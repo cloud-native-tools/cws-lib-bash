@@ -39,3 +39,12 @@ function git_update_all() {
 function git_top_branch() {
   git branch -a --sort=-committerdate | head -n 20
 }
+
+function git_push_all(){
+  local branch=${1:-main}
+  for remote in $(git remote)
+  do
+    echo "=======    Remote ${remote}    ======="
+    git push ${remote} ${branch}
+  done
+}
