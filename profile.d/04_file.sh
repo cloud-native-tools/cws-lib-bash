@@ -146,3 +146,13 @@ function file_changed() {
   local last_day=${1:-1}
   find /etc/ /lib /usr/ -type f -mtime -${last_day} -ls | awk '{print $NF}'
 }
+
+function file_mv() {
+  local src=$1
+  local dest=$2
+  if [ ! -d $(dirname $dest) ]
+  then 
+    mkdir -p $(dirname $dest)
+  fi
+  mv -fv $src $dest
+}

@@ -43,6 +43,16 @@ k8s.gcr.io/coredns/coredns:v1.8.6=registry.cn-hangzhou.aliyuncs.com/google_conta
 EOF
 }
 
+function k8s_get_all() {
+  local namespace="${1}"
+  if [ -z "${namespace}" ]
+  then
+    kubectl get all,cm,secret,ing -A
+  else
+    kubectl get all,cm,secret,ing -n ${namespace}
+  fi
+}
+
 function k8s_prune_ns() {
   local namespace="$1"
   kubectl -n "${namespace}" delete $(kubectl get all,cm,secret,ing -n "${namespace}" -o name)
@@ -54,4 +64,14 @@ function k8s_service_account() {
   local service_name="$2"
   local secret_name=$(kubectl -n $namespace get sa/$service_name -o jsonpath="{.secrets[0].name}")
   kubectl -n ${namespace} get secret "${secret_name}" -o go-template="{{.data.token | base64decode}}"
+}
+
+function k8s_info(){
+  echo "-------  kubectl version   --------"
+  kubectl version –short
+  echo "-------  cluster info      --------"
+  kubectl cluster-info
+  echo "-------  component status  -------"
+  kubectl get componentstatus
+  
 }

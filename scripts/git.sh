@@ -11,7 +11,7 @@ function git_checkout_by_date() {
   local step=${5:-"1days"}
 
   git clone "${git_url}" "${git_dir}"
-  pushd "${git_dir}" > /dev/null 2>&1
+  pushd "${git_dir}" >/dev/null 2>&1
   commit_log=commit.log
 
   git log --pretty="%cd_%h" --date="short" --after="${begin}" >${commit_log}
@@ -40,11 +40,14 @@ function git_top_branch() {
   git branch -a --sort=-committerdate | head -n 20
 }
 
-function git_push_all(){
+function git_push_all() {
   local branch=${1:-main}
-  for remote in $(git remote)
-  do
-    echo "=======    Remote ${remote}    ======="
+  for remote in $(git remote); do
+    echo "===================    Remote [${remote}]    ==================="
     git push ${remote} ${branch}
   done
+}
+
+function git_update_submodule() {
+  git submodule update --init --recursive --remote
 }
