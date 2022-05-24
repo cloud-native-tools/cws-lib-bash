@@ -45,17 +45,18 @@ EOF
 
 function k8s_get_all() {
   local namespace="${1}"
-  if [ -z "${namespace}" ]
-  then
-    kubectl get all,cm,secret,ing -A
+  local k8s_fields="all,cm,secret,ing,sa,pvc"
+  if [ -z "${namespace}" ]; then
+    kubectl get ${k8s_fields} -A -o wide
   else
-    kubectl get all,cm,secret,ing -n ${namespace}
+    kubectl get ${k8s_fields} -n ${namespace} -o wide
   fi
 }
 
 function k8s_prune_ns() {
   local namespace="$1"
-  kubectl -n "${namespace}" delete $(kubectl get all,cm,secret,ing -n "${namespace}" -o name)
+  local k8s_fields="all,cm,secret,ing"
+  kubectl -n "${namespace}" delete $(kubectl get ${k8s_fields} -n "${namespace}" -o name)
   kubectl delete namespace "${namespace}"
 }
 
@@ -66,12 +67,54 @@ function k8s_service_account() {
   kubectl -n ${namespace} get secret "${secret_name}" -o go-template="{{.data.token | base64decode}}"
 }
 
-function k8s_info(){
+function k8s_info() {
   echo "-------  kubectl version   --------"
   kubectl version –short
   echo "-------  cluster info      --------"
   kubectl cluster-info
   echo "-------  component status  -------"
   kubectl get componentstatus
-  
+
+}
+
+function k8s_ns() {
+  kubectl get namespace
+}
+
+function k8s_ep() {
+  local namespace="$1"
+  kubectl get ep -n $namespace
+}
+
+function k8s_desc_ns() {
+  local namespace=$1
+  kubectl describe namespace ${namespace}
+}
+
+function k8s_desc_pod() {
+  local namespace=$1
+  shift
+  local object=$@
+  kubectl describe -n ${namespace} pods ${object}
+}
+
+function k8s_failed_pod() {
+  local namespace="${1}"
+  if [ -z "${namespace}" ]; then
+    kubectl get pod -A -o wide | grep -v Running | grep -v Completed
+  else
+    kubectl get pod -n ${namespace} -o wide | grep -v Running | grep -v Completed
+  fi
+}
+
+function k8s_sys_pod() {
+  kubectl get pod -n kube-system $@
+}
+
+function k8s_sys_svc() {
+  kubectl get service -n kube-system $@
+}
+
+function k8s_sys_deploy() {
+  kubectl get deployment -n kube-system $@
 }

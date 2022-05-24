@@ -5,6 +5,10 @@ function dp() {
   docker-compose $@
 }
 
+function dp_up() {
+  docker-compose --compatibility up -d --remove-orphans $@
+}
+
 function drun() {
   docker run --rm -it --privileged --network host --entrypoint /bin/sh $@
 }
@@ -60,18 +64,18 @@ function docker_delete_remote_images() {
 
 function docker_generate_dockerfile() {
   local img=$1
-  docker history --no-trunc ${img}\
-  | tac \
-  | tr -s ' ' \
-  | cut -d " " -f 5- \
-  | sed 's,^/bin/sh -c #(nop) ,,g' \
-  | sed 's,^/bin/sh -c,RUN,g' \
-  | sed 's, && ,\n  & ,g' \
-  | sed 's,\s*[0-9]*[\.]*[0-9]*\s*[kMG]*B\s*$,,g' \
-  | head -n -1
+  docker history --no-trunc ${img} |
+    tac |
+    tr -s ' ' |
+    cut -d " " -f 5- |
+    sed 's,^/bin/sh -c #(nop) ,,g' |
+    sed 's,^/bin/sh -c,RUN,g' |
+    sed 's, && ,\n  & ,g' |
+    sed 's,\s*[0-9]*[\.]*[0-9]*\s*[kMG]*B\s*$,,g' |
+    head -n -1
 }
 
-function docker_image_to_ctr(){
+function docker_image_to_ctr() {
   local img=$1
-  docker save ${img}|ctr image import -
+  docker save ${img} | ctr image import -
 }

@@ -14,32 +14,43 @@ function net_info() {
   done
 }
 
-function route_add() {
+function net_route_add() {
   local target=$1
   local gateway=$2
   local interface=$3
   ip route add ${target} via ${gateway} dev ${interface}
 }
 
-function route_get() {
+function net_route_get() {
   local target=$1
   ip route get ${target}
 }
 
-function income_conn() {
+function net_income_conn() {
   local port=$1
   netstat -apnt4 | grep -w ESTABLISHED | awk "(\$4 ~ /.*:${port}/){print \$5}" | awk 'BEGIN{FS=":"}{print $1}' | sort | uniq -c
 }
 
-function outcome_conn() {
+function net_outcome_conn() {
   local port=$1
   netstat -apnt4 | grep -w ESTABLISHED | awk "(\$5 ~ /.*:${port}/){print \$5}" | awk 'BEGIN{FS=":"}{print $1}' | sort | uniq -c
 }
 
-function add_delay_in_ms() {
+function net_add_delay_in_ms() {
   tc qdisc add dev $1 root netem delay ${2}ms
 }
 
-function del_delay_in_ms() {
+function net_del_delay_in_ms() {
   tc qdisc del dev $1 root netem
+}
+
+function net_namespaces() {
+  cd /var/run/netns
+  for n in *; do
+    ss -tpn -l -N $n
+  done
+}
+
+function net_my() {
+  ip route get $(who | awk '{print $NF}' | tr -d '(' | tr -d ')') | grep src | awk '{print $7}'
 }
