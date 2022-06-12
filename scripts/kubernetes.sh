@@ -86,6 +86,13 @@ function k8s_ep() {
   kubectl get ep -n $namespace
 }
 
+function k8s_desc() {
+  local namespace=$1
+  shift
+  local object=$@
+  kubectl describe -n ${namespace} ${object}
+}
+
 function k8s_desc_ns() {
   local namespace=$1
   kubectl describe namespace ${namespace}
@@ -117,4 +124,32 @@ function k8s_sys_svc() {
 
 function k8s_sys_deploy() {
   kubectl get deployment -n kube-system $@
+}
+
+function k8s_apply() {
+  kubectl apply -R -f $@
+}
+
+function k8s_node_labels() {
+  local script=$(
+cat <<'EOF'
+{
+  gsub(",","\n\t",$NF);
+  gsub("^","\t",$NF);
+  print $1":\n"$NF
+}
+EOF
+  )
+  kubectl get node --show-labels | grep -v LABELS | awk ${script}
+}
+
+function k8s_node_taints() {
+  local tpl=$(
+cat <<'EOF'
+{{range .items}}{{.metadata.name}}{{":"}}
+  {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{end}}
+{{end}}
+EOF
+  )
+  kubectl get nodes -o go-template --template="${tpl}"
 }
