@@ -1,3 +1,7 @@
-function is_cgroup_v2() {
+function cgroup_is_v2() {
     test -e /sys/fs/cgroup/cgroup.controllers
+}
+
+function cgroup_remove_all() {
+    find /sys/fs/cgroup -depth -type d -print -exec rmdir {} \;
 }

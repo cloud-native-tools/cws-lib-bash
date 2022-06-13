@@ -28,5 +28,9 @@ function yum_mk_rootfs() {
     ${yum_install} ${default_packages} centos-release
     ;;
   esac
-  # umount 
+  # umount
+}
+
+function yum_list() {
+  yum list --showduplicates $@
 }
