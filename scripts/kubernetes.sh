@@ -75,16 +75,25 @@ function k8s_failed_pod() {
   fi
 }
 
+export SYSTEM_NAMESPACE=kube-system
 function k8s_sys_pod() {
-  kubectl get pod -n kube-system $@
+  kubectl -n ${SYSTEM_NAMESPACE} get pod $@
 }
 
 function k8s_sys_svc() {
-  kubectl get service -n kube-system $@
+  kubectl -n ${SYSTEM_NAMESPACE} get service $@
 }
 
 function k8s_sys_deploy() {
-  kubectl get deployment -n kube-system $@
+  kubectl -n ${SYSTEM_NAMESPACE} get deployment $@
+}
+
+function k8s_sys_desc() {
+  kubectl -n ${SYSTEM_NAMESPACE} describe $@
+}
+
+function k8s_sys_logs() {
+  kubectl -n ${SYSTEM_NAMESPACE} logs $@
 }
 
 function k8s_apply() {
