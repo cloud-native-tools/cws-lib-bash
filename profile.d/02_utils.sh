@@ -37,16 +37,12 @@ function die() {
   exit 1
 }
 
-function get_root() {
+function get_script_root() {
   if test -t; then
     pwd || echo ${PWD}
   else
-    if is_bash
-    then
-        echo $(readlink -f $(dirname ${BASH_SOURCE[0]}))
-    else
-        echo ${PWD}
-    fi
+    is_bash && echo $(readlink -f $(dirname ${BASH_SOURCE[0]}))
+    is_zsh && echo $(dirname ${(%):-%N})
   fi
 }
 

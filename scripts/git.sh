@@ -1,6 +1,7 @@
 function git_track_lfs() {
-  local file_size=$1
-  find . -type f -size +${file_size} | grep -v /.git/ | grep -v /target/ | xargs git lfs track
+  local file_size=${1:-"+1M"}
+  echo "using git lfs track file large than ${file_size}"
+  find . -type f -size "${file_size}" | grep -v /.git/ | xargs git lfs track
 }
 
 function git_checkout_by_date() {
