@@ -105,16 +105,14 @@ function k8s_nodes() {
 }
 
 function k8s_node_labels() {
-  local script=$(
+  local tpl=$(
     cat <<'EOF'
-{
-  gsub(",","\n\t",$NF);
-  gsub("^","\t",$NF);
-  print $1":\n"$NF
-}
+{{range .items}}{{.metadata.name}}{{":"}}
+  {{range $key,$value := .metadata.labels}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
+{{end}}
 EOF
   )
-  kubectl get node --show-labels | grep -v LABELS | awk ${script}
+  kubectl get nodes -o go-template --template="${tpl}"
 }
 
 function k8s_node_taints() {
@@ -122,6 +120,30 @@ function k8s_node_taints() {
     cat <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{"\n"}}{{end}}
+{{end}}
+EOF
+  )
+  kubectl get nodes -o go-template --template="${tpl}"
+}
+
+function k8s_node_annotations() {
+  local tpl=$(
+    cat <<'EOF'
+{{range .items}}{{.metadata.name}}{{":"}}
+  {{range $key,$value := .metadata.annotations}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
+{{end}}
+EOF
+  )
+  kubectl get nodes -o go-template --template="${tpl}"
+}
+
+function k8s_node_status() {
+  local tpl=$(
+    cat <<'EOF'
+{{range .items}}{{.metadata.name}}{{":"}}
+  CPU: {{.status.capacity.cpu}}
+  Memory: {{.status.capacity.memory}}
+  Pods: {{.status.capacity.pods}}
 {{end}}
 EOF
   )
