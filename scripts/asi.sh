@@ -27,4 +27,3 @@ EOF
     )
     kubectl get nodes -o go-template --template="${tpl}"
 }
-

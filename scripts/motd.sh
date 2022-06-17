@@ -8,9 +8,9 @@ function motd_generate() {
   KERNEL=$(uname -r)
   CPU=$(awk -F '[ :][ :]+' '/^model name/ { print $2; exit; }' /proc/cpuinfo)
   ARCH=$(uname -m)
-  NAME=master
+  IP=$(hostname -i)
   DISC=$(df -h | awk '$NF=="/"{print $5 }')
-  NET=$(ifconfig|grep bond0 -A1|grep inet|awk '{print $2}')
+  NET=$(ifconfig|grep -E 'bond|eth' -A1|grep inet|awk '{print $2}'|tr '\n' ',')
   MEMORY_USED=$(free -t -m | grep "Total:" | awk '{print $3}')
   MEMORY_TOTAL=$(free -t -m | grep "Total:" | awk '{print $2}')
   MEMORY_SWAP=$(free -m | tail -n 1 | awk '{print $3}')
@@ -62,7 +62,7 @@ function motd_generate() {
 /_/   \_\|_||_||_.__/  \__,_||_.__/  \__,_|
 $C" >>$motd
   echo -e "$R===============================================================" >>$motd
-  echo -e "       $R Welcome to $Y $HOSTNAME $NAME-$NET                     " >>$motd
+  echo -e "       $R Welcome to $Y $HOSTNAME $IP [$NET]                     " >>$motd
   echo -e "       $R CPU      $W= $CPU                                      " >>$motd
   echo -e "       $R KERNEL   $W= $KERNEL                                   " >>$motd
   echo -e "       $R CMDLINE  $W= $CMDLINE                                  " >>$motd

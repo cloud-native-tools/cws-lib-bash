@@ -149,3 +149,64 @@ EOF
   )
   kubectl get nodes -o go-template --template="${tpl}"
 }
+
+function k8s_login_pod() {
+  local namepsace=$1
+  local pod_name=$2
+  kubectl -n ${namepsace} exec -it ${pod_name} -- sh
+}
+
+function k8s_login_container() {
+  local namepsace=$1
+  local pod_name=$2
+  local container_name=$3
+  if [ -z "${container_name}" ]; then
+    kubectl -n ${namepsace} exec -it ${pod_name} -- sh
+  else
+    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- sh
+  fi
+}
+
+function k8s_get_pods_on_node() {
+  local node_name=$1
+  kubectl get pods -A -o wide --field-selector spec.nodeName=${node_name}
+}
+
+function k8s_get_container_in_pod() {
+  local namepsace=${1:-default}
+  local pod_name=$2
+  printf "%-24s %-24s %-80s %-20s\n" "Pod Name" "Container Name" Image Command
+  local tpl=$(
+    cat <<'EOF'
+{{- $pod_name := .metadata.name -}}
+{{- range .spec.containers -}}
+  {{- printf "%-24s " $pod_name -}}
+  {{- printf "%-24s " .name -}}
+  {{- printf "%-80s " .image -}}
+  {{- with $cmd := index .command 0 -}}
+    {{- printf "%-20s\n" $cmd -}}
+  {{- end -}}
+{{- end -}}
+{{- range .spec.initContainers -}}
+  {{- printf "%-24s " $pod_name -}}
+  {{- printf "(init) %-17s " .name -}}
+  {{- printf "%-80s " .image -}}
+  {{- with $cmd := index .command 0 -}}
+    {{- printf "%-20s\n" $cmd -}}
+  {{- end -}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${pod_name}" ]; then
+    local tpl_list=$(
+      cat <<EOF
+{{- range .items -}}
+  ${tpl}
+{{- end -}}
+EOF
+    )
+    kubectl -n ${namepsace} get pods -o go-template --template="${tpl_list}"
+  else
+    kubectl -n ${namepsace} get pods ${pod_name} -o go-template --template="${tpl}"
+  fi
+}
