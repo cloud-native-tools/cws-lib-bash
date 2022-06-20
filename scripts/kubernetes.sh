@@ -210,3 +210,68 @@ EOF
     kubectl -n ${namepsace} get pods ${pod_name} -o go-template --template="${tpl}"
   fi
 }
+
+function k8s_pods() {
+  local namepsace=${1}
+  printf "%-12s %-60s %-40s %-12s\n" Namespace Name Node "Runtime"
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "%-12s " .metadata.namespace -}}
+  {{- printf "%-60s " .metadata.name -}}
+  {{- printf "%-40s " .spec.nodeName -}}
+  {{- with .spec.runtimeClassName -}}
+    {{- printf "%-20s" . -}}
+  {{- else -}}
+    {{- printf "%-20s" "runc" -}}
+  {{- end -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get pods -A -o go-template --template="${tpl}"
+  else
+    kubectl get pods -n ${namepsace} -o go-template --template="${tpl}"
+  fi
+}
+
+function k8s_pod_life() {
+  local namepsace=${1:-default}
+  local pod=${2}
+  local single_tpl=$(
+    cat <<'EOF'
+  {{- printf "Pod: %-24s\n" .metadata.name -}}
+  {{- printf "  %-24s: %-24s\n" "Created" .metadata.creationTimestamp -}}
+  {{- printf "  %-24s: %-24s\n" "Started" .status.startTime -}}
+  {{- range .status.conditions -}}
+    {{- printf "  %-16s(%-6s): %-24s\n" .type .status .lastTransitionTime -}}
+  {{- end -}}
+  {{- range .status.containerStatuses -}}
+    {{- printf "  Container: %-24s\n" .name -}}
+    {{- range $key,$value := .state -}}
+    {{- printf "    %-22s startedAt: %-16s\n" $key $value.startedAt -}}
+    {{- printf "    %-21s finishedAt: %-16s\n" $key $value.startedAt -}}
+    {{- end -}}
+  {{- end -}}
+EOF
+  )
+  local list_tpl=$(
+    cat <<EOF
+{{- range .items -}}
+${single_tpl}
+{{- end -}}
+EOF
+  )
+  if [ -z "${pod}" ]; then
+    kubectl get pods -n ${namepsace} -o go-template --template="${list_tpl}"
+  else
+    kubectl get pods ${pod} -n ${namepsace} -o go-template --template="${single_tpl}"
+  fi
+}
+
+function k8s_pod_on_node() {
+  local node_name=${1}
+  shift
+  kubectl get pod --field-selector spec.nodeName=${node_name} $@
+}
