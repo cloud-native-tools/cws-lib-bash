@@ -17,19 +17,26 @@ function debug_off() {
 
 function is_interactive() { test -t 0; }
 
+function date_now() {
+  date "+${DATE_TIME_FORMAT:-%Y-%m-%d %H:%M:%S}"
+}
+
 function log() {
   local level=$1
   local now=$(date_now)
-  local color
+  local color=""
+  local clear=""
   case ${level} in
   WARN)
     color=${YELLOW}
+    clear=${CLEAR}
     ;;
   ERROR)
     color=${RED}
+    clear=${CLEAR}
     ;;
   esac
-  echo -en "${color}[${now}] $@${CLEAR}\n"
+  echo -en "${color}[${now}] $@${clear}\n"
 }
 
 function die() {
@@ -90,5 +97,22 @@ function source_scripts() {
       source ${script}
     done
     unset script
+  fi
+}
+
+
+function script_entry(){
+  if [ $# -gt 0 ]; then
+    if typeset -f $1 >/dev/null 2>&1; then
+        fn=$1
+        shift
+        log INFO "call function [${fn} $@]"
+        ${fn} $@
+    else
+        log INFO "show variables [$@]: $@"
+        eval "echo $@"
+    fi
+  else 
+    echo "Usage: script_entry <function> [args] | variables"
   fi
 }

@@ -213,13 +213,17 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
-  printf "%-12s %-60s %-40s %-12s\n" Namespace Name Node "Runtime"
+  printf "%-24s %-60s %-40s %-12s\n" Namespace Name Node "Runtime"
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
-  {{- printf "%-12s " .metadata.namespace -}}
+  {{- printf "%-24s " .metadata.namespace -}}
   {{- printf "%-60s " .metadata.name -}}
-  {{- printf "%-40s " .spec.nodeName -}}
+  {{- with .spec.nodeName -}}
+    {{- printf "%-40s " . -}}
+  {{- else -}}
+    {{- printf "%-40s " "None" -}}
+  {{- end -}}
   {{- with .spec.runtimeClassName -}}
     {{- printf "%-20s" . -}}
   {{- else -}}
@@ -270,8 +274,14 @@ EOF
   fi
 }
 
-function k8s_pod_on_node() {
+function k8s_pod_by_node() {
   local node_name=${1}
   shift
   kubectl get pod --field-selector spec.nodeName=${node_name} $@
+}
+
+function k8s_pod_by_runtime() {
+  local runtime_class=${1}
+  shift
+  kubectl get pod --field-selector .spec.runtimeClassName=${runtime_class} $@
 }
