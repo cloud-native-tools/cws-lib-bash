@@ -12,3 +12,5 @@ alias free="free -mw"
 alias psl="ps auxf"
 alias psearch="ps aux | grep -v grep | grep -i -e VSZ -e"
 
+[ -n "${BASH_VERSION}" ] && alias sh="bash"
+[ -n "${ZSH_VERSION}" ] && alias sh="zsh"

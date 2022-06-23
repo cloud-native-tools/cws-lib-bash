@@ -44,12 +44,22 @@ function die() {
   exit 1
 }
 
+function get_script_file() {
+  if is_bash 
+  then 
+    echo "${BASH_SOURCE[0]}"
+  fi
+  if is_zsh
+  then
+    echo "${(%):-%N}"
+  fi
+}
+
 function get_script_root() {
   if test -t; then
     pwd || echo ${PWD}
   else
-    is_bash && echo $(readlink -f $(dirname ${BASH_SOURCE[0]}))
-    is_zsh && echo $(dirname ${(%):-%N})
+    readlink -f $(dirname $(get_script_file))
   fi
 }
 
@@ -100,19 +110,18 @@ function source_scripts() {
   fi
 }
 
-
 function script_entry(){
   if [ $# -gt 0 ]; then
     if typeset -f $1 >/dev/null 2>&1; then
         fn=$1
         shift
-        log INFO "call function [${fn} $@]"
+        log INFO "call function [${fn}]: $@"
         ${fn} $@
     else
-        log INFO "show variables [$@]: $@"
+        log INFO "show variables [$@]:"
         eval "echo $@"
     fi
   else 
-    echo "Usage: script_entry <function> [args] | variables"
+    echo "$(get_script_file) sourced"
   fi
 }
