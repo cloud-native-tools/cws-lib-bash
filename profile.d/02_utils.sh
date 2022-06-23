@@ -1,4 +1,3 @@
-
 function is_bash() { test -n "${BASH_VERSION}"; }
 function is_zsh() { test -n "${ZSH_VERSION}"; }
 
@@ -7,7 +6,14 @@ function debug_on() {
   if [ -n "${log}" ]; then
     exec 2 >${log}
   fi
-  export PS4='+ ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+  if is_bash; then
+    export PS4='+$? ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+  fi
+  if is_zsh; then
+    setopt prompt_subst
+    export PS4='+$? ${(%):-%N}:${LINENO}:${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+  fi
+
   set -x
 }
 
@@ -42,25 +48,6 @@ function log() {
 function die() {
   echo -e "${RED}${@}${CLEAR}"
   exit 1
-}
-
-function get_script_file() {
-  if is_bash 
-  then 
-    echo "${BASH_SOURCE[0]}"
-  fi
-  if is_zsh
-  then
-    echo "${(%):-%N}"
-  fi
-}
-
-function get_script_root() {
-  if test -t; then
-    pwd || echo ${PWD}
-  else
-    readlink -f $(dirname $(get_script_file))
-  fi
 }
 
 function matches() {
@@ -110,18 +97,18 @@ function source_scripts() {
   fi
 }
 
-function script_entry(){
+function script_entry() {
   if [ $# -gt 0 ]; then
     if typeset -f $1 >/dev/null 2>&1; then
-        fn=$1
-        shift
-        log INFO "call function [${fn}]: $@"
-        ${fn} $@
+      fn=$1
+      shift
+      log INFO "call function [${fn}]: $@"
+      ${fn} $@
     else
-        log INFO "show variables [$@]:"
-        eval "echo $@"
+      log INFO "show variables [$@]:"
+      eval "echo $@"
     fi
-  else 
-    echo "$(get_script_file) sourced"
+  else
+    echo "$0 sourced"
   fi
 }
