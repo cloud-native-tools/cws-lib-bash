@@ -1,15 +1,8 @@
-function dssh() {
-  docker exec -it "$1" bash
-}
-function dp() {
-  docker-compose $@
+function docker_exec() {
+  docker exec -it "$1" ${2:-bash}
 }
 
-function dp_up() {
-  docker-compose --compatibility up -d --remove-orphans $@
-}
-
-function drun() {
+function docker_run() {
   docker run --rm -it --privileged --network host --entrypoint /bin/sh $@
 }
 
@@ -78,4 +71,20 @@ function docker_generate_dockerfile() {
 function docker_image_to_ctr() {
   local img=$1
   docker save ${img} | ctr image import -
+}
+
+function dp() {
+  docker-compose $@
+}
+
+function dp_up() {
+  docker-compose up -d --compatibility --remove-orphans $@
+}
+
+function dp_recreate(){
+  docker-compose up -d --force-recreate --no-deps $@
+}
+
+function dp_svc(){
+  
 }
