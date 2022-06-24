@@ -1,16 +1,13 @@
 #!/bin/sh
 
-function is_bash() { test -n "${BASH_VERSION}"; }
-function is_zsh() { test -n "${ZSH_VERSION}"; }
-function get_script_root() {
-  if test -t; then
-    pwd || echo ${PWD}
-  else
-    is_bash && echo $(readlink -f $(dirname ${BASH_SOURCE[0]}))
-    is_zsh && echo $(dirname ${(%):-%N})
-  fi
-}
-ROOT=$(get_script_root)
+# reference: get_script_root.snippets
+ROOT=
+if [ -n "${BASH_VERSION}" ]; then
+    ROOT=$(readlink -f $(dirname "${BASH_SOURCE[0]}"))
+fi
+if [ -n "${ZSH_VERSION}" ]; then
+    ROOT=$(readlink -f $(dirname "${(%):-%N}"))
+fi
 PROFILED=${ROOT}/profile.d
 SCRIPTS=${ROOT}/scripts
 
