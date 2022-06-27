@@ -101,7 +101,7 @@ function k8s_apply() {
 }
 
 function k8s_nodes() {
-  kubectl get nodes -o wide
+  kubectl get nodes -o wide $@
 }
 
 function k8s_node_labels() {
@@ -112,7 +112,7 @@ function k8s_node_labels() {
 {{end}}
 EOF
   )
-  kubectl get nodes -o go-template --template="${tpl}"
+  kubectl get nodes $@ -o go-template --template="${tpl}"
 }
 
 function k8s_node_taints() {
@@ -165,11 +165,6 @@ function k8s_login_container() {
   else
     kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- sh
   fi
-}
-
-function k8s_get_pods_on_node() {
-  local node_name=$1
-  kubectl get pods -A -o wide --field-selector spec.nodeName=${node_name}
 }
 
 function k8s_get_container_in_pod() {

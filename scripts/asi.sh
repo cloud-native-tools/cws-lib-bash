@@ -25,5 +25,5 @@ function asi_node_info() {
 {{- end -}}
 EOF
     )
-    kubectl get nodes -o go-template --template="${tpl}"
+    kubectl get nodes $@ -o go-template --template="${tpl}"
 }
