@@ -81,10 +81,10 @@ function dp_up() {
   docker-compose up -d --compatibility --remove-orphans $@
 }
 
-function dp_recreate(){
+function dp_recreate() {
   docker-compose up -d --force-recreate --no-deps $@
 }
 
-function dp_svc(){
-  
+function dp_svc() {
+  docker-compose ps --services
 }
