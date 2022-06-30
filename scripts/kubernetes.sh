@@ -42,11 +42,6 @@ function k8s_ns() {
   kubectl get namespace
 }
 
-function k8s_ep() {
-  local namespace="$1"
-  kubectl get ep -n $namespace
-}
-
 function k8s_desc() {
   local namespace=$1
   shift
@@ -94,6 +89,10 @@ function k8s_sys_desc() {
 
 function k8s_sys_logs() {
   kubectl -n ${SYSTEM_NAMESPACE} logs $@
+}
+
+function k8s_sys_ep() {
+  kubectl -n ${SYSTEM_NAMESPACE} get ep $@
 }
 
 function k8s_apply() {
@@ -208,12 +207,17 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
-  printf "%-24s %-60s %-40s %-12s\n" Namespace Name Node "Runtime"
+  printf "%-24s %-60s %-16s %-40s %-12s %-10s\n" Namespace Name IP Node Runtime Status
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
   {{- printf "%-24s " .metadata.namespace -}}
   {{- printf "%-60s " .metadata.name -}}
+  {{- with .status.podIP -}}
+    {{- printf "%-16s " . -}}
+  {{- else -}}
+    {{- printf "%-16s " "None" -}}
+  {{- end -}}
   {{- with .spec.nodeName -}}
     {{- printf "%-40s " . -}}
   {{- else -}}
@@ -224,6 +228,7 @@ function k8s_pods() {
   {{- else -}}
     {{- printf "%-20s" "runc" -}}
   {{- end -}}
+  {{- printf "%-10s " .status.phase -}}
   {{"\n"}}
 {{- end -}}
 EOF
@@ -279,4 +284,33 @@ function k8s_pod_by_runtime() {
   local runtime_class=${1}
   shift
   kubectl get pod --field-selector .spec.runtimeClassName=${runtime_class} $@
+}
+
+function k8s_images() {
+  printf "%-24s %-60s %-80s \n" Namespace Name Image
+  local list_tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $pod_name := .metadata.name -}}
+  {{- range .spec.containers -}}
+    {{- printf "%-24s " $namespace_name -}}
+    {{- printf "%-60s " $pod_name -}}
+    {{- printf "%-80s " .image -}}
+    {{"\n"}}
+  {{- end -}}
+  {{- range .spec.initContainers -}}
+    {{- printf "%-24s " $namespace_name -}}
+    {{- printf "%-60s " $pod_name -}}
+    {{- printf "%-80s " .image -}}
+    {{"\n"}}
+  {{- end -}}
+{{- end -}}
+EOF
+  )
+  kubectl get pods -A -o go-template --template="${list_tpl}" $@
+}
+
+function k8s_images_used() {
+  k8s_images $@ | awk '{print $3}' | sort | uniq
 }
