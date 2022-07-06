@@ -34,10 +34,10 @@ $C" >>$motd
   echo -e "$R===============================================================" >>$motd
   echo -e "       $R Welcome to $Y $HOSTNAME $IP [$NET]                     " >>$motd
   echo -e "       $R CPU      $W= $CPU                                      " >>$motd
+  echo -e "       $R ARCH     $W= $ARCH                                     " >>$motd
+  echo -e "       $R HOSTNAME $W= $HOSTNAME                                 " >>$motd
   echo -e "       $R KERNEL   $W= $KERNEL                                   " >>$motd
   echo -e "       $R CMDLINE  $W= $CMDLINE                                  " >>$motd
-  echo -e "       $R HOSTNAME $W= $HOSTNAME                                 " >>$motd
-  echo -e "       $R ARCH     $W= $ARCH                                     " >>$motd
   echo -e "$R===============================================================" >>$motd
   echo -e "$X" >>$motd
 }

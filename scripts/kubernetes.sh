@@ -207,7 +207,7 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
-  printf "%-24s %-60s %-16s %-40s %-12s %-10s\n" Namespace Name IP Node Runtime Status
+  printf "%-24s %-60s %-16s %-40s %-20s %-10s\n" Namespace Name IP Node Runtime Status
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -313,4 +313,15 @@ EOF
 
 function k8s_images_used() {
   k8s_images $@ | awk '{print $3}' | sort | uniq
+}
+
+function k8s_apply() {
+  if [ $# -gt 1 ]; then
+    local namespace=$1
+    local file_dir=$2
+    kubectl apply --namespace=${namespace} -R -f ${file_dir}
+  else
+    local file_dir=${1:-.}
+    kubectl apply --namespace=${namespace} -R -f ${file_dir}
+  fi
 }
