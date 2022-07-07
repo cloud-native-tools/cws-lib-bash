@@ -255,7 +255,6 @@ function k8s_svc_ports(){
 {{- range .items -}}
   {{- $namespace_name := .metadata.namespace -}}
   {{- $service_name := .metadata.name -}}
-  {{- $port_type := .spec.type -}}
   {{- $cluster_ips := .spec.clusterIPs -}}
   {{- $external_ips := .spec.externalIPs -}}
   {{- $ports := .spec.ports -}}
@@ -265,7 +264,7 @@ function k8s_svc_ports(){
     {{- range $ports -}}
       {{- printf "%-24s " $namespace_name -}}
       {{- printf "%-40s " $service_name -}}
-      {{- printf "%-10s " $port_type -}}
+      {{- printf "%-10s " "ClusterIP" -}}
       {{- $combine := (printf "%v:%v" $cluster_ip .port) -}}
       {{- printf "%-24s " $combine -}}
       {{- printf "%-12v " .targetPort -}}
@@ -280,7 +279,7 @@ function k8s_svc_ports(){
     {{- range $ports -}}
       {{- printf "%-24s " $namespace_name -}}
       {{- printf "%-40s " $service_name -}}
-      {{- printf "%-10s " $port_type -}}
+      {{- printf "%-10s " "ExternalIP" -}}
       {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
       {{- printf "%-24s " $combine -}}
       {{- printf "%-12v " .targetPort -}}
