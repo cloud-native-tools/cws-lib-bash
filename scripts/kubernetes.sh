@@ -159,7 +159,7 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
-  printf "%-24s %-60s %-10s %-16s %-40s %-20s\n" Namespace Name Status IP Node Runtime 
+  printf "%-24s %-60s %-10s %-16s %-40s %-20s\n" Namespace Name Status IP Node Runtime
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -238,7 +238,7 @@ function k8s_pod_by_runtime() {
   kubectl get pod --field-selector .spec.runtimeClassName=${runtime_class} $@
 }
 
-function k8s_svc(){
+function k8s_svc() {
   local namepsace=${1}
   if [ -z "${namepsace}" ]; then
     kubectl get service -A
@@ -247,9 +247,9 @@ function k8s_svc(){
   fi
 }
 
-function k8s_svc_ports(){
+function k8s_svc_ports() {
   local namepsace=${1}
-  printf "%-24s %-40s %-10s %-24s %-12s %-16s\n" Namespace Service Type "IP:Port" Target Selector
+  printf "%-24s %-40s %-16s %-12s %-24s\n" Namespace Service Type Target "IP:Port" 
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -264,13 +264,10 @@ function k8s_svc_ports(){
     {{- range $ports -}}
       {{- printf "%-24s " $namespace_name -}}
       {{- printf "%-40s " $service_name -}}
-      {{- printf "%-10s " "ClusterIP" -}}
+      {{- printf "%-16s " "ClusterIP" -}}
+      {{- printf "%-12v " .targetPort -}}
       {{- $combine := (printf "%v:%v" $cluster_ip .port) -}}
       {{- printf "%-24s " $combine -}}
-      {{- printf "%-12v " .targetPort -}}
-      {{- range $k, $v := $selector -}}
-        {{- printf "%v=%v," $k $v -}}
-      {{- end -}}
       {{"\n"}}
     {{- end -}}
   {{- end -}}
@@ -279,13 +276,10 @@ function k8s_svc_ports(){
     {{- range $ports -}}
       {{- printf "%-24s " $namespace_name -}}
       {{- printf "%-40s " $service_name -}}
-      {{- printf "%-10s " "ExternalIP" -}}
+      {{- printf "%-16s " "ExternalIP" -}}
+      {{- printf "%-12v " .targetPort -}}
       {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
       {{- printf "%-24s " $combine -}}
-      {{- printf "%-12v " .targetPort -}}
-      {{- range $k, $v := $selector -}}
-        {{- printf "%v=%v," $k $v -}}
-      {{- end -}}
       {{"\n"}}
     {{- end -}}
   {{- end -}}
@@ -339,6 +333,11 @@ function k8s_apply() {
   fi
 }
 
+function k8s_delete() {
+  local file_dir=${1:-.}
+  kubectl delete -R -f ${file_dir}
+}
+
 export SYSTEM_NAMESPACE=kube-system
 function k8s_sys_pod() {
   k8s_pods ${SYSTEM_NAMESPACE}
@@ -363,3 +362,5 @@ function k8s_sys_logs() {
 function k8s_sys_ep() {
   kubectl -n ${SYSTEM_NAMESPACE} get ep $@
 }
+
+

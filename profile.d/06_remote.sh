@@ -20,6 +20,8 @@ function remote_deploy() {
 function remote_cmd() {
     for host in $(remote_get_hosts); do
         echo "Run on [$host]: [$@]"
-        ssh -t $host -- "bash -l -c '$@'"
+        echo "---"
+        ssh -t -q $host -- "bash -l -c '$@'"
+        echo "---"
     done
 }
