@@ -159,6 +159,7 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
+  shift
   printf "%-24s %-60s %-10s %-16s %-40s %-20s\n" Namespace Name Status IP Node Runtime
   local tpl=$(
     cat <<'EOF'
@@ -186,9 +187,9 @@ function k8s_pods() {
 EOF
   )
   if [ -z "${namepsace}" ]; then
-    kubectl get pods -A -o go-template --template="${tpl}"
+    kubectl get pods -A -o go-template --template="${tpl}" $@
   else
-    kubectl get pods -n ${namepsace} -o go-template --template="${tpl}"
+    kubectl get pods -n ${namepsace} -o go-template --template="${tpl}" $@
   fi
 }
 
@@ -243,13 +244,14 @@ function k8s_svc() {
   if [ -z "${namepsace}" ]; then
     kubectl get service -A
   else
-    kubectl get service -n ${namepsace}
+    shift
+    kubectl get service -n ${namepsace} $@
   fi
 }
 
 function k8s_svc_ports() {
   local namepsace=${1}
-  printf "%-24s %-40s %-16s %-12s %-24s\n" Namespace Service Type Target "IP:Port" 
+  printf "%-24s %-40s %-16s %-12s %-24s\n" Namespace Service Type Target "IP:Port"
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -293,6 +295,39 @@ EOF
   fi
 }
 
+function k8s_ep() {
+  local namepsace=${1}
+  printf "%-24s %-40s %-24s %-48s %-24s\n" Namespace Name Node Pod Target
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $endpoint_name := .metadata.name -}}
+  {{- range .subsets -}}
+    {{- $addresses := .addresses -}}
+    {{- $ports := .ports -}}
+    {{- range $address := $addresses -}}
+        {{- range $port := $ports -}}
+          {{- printf "%-24s " $namespace_name -}}
+          {{- printf "%-40s " $endpoint_name -}}
+          {{- printf "%-24s " $address.nodeName -}}
+          {{- printf "%-48s " $address.targetRef.name -}}
+          {{- $combine := (printf "%s://%v:%v" $port.name $address.ip $port.port) -}}
+          {{- printf "%-24s " $combine -}}
+          {{"\n"}}
+        {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get ep -A -o go-template --template="${tpl}"
+  else
+    kubectl get ep -n ${namepsace} -o go-template --template="${tpl}"
+  fi
+}
+
 function k8s_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local list_tpl=$(
@@ -325,10 +360,12 @@ function k8s_images_used() {
 function k8s_apply() {
   if [ $# -gt 1 ]; then
     local namespace=$1
-    local file_dir=$2
+    local file_dir=${2:-.}
+    echo "kubectl apply --namespace=${namespace} -R -f ${file_dir}"
     kubectl apply --namespace=${namespace} -R -f ${file_dir}
   else
     local file_dir=${1:-.}
+    echo "kubectl apply -R -f ${file_dir}"
     kubectl apply -R -f ${file_dir}
   fi
 }
@@ -340,11 +377,11 @@ function k8s_delete() {
 
 export SYSTEM_NAMESPACE=kube-system
 function k8s_sys_pod() {
-  k8s_pods ${SYSTEM_NAMESPACE}
+  k8s_pods ${SYSTEM_NAMESPACE} $@
 }
 
 function k8s_sys_svc() {
-  kubectl -n ${SYSTEM_NAMESPACE} get service $@
+  k8s_svc ${SYSTEM_NAMESPACE} $@
 }
 
 function k8s_sys_deployment() {
@@ -362,5 +399,3 @@ function k8s_sys_logs() {
 function k8s_sys_ep() {
   kubectl -n ${SYSTEM_NAMESPACE} get ep $@
 }
-
-
