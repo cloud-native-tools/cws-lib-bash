@@ -377,6 +377,12 @@ function k8s_delete() {
   kubectl delete -R -f ${file_dir}
 }
 
+function k8s_logs() {
+  local namepsace=${1}
+  shift
+  kubectl -n ${namepsace} logs --all-containers=true $@
+}
+
 export SYSTEM_NAMESPACE=kube-system
 function k8s_sys_pod() {
   k8s_pods ${SYSTEM_NAMESPACE} $@
@@ -395,7 +401,7 @@ function k8s_sys_desc() {
 }
 
 function k8s_sys_logs() {
-  kubectl -n ${SYSTEM_NAMESPACE} logs $@
+  k8s_logs ${SYSTEM_NAMESPACE}
 }
 
 function k8s_sys_ep() {
