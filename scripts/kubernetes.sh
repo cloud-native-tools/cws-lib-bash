@@ -159,7 +159,9 @@ EOF
 
 function k8s_pods() {
   local namepsace=${1}
-  shift
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
   printf "%-24s %-60s %-10s %-16s %-40s %-20s\n" Namespace Name Status IP Node Runtime
   local tpl=$(
     cat <<'EOF'

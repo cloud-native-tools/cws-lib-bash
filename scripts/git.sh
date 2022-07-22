@@ -45,10 +45,11 @@ function git_push_all() {
   local branch=${1:-main}
   for remote in $(git remote); do
     echo "===================    Remote [${remote}]    ==================="
-    git push ${remote} ${branch}
+    git push -u ${remote} ${branch}
   done
 }
 
 function git_update_submodule() {
   git submodule update --init --recursive --remote
 }
+
