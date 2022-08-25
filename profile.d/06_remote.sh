@@ -1,5 +1,5 @@
 function remote_get_hosts() {
-    local hosts_file=${1:-~/remote_hosts}
+    local hosts_file=${1:-~/.remote/remote_hosts}
     if [ -z "${REMOTE_HOSTS}" ]; then
         cat ${hosts_file}
     else
