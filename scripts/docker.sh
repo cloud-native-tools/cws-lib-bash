@@ -73,6 +73,12 @@ function docker_image_to_ctr() {
   docker save ${img} | ctr image import -
 }
 
+function docker_image_change_registry(){
+    local image_name_or_id=$1
+    local new_registry=$2
+    docker image inspect -f '{{index .RepoTags 0}}' ${image_name_or_id}|sed "s@^[^/]*/@$new_registry/@g"
+}
+
 function dp() {
   docker-compose $@
 }
@@ -88,3 +94,4 @@ function dp_recreate() {
 function dp_svc() {
   docker-compose ps --services
 }
+

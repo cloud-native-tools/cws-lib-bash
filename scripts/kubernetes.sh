@@ -407,3 +407,7 @@ function k8s_sys_logs() {
 function k8s_sys_ep() {
   kubectl -n ${SYSTEM_NAMESPACE} get ep $@
 }
+
+function k8s_dump_kubeadm_config() {
+  kubectl -n ${SYSTEM_NAMESPACE} get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}'
+}

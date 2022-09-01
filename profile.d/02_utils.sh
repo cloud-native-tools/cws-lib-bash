@@ -78,6 +78,14 @@ function truncate() {
   echo "$*" | awk -v len=$len '{ if (length($0) > len) print substr($0, 1, len-3) "..."; else print; }'
 }
 
+function upper() {
+  echo $@ | tr '[:lower:]' '[:upper:]'
+}
+
+function lower() {
+  echo $@ | tr '[:upper:]' '[:lower:]'
+}
+
 function escape() {
   echo "$1" | sed 's/\([\.\$\*]\)/\\\1/g'
 }
