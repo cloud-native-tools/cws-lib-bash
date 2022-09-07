@@ -1,12 +1,17 @@
-export cri_socket=/run/containerd/containerd.sock
+export cri_socket=/run/containerd/containerd.io.sock
 export ctr_cmd="/usr/bin/ctr -a ${cri_socket}"
 export cri_cmd="/usr/bin/crictl -r unix://${cri_socket}"
 export k8s_ns="-n=k8s.io"
 export docker_ns="-n=moby"
 
-function ctr_load_k8s_image() {
+function ctr_load_k8s_image_from_file() {
     local img_file=$1
     ${ctr_cmd} ${k8s_ns} images import "${img_file}"
+}
+
+function ctr_load_k8s_image_from_docker() {
+    local img=$1
+    docker save ${img} | ${ctr_cmd} ${k8s_ns} image import -
 }
 
 function ctr_load_k8s_images() {

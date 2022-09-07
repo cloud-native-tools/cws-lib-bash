@@ -411,3 +411,63 @@ function k8s_sys_ep() {
 function k8s_dump_kubeadm_config() {
   kubectl -n ${SYSTEM_NAMESPACE} get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}'
 }
+
+function k8s_kubeconfig() {
+    kubectl config view --raw
+}
+
+# - apiVersion: v1
+#   count: 2901
+#   eventTime: null
+#   firstTimestamp: "2022-08-19T05:03:52Z"
+#   involvedObject:
+#     apiVersion: v1
+#     fieldPath: spec.containers{spark-worker}
+#     kind: Pod
+#     name: spark-worker-2
+#     namespace: kube-spark
+#     resourceVersion: "3988866"
+#     uid: e69faa63-5e2d-4c66-99f1-830730aa3e74
+#   kind: Event
+#   lastTimestamp: "2022-09-07T08:52:38Z"
+#   message: Back-off restarting failed container
+#   metadata:
+#     creationTimestamp: "2022-09-07T06:24:07Z"
+#     name: spark-worker-2.170ca6803c4c6cf1
+#     namespace: kube-spark
+#     resourceVersion: "7077478"
+#     uid: 59f33642-dd34-419b-a094-a467f991a317
+#   reason: BackOff
+#   reportingComponent: ""
+#   reportingInstance: ""
+#   source:
+#     component: kubelet
+#     host: e18d07251.et15sqa
+#   type: Warningkube-state-metrics-0.170fb255797a4730
+# FailedCreatePodSandBox
+function k8s_event() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  printf "%-24s %-10s %-24s %-24s %-10s %-24s %-60s\n" Namespace Kind Time Object Type Reason Message
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "%-24s " .metadata.namespace -}}
+  {{- printf "%-10s " .involvedObject.kind -}}
+  {{- printf "%-24s " .metadata.creationTimestamp -}}
+  {{- printf "%-24s " .involvedObject.name -}}
+  {{- printf "%-10s " .type -}}
+  {{- printf "%-24s " .reason -}}
+  {{- printf "%-60s " .message -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get event -A -o go-template --template="${tpl}" $@
+  else
+    kubectl get event -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}

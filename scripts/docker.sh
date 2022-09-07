@@ -68,15 +68,74 @@ function docker_generate_dockerfile() {
     head -n -1
 }
 
-function docker_image_to_ctr() {
-  local img=$1
-  docker save ${img} | ctr image import -
+function docker_image_name() {
+  if [ $# -eq 1 ]; then
+    local image_name_or_id=$1
+  else
+    local image_name_or_id=$(cat -)
+  fi
+  local image_name=$(docker image inspect -f '{{index .RepoTags 0}}' ${image_name_or_id} 2>/dev/null)
+  if [ -z "${image_name}" ]; then
+    echo ${image_name_or_id}
+  else
+    echo ${image_name}
+  fi
 }
 
-function docker_image_change_registry(){
+function docker_image_change_registry() {
+  if [ $# -eq 2 ]; then
     local image_name_or_id=$1
-    local new_registry=$2
-    docker image inspect -f '{{index .RepoTags 0}}' ${image_name_or_id}|sed "s@^[^/]*/@$new_registry/@g"
+    shift
+  else
+    local image_name_or_id=$(cat -)
+  fi
+  local new_registry=$1
+  if [ -z "${new_registry}" ]; then
+    docker_image_name ${image_name_or_id} | sed "s@^[^/]*/@@g"
+  else
+    docker_image_name ${image_name_or_id} | sed "s@^[^/]*/@$new_registry/@g"
+  fi
+}
+
+function docker_image_change_repository() {
+  if [ $# -eq 2 ]; then
+    local image_name_or_id=$1
+    shift
+  else
+    local image_name_or_id=$(cat -)
+  fi
+  local new_repository=$1
+  docker_image_name ${image_name_or_id} | sed "s@^\([^/]*/\)?[^/]*/@\1$new_repository/@g"
+}
+
+function docker_image_change_tag() {
+  if [ $# -eq 2 ]; then
+    local image_name_or_id=$1
+    shift
+  else
+    local image_name_or_id=$(cat -)
+  fi
+  local new_tag=$1
+  docker_image_name ${image_name_or_id} | sed "s@^\([^:]*:\).*@\1${new_tag}@g"
+}
+
+function docker_image_rename() {
+  local image_name_or_id=$1
+  local new_registry=$2
+  local new_repository=$3
+  local new_tag=$4
+  local run=$5
+  local old_name=$(docker_image_name ${image_name_or_id})
+  local new_name=$(echo ${image_name_or_id} |
+    docker_image_change_registry ${new_registry} |
+    docker_image_change_repository ${new_repository} |
+    docker_image_change_tag ${new_tag})
+  if [ -z "${run}" ]; then
+    echo ${new_name}
+  else
+    echo "Tag: ${old_name}  -->  ${new_name}"
+    docker tag ${old_name} ${new_name}
+  fi
 }
 
 function dp() {
@@ -94,4 +153,3 @@ function dp_recreate() {
 function dp_svc() {
   docker-compose ps --services
 }
-
