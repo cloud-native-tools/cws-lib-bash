@@ -113,8 +113,10 @@ function script_entry() {
       log INFO "call function [${fn}]: $@"
       ${fn} $@
     else
-      log INFO "show variables [$@]:"
-      eval "echo $@"
+      var=$1
+      shift
+      log INFO "show variables [${var}]:"
+      eval "echo ${var}=\${var}"
     fi
   else
     echo "$0 sourced"

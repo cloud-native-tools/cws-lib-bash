@@ -38,8 +38,15 @@ function k8s_prune_ns() {
 function k8s_desc_pod() {
   local namespace=$1
   shift
-  local object=$@
-  kubectl describe -n ${namespace} pods ${object}
+  local pods=$@
+  kubectl describe -n ${namespace} pods ${pods}
+}
+
+function k8s_desc_node() {
+  local namespace=$1
+  shift
+  local node=$@
+  kubectl describe -n ${namespace} node ${node}
 }
 
 function k8s_failed_pod() {
@@ -412,39 +419,21 @@ function k8s_dump_kubeadm_config() {
   kubectl -n ${SYSTEM_NAMESPACE} get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}'
 }
 
-function k8s_kubeconfig() {
-    kubectl config view --raw
+function k8s_update_kubeadm_certs() {
+  local adm_conf=$1
+  # apiServer:
+  #   certSANs:
+  #   - ${INTERNAL_IP}
+  #   - ${EXTERNAL_IP}
+  mv -fv /etc/kubernetes/pki/apiserver.crt /etc/kubernetes/pki/apiserver.crt.bak
+  mv -fv /etc/kubernetes/pki/apiserver.key /etc/kubernetes/pki/apiserver.key.bak
+  kubeadm init phase certs apiserver --v=5 --config ${adm_conf}
 }
 
-# - apiVersion: v1
-#   count: 2901
-#   eventTime: null
-#   firstTimestamp: "2022-08-19T05:03:52Z"
-#   involvedObject:
-#     apiVersion: v1
-#     fieldPath: spec.containers{spark-worker}
-#     kind: Pod
-#     name: spark-worker-2
-#     namespace: kube-spark
-#     resourceVersion: "3988866"
-#     uid: e69faa63-5e2d-4c66-99f1-830730aa3e74
-#   kind: Event
-#   lastTimestamp: "2022-09-07T08:52:38Z"
-#   message: Back-off restarting failed container
-#   metadata:
-#     creationTimestamp: "2022-09-07T06:24:07Z"
-#     name: spark-worker-2.170ca6803c4c6cf1
-#     namespace: kube-spark
-#     resourceVersion: "7077478"
-#     uid: 59f33642-dd34-419b-a094-a467f991a317
-#   reason: BackOff
-#   reportingComponent: ""
-#   reportingInstance: ""
-#   source:
-#     component: kubelet
-#     host: e18d07251.et15sqa
-#   type: Warningkube-state-metrics-0.170fb255797a4730
-# FailedCreatePodSandBox
+function k8s_kubeconfig() {
+  kubectl config view --raw
+}
+
 function k8s_event() {
   local namepsace=${1}
   if [ -n "${namepsace}" ]; then
@@ -470,4 +459,16 @@ EOF
   else
     kubectl get event -n ${namepsace} -o go-template --template="${tpl}" $@
   fi
+}
+
+function k8s_label_nodes() {
+  local node_name=${1}
+  local label_value=${2}
+  kubectl label nodes --overwrite ${node_name} ${label_value}
+}
+
+function k8s_taint_nodes() {
+  local node_name=${1}
+  local taint_value=${2}
+  kubectl taint nodes --overwrite ${node_name} ${taint_value}
 }

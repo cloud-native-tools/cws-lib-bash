@@ -42,7 +42,7 @@ function git_top_branch() {
 }
 
 function git_push_all() {
-  local branch=${1:-main}
+  local branch=${1:-master}
   for remote in $(git remote); do
     echo "===================    Remote [${remote}]    ==================="
     git push -u ${remote} ${branch}
