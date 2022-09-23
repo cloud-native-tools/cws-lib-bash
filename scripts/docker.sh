@@ -7,7 +7,8 @@ function docker_run() {
 }
 
 function docker_gc() {
-  docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc:latest
+  # docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc:latest
+  docker system prune $@
 }
 
 function docker_host() {

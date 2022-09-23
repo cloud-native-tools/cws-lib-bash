@@ -125,28 +125,24 @@ function k8s_login_container() {
   fi
 }
 
-function k8s_get_container_in_pod() {
+function k8s_containers() {
   local namepsace=${1:-default}
   local pod_name=$2
-  printf "%-24s %-24s %-80s %-20s\n" "Pod Name" "Container Name" Image Command
+  printf "%-40s %-30s %-80s\n" "Pod Name" "Container Name" Image
   local tpl=$(
     cat <<'EOF'
 {{- $pod_name := .metadata.name -}}
 {{- range .spec.containers -}}
-  {{- printf "%-24s " $pod_name -}}
-  {{- printf "%-24s " .name -}}
+  {{- printf "%-40s " $pod_name -}}
+  {{- printf "%-30s " .name -}}
   {{- printf "%-80s " .image -}}
-  {{- with $cmd := index .command 0 -}}
-    {{- printf "%-20s\n" $cmd -}}
-  {{- end -}}
+  {{"\n"}}
 {{- end -}}
 {{- range .spec.initContainers -}}
-  {{- printf "%-24s " $pod_name -}}
-  {{- printf "(init) %-17s " .name -}}
+  {{- printf "%-40s " $pod_name -}}
+  {{- printf "(init) %-23s " .name -}}
   {{- printf "%-80s " .image -}}
-  {{- with $cmd := index .command 0 -}}
-    {{- printf "%-20s\n" $cmd -}}
-  {{- end -}}
+  {{"\n"}}
 {{- end -}}
 EOF
   )
@@ -386,8 +382,13 @@ function k8s_delete() {
 
 function k8s_logs() {
   local namepsace=${1}
-  shift
-  kubectl -n ${namepsace} logs --all-containers=true $@
+  local pod=${2}
+  local container=${3}
+  if [ -z "${container}" ]; then
+    kubectl -n ${namepsace} logs --all-containers=true ${pod}
+  else
+    kubectl -n ${namepsace} logs ${pod} ${container}
+  fi
 }
 
 export SYSTEM_NAMESPACE=kube-system
@@ -471,4 +472,9 @@ function k8s_taint_nodes() {
   local node_name=${1}
   local taint_value=${2}
   kubectl taint nodes --overwrite ${node_name} ${taint_value}
+}
+
+function k8s_apis() {
+  kubectl api-resources --namespaced=true
+  kubectl api-resources --namespaced=false
 }
