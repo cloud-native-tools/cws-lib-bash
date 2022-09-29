@@ -42,7 +42,7 @@ function git_top_branch() {
 }
 
 function git_push_all() {
-  local branch=${1:-master}
+  local branch=${1:-main}
   for remote in $(git remote); do
     echo "===================    Remote [${remote}]    ==================="
     git push -u ${remote} ${branch}
@@ -53,3 +53,6 @@ function git_update_submodule() {
   git submodule update --init --recursive --remote
 }
 
+function git_sync_ignore() {
+  git ls-files -ci --exclude-standard | xargs git rm --cached
+}

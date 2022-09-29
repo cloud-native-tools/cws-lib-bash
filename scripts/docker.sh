@@ -139,6 +139,10 @@ function docker_image_rename() {
   fi
 }
 
+function docker_images() {
+  docker images --filter "dangling=false"
+}
+
 function dp() {
   docker-compose $@
 }
