@@ -1,36 +1,25 @@
-export cri_socket=/run/containerd/containerd.io.sock
-export ctr_cmd="/usr/bin/ctr -a ${cri_socket}"
-export cri_cmd="/usr/bin/crictl -r unix://${cri_socket}"
-export k8s_ns="-n=k8s.io"
-export docker_ns="-n=moby"
+for sock in /run/containerd/containerd.sock /run/containerd/containerd.io.sock; do
+    if [ -S ${sock} ]; then
+        export CRI_SOCKET=${sock}
+    fi
+done
+unset sock
+
+export CTR="/usr/bin/ctr -a ${CRI_SOCKET}"
+export CRI="/usr/bin/crictl -r unix://${CRI_SOCKET}"
+export K8S_NS="-n=k8s.io"
+export DOCKER_NS="-n=moby"
 
 function ctr_load_k8s_image_from_file() {
     local img_file=$1
-    ${ctr_cmd} ${k8s_ns} images import "${img_file}"
+    ${CTR} ${K8S_NS} images import "${img_file}"
 }
 
 function ctr_load_k8s_image_from_docker() {
     local img=$1
-    docker save ${img} | ${ctr_cmd} ${k8s_ns} image import -
-}
-
-function ctr_load_k8s_images() {
-    while IFS='=' read -r origin mirror; do
-        echo "loading [${mirror}] as [${origin}"]
-        #    docker pull "${mirror}"
-        #    docker tag "${mirror}" "${origin}"
-        #    docker rmi "${mirror}"
-        #    docker save "${origin}" | ${ctr_cmd} -n=k8s.io images import -
-        ${ctr_cmd} ${k8s_ns} images pull "${mirror}"
-        ${ctr_cmd} ${k8s_ns} images tag "${mirror}" "${origin}"
-    done <<EOF
-k8s.gcr.io/kube-apiserver:v1.24.1=registry.cn-hangzhou.aliyuncs.com/google_containers/kube-apiserver:v1.24.1
-k8s.gcr.io/kube-controller-manager:v1.24.1=registry.cn-hangzhou.aliyuncs.com/google_containers/kube-controller-manager:v1.24.1
-k8s.gcr.io/kube-scheduler:v1.24.1=registry.cn-hangzhou.aliyuncs.com/google_containers/kube-scheduler:v1.24.1
-k8s.gcr.io/kube-proxy:v1.24.1=registry.cn-hangzhou.aliyuncs.com/google_containers/kube-proxy:v1.24.1
-k8s.gcr.io/pause:3.6=registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.6
-k8s.gcr.io/pause:3.5=registry.cn-hangzhou.aliyuncs.com/google_containers/pause:3.5
-k8s.gcr.io/etcd:3.5.3-0=registry.cn-hangzhou.aliyuncs.com/google_containers/etcd:3.5.3-0
-k8s.gcr.io/coredns/coredns:v1.8.6=registry.cn-hangzhou.aliyuncs.com/google_containers/coredns:1.8.6
-EOF
+    local new_name=${2:-${img}}
+    if [[ "${img}" != "${new_name}" ]]; then
+        docker tag ${img} ${new_name}
+    fi
+    docker save ${new_name} | ${CTR} ${K8S_NS} image import -
 }

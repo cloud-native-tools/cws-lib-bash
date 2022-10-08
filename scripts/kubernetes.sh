@@ -478,3 +478,27 @@ function k8s_apis() {
   kubectl api-resources --namespaced=true
   kubectl api-resources --namespaced=false
 }
+
+function k8s_configmap() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
+  {{- printf "Name: %-60s\n" .metadata.name -}}
+  {{- range $key, $value := .data -}}
+    {{- printf "data: %s\n%-80s\n" $key $value -}}
+  {{- end -}}
+  {{"---\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get configmap -A -o go-template --template="${tpl}" $@
+  else
+    kubectl get configmap -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}

@@ -1,9 +1,9 @@
 function encode_files() {
-  local target="$@"
-  echo "echo \"$(tar zc --exclude-vcs $(ls -d "${target}") | base64 -w0)\"|base64 -d|tar zx"
+  local target=${@:-.}
+  echo "echo \"$(tar zc --exclude-vcs $(ls ${target}) | base64 -w0)\"|base64 -d|tar zx"
 }
 
-function encode_file() {
+function encode_packed() {
   local INPUT="$@"
 
   [[ -z "$INPUT" ]] && die "Usage: pack_file <file>"
