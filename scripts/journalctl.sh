@@ -57,5 +57,5 @@
 
 function journalctl_clean() {
     local duration=${1:-12h}
-    journalctl --vacuum-time=duration
+    journalctl --vacuum-time=${duration}
 }
