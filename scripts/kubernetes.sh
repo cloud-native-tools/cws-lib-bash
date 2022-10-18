@@ -111,17 +111,19 @@ EOF
 function k8s_login_pod() {
   local namepsace=$1
   local pod_name=$2
-  kubectl -n ${namepsace} exec -it ${pod_name} -- sh
+  local cmd=${3:-sh}
+  kubectl -n ${namepsace} exec -it ${pod_name} -- ${cmd}
 }
 
 function k8s_login_container() {
   local namepsace=$1
   local pod_name=$2
   local container_name=$3
+  local cmd=${4:-sh}
   if [ -z "${container_name}" ]; then
-    kubectl -n ${namepsace} exec -it ${pod_name} -- sh
+    k8s_login_pod ${namepsace} ${pod_name} ${cmd}
   else
-    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- sh
+    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- ${cmd}
   fi
 }
 

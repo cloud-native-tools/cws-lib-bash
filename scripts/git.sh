@@ -56,3 +56,8 @@ function git_update_submodule() {
 function git_sync_ignore() {
   git ls-files -ci --exclude-standard | xargs git rm --cached
 }
+
+function git_clean() {
+  git clean -dfX
+  find . -type d -empty | grep -v .git | xargs rm -rfv
+}
