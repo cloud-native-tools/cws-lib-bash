@@ -24,7 +24,15 @@ function ctr_load_k8s_image_from_docker() {
     docker save ${new_name} | ${CTR} ${K8S_NS} image import -
 }
 
-function crictl_pod_info() {
+function cri_pods() {
+    ${CRI} pods $@
+}
+
+function cri_pod_info() {
     local pod_name=${1}
-    crictl pods --name ${pod_name} -o yaml
+    cri_pods --name ${pod_name} -o yaml
+}
+
+function cri_images() {
+    ${CRI} images $@
 }

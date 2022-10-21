@@ -335,7 +335,7 @@ EOF
   fi
 }
 
-function k8s_images() {
+function k8s_pods_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local list_tpl=$(
     cat <<'EOF'
@@ -361,7 +361,7 @@ EOF
 }
 
 function k8s_images_used() {
-  k8s_images $@ | awk '{print $3}' | sort | uniq
+  k8s_pods_images $@|grep -vw Image | awk '{print $3}' | sort | uniq
 }
 
 function k8s_apply() {
