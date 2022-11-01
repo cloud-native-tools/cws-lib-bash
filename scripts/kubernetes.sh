@@ -28,10 +28,15 @@ function k8s_ns() {
   kubectl get namespace
 }
 
-function k8s_prune_ns() {
+function k8s_ns_all() {
   local namespace="$1"
   local k8s_fields="all,cm,secret,ing,sa,pvc"
-  kubectl -n "${namespace}" delete $(kubectl get ${k8s_fields} -n "${namespace}" -o name)
+  kubectl get ${k8s_fields} -n "${namespace}" -o name
+}
+
+function k8s_ns_prune() {
+  local namespace="$1"
+  kubectl -n "${namespace}" delete $(k8s_ns_all ${namespace} | grep -v 'secret/default-token')
   kubectl delete namespace "${namespace}"
 }
 
@@ -112,7 +117,11 @@ function k8s_login_pod() {
   local namepsace=$1
   local pod_name=$2
   local cmd=${3:-sh}
-  kubectl -n ${namepsace} exec -it ${pod_name} -- ${cmd}
+  if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
+    echo "Usage: k8s_login_pod <namespace> <pod name> [cmd]"
+  else
+    kubectl -n ${namepsace} exec -it ${pod_name} -- ${cmd}
+  fi
 }
 
 function k8s_login_container() {
@@ -120,10 +129,40 @@ function k8s_login_container() {
   local pod_name=$2
   local container_name=$3
   local cmd=${4:-sh}
-  if [ -z "${container_name}" ]; then
-    k8s_login_pod ${namepsace} ${pod_name} ${cmd}
+  if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
+    echo "Usage: k8s_login_container <namespace> <pod name> [container name] [cmd]"
   else
-    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- ${cmd}
+    if [ -z "${container_name}" ]; then
+      k8s_login_pod ${namepsace} ${pod_name} ${cmd}
+    else
+      kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- ${cmd}
+    fi
+  fi
+}
+
+function k8s_exec_pod() {
+  local namepsace=$1
+  shift
+  local pod_name=$1
+  shift
+  if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
+    echo "Usage: k8s_exec_pod <namespace> <pod name> <cmd>"
+  else
+    kubectl -n ${namepsace} exec -it ${pod_name} -- $@
+  fi
+}
+
+function k8s_login_container() {
+  local namepsace=$1
+  shift
+  local pod_name=$1
+  shift
+  local container_name=$1
+  shift
+  if [ -z "${namepsace}" -o -z "${pod_name}" -o -z "${container_name}" ]; then
+    echo "Usage: k8s_login_container <namespace> <pod name> <container name> <cmd>"
+  else
+    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- $@
   fi
 }
 
@@ -361,7 +400,7 @@ EOF
 }
 
 function k8s_images_used() {
-  k8s_pods_images $@|grep -vw Image | awk '{print $3}' | sort | uniq
+  k8s_pods_images $@ | grep -vw Image | awk '{print $3}' | sort | uniq
 }
 
 function k8s_apply() {
@@ -503,4 +542,18 @@ EOF
   else
     kubectl get configmap -n ${namepsace} -o go-template --template="${tpl}" $@
   fi
+}
+
+function k8s_ns_export() {
+  local namespace="$1"
+  shift
+  for n in $(k8s_ns_all ${namespace}); do
+    kubectl get -o=yaml $n
+  done
+}
+
+function k8s_pod_export() {
+  local namespace="$1"
+  shift
+  kubectl -n ${namespace} get pod -o=yaml $@
 }
