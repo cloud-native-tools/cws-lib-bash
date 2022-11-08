@@ -32,5 +32,6 @@ function ps_user() {
 #   USER   show only trees rooted at processes of this user
 
 function ps_tree() {
-  pstree -aln -N net --highlight-pid=$@
+  local pid=${1}
+  pstree -apsnl -N net -H ${pid} ${pid}
 }

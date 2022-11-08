@@ -45,7 +45,3 @@ $C" >>$motd
 function motd() {
   cat /etc/motd
 }
-
-if touch /etc/motd 2>/dev/null; then
-  motd_generate
-fi
