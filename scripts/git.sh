@@ -61,3 +61,10 @@ function git_clean() {
   git clean -dfX
   find . -type d -empty | grep -v .git | xargs rm -rfv
 }
+
+function git_mirror_repo() {
+  local url=${1}
+  local dir=${2:-~/repo}
+  local path=$(echo ${url} | sed 's@https\?://[^/]*/@@g')
+  git clone --mirror ${url} ${path}
+}

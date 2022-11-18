@@ -158,3 +158,9 @@ function dp_recreate() {
 function dp_svc() {
   docker-compose ps --services
 }
+
+function docker_import_env() {
+  local docker_file=${1}
+  eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
+}
+

@@ -7,7 +7,9 @@ function download_file() {
     else
         mkdir -p ${dir}/${path}
         pushd ${dir}/${path} >/dev/null 2>&1
-        curl --progress-bar --show-error --location --compressed --insecure --http1.1 --retry 5 --retry-delay 1 -O ${url}
+        curl --progress-bar --show-error --location --compressed --insecure --retry 5 --retry-delay 1 -O ${url}
         popd >/dev/null 2>&1
+        echo "${url} -> ${dir}/${path}"
     fi
 }
+
