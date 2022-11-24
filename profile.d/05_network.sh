@@ -54,3 +54,7 @@ function net_namespaces() {
 function net_my() {
   ip route get $(who | awk '{print $NF}' | tr -d '(' | tr -d ')') | grep src | awk '{print $7}'
 }
+
+function net_ping() {
+  ping -c 4 -i 0.1 -W 1 $@ > /dev/null 2>&1
+}
