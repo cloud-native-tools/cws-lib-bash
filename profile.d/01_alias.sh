@@ -8,7 +8,7 @@ alias ..="cd .."
 alias ...="cd ../.."
 alias find_name="find . -name "
 alias df="df -Th"
-alias free="free -mw"
+alias free="free -mwh"
 alias psl="ps auxf"
 alias psearch="ps aux | grep -v grep | grep -i -e VSZ -e"
 

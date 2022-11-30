@@ -557,3 +557,53 @@ function k8s_pod_export() {
   shift
   kubectl -n ${namespace} get pod -o=yaml $@
 }
+
+function k8s_svc_avail_external_ip() {
+  local namepsace=${1}
+  local service=${2}
+  local opt=${3:-available}
+  if [ -n "${namepsace}" -a -n "${service}" ]; then
+    local list_ip_tpl=$(
+      cat <<'EOF'
+{{ range .spec.externalIPs }}
+  {{- . }}
+{{ end }}
+EOF
+    )
+    available_ip=""
+    for ip in $(kubectl -n ${namepsace} get service ${service} -o go-template --template="${list_ip_tpl}"); do
+      if net_ping ${ip}; then
+        echo ${ip}
+        break
+      else
+        if [[ ${opt} != "available" ]]; then
+          echo "${ip} is not available"
+        fi
+      fi
+    done
+  fi
+}
+
+function k8s_svc_avail_external_ip_port() {
+  local namepsace=${1}
+  local service=${2}
+  local port_name=${3}
+  available_ip=$(k8s_svc_avail_external_ip ${namepsace} ${service})
+  if [ -n "${available_ip}" ]; then
+    local list_ip_tpl=$(
+      cat <<'EOF' | sed "s/@AVAILABLE_IP@/${available_ip}/g" | sed "s/@PORT_NAME@/${port_name}/g"
+{{- $external_ips := .spec.externalIPs -}}
+{{- $ports := .spec.ports -}}
+{{- range $external_ips -}}
+  {{- $external_ip := . -}}
+  {{- range $ports -}}
+    {{- if and (eq (printf "%s" .targetPort) "@PORT_NAME@") (eq (printf "%s" $external_ip) "@AVAILABLE_IP@") -}}
+      {{- printf "%s %d" $external_ip .nodePort }}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+    )
+    kubectl -n ${namepsace} get service ${service} -o go-template --template="${list_ip_tpl}"
+  fi
+}
