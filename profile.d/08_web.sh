@@ -1,15 +1,14 @@
-function download_file() {
-    local url=${1}
-    local dir=${2:-~/repo}
-    local path=$(dirname $(echo ${url} | sed 's@https\?://[^/]*/@@g'))
-    if [ -z "${url}" ]; then
-        echo "Usage: download_file [url] "
-    else
-        mkdir -p ${dir}/${path}
-        pushd ${dir}/${path} >/dev/null 2>&1
-        curl --progress-bar --show-error --location --compressed --insecure --retry 5 --retry-delay 1 -O ${url}
-        popd >/dev/null 2>&1
-        echo "${url} -> ${dir}/${path}"
-    fi
+export CURL_VERBOSE_OPTS="--progress-bar --show-error"
+export CURL_DOWNLOAD_OPTS="--location --compressed --insecure"
+export CURL_RETRY_OPTS="--retry 5 --retry-delay 1"
+
+export WGET_VERBOSE_OPTS="--progress=dot:giga"
+export WGET_DOWNLOAD_OPTS="--no-check-certificate"
+
+function curl_download() {
+    curl ${CURL_VERBOSE_OPTS} ${CURL_DOWNLOAD_OPTS} ${CURL_RETRY_OPTS} $@
 }
 
+function wget_download() {
+    wget ${WGET_VERBOSE_OPTS} ${WGET_DOWNLOAD_OPTS}
+}
