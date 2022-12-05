@@ -56,5 +56,14 @@ function net_my() {
 }
 
 function net_ping() {
-  ping -c 4 -i 0.1 -W 1 $@ > /dev/null 2>&1
+  ping -c 4 -i 0.1 -W 1 $@ >/dev/null 2>&1
+}
+
+function net_is_ip() {
+  local ip=${1}
+  if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+    echo "true"
+  else
+    echo "false"
+  fi
 }

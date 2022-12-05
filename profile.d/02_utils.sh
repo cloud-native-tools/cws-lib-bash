@@ -33,11 +33,11 @@ function log() {
   local color=""
   local clear=""
   case ${level} in
-  WARN)
+  WARN|warn)
     color=${YELLOW}
     clear=${CLEAR}
     ;;
-  ERROR)
+  ERROR|error)
     color=${RED}
     clear=${CLEAR}
     ;;
