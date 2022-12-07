@@ -45,7 +45,7 @@ function git_push_all() {
   local branch=${1:-main}
   for remote in $(git remote); do
     echo "===================    Remote [${remote}]    ==================="
-    git push -u ${remote} ${branch}
+    git push ${remote} ${branch}
   done
 }
 

@@ -164,3 +164,7 @@ function docker_import_env() {
   eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
 }
 
+
+function docker_prune() {
+    docker system prune -a
+}

@@ -36,3 +36,7 @@ function cri_pod_info() {
 function cri_images() {
     ${CRI} images $@
 }
+
+function cri_prune() {
+    $CRI rmi --prune
+}
