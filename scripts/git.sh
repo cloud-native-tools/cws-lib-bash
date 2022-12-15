@@ -62,3 +62,6 @@ function git_clean() {
   find . -type d -empty | grep -v .git | xargs rm -rfv
 }
 
+function git_tag() {
+  git log --tags --simplify-by-decoration --pretty="format:%ci %d"
+}

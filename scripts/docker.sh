@@ -11,12 +11,12 @@ function docker_gc() {
   docker system prune $@
 }
 
-function docker_host() {
-  docker run --rm -it --privileged --network host --pid=host -v /:/ busybox nsenter -t 1 -m -u -n -i sh
+function docker_descktop_host() {
+  docker run --rm -it --privileged --network host --pid=host -v /:/host busybox nsenter -t 1 -m -u -n -i sh
 }
 
 function docker_desktop_enter() {
-  docker run --rm -it --privileged --network host --pid=host -v /:/media busybox chroot /media -- nsenter -t 1 -m -u -n -i sh
+  docker run --rm -it --privileged --network host --pid=host -v /:/host busybox chroot /host nsenter -t 1 -m -u -n -i sh
 }
 
 function docker_create_network() {
