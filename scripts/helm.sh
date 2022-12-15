@@ -19,11 +19,23 @@ function helm_export_values() {
 
 function helm_generate() {
   local helm_repo_url="${1}"
-  local helm_chart_name="${2}"
-  local helm_repo_name="${3}"
-  local helm_deploy_name="${4}"
-  local namespace_prefix="${5}"
-  local context_name="${6:-workspace}"
+  if [ ! -d ${helm_repo_url} ]; then
+    local helm_chart_name="${2}"
+    local helm_repo_name="${3}"
+    local helm_deploy_name="${4}"
+    local namespace_prefix="${5:-${helm_deploy_name}}"
+    local context_name="${6:-workspace}"
+    if ! helm repo add ${helm_repo_name} ${helm_repo_url}; then
+      log error "add helm repo [${helm_repo_name}] failed from [${helm_repo_url}]"
+      return
+    fi
+    log info "use remote helm chart [${helm_chart_name}@${helm_repo_url}] as [${helm_deploy_name}@${helm_repo_name}]"
+  else
+    local helm_deploy_name="${2}"
+    local namespace_prefix="${3:-${helm_deploy_name}}"
+    local context_name="${4:-workspace}"
+    log info "use local helm chart [${helm_deploy_name}@${helm_repo_url}]"
+  fi
 
   local values_dir="src/helm/values"
   local chart_dir="src/helm/chart"
@@ -38,9 +50,8 @@ function helm_generate() {
   local values_file=${values_dir}/${helm_deploy_name}.yaml
   local manifest_file=${manifest_dir}/${helm_deploy_name}.yaml
 
-  helm repo add ${helm_repo_name} ${helm_repo_url}
-  if [ ! -f ${helm_repo_url} ]; then
-    if [ ! -d ${chart_dir}/$(basename ${chart_name}) ]; then
+  if [ ! -d ${helm_repo_url} ]; then
+    if [ ! -d ${chart_dir}/${helm_chart_name} ]; then
       helm pull --untar --untardir ${chart_dir} ${chart_name}
     fi
     local_chart_path="$(realpath ${chart_dir}/$(basename ${chart_name}))"

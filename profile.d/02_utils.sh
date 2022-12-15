@@ -33,13 +33,18 @@ function log() {
   local color=""
   local clear=""
   case ${level} in
-  WARN|warn)
+  WARN | warn)
     color=${YELLOW}
     clear=${CLEAR}
+    shift
     ;;
-  ERROR|error)
+  ERROR | error)
     color=${RED}
     clear=${CLEAR}
+    shift
+    ;;
+  TRACE | trace | DEBUG | debug | INFO | info)
+    shift
     ;;
   esac
   echo -en "${color}[${now}] $@${clear}\n"
