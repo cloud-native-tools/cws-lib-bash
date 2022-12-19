@@ -9,7 +9,7 @@ function ssh_local_to_remote() {
   else
     ssh_kill_by_port ${local_port}
     log "ssh forward :${local_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${remote_port}"
-    ssh -nNTf -L 127.0.0.1:${local_port}:127.0.0.1:${remote_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -L 127.0.0.1:${local_port}:127.0.0.1:${remote_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
   fi
 }
 
@@ -23,7 +23,7 @@ function ssh_proxy() {
   else
     ssh_kill_by_port ${local_port}
     log "ssh proxy :${local_port}->${jumper_user}@${jumper_ip}:${jumper_port}->*"
-    ssh -nNTf -D ${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -D ${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
   fi
 }
 
