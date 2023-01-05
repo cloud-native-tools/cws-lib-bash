@@ -65,3 +65,11 @@ function git_clean() {
 function git_tag() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
 }
+
+function git_http_url() {
+  if [ -f .git/config ]; then
+    cat .git/config | grep -w 'url' | grep '=' | awk '{print $NF}' | sed 's~git@\([^:]*\):\(.*\)~https://\1/\2~g'
+  else 
+    log error "$(pwd) not a git work dir"
+  fi
+}

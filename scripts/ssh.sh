@@ -13,6 +13,21 @@ function ssh_local_to_remote() {
   fi
 }
 
+function ssh_remote_to_local() {
+  local local_port=${1}
+  local remote_port=${2}
+  local jumper_ip=${3}
+  local jumper_port=${4:-22}
+  local jumper_user=${5:-root}
+  if [ -z "${local_port}" -o -z "${remote_port}" -o -z "${jumper_ip}" ]; then
+    echo "Usage: ssh_remote_to_local {local_port} {remote_port} {jumper_ip} [jumper_port=22] [jumper_user=root]"
+  else
+    ssh_kill_by_port ${local_port}
+    log "ssh forward :${remote_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${local_port}"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -R 0.0.0.0:${remote_port}:127.0.0.1:${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+  fi
+}
+
 function ssh_proxy() {
   local local_port=${1}
   local jumper_ip=${2}

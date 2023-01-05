@@ -11,7 +11,7 @@ function docker_gc() {
   docker system prune $@
 }
 
-function docker_descktop_host() {
+function docker_desktop_host() {
   docker run --rm -it --privileged --network host --pid=host -v /:/host busybox nsenter -t 1 -m -u -n -i sh
 }
 
