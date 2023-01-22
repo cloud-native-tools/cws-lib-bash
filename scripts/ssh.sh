@@ -1,5 +1,7 @@
 function ssh_local_to_remote() {
+  local local_ip=127.0.0.1
   local local_port=${1}
+  local remote_ip=127.0.0.1
   local remote_port=${2}
   local jumper_ip=${3}
   local jumper_port=${4:-22}
@@ -8,13 +10,15 @@ function ssh_local_to_remote() {
     echo "Usage: ssh_local_to_remote {local_port} {remote_port} {jumper_ip} [jumper_port=22] [jumper_user=root]"
   else
     ssh_kill_by_port ${local_port}
-    log "ssh forward :${local_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${remote_port}"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -L 127.0.0.1:${local_port}:127.0.0.1:${remote_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+    log "ssh forward ${local_ip}:${local_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${remote_ip}:${remote_port}"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -L ${local_ip}:${local_port}:${remote_ip}:${remote_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
   fi
 }
 
 function ssh_remote_to_local() {
+  local local_ip=0.0.0.0
   local local_port=${1}
+  local remote_ip=0.0.0.0
   local remote_port=${2}
   local jumper_ip=${3}
   local jumper_port=${4:-22}
@@ -23,8 +27,8 @@ function ssh_remote_to_local() {
     echo "Usage: ssh_remote_to_local {local_port} {remote_port} {jumper_ip} [jumper_port=22] [jumper_user=root]"
   else
     ssh_kill_by_port ${local_port}
-    log "ssh forward :${remote_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${local_port}"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -R 0.0.0.0:${remote_port}:127.0.0.1:${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+    log "ssh forward ${remote_ip}:${remote_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${local_ip}:${local_port}"
+    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -R ${remote_ip}:${remote_port}:${local_ip}:${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
   fi
 }
 

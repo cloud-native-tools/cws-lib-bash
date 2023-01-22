@@ -11,14 +11,6 @@ function docker_gc() {
   docker system prune $@
 }
 
-function docker_desktop_host() {
-  docker run --rm -it --privileged --network host --pid=host -v /:/host busybox nsenter -t 1 -m -u -n -i sh
-}
-
-function docker_desktop_enter() {
-  docker run --rm -it --privileged --network host --pid=host -v /:/host busybox chroot /host nsenter -t 1 -m -u -n -i sh
-}
-
 function docker_create_network() {
   IFADDR=${1}
   ip link add docker0 type bridge
