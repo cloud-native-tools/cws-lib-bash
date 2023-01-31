@@ -607,3 +607,43 @@ EOF
     kubectl -n ${namepsace} get service ${service} -o go-template --template="${list_ip_tpl}"
   fi
 }
+
+function k8s_generate_namespace() {
+  local namepsace=${1}
+  kubectl create namespace --dry-run=client -o yaml ${namepsace}
+}
+
+function k8s_generate_pod() {
+  local pod=${1}
+  local image=${2}
+  local kcmd="kubectl run ${pod} --image=${image} --dry-run=client -o yaml"
+  # kcmd="${kcmd} --port=5701 " # let the container expose port 5701
+  # kcmd="${kcmd} --env=\"POD_NAMESPACE=default\" " # set environment variables "DNS_DOMAIN=cluster" and "POD_NAMESPACE=default" in the container
+  # kcmd="${kcmd} --labels=\"app=hazelcast,env=prod\" "  # set labels "app=hazelcast" and "env=prod" in the container
+  # kcmd="${kcmd} --command -- <cmd> <arg1> ... <argN> " # pod using a different command and custom arguments
+  eval $kcmd
+}
+
+function k8s_secret() {
+  local namepsace=${1}
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "Namespace: %-40s\n" .metadata.namespace -}}
+  {{- printf "Name: %-60s\n" .metadata.name -}}
+  {{- printf "Data: \n" -}}
+  {{- range $key, $value := .data -}}    
+  {{- printf "    %-40s = " $key -}}
+  {{- printf "%s\n" (base64decode $value) -}}
+  {{- end -}}
+  {{"---\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get secret -A -o go-template --template="${tpl}" $@
+  else
+    shift
+    kubectl get secret -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}
