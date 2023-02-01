@@ -647,3 +647,84 @@ EOF
     kubectl get secret -n ${namepsace} -o go-template --template="${tpl}" $@
   fi
 }
+
+function k8s_pvc() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  printf "%-40s %-60s %-8s %-8s %-12s %-12s %-20s %-20s\n" Namespace Name Status Capacity StorageClass VolumeMode CreationTime AccessModes
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "%-40s " .metadata.namespace -}}
+  {{- printf "%-60s " .metadata.name -}}
+  {{- printf "%-8s " .status.phase -}}
+  {{- printf "%-8s " .spec.resources.requests.storage -}}
+  {{- printf "%-12s " .spec.storageClassName -}}
+  {{- printf "%-12s " .spec.volumeMode -}}
+  {{- printf "%-20s " .metadata.creationTimestamp -}}
+  {{- printf "%-20v " .spec.accessModes -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get pvc -A -o go-template --template="${tpl}" $@
+  else
+    kubectl get pvc -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}
+
+function k8s_pv() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  printf "%-40s %-40s %-8s %-8s %-12s %-12s %-12s %-20s %-20s\n" Name PVC Status Capacity StorageClass Reclaim VolumeMode CreationTime AccessModes
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "%-40s " .metadata.name -}}
+  {{- printf "%-40s " .spec.claimRef.name -}}
+  {{- printf "%-8s " .status.phase -}}
+  {{- printf "%-8s " .spec.capacity.storage -}}
+  {{- printf "%-12s " .spec.storageClassName -}}
+  {{- printf "%-12s " .spec.persistentVolumeReclaimPolicy -}}
+  {{- printf "%-12s " .spec.volumeMode -}}
+  {{- printf "%-20s " .metadata.creationTimestamp -}}
+  {{- printf "%-20v " .spec.accessModes -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get pv -A -o go-template --template="${tpl}" $@
+  else
+    kubectl get pv -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}
+
+function k8s_sc() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  printf "%-40s %-40s %-20s %-20s\n" Name Provisioner ReclaimPolicy VolumeBindingMode
+  local tpl=$(
+    cat <<'EOF'
+{{- range .items -}}
+  {{- printf "%-40s " .metadata.name -}}
+  {{- printf "%-40s " .provisioner -}}
+  {{- printf "%-20s " .reclaimPolicy -}}
+  {{- printf "%-20s " .volumeBindingMode -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  if [ -z "${namepsace}" ]; then
+    kubectl get storageclass -A -o go-template --template="${tpl}" $@
+  else
+    kubectl get storageclass -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}
