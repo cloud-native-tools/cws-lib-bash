@@ -297,7 +297,8 @@ function k8s_svc() {
 
 function k8s_svc_ports() {
   local namepsace=${1}
-  printf "%-24s %-40s %-16s %-12s %-24s\n" Namespace Service Type Target "IP:Port"
+  local service_domain="svc.cluster.local"
+  printf "%-32s %-48s %-16s %-16s %-24s %-32s\n" Namespace Service Type Target "IP:Port" "URL"
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -310,24 +311,26 @@ function k8s_svc_ports() {
   {{- range $cluster_ips -}}
     {{- $cluster_ip := . -}}
     {{- range $ports -}}
-      {{- printf "%-24s " $namespace_name -}}
-      {{- printf "%-40s " $service_name -}}
+      {{- printf "%-32s " $namespace_name -}}
+      {{- printf "%-48s " $service_name -}}
       {{- printf "%-16s " "ClusterIP" -}}
-      {{- printf "%-12v " .targetPort -}}
+      {{- printf "%-16v " .targetPort -}}
       {{- $combine := (printf "%v:%v" $cluster_ip .port) -}}
       {{- printf "%-24s " $combine -}}
+      {{- printf "%s.%s.svc.cluster.local:%v" $service_name $namespace_name .port -}}
       {{"\n"}}
     {{- end -}}
   {{- end -}}
   {{- range $external_ips -}}
     {{- $external_ip := . -}}
     {{- range $ports -}}
-      {{- printf "%-24s " $namespace_name -}}
-      {{- printf "%-40s " $service_name -}}
+      {{- printf "%-32s " $namespace_name -}}
+      {{- printf "%-48s " $service_name -}}
       {{- printf "%-16s " "ExternalIP" -}}
-      {{- printf "%-12v " .targetPort -}}
+      {{- printf "%-16v " .targetPort -}}
       {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
       {{- printf "%-24s " $combine -}}
+      {{- printf "%s.%s.svc.cluster.local:%v" $service_name $namespace_name .port -}}
       {{"\n"}}
     {{- end -}}
   {{- end -}}
@@ -404,15 +407,12 @@ function k8s_images_used() {
 }
 
 function k8s_apply() {
-  if [ $# -gt 1 ]; then
-    local namespace=$1
-    local file_dir=${2:-.}
-    echo "kubectl apply --namespace=${namespace} -R -f ${file_dir}"
-    kubectl apply --namespace=${namespace} -R -f ${file_dir}
-  else
-    local file_dir=${1:-.}
-    echo "kubectl apply -R -f ${file_dir}"
+  local namespace=$1
+  local file_dir=${2:-.}
+  if [ -z "${namespace}" ]; then
     kubectl apply -R -f ${file_dir}
+  else
+    kubectl apply --namespace=${namespace} -R -f ${file_dir}
   fi
 }
 
