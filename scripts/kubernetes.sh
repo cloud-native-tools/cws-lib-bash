@@ -7,7 +7,7 @@ function k8s_sa_token() {
 
 function k8s_get_all() {
   local namespace="${1}"
-  local k8s_fields="all,cm,secret,ing,sa,pvc,pv"
+  local k8s_fields="all,cm,secret,ing,sa,pvc"
   if [ -z "${namespace}" ]; then
     kubectl get ${k8s_fields} -A -o wide
   else

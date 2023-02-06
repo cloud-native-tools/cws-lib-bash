@@ -150,9 +150,18 @@ function file_changed() {
 function file_mv() {
   local src=$1
   local dest=$2
-  if [ ! -d $(dirname $dest) ]
-  then 
+  if [ ! -d $(dirname $dest) ]; then
     mkdir -p $(dirname $dest)
   fi
   mv -fv $src $dest
+}
+
+function extract_file_to() {
+  local tar_file=${1}
+  local dst_dir=${2}
+  local file_in_tar=${3}
+  tar --extract --verbose \
+    --file ${tar_file} \
+    --directory=${dst_dir} \
+    --strip 1 "${file_in_tar}"
 }
