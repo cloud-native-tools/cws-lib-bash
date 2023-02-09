@@ -206,22 +206,23 @@ function k8s_pods() {
   if [ -n "${namepsace}" ]; then
     shift
   fi
-  printf "%-40s %-60s %-10s %-16s %-40s %-20s\n" Namespace Name Status IP Node Runtime
+  printf "%-30s %-50s %-10s %-50s %-20s %-20s\n" Namespace Name Status Owner Node Runtime
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
-  {{- printf "%-40s " .metadata.namespace -}}
-  {{- printf "%-60s " .metadata.name -}}
+  {{- printf "%-30s " .metadata.namespace -}}
+  {{- printf "%-50s " .metadata.name -}}
   {{- printf "%-10s " .status.phase -}}
-  {{- with .status.podIP -}}
-    {{- printf "%-16s " . -}}
+  {{- range .metadata.ownerReferences -}}
+    {{- printf "%10s/" .kind -}}
+    {{- printf "%-40s" .name -}}
   {{- else -}}
-    {{- printf "%-16s " "None" -}}
+    {{- printf "%-50s " "None" -}}
   {{- end -}}
   {{- with .spec.nodeName -}}
-    {{- printf "%-40s " . -}}
+    {{- printf "%-20s " . -}}
   {{- else -}}
-    {{- printf "%-40s " "None" -}}
+    {{- printf "%-20s " "None" -}}
   {{- end -}}
   {{- with .spec.runtimeClassName -}}
     {{- printf "%-20s" . -}}
