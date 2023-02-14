@@ -14,5 +14,5 @@ function curl_download() {
 }
 
 function wget_download() {
-    wget ${WGET_VERBOSE_OPTS} ${WGET_DOWNLOAD_OPTS}
+    wget ${WGET_VERBOSE_OPTS} ${WGET_DOWNLOAD_OPTS} $@
 }
