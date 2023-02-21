@@ -152,6 +152,18 @@ function k8s_exec_pod() {
   fi
 }
 
+function k8s_delete_pod() {
+  local namepsace=$1
+  shift
+  local pod_name=$1
+  shift
+  if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
+    echo "Usage: k8s_delete_pod <namespace> <pod name> <args...>"
+  else
+    kubectl -n ${namepsace} delete pod ${pod_name} -- $@
+  fi
+}
+
 function k8s_login_container() {
   local namepsace=$1
   shift
@@ -458,11 +470,11 @@ function k8s_sys_ep() {
   kubectl -n ${SYSTEM_NAMESPACE} get ep $@
 }
 
-function k8s_dump_kubeadm_config() {
+function k8s_kubeadm_dump_config() {
   kubectl -n ${SYSTEM_NAMESPACE} get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}'
 }
 
-function k8s_update_kubeadm_certs() {
+function k8s_kubeadm_update_certs() {
   local adm_conf=$1
   # apiServer:
   #   certSANs:

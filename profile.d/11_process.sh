@@ -33,5 +33,5 @@ function ps_user() {
 
 function ps_tree() {
   local pid=${1}
-  pstree -apsnl -N net -H ${pid} ${pid}
+  pstree -asnl -N net -H ${pid} ${pid}
 }
