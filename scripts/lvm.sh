@@ -1,11 +1,7 @@
 function lvm_create() {
-    local vg_name=${1:-adb-vg}
-    local lvm_count=${2:-20}
-    local lvm_size=${3:-40G}
-
-    for i in $(seq ${lvm_count}); do
-        lvcreate -y -L ${lvm_size} -i 4 -I 4096 ${vg_name} -n "${vg_name}-test-${i}"
-    done
+    local vg_name=${1}
+    local lvm_size=${2}
+    lvcreate -y -L ${lvm_size} -i 5 -I 4096 ${vg_name} -n "${vg_name}-test-${i}"
 }
 
 function lvm_remove() {
@@ -36,4 +32,3 @@ function lvm_test_mkfs() {
         perf trace -S -i ${trace_file} -o ${report_file}
     done
 }
-

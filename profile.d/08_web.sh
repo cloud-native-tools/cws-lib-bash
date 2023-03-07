@@ -1,5 +1,5 @@
 export CURL_VERBOSE_OPTS="--progress-bar --show-error"
-export CURL_DOWNLOAD_OPTS="--location --compressed --insecure"
+export CURL_DOWNLOAD_OPTS="--location --compressed --insecure --continue-at -"
 export CURL_RETRY_OPTS="--retry 5 --retry-delay 1"
 
 export WGET_VERBOSE_OPTS="--progress=dot:giga"

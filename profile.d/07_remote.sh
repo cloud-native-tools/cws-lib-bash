@@ -12,16 +12,33 @@ function remote_deploy() {
     shift
     local src=$@
     for host in $(remote_get_hosts); do
-        echo "Deploy [$src] to $host:${dest}"
-        scp $src ${host}:$dest
+        echo "Deploy [${src}] to ${host}:${dest}"
+        scp -r ${src} ${host}:${dest}
     done
 }
 
 function remote_cmd() {
     for host in $(remote_get_hosts); do
-        echo "Run on [$host]: [$@]"
+        echo "Run on [${host}]: [$@]"
         echo "---"
-        ssh -t -q $host -- "bash -l -c '$@'"
+        ssh -t -q ${host} -- "bash -l -c '$@'"
         echo "---"
     done
+}
+
+function remote_download(){
+    local target=${1}
+    local root=${2}
+    if [ -n "${target}" ]; then
+        if [ -z "${root}" ]; then
+            root=.
+        fi
+        for host in $(remote_get_hosts); do
+            echo "Get ${host}:${target} ${root}"
+            mkdir -pv $(dirname ${root}/${host}/${target})
+            scp -r ${host}:${target} ${root}/${host}/${target}
+        done
+    else
+        echo "Usage: remote_download <abs path> "
+    fi
 }

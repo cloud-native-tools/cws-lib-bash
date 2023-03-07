@@ -50,4 +50,11 @@ function enter_chroot() {
   fi
 }
 
-
+function mount_bootable() {
+  local target=${1}
+  local mountpoint=${2:-/media}
+  local free_loop=$(losetup -f)
+  losetup ${free_loop} ${target} -o $((2048 * 512))
+  mount ${free_loop} ${mountpoint}
+  log info "mount: ${target} -> ${free_loop} -> ${mountpoint}"
+}
