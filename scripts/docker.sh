@@ -156,7 +156,18 @@ function docker_import_env() {
   eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
 }
 
-
 function docker_prune() {
-    docker system prune -a
+  docker system prune -a
+}
+
+function docker_export() {
+  local img=${1}
+  local dest=${2}
+  if [ -z "${img}" -o -z "${dest}" ]; then
+    echo "Usage: docker_export <image> <dest>"
+  else
+    local cid=$(docker create ${img})
+    docker export ${cid} | tar -xC ${dest}
+    docker rm -f ${cid}
+  fi
 }
