@@ -1,6 +1,5 @@
 #!/bin/sh
 
-# reference: get_script_root.snippets
 ROOT=
 if [ -n "${BASH_VERSION}" ]; then
     ROOT=$(readlink -f $(dirname "${BASH_SOURCE[0]}"))

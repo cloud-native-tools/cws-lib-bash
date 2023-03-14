@@ -160,7 +160,7 @@ function docker_prune() {
   docker system prune -a
 }
 
-function docker_export() {
+function docker_extract() {
   local img=${1}
   local dest=${2}
   if [ -z "${img}" -o -z "${dest}" ]; then
