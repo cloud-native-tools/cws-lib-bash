@@ -2,7 +2,8 @@ function systemd_list_unit_file() {
   find ${@} -regex '.*\.service\|.*\.socket|.*\.device|.*\.mount|.*\.automount|.*\.swap|.*\.target|.*\.path|.*\.timer' 2>/dev/null
 }
 function systemd_list_system_unit_file() {
-  systemd_list_unit_file /etc/systemd/system.control/ \
+  systemd_list_unit_file \
+    /etc/systemd/system.control/ \
     /run/systemd/system.control/ \
     /run/systemd/transient/ \
     /run/systemd/generator.early/ \
@@ -16,7 +17,8 @@ function systemd_list_system_unit_file() {
 }
 
 function systemd_list_user_unit_file() {
-  systemd_list_unit_file ~/.config/systemd/user.control/ \
+  systemd_list_unit_file \
+    ~/.config/systemd/user.control/ \
     ~/.config/systemd/user/ \
     /etc/systemd/user/ \
     /run/systemd/user/ \

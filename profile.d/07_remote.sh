@@ -1,9 +1,8 @@
 function remote_get_hosts() {
-    local hosts_file=${1:-~/.remote/remote_hosts}
-    if [ -z "${REMOTE_HOSTS}" ]; then
-        cat ${hosts_file}
-    else
-        echo ${REMOTE_HOSTS}
+    local hosts_file_root="${HOME}/.remote"
+    local hosts_file=${1:-remote_hosts}
+    if ! cat ${hosts_file_root}/${hosts_file}; then
+        log error "$? cannot find ${hosts_file_root}/${hosts_file}"
     fi
 }
 
@@ -26,7 +25,23 @@ function remote_cmd() {
     done
 }
 
-function remote_download(){
+function remote_cmd_expect() {
+    local password=$1
+    shift
+    for host in $(remote_get_hosts); do
+        echo "Run on [${host}]: [$@]"
+        echo "---"
+        expect <<-EOF
+    spawn ssh -t -q ${host} -- "bash -l -c '$@'"
+    expect '*password:'
+    send '${password}\r'
+EOF
+        echo "---"
+    done
+
+}
+
+function remote_download() {
     local target=${1}
     local root=${2}
     if [ -n "${target}" ]; then
