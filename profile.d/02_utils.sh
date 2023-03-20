@@ -127,3 +127,13 @@ function script_entry() {
     echo "$0 sourced"
   fi
 }
+
+function read_line() {
+  local lineno=${1}
+  while read -r line; do
+    echo "${lineno} ${line}"
+    if [ -n "${line}" ]; then
+      ((lineno += 1))
+    fi
+  done
+}

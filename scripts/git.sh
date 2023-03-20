@@ -69,7 +69,20 @@ function git_tag() {
 function git_http_url() {
   if [ -f .git/config ]; then
     cat .git/config | grep -w 'url' | grep '=' | awk '{print $NF}' | sed 's~git@\([^:]*\):\(.*\)~https://\1/\2~g'
-  else 
+  else
     log error "$(pwd) not a git work dir"
   fi
+}
+
+function git_locate() {
+  local ref=${1}
+  local count=${2:-50}
+  local commit=$(git rev-parse ${ref})
+  git log --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -${count} ${commit}~${count}..${commit}
+}
+
+
+function git_graph() {
+  local count=${1:-50}
+  git log --graph --all --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -${count}
 }
