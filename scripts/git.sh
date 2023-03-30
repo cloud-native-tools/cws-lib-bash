@@ -86,3 +86,4 @@ function git_graph() {
   local count=${1:-50}
   git log --graph --all --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -${count}
 }
+

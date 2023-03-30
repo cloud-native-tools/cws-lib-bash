@@ -36,18 +36,24 @@ function log() {
   WARN | warn)
     color=${YELLOW}
     clear=${CLEAR}
+    level="WARN"
     shift
     ;;
   ERROR | error)
     color=${RED}
     clear=${CLEAR}
+    level="ERROR"
     shift
     ;;
-  TRACE | trace | DEBUG | debug | INFO | info)
+  INFO | info)
+    level="INFO"
     shift
+    ;;
+  *)
+    level="INFO"
     ;;
   esac
-  echo -en "${color}[${now}] $@${clear}\n"
+  echo -en "${color}[${now}][${level}] $@${clear}\n"
 }
 
 function die() {

@@ -3,7 +3,7 @@ function docker_exec() {
 }
 
 function docker_run() {
-  docker run --rm -it --privileged --network host --entrypoint /bin/sh $@
+  docker run --rm -it --privileged -v /:/host --network host --entrypoint /bin/sh $@
 }
 
 function docker_gc() {

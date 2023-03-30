@@ -41,6 +41,15 @@ EOF
 
 }
 
+function remote_sync_hostname() {
+    for host in $(remote_get_hosts); do
+        echo "Run on [${host}]: [$@]"
+        echo "---"
+        ssh -t -q ${host} -- "echo ${host} > /etc/hostname; hostname ${host}; hostname"
+        echo "---"
+    done
+}
+
 function remote_download() {
     local target=${1}
     local root=${2}
