@@ -16,9 +16,9 @@ function ssh_local_to_remote() {
 }
 
 function ssh_remote_to_local() {
-  local local_ip=0.0.0.0
+  local local_ip=127.0.0.1
   local local_port=${1}
-  local remote_ip=0.0.0.0
+  local remote_ip=127.0.0.1
   local remote_port=${2}
   local jumper_ip=${3}
   local jumper_port=${4:-22}

@@ -1,3 +1,5 @@
+GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/([^.]+)(.git)?'
+
 function git_track_lfs() {
   local file_size=${1:-"+1M"}
   echo "using git lfs track file large than ${file_size}"
@@ -42,10 +44,17 @@ function git_top_branch() {
 }
 
 function git_push_all() {
-  local branch=${1:-main}
+  local branch=${1}
+  if [ -z "${branch}" ]; then
+    branch=$(git branch --show-current)
+  else
+    shift
+  fi
   for remote in $(git remote); do
-    echo "===================    Remote [${remote}]    ==================="
-    git push ${remote} ${branch}
+    if [ "${remote}" != "origin" ]; then
+      echo "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
+      git push $@ ${remote} ${branch}
+    fi
   done
 }
 
@@ -66,12 +75,11 @@ function git_tag() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
 }
 
-function git_http_url() {
-  if [ -f .git/config ]; then
-    cat .git/config | grep -w 'url' | grep '=' | awk '{print $NF}' | sed 's~git@\([^:]*\):\(.*\)~https://\1/\2~g'
-  else
-    log error "$(pwd) not a git work dir"
-  fi
+function git_list_url() {
+  local root=${1:-.}
+  for git_dir in $(find ${root} -name '.git' -type d); do
+    grep -w 'url' ${git_dir}/config | cut -d' ' -f 3
+  done
 }
 
 function git_locate() {
@@ -81,9 +89,22 @@ function git_locate() {
   git log --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -${count} ${commit}~${count}..${commit}
 }
 
-
 function git_graph() {
   local count=${1:-50}
   git log --graph --all --pretty='%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' -${count}
 }
 
+function git_parse_url() {
+  local url=$1
+  local verbose=$2
+  if [ -z "${verbose}" ]; then
+    echo ${url} | sed -E "s~${GIT_URL_PATTERN}~\1 \2 \3 \4 \5 \6~g"
+  else
+    echo ${url} | sed -E "s~${GIT_URL_PATTERN}~schema=\1 host=\2 delim=\3 project=\4 repository=\5 suffix=\6~g"
+  fi
+}
+
+function git_https_url() {
+  local root=${1:-.}
+  git_list_url ${root} | sed -E "s~${GIT_URL_PATTERN}~https://\2/\4/\5\6~g"
+}
