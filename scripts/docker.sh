@@ -162,12 +162,21 @@ function docker_prune() {
 
 function docker_extract() {
   local img=${1}
-  local dest=${2}
-  if [ -z "${img}" -o -z "${dest}" ]; then
-    echo "Usage: docker_export <image> <dest>"
+  local dest=${2:-${PWD}/rootfs}
+  if [ -z "${img}" ]; then
+    echo "Usage: docker_export <image> [dest=${PWD}]"
   else
     local cid=$(docker create ${img})
+    mkdir -pv ${dest}
     docker export ${cid} | tar -xC ${dest}
     docker rm -f ${cid}
   fi
+}
+
+function docker_func_to_run() {
+  local func_name=${1}
+  echo 'RUN set -ex; \\'
+  echo '    { \\'
+  declare -f ${func_name} | sed "s/^/        echo '/g" | sed "s/\$/'; \\\/g"
+  echo "    }; >> /etc/profile.d/90_helpers.sh"
 }

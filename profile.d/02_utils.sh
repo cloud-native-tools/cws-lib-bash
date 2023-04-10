@@ -53,7 +53,7 @@ function log() {
     level="INFO"
     ;;
   esac
-  echo -en "${color}[${now}][${level}] $@${clear}\n"
+  echo -en "${color}[${now}][$$][${level}] $@${clear}\n"
 }
 
 function die() {
