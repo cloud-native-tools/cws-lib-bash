@@ -218,18 +218,20 @@ function k8s_pods() {
   if [ -n "${namepsace}" ]; then
     shift
   fi
-  printf "%-30s %-50s %-10s %-50s %-20s %-20s\n" Namespace Name Status Owner Node Runtime
+  printf "%-30s %-50s %-10s %-12s %-40s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
   {{- printf "%-30s " .metadata.namespace -}}
   {{- printf "%-50s " .metadata.name -}}
   {{- printf "%-10s " .status.phase -}}
-  {{- range .metadata.ownerReferences -}}
-    {{- printf "%10s/" .kind -}}
-    {{- printf "%-40s" .name -}}
+  {{- with .metadata.ownerReferences -}}
+  {{- $owner := index . 0 -}}
+    {{- printf "%-12s " $owner.kind -}}
+    {{- printf "%-40s " $owner.name -}}
   {{- else -}}
-    {{- printf "%-50s " "None" -}}
+    {{- printf "%-12s " "None" -}}
+    {{- printf "%-40s " "None" -}}
   {{- end -}}
   {{- with .spec.nodeName -}}
     {{- printf "%-20s " . -}}
@@ -245,6 +247,7 @@ function k8s_pods() {
 {{- end -}}
 EOF
   )
+
   if [ -z "${namepsace}" ]; then
     kubectl get pods -A -o go-template --template="${tpl}" $@
   else
@@ -455,7 +458,7 @@ function k8s_sys_svc() {
 }
 
 function k8s_sys_deployment() {
-  kubectl -n ${SYSTEM_NAMESPACE} get deployment $@
+  k8s_deployment ${SYSTEM_NAMESPACE} $@
 }
 
 function k8s_sys_desc() {
@@ -739,5 +742,64 @@ EOF
     kubectl get storageclass -A -o go-template --template="${tpl}" $@
   else
     kubectl get storageclass -n ${namepsace} -o go-template --template="${tpl}" $@
+  fi
+}
+
+function k8s_deployment() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  #   printf "%-30s %-50s %-5s %-5s\n" Namespace Name Generation Replicas
+  #   local tpl=$(
+  #     cat <<'EOF'
+  # {{- range .items -}}
+  #   {{- printf "%-30s " .metadata.namespace -}}
+  #   {{- printf "%-50s " .metadata.name -}}
+  #   {{- printf "%-5s " .metadata.generation -}}
+  #   {{- printf "%-5s " .spec.replicas: -}}
+  #   {{"\n"}}
+  # {{- end -}}
+  # EOF
+  #   )
+  #   if [ -z "${namepsace}" ]; then
+  #     kubectl get deployment -A -o go-template --template="${tpl}" $@
+  #   else
+  #     kubectl get deployment -n ${namepsace} -o go-template --template="${tpl}" $@
+  #   fi
+  if [ -z "${namepsace}" ]; then
+    kubectl get deployment -A $@
+  else
+    kubectl get deployment -n ${namepsace} $@
+  fi
+}
+
+
+function k8s_ds() {
+  local namepsace=${1}
+  if [ -n "${namepsace}" ]; then
+    shift
+  fi
+  #   printf "%-30s %-50s %-5s %-5s\n" Namespace Name Generation Replicas
+  #   local tpl=$(
+  #     cat <<'EOF'
+  # {{- range .items -}}
+  #   {{- printf "%-30s " .metadata.namespace -}}
+  #   {{- printf "%-50s " .metadata.name -}}
+  #   {{- printf "%-5s " .metadata.generation -}}
+  #   {{- printf "%-5s " .spec.replicas: -}}
+  #   {{"\n"}}
+  # {{- end -}}
+  # EOF
+  #   )
+  #   if [ -z "${namepsace}" ]; then
+  #     kubectl get deployment -A -o go-template --template="${tpl}" $@
+  #   else
+  #     kubectl get deployment -n ${namepsace} -o go-template --template="${tpl}" $@
+  #   fi
+  if [ -z "${namepsace}" ]; then
+    kubectl get daemonset -A $@
+  else
+    kubectl get daemonset -n ${namepsace} $@
   fi
 }
