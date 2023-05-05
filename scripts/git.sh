@@ -108,3 +108,8 @@ function git_https_url() {
   local root=${1:-.}
   git_list_url ${root} | sed -E "s~${GIT_URL_PATTERN}~https://\2/\4/\5\6~g"
 }
+
+function git_clone_into() {
+  local dir=${1:-${PWD}}
+  git -C ${dir} clone --progress --recurse-submodules -j4
+}
