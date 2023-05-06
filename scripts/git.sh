@@ -111,5 +111,6 @@ function git_https_url() {
 
 function git_clone_into() {
   local dir=${1:-${PWD}}
-  git -C ${dir} clone --progress --recurse-submodules -j4
+  if [ $# -gt 0 ]; then shift; fi
+  git -C ${dir} clone --progress --recurse-submodules -j4 $@
 }

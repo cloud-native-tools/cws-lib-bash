@@ -48,10 +48,7 @@ function k8s_desc_pod() {
 }
 
 function k8s_desc_node() {
-  local namespace=$1
-  shift
-  local node=$@
-  kubectl describe -n ${namespace} node ${node}
+  kubectl describe node $@
 }
 
 function k8s_failed_pod() {
@@ -68,49 +65,37 @@ function k8s_nodes() {
 }
 
 function k8s_node_labels() {
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range $key,$value := .metadata.labels}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
 {{end}}
 EOF
-  )
-  kubectl get nodes $@ -o go-template --template="${tpl}"
 }
 
 function k8s_node_taints() {
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{"\n"}}{{end}}
 {{end}}
 EOF
-  )
-  kubectl get nodes -o go-template --template="${tpl}"
 }
 
 function k8s_node_annotations() {
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range $key,$value := .metadata.annotations}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
 {{end}}
 EOF
-  )
-  kubectl get nodes -o go-template --template="${tpl}"
 }
 
 function k8s_node_status() {
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   CPU: {{.status.capacity.cpu}}
   Memory: {{.status.capacity.memory}}
   Pods: {{.status.capacity.pods}}
 {{end}}
 EOF
-  )
-  kubectl get nodes -o go-template --template="${tpl}"
 }
 
 function k8s_login_pod() {
@@ -214,13 +199,18 @@ EOF
 }
 
 function k8s_pods() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
   printf "%-30s %-50s %-10s %-12s %-40s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "%-30s " .metadata.namespace -}}
   {{- printf "%-50s " .metadata.name -}}
@@ -246,13 +236,6 @@ function k8s_pods() {
   {{"\n"}}
 {{- end -}}
 EOF
-  )
-
-  if [ -z "${namepsace}" ]; then
-    kubectl get pods -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get pods -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_pod_life() {
@@ -292,13 +275,33 @@ EOF
 function k8s_pod_by_node() {
   local node_name=${1}
   shift
-  kubectl get pod --field-selector spec.nodeName=${node_name} $@
+  if [ -z "${node_name}" ]; then
+    echo "Usage: k8s_pod_by_node <node name> [kubectl options]"
+    return 1
+  fi
+  k8s_pods $@ --field-selector spec.nodeName=${node_name}
 }
 
 function k8s_pod_by_runtime() {
   local runtime_class=${1}
   shift
-  kubectl get pod --field-selector .spec.runtimeClassName=${runtime_class} $@
+  if [ -z "${runtime_class}" ]; then
+    echo "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
+    return 1
+  fi
+  k8s_pods $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
+}
+
+function k8s_pod_by_node_and_runtime() {
+  local node_name=${1}
+  shift
+  local runtime_class=${1}
+  shift
+  if [ -z "${node_name}" ] || [ -z "${runtime_class}" ]; then
+    echo "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
+    return 1
+  fi
+  k8s_pods $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
 
 function k8s_svc() {
@@ -312,11 +315,19 @@ function k8s_svc() {
 }
 
 function k8s_svc_ports() {
-  local namepsace=${1}
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
   local service_domain="svc.cluster.local"
   printf "%-32s %-48s %-16s %-16s %-24s %-32s\n" Namespace Service Type Target "IP:Port" "URL"
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get service ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- $namespace_name := .metadata.namespace -}}
   {{- $service_name := .metadata.name -}}
@@ -352,19 +363,21 @@ function k8s_svc_ports() {
   {{- end -}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get service -A -o go-template --template="${tpl}"
-  else
-    kubectl get service -n ${namepsace} -o go-template --template="${tpl}"
-  fi
 }
 
 function k8s_ep() {
-  local namepsace=${1}
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
   printf "%-24s %-40s %-24s %-48s %-24s\n" Namespace Name Node Pod Target
-  local tpl=$(
-    cat <<'EOF'
+  kubectl get ep ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- $namespace_name := .metadata.namespace -}}
   {{- $endpoint_name := .metadata.name -}}
@@ -385,18 +398,21 @@ function k8s_ep() {
   {{- end -}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get ep -A -o go-template --template="${tpl}"
-  else
-    kubectl get ep -n ${namepsace} -o go-template --template="${tpl}"
-  fi
 }
 
 function k8s_pods_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
-  local list_tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- $namespace_name := .metadata.namespace -}}
   {{- $pod_name := .metadata.name -}}
@@ -414,8 +430,6 @@ function k8s_pods_images() {
   {{- end -}}
 {{- end -}}
 EOF
-  )
-  kubectl get pods -A -o go-template --template="${list_tpl}" $@
 }
 
 function k8s_images_used() {
@@ -493,11 +507,18 @@ function k8s_kubeconfig() {
 }
 
 function k8s_event() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
   printf "%-24s %-10s %-24s %-24s %-10s %-24s %-60s\n" Namespace Kind Time Object Type Reason Message
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get event ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
   local tpl=$(
     cat <<'EOF'
 {{- range .items -}}
@@ -511,12 +532,6 @@ function k8s_event() {
   {{"\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get event -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get event -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_label_nodes() {
@@ -537,12 +552,17 @@ function k8s_apis() {
 }
 
 function k8s_configmap() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
-  local tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get configmap ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
   {{- printf "Name: %-60s\n" .metadata.name -}}
@@ -552,12 +572,6 @@ function k8s_configmap() {
   {{"---\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get configmap -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get configmap -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_ns_export() {
@@ -641,9 +655,17 @@ function k8s_generate_pod() {
 }
 
 function k8s_secret() {
-  local namepsace=${1}
-  local tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get secret ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "Namespace: %-40s\n" .metadata.namespace -}}
   {{- printf "Name: %-60s\n" .metadata.name -}}
@@ -655,23 +677,21 @@ function k8s_secret() {
   {{"---\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get secret -A -o go-template --template="${tpl}" $@
-  else
-    shift
-    kubectl get secret -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_pvc() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
   printf "%-40s %-60s %-8s %-8s %-12s %-12s %-20s %-20s\n" Namespace Name Status Capacity StorageClass VolumeMode CreationTime AccessModes
-  local tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get pvc ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "%-40s " .metadata.namespace -}}
   {{- printf "%-60s " .metadata.name -}}
@@ -684,22 +704,21 @@ function k8s_pvc() {
   {{"\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get pvc -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get pvc -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_pv() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
   printf "%-40s %-40s %-8s %-8s %-12s %-12s %-12s %-20s %-20s\n" Name PVC Status Capacity StorageClass Reclaim VolumeMode CreationTime AccessModes
-  local tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get pv ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "%-40s " .metadata.name -}}
   {{- printf "%-40s " .spec.claimRef.name -}}
@@ -713,22 +732,21 @@ function k8s_pv() {
   {{"\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get pv -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get pv -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_sc() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
   printf "%-40s %-40s %-20s %-20s\n" Name Provisioner ReclaimPolicy VolumeBindingMode
-  local tpl=$(
-    cat <<'EOF'
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get storageclass ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "%-40s " .metadata.name -}}
   {{- printf "%-40s " .provisioner -}}
@@ -737,12 +755,6 @@ function k8s_sc() {
   {{"\n"}}
 {{- end -}}
 EOF
-  )
-  if [ -z "${namepsace}" ]; then
-    kubectl get storageclass -A -o go-template --template="${tpl}" $@
-  else
-    kubectl get storageclass -n ${namepsace} -o go-template --template="${tpl}" $@
-  fi
 }
 
 function k8s_deployment() {
@@ -773,7 +785,6 @@ function k8s_deployment() {
     kubectl get deployment -n ${namepsace} $@
   fi
 }
-
 
 function k8s_ds() {
   local namepsace=${1}
