@@ -199,7 +199,12 @@ EOF
 }
 
 function k8s_pods() {
-  local namepsace=${1:-all}
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
   case ${namepsace} in
   all)
     ns_opt=-A
@@ -208,7 +213,6 @@ function k8s_pods() {
     ns_opt="-n ${namepsace}"
     ;;
   esac
-  shift
   printf "%-30s %-50s %-10s %-12s %-40s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
