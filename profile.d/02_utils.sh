@@ -58,7 +58,7 @@ function log() {
     level="INFO"
     ;;
   esac
-  printf "%s\n" "${color}[${now}][$$][${level}] $@${clear}"
+  printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
 }
 
 function die() {
