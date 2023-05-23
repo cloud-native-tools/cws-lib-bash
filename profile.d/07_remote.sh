@@ -11,17 +11,17 @@ function remote_deploy() {
     shift
     local src=$@
     for host in $(remote_get_hosts); do
-        echo "Deploy [${src}] to ${host}:${dest}"
+        log info "Deploy [${src}] to ${host}:${dest}"
         scp -r ${src} ${host}:${dest}
     done
 }
 
 function remote_cmd() {
     for host in $(remote_get_hosts); do
-        echo "Run on [${host}]: [$@]"
-        echo "---"
+        log plain "Run on [${host}]: [$@]"
+        log plain "---"
         ssh -t -q ${host} -- "bash -l -c '$@'"
-        echo "---"
+        log plain "---"
     done
 }
 
@@ -29,24 +29,24 @@ function remote_cmd_expect() {
     local password=$1
     shift
     for host in $(remote_get_hosts); do
-        echo "Run on [${host}]: [$@]"
-        echo "---"
+        log plain "Run on [${host}]: [$@]"
+        log plain "---"
         expect <<-EOF
     spawn ssh -t -q ${host} -- "bash -l -c '$@'"
     expect '*password:'
     send '${password}\r'
 EOF
-        echo "---"
+        log plain "---"
     done
 
 }
 
 function remote_sync_hostname() {
     for host in $(remote_get_hosts); do
-        echo "Run on [${host}]: [$@]"
-        echo "---"
+        log plain "Run on [${host}]: [$@]"
+        log plain "---"
         ssh -t -q ${host} -- "echo ${host} > /etc/hostname; hostname ${host}; hostname"
-        echo "---"
+        log plain "---"
     done
 }
 
@@ -58,11 +58,11 @@ function remote_download() {
             root=.
         fi
         for host in $(remote_get_hosts); do
-            echo "Get ${host}:${target} ${root}"
+            log info "Get ${host}:${target} ${root}"
             mkdir -pv $(dirname ${root}/${host}/${target})
             scp -r ${host}:${target} ${root}/${host}/${target}
         done
     else
-        echo "Usage: remote_download <abs path> "
+        log warn "Usage: remote_download <abs path> "
     fi
 }

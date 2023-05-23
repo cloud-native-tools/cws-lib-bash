@@ -16,11 +16,11 @@ function k8s_get_all() {
 }
 
 function k8s_info() {
-  echo "-------  kubectl version   --------"
+  log plain "-------  kubectl version   --------"
   kubectl version –short
-  echo "-------  cluster info      --------"
+  log plain "-------  cluster info      --------"
   kubectl cluster-info
-  echo "-------  component status  -------"
+  log plain "-------  component status  -------"
   kubectl get componentstatus
 }
 
@@ -103,7 +103,7 @@ function k8s_login_pod() {
   local pod_name=$2
   local cmd=${3:-sh}
   if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
-    echo "Usage: k8s_login_pod <namespace> <pod name> [cmd]"
+    log warn "Usage: k8s_login_pod <namespace> <pod name> [cmd]"
   else
     kubectl -n ${namepsace} exec -it ${pod_name} -- ${cmd}
   fi
@@ -115,7 +115,7 @@ function k8s_login_container() {
   local container_name=$3
   local cmd=${4:-sh}
   if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
-    echo "Usage: k8s_login_container <namespace> <pod name> [container name] [cmd]"
+    log warn "Usage: k8s_login_container <namespace> <pod name> [container name] [cmd]"
   else
     if [ -z "${container_name}" ]; then
       k8s_login_pod ${namepsace} ${pod_name} ${cmd}
@@ -131,7 +131,7 @@ function k8s_exec_pod() {
   local pod_name=$1
   shift
   if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
-    echo "Usage: k8s_exec_pod <namespace> <pod name> <cmd>"
+    log warn "Usage: k8s_exec_pod <namespace> <pod name> <cmd>"
   else
     kubectl -n ${namepsace} exec -it ${pod_name} -- $@
   fi
@@ -143,7 +143,7 @@ function k8s_delete_pod() {
   local pod_name=$1
   shift
   if [ -z "${namepsace}" -o -z "${pod_name}" ]; then
-    echo "Usage: k8s_delete_pod <namespace> <pod name> <args...>"
+    log warn "Usage: k8s_delete_pod <namespace> <pod name> <args...>"
   else
     kubectl -n ${namepsace} delete pod ${pod_name} -- $@
   fi
@@ -157,7 +157,7 @@ function k8s_login_container() {
   local container_name=$1
   shift
   if [ -z "${namepsace}" -o -z "${pod_name}" -o -z "${container_name}" ]; then
-    echo "Usage: k8s_login_container <namespace> <pod name> <container name> <cmd>"
+    log warn "Usage: k8s_login_container <namespace> <pod name> <container name> <cmd>"
   else
     kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- $@
   fi
@@ -280,7 +280,7 @@ function k8s_pod_by_node() {
   local node_name=${1}
   shift
   if [ -z "${node_name}" ]; then
-    echo "Usage: k8s_pod_by_node <node name> [kubectl options]"
+    log warn "Usage: k8s_pod_by_node <node name> [kubectl options]"
     return 1
   fi
   k8s_pods $@ --field-selector spec.nodeName=${node_name}
@@ -290,7 +290,7 @@ function k8s_pod_by_runtime() {
   local runtime_class=${1}
   shift
   if [ -z "${runtime_class}" ]; then
-    echo "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
+    log warn "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
     return 1
   fi
   k8s_pods $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
@@ -302,7 +302,7 @@ function k8s_pod_by_node_and_runtime() {
   local runtime_class=${1}
   shift
   if [ -z "${node_name}" ] || [ -z "${runtime_class}" ]; then
-    echo "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
+    log warn "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
     return 1
   fi
   k8s_pods $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
@@ -607,11 +607,11 @@ EOF
     available_ip=""
     for ip in $(kubectl -n ${namepsace} get service ${service} -o go-template --template="${list_ip_tpl}"); do
       if net_ping ${ip}; then
-        echo ${ip}
+        log plain ${ip}
         break
       else
         if [[ ${opt} != "available" ]]; then
-          echo "${ip} is not available"
+          log error "${ip} is not available"
         fi
       fi
     done

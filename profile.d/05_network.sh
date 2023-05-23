@@ -62,8 +62,8 @@ function net_ping() {
 function net_is_ip() {
   local ip=${1}
   if [[ $ip =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-    echo "true"
+    log plain "true"
   else
-    echo "false"
+    log plain "false"
   fi
 }

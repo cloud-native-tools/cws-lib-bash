@@ -46,7 +46,7 @@ function enter_chroot() {
       umount_chroot ${root_dir}
     fi
   else
-    echo "already in a chroot env"
+    log warn "already in a chroot env"
   fi
 }
 

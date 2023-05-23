@@ -3,12 +3,15 @@ function docker_exec() {
 }
 
 function docker_run() {
-  docker run --rm -it --privileged -v /:/host --network host --entrypoint /bin/sh $@
+  docker run --rm -it --privileged -v /:/rootfs --network host --entrypoint /bin/sh $@
 }
 
 function docker_gc() {
-  # docker run --rm -v /var/run/docker.sock:/var/run/docker.sock spotify/docker-gc:latest
   docker system prune $@
+}
+
+function docker_prune() {
+  docker system prune -a
 }
 
 function docker_create_network() {
@@ -18,34 +21,6 @@ function docker_create_network() {
   ip link set docker0 up
   iptables -t nat -A POSTROUTING -s "${IFADDR}" ! -d "${IFADDR}" -j MASQUERADE
   echo 1 >/proc/sys/net/ipv4/ip_forward
-}
-
-function docker_list_remote_images() {
-  local registry=$1
-  local project=$2
-  set -x
-  curl -sSL -I \
-    -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-    "http://${registry}/v2/${project}/manifests/$(
-      curl -sSL "http://${registry}/v2/${project}/tags/list" | jq -r '.tags[0]'
-    )" |
-    awk '$1 == "Docker-Content-Digest:" { print $2 }' |
-    tr -d $'\r'
-  set +x
-}
-
-function docker_delete_remote_images() {
-  local registry=$1
-  local project=$2
-  curl -v -sSL -X DELETE "http://${registry}/v2/${project}/manifests/$(
-    curl -sSL -I \
-      -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-      "http://${registry}/v2/${project}/manifests/$(
-        curl -sSL "http://${registry}/v2/${project}/tags/list" | jq -r '.tags[0]'
-      )" |
-      awk '$1 == "Docker-Content-Digest:" { print $2 }' |
-      tr -d $'\r'
-  )"
 }
 
 function docker_generate_dockerfile() {
@@ -59,76 +34,6 @@ function docker_generate_dockerfile() {
     sed 's, && ,\n  & ,g' |
     sed 's,\s*[0-9]*[\.]*[0-9]*\s*[kMG]*B\s*$,,g' |
     head -n -1
-}
-
-function docker_image_name() {
-  if [ $# -eq 1 ]; then
-    local image_name_or_id=$1
-  else
-    local image_name_or_id=$(cat -)
-  fi
-  local image_name=$(docker image inspect -f '{{index .RepoTags 0}}' ${image_name_or_id} 2>/dev/null)
-  if [ -z "${image_name}" ]; then
-    echo ${image_name_or_id}
-  else
-    echo ${image_name}
-  fi
-}
-
-function docker_image_change_registry() {
-  if [ $# -eq 2 ]; then
-    local image_name_or_id=$1
-    shift
-  else
-    local image_name_or_id=$(cat -)
-  fi
-  local new_registry=$1
-  if [ -z "${new_registry}" ]; then
-    docker_image_name ${image_name_or_id} | sed "s@^[^/]*/@@g"
-  else
-    docker_image_name ${image_name_or_id} | sed "s@^[^/]*/@$new_registry/@g"
-  fi
-}
-
-function docker_image_change_repository() {
-  if [ $# -eq 2 ]; then
-    local image_name_or_id=$1
-    shift
-  else
-    local image_name_or_id=$(cat -)
-  fi
-  local new_repository=$1
-  docker_image_name ${image_name_or_id} | sed "s@^\([^/]*/\)?[^/]*/@\1$new_repository/@g"
-}
-
-function docker_image_change_tag() {
-  if [ $# -eq 2 ]; then
-    local image_name_or_id=$1
-    shift
-  else
-    local image_name_or_id=$(cat -)
-  fi
-  local new_tag=$1
-  docker_image_name ${image_name_or_id} | sed "s@^\([^:]*:\).*@\1${new_tag}@g"
-}
-
-function docker_image_rename() {
-  local image_name_or_id=$1
-  local new_registry=$2
-  local new_repository=$3
-  local new_tag=$4
-  local run=$5
-  local old_name=$(docker_image_name ${image_name_or_id})
-  local new_name=$(echo ${image_name_or_id} |
-    docker_image_change_registry ${new_registry} |
-    docker_image_change_repository ${new_repository} |
-    docker_image_change_tag ${new_tag})
-  if [ -z "${run}" ]; then
-    echo ${new_name}
-  else
-    echo "Tag: ${old_name}  -->  ${new_name}"
-    docker tag ${old_name} ${new_name}
-  fi
 }
 
 function docker_images() {
@@ -151,20 +56,11 @@ function dp_svc() {
   docker-compose ps --services
 }
 
-function docker_import_env() {
-  local docker_file=${1}
-  eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
-}
-
-function docker_prune() {
-  docker system prune -a
-}
-
 function docker_extract() {
   local img=${1}
   local dest=${2:-${PWD}/rootfs}
   if [ -z "${img}" ]; then
-    echo "Usage: docker_export <image> [dest=${PWD}]"
+    log warn "Usage: docker_export <image> [dest=${PWD}]"
   else
     local cid=$(docker create ${img})
     mkdir -pv ${dest}
@@ -173,10 +69,6 @@ function docker_extract() {
   fi
 }
 
-function docker_func_to_run() {
-  local func_name=${1}
-  echo 'RUN set -ex; \\'
-  echo '    { \\'
-  declare -f ${func_name} | sed "s/^/        echo '/g" | sed "s/\$/'; \\\/g"
-  echo "    }; >> /etc/profile.d/90_helpers.sh"
+function docker_ps() {
+  docker ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\n{{if .Ports}}{{with $p := split .Ports ", "}}{{range $p}}\t{{println .}}{{end}}{{end}}{{else}}\t\t{{println "No Ports"}}{{end}}'
 }

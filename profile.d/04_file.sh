@@ -1,6 +1,6 @@
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(tar zc --exclude-vcs $(ls ${target}) | base64 -w0)\"|base64 -d|tar zx"
+  log plain "echo \"$(tar zc --exclude-vcs $(ls ${target}) | base64 -w0)\"|base64 -d|tar zx"
 }
 
 function encode_packed() {
@@ -22,33 +22,33 @@ function encode_packed() {
   split -b ${part_size} -d ${encode_tar} ${encode_tar}.
 
   # if tar file exists but not match checksum, remove it
-  echo "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${encode_script}
-  echo "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${merge_script}
+  log plain "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${encode_script}
+  log plain "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${merge_script}
 
   # handle each part of the splited file
   for part in $(ls ${encode_tar}.*); do
     # if the part not exist or not match checksum, generate it
-    echo "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >>${encode_script}
+    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >>${encode_script}
 
     # check sum of the part
-    echo "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}
-    echo "echo '$(sha256sum ${part})'|sha256sum -c" >>${merge_script}
+    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}
+    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${merge_script}
 
     # this script is for upload part file only
-    echo "echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
-    echo "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}${part#${encode_tar}}
+    log plain "echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
+    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}${part#${encode_tar}}
 
     # merge part file to whole tar file
-    echo "cat ${part} >> ${encode_tar}" >>${encode_script}
-    echo "cat ${part} >> ${encode_tar}" >>${merge_script}
+    log plain "cat ${part} >> ${encode_tar}" >>${encode_script}
+    log plain "cat ${part} >> ${encode_tar}" >>${merge_script}
 
     # remove part file locally
     rm -f ${part}
   done
 
   # extract tar file to original file and remove tar file
-  echo "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${encode_script}
-  echo "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${merge_script}
+  log plain "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${encode_script}
+  log plain "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${merge_script}
 
   # remove tar file locally
   rm -f ${encode_tar}
@@ -105,12 +105,12 @@ function extract() {
         *.xz) unxz ./"$n" ;;
         *.exe) cabextract ./"$n" ;;
         *)
-          echo "extract: '$n' - unknown archive method"
+          log error "extract: '$n' - unknown archive method"
           return 1
           ;;
         esac
       else
-        echo "'$n' - file does not exist"
+        log error "'$n' - file does not exist"
         return 1
       fi
     done
@@ -127,9 +127,7 @@ function fast_delete() {
 }
 
 function file_size() {
-  local filename=$1
-  shift
-  echo $(du -k "$filename" | cut -f1)
+  du -k "$filename" | cut -f1
 }
 
 function file_same() {

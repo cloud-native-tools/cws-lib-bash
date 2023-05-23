@@ -33,6 +33,11 @@ function log() {
   local color=""
   local clear=""
   case ${level} in
+  PLAIN | plain)
+    shift
+    printf "%s\n" "$*"
+    return
+    ;;
   WARN | warn)
     color=${YELLOW}
     clear=${CLEAR}
@@ -57,52 +62,52 @@ function log() {
 }
 
 function die() {
-  echo -e "${RED}${@}${CLEAR}"
+  log plain "${RED}${@}${CLEAR}"
   exit 1
 }
 
 function matches() {
   local pat=$1
   shift
-  echo "$@" | grep -qEi "$pat" >/dev/null 2>&1
+  log plain "$@" | grep -qEi "$pat" >/dev/null 2>&1
 }
 
 function success() {
-  echo -e "${SYMBOL_SUCCESS}"
+  log plain "${SYMBOL_SUCCESS}"
 }
 
 function failed() {
-  echo -e "${SYMBOL_FAILURE}"
+  log plain "${SYMBOL_FAILURE}"
 }
 
 function trim() {
-  echo "$@" | awk '{ gsub(/^ +| +$/,"") }{ print $0 }'
+  log plain "$@" | awk '{ gsub(/^ +| +$/,"") }{ print $0 }'
 }
 
 function repeat() {
-  echo $(printf "%${2}s" | tr " " "$1")
+  log plain $(printf "%${2}s" | tr " " "$1")
 }
 
 function truncate() {
   local len=$1
   shift
-  echo "$*" | awk -v len=$len '{ if (length($0) > len) print substr($0, 1, len-3) "..."; else print; }'
+  log plain "$*" | awk -v len=$len '{ if (length($0) > len) print substr($0, 1, len-3) "..."; else print; }'
 }
 
 function upper() {
-  echo $@ | tr '[:lower:]' '[:upper:]'
+  log plain $@ | tr '[:lower:]' '[:upper:]'
 }
 
 function lower() {
-  echo $@ | tr '[:upper:]' '[:lower:]'
+  log plain $@ | tr '[:upper:]' '[:lower:]'
 }
 
 function escape() {
-  echo "$1" | sed 's/\([\.\$\*]\)/\\\1/g'
+  log plain "$@" | sed 's/\([\.\$\*]\)/\\\1/g'
 }
 
 function escape_slashes() {
-  echo "$@" | sed 's/\\/\\\\/g'
+  log plain "$@" | sed 's/\\/\\\\/g'
 }
 
 function source_scripts() {
@@ -130,14 +135,14 @@ function script_entry() {
       eval "echo ${var}=\${var}"
     fi
   else
-    echo "$0 sourced"
+    log info "$0 sourced"
   fi
 }
 
 function read_line() {
   local lineno=${1}
   while read -r line; do
-    echo "${lineno} ${line}"
+    log plain "${lineno} ${line}"
     if [ -n "${line}" ]; then
       ((lineno += 1))
     fi

@@ -6,7 +6,7 @@ function perf_syscall_record() {
   local iteration=${1:-10}
   local duration=${2:-5}
   for iter in $(seq ${iteration}); do
-    echo "Iter: ${iter}"
+    log info "Iter: ${iter}"
     perf record -e 'raw_syscalls:*' -a -o node-trace-$(date '+%s').data -- sleep ${duration}
   done
 }
@@ -20,7 +20,7 @@ function perf_cgroup_path_of_pid() {
   local pid=${1}
   local cgroup_root=$(dirname $(mount | grep -E '^cgroup on ' | grep -w cpuset | awk '{print $3}'))
   local cgroup_perf_path=$(find ${cgroup_root} -name "*.procs" -exec grep -w "${pid}" {} /dev/null \; 2>/dev/null | grep '/perf_event/')
-  echo ${cgroup_perf_path} | sed 's@/sys/fs/cgroup/perf_event/\([^:]*\)/cgroup.procs:[0-9]\+@\1@g'
+  printf "${cgroup_perf_path}\n" | sed 's@/sys/fs/cgroup/perf_event/\([^:]*\)/cgroup.procs:[0-9]\+@\1@g'
 }
 
 function perf_record_by_cgroup() {

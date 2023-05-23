@@ -12,7 +12,7 @@ function openssl_create_ca() {
     openssl req -x509 -new -nodes -key ${name}.key -sha256 -days ${CA_DAYS} -out ${name}.pem -subj "${CA_SUBJ}"
     log "CA ${name}: ${name}.key ${name}.pem"
   else
-    echo "Usage: openssl_create_ca {ca_name}"
+    log warn "Usage: openssl_create_ca {ca_name}"
   fi
 }
 
@@ -22,7 +22,7 @@ function openssl_create_ca_signed_cert() {
   local ca_cert=${3}
 
   if [ -z "${name}" -o -z "${ca_key}" -o -z "${ca_cert}" ]; then
-    echo "Usage: openssl_create_ca_signed_cert {name} {ca_key} {ca_cert} -- DNS IP ..."
+    log warn "Usage: openssl_create_ca_signed_cert {name} {ca_key} {ca_cert} -- DNS IP ..."
   else
     openssl genrsa -out ${name}.key 2048
     openssl req -new -key ${name}.key -out ${name}.csr -subj "${CA_SUBJ}"
@@ -40,9 +40,9 @@ EOF
     dns_index=1
     for addr in $@; do
       if [ "$(net_is_ip ${addr})" = "true" ]; then
-        echo "IP.${ip_index} = ${addr}" >>${name}.ext
+        log plain "IP.${ip_index} = ${addr}" >>${name}.ext
       else
-        echo "DNS.${dns_index} = ${addr}" >>${name}.ext
+        log plain "DNS.${dns_index} = ${addr}" >>${name}.ext
       fi
     done
 

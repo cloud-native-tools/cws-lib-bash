@@ -2,7 +2,7 @@ GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/([^.]+)(.gi
 
 function git_track_lfs() {
   local file_size=${1:-"+1M"}
-  echo "using git lfs track file large than ${file_size}"
+  log info "using git lfs track file large than ${file_size}"
   find . -type f -size "${file_size}" | grep -v /.git/ | xargs git lfs track
 }
 
@@ -23,7 +23,7 @@ function git_checkout_by_date() {
     if [[ $(date '+%s' -d ${iter}) -gt $(date '+%s' -d ${end}) ]]; then break; fi
     commit=$(grep ${iter} ${commit_log} | tail -n1)
     if [[ -n "${commit}" ]]; then
-      echo "commit: ${commit#*_} at ${commit%_*}"
+      log info "commit: ${commit#*_} at ${commit%_*}"
     fi
     iter=$(date '+%Y-%m-%d' -d "${iter}+${step}")
   done
@@ -33,7 +33,7 @@ function git_checkout_by_date() {
 function git_update_all() {
   for gf in $(find . -name .git); do
     pushd "${gf%/.git}" >/dev/null 2>&1
-    echo "update in $(pwd)"
+    log info "update in $(pwd)"
     git pull --all
     popd >/dev/null 2>&1
   done
@@ -52,7 +52,7 @@ function git_push_all() {
   fi
   for remote in $(git remote); do
     if [ "${remote}" != "origin" ]; then
-      echo "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
+      log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
       git push $@ ${remote} ${branch}
     fi
   done
@@ -98,9 +98,9 @@ function git_parse_url() {
   local url=$1
   local verbose=$2
   if [ -z "${verbose}" ]; then
-    echo ${url} | sed -E "s~${GIT_URL_PATTERN}~\1 \2 \3 \4 \5 \6~g"
+    log plain ${url} | sed -E "s~${GIT_URL_PATTERN}~\1 \2 \3 \4 \5 \6~g"
   else
-    echo ${url} | sed -E "s~${GIT_URL_PATTERN}~schema=\1 host=\2 delim=\3 project=\4 repository=\5 suffix=\6~g"
+    log plain ${url} | sed -E "s~${GIT_URL_PATTERN}~schema=\1 host=\2 delim=\3 project=\4 repository=\5 suffix=\6~g"
   fi
 }
 
