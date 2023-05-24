@@ -213,19 +213,19 @@ function k8s_pods() {
     ns_opt="-n ${namepsace}"
     ;;
   esac
-  printf "%-30s %-50s %-10s %-12s %-40s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
+  printf "%-40s %-60s %-10s %-12s %-50s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
-  {{- printf "%-30s " .metadata.namespace -}}
-  {{- printf "%-50s " .metadata.name -}}
+  {{- printf "%-40s " .metadata.namespace -}}
+  {{- printf "%-60s " .metadata.name -}}
   {{- printf "%-10s " .status.phase -}}
   {{- with .metadata.ownerReferences -}}
   {{- $owner := index . 0 -}}
     {{- printf "%-12s " $owner.kind -}}
-    {{- printf "%-40s " $owner.name -}}
+    {{- printf "%-50s " $owner.name -}}
   {{- else -}}
     {{- printf "%-12s " "None" -}}
-    {{- printf "%-40s " "None" -}}
+    {{- printf "%-50s " "None" -}}
   {{- end -}}
   {{- with .spec.nodeName -}}
     {{- printf "%-20s " . -}}

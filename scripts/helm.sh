@@ -12,7 +12,7 @@ function helm_export_values() {
     if [ ! -f ${values_file} ]; then
       helm show values ${chart_name} >${values_file}
     else
-      log error "${values_file} exists, skipping"
+      log warn "${values_file} exists, skipping"
     fi
   fi
 }
