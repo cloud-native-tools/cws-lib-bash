@@ -27,23 +27,23 @@ function motd_generate() {
   #Clear screen before motd
   clear >$motd
 
-  log plain "$Y
+  log color "$Y
     _     _  _  _             _
    / \   | |(_)| |__    __ _ | |__    __ _
   / _ \  | || || '_ \  / _\` || '_ \  / _\` |
  / ___ \ | || || |_) || (_| || |_) || (_| |
 /_/   \_\|_||_||_.__/  \__,_||_.__/  \__,_|
 $C" >>$motd
-  log plain "$R===============================================================" >>$motd
-  log plain "       $R Welcome to $Y $HOSTNAME $IP [$NET]                     " >>$motd
-  log plain "       $R CPU      $W= $CPU                                      " >>$motd
-  log plain "       $R ARCH     $W= $ARCH                                     " >>$motd
-  log plain "       $R HOSTNAME $W= $HOSTNAME                                 " >>$motd
-  log plain "       $R OS       $W= $PRETTY_NAME                              " >>$motd
-  log plain "       $R KERNEL   $W= $KERNEL                                   " >>$motd
-  log plain "       $R CMDLINE  $W= $CMDLINE                                  " >>$motd
-  log plain "$R===============================================================" >>$motd
-  log plain "$X" >>$motd
+  log color "$R===============================================================" >>$motd
+  log color "       $R Welcome to $Y $HOSTNAME $IP [$NET]                     " >>$motd
+  log color "       $R CPU      $W= $CPU                                      " >>$motd
+  log color "       $R ARCH     $W= $ARCH                                     " >>$motd
+  log color "       $R HOSTNAME $W= $HOSTNAME                                 " >>$motd
+  log color "       $R OS       $W= $PRETTY_NAME                              " >>$motd
+  log color "       $R KERNEL   $W= $KERNEL                                   " >>$motd
+  log color "       $R CMDLINE  $W= $CMDLINE                                  " >>$motd
+  log color "$R===============================================================" >>$motd
+  log color "$X" >>$motd
 }
 
 function motd() {

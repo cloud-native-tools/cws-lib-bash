@@ -33,6 +33,11 @@ function log() {
   local color=""
   local clear=""
   case ${level} in
+  COLOR | color)
+    shift
+    printf "%b\n" "$@"
+    return
+    ;;
   PLAIN | plain)
     shift
     printf "%s\n" "$*"
