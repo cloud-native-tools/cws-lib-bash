@@ -28,15 +28,20 @@ function k8s_ns() {
   kubectl get namespace
 }
 
-function k8s_ns_all() {
+function k8s_ns_names() {
   local namespace="$1"
   local k8s_fields="all,cm,secret,ing,sa,pvc"
   kubectl get ${k8s_fields} -n "${namespace}" -o name
 }
 
+function k8s_ns_all() {
+  local namespace="$1"
+  kubectl api-resources --verbs=list --namespaced -o name | xargs -n 1 kubectl get -n "${namespace}" --ignore-not-found --show-kind
+}
+
 function k8s_ns_prune() {
   local namespace="$1"
-  kubectl -n "${namespace}" delete $(k8s_ns_all ${namespace} | grep -v 'secret/default-token')
+  kubectl -n "${namespace}" delete $(k8s_ns_names ${namespace} | grep -v 'secret/default-token')
   kubectl delete namespace "${namespace}"
 }
 
