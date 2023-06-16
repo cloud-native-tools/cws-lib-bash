@@ -20,7 +20,7 @@ function remote_cmd() {
     for host in $(remote_get_hosts); do
         log plain "Run on [${host}]: [$@]"
         log plain "---"
-        ssh -t -q ${host} -- "bash -l -c '$@'"
+        ssh -t -q ${host} -- "bash -l -c '$@';echo \"Exit Code: $?\""
         log plain "---"
     done
 }
