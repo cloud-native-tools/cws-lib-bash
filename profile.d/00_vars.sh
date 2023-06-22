@@ -1,3 +1,5 @@
+CWS_LIB_COMMIT_ID=d71f625
+
 TMOUT=0
 
 CLEAR='\033[0m'
@@ -47,3 +49,7 @@ DATE_TIME_FORMAT='%Y-%m-%d %H:%M:%S'
 
 HISTFILE=$HOME/.bash_history
 HISTCONTROL=ignoreboth
+
+EXIT_SUCCESS=0
+EXIT_FAILURE=1
+

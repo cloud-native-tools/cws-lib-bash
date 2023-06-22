@@ -18,3 +18,4 @@ done
 unset i
 
 export PATH=${BIN}:${PATH}
+

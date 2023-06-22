@@ -55,8 +55,21 @@ function log() {
     level="ERROR"
     shift
     ;;
+  FATAL | fatal)
+    color=${RED}
+    clear=${CLEAR}
+    level="FATAL"
+    echo -en "${color}[${now}][$$][${level}] $@${clear}\n"
+    exit ${EXIT_FAILURE}
+    ;;
   INFO | info)
     level="INFO"
+    shift
+    ;;
+  NOTICE | notice)
+    level="NOTICE"
+    color=${GREEN}
+    clear=${CLEAR}
     shift
     ;;
   *)

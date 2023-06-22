@@ -56,16 +56,27 @@ function dp_svc() {
   docker-compose ps --services
 }
 
+function docker_import_env() {
+  local docker_file=${1}
+  eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
+}
+
+function docker_prune() {
+  docker system prune -a
+}
+
 function docker_extract() {
   local img=${1}
   local dest=${2:-${PWD}/rootfs}
   if [ -z "${img}" ]; then
     log warn "Usage: docker_export <image> [dest=${PWD}]"
+    return 1
   else
     local cid=$(docker create ${img})
     mkdir -pv ${dest}
     docker export ${cid} | tar -xC ${dest}
     docker rm -f ${cid}
+    return 0
   fi
 }
 
