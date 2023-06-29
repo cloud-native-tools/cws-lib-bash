@@ -54,3 +54,18 @@ function ssh_kill_by_port() {
     kill -9 ${ssh_pid}
   fi
 }
+
+function ssh_add_host() {
+  local host=$1
+  local port=${2:-22}
+  local name=${3:-${host}}
+  local user=${4:-root}
+  local key=${5:-~/.ssh/id_rsa}
+  {
+    echo "Host ${name}"
+    echo "  HostName ${host}"
+    echo "  Port ${port}"
+    echo "  User ${user}"
+    echo "  IdentityFile ${key}"
+  }
+}

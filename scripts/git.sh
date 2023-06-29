@@ -112,5 +112,13 @@ function git_https_url() {
 function git_clone_into() {
   local dir=${1:-${PWD}}
   if [ $# -gt 0 ]; then shift; fi
-  git -C ${dir} clone --progress --recurse-submodules -j4 $@
+  git -C ${dir} clone --progress --recurse-submodules -j$(nproc) $@
+}
+
+function git_tag_to_commit() {
+  local url=${1}
+  local tag=${2}
+  if [ -n "${tag}" ] && [ -n "${url}" ]; then
+    git ls-remote --tags ${url} | grep -w ${tag} | cut -f1
+  fi
 }

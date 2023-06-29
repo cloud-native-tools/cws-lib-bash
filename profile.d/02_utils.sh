@@ -36,47 +36,44 @@ function log() {
   COLOR | color)
     shift
     printf "%b\n" "$@"
-    return
     ;;
   PLAIN | plain)
     shift
     printf "%s\n" "$*"
-    return
     ;;
   WARN | warn)
     color=${YELLOW}
     clear=${CLEAR}
     level="WARN"
-    shift
+    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
     ;;
   ERROR | error)
     color=${RED}
     clear=${CLEAR}
     level="ERROR"
-    shift
+    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
     ;;
   FATAL | fatal)
     color=${RED}
     clear=${CLEAR}
     level="FATAL"
-    echo -en "${color}[${now}][$$][${level}] $@${clear}\n"
+    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
     exit ${EXIT_FAILURE}
     ;;
   INFO | info)
     level="INFO"
-    shift
+    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
     ;;
   NOTICE | notice)
     level="NOTICE"
     color=${GREEN}
     clear=${CLEAR}
-    shift
+    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
     ;;
   *)
-    level="INFO"
+    log plain $@
     ;;
   esac
-  printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
 }
 
 function die() {
