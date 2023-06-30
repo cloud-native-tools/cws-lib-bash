@@ -32,13 +32,12 @@ function log() {
   local now=$(date_now)
   local color=""
   local clear=""
+  shift
   case ${level} in
   COLOR | color)
-    shift
     printf "%b\n" "$@"
     ;;
   PLAIN | plain)
-    shift
     printf "%s\n" "$*"
     ;;
   WARN | warn)
