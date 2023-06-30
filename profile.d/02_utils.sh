@@ -32,27 +32,28 @@ function log() {
   local now=$(date_now)
   local color=""
   local clear=""
-  shift
+
   case ${level} in
-  COLOR | color)
-    printf "%b\n" "$@"
-    ;;
   PLAIN | plain)
+    shift
     printf "%s\n" "$*"
     ;;
   WARN | warn)
+    shift
     color=${YELLOW}
     clear=${CLEAR}
     level="WARN"
     printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
     ;;
   ERROR | error)
+    shift
     color=${RED}
     clear=${CLEAR}
     level="ERROR"
     printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
     ;;
   FATAL | fatal)
+    shift
     color=${RED}
     clear=${CLEAR}
     level="FATAL"
@@ -60,10 +61,12 @@ function log() {
     exit ${EXIT_FAILURE}
     ;;
   INFO | info)
+    shift
     level="INFO"
     printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
     ;;
   NOTICE | notice)
+    shift
     level="NOTICE"
     color=${GREEN}
     clear=${CLEAR}

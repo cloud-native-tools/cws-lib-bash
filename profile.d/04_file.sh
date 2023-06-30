@@ -163,3 +163,19 @@ function extract_file_to() {
     --directory=${dst_dir} \
     --strip 1 "${file_in_tar}"
 }
+
+function file_size() {
+  local filepath=${1}
+  if [ -z "${filepath}" ]; then
+    echo "Usage: file_size <filepath>"
+    return 1
+  fi
+  if [ ! -e "${filepath}" ]; then
+    echo "File not exist: ${filepath}"
+    return 1
+  fi
+  local logical_size=$(stat -c "%s" ${filepath})
+  local physical_size=$(stat -c "%b" ${filepath})
+  echo "Logical size: ${logical_size} bytes"
+  echo "Physical size: $((physical_size * 512)) bytes"
+}
