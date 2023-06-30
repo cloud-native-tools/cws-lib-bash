@@ -30,47 +30,41 @@ function date_now() {
 function log() {
   local level=$1
   local now=$(date_now)
-  local color=""
-  local clear=""
 
   case ${level} in
   PLAIN | plain)
     shift
+    # print what as-is, no color
     printf "%s\n" "$*"
     ;;
-  WARN | warn)
+  COLOR | color)
     shift
-    color=${YELLOW}
-    clear=${CLEAR}
-    level="WARN"
-    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
-    ;;
-  ERROR | error)
-    shift
-    color=${RED}
-    clear=${CLEAR}
-    level="ERROR"
-    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
-    ;;
-  FATAL | fatal)
-    shift
-    color=${RED}
-    clear=${CLEAR}
-    level="FATAL"
-    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}" >&2
-    exit ${EXIT_FAILURE}
+    # like plain, but with color
+    printf "%b\n" "$@"
     ;;
   INFO | info)
     shift
-    level="INFO"
-    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
+    printf "%b\n" "[${now}][$$][INFO] $@"
     ;;
   NOTICE | notice)
     shift
-    level="NOTICE"
-    color=${GREEN}
-    clear=${CLEAR}
-    printf "%b\n" "${color}[${now}][$$][${level}] $@${clear}"
+    printf "%b\n" "${GREEN}[${now}][$$][NOTICE] $@${CLEAR}"
+    ;;
+  WARN | warn)
+    shift
+    # use yellow color for warning
+    printf "%b\n" "${YELLOW}[${now}][$$][WARN] $@${CLEAR}" >&2
+    ;;
+  ERROR | error)
+    shift
+    # use red color for error
+    printf "%b\n" "${RED}[${now}][$$][ERROR] $@${CLEAR}" >&2
+    ;;
+  FATAL | fatal)
+    shift
+    # use red color for fatal error, NOTICE: this will exit the script
+    printf "%b\n" "${RED}[${now}][$$][FATAL] $@${CLEAR}" >&2
+    exit ${EXIT_FAILURE}
     ;;
   *)
     log plain $@
