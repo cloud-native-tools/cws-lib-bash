@@ -164,7 +164,7 @@ function extract_file_to() {
     --strip 1 "${file_in_tar}"
 }
 
-function file_size() {
+function file_real_size() {
   local filepath=${1}
   if [ -z "${filepath}" ]; then
     echo "Usage: file_size <filepath>"

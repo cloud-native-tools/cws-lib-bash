@@ -288,7 +288,7 @@ function k8s_pod_by_node() {
     log warn "Usage: k8s_pod_by_node <node name> [kubectl options]"
     return 1
   fi
-  k8s_pods $@ --field-selector spec.nodeName=${node_name}
+  k8s_pods $@ --field-selector "spec.nodeName=${node_name}"
 }
 
 function k8s_pod_by_runtime() {
