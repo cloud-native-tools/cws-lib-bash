@@ -1,6 +1,6 @@
 function encode_files() {
   local target=${@:-.}
-  log plain "echo \"$(tar zc --exclude-vcs $(ls ${target}) | base64 -w0)\"|base64 -d|tar zx"
+  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64 -w0)\"|base64 -d|tar zx"
 }
 
 function encode_packed() {
