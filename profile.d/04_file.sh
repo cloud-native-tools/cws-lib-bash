@@ -1,3 +1,7 @@
+function encode_stdin() {
+  echo "echo \"$(gzip -c - | base64 -w0)\"|base64 -d|gunzip -c -"
+}
+
 function encode_files() {
   local target=${@:-.}
   echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64 -w0)\"|base64 -d|tar zx"

@@ -17,7 +17,7 @@ function k8s_get_all() {
 
 function k8s_info() {
   log plain "-------  kubectl version   --------"
-  kubectl version –short
+  kubectl version
   log plain "-------  cluster info      --------"
   kubectl cluster-info
   log plain "-------  component status  -------"
@@ -822,4 +822,8 @@ function k8s_ds() {
   else
     kubectl get daemonset -n ${namepsace} $@
   fi
+}
+
+function k8s_current_cluster() {
+  kubectl config view -o jsonpath='{.contexts[?(@.name == "'"$(kubectl config current-context)"'")].context.cluster}'
 }

@@ -83,3 +83,7 @@ function docker_extract() {
 function docker_ps() {
   docker ps -a --format 'table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.Status}}\n{{if .Ports}}{{with $p := split .Ports ", "}}{{range $p}}\t{{println .}}{{end}}{{end}}{{else}}\t\t{{println "No Ports"}}{{end}}'
 }
+
+function docker_names() {
+  docker ps | awk '{print $NF}' | grep -v NAMES
+}

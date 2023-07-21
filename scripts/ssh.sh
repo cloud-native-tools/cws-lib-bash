@@ -23,12 +23,13 @@ function ssh_remote_to_local() {
   local jumper_ip=${3}
   local jumper_port=${4:-22}
   local jumper_user=${5:-root}
+  local key_file=${6:-~/.ssh/id_rsa}
   if [ -z "${local_port}" -o -z "${remote_port}" -o -z "${jumper_ip}" ]; then
     log plain "Usage: ssh_remote_to_local {remote_port} {local_port} {jumper_ip} [jumper_port=22] [jumper_user=root]"
   else
     ssh_kill_by_port ${local_port}
     log "ssh forward ${remote_ip}:${remote_port}->${jumper_user}@${jumper_ip}:${jumper_port}->${local_ip}:${local_port}"
-    ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -R ${remote_ip}:${remote_port}:${local_ip}:${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
+    ssh -i ${key_file} -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -nNTf -R ${remote_ip}:${remote_port}:${local_ip}:${local_port} -p ${jumper_port} ${jumper_user}@${jumper_ip}
   fi
 }
 
@@ -50,12 +51,12 @@ function ssh_kill_by_port() {
   local port=${1}
   local ssh_pid=$(lsof -i -n -P | grep LISTEN | grep ${port} -w | grep ssh -w | tr -s ' ' | cut -d' ' -f2)
   if [ -n "${ssh_pid}" ]; then
-    log "kill a ssh agent listen on ${port}"
-    kill -9 ${ssh_pid}
+    log warn "kill a ssh agent [${ssh_pid}] listen on [${port}]"
+    kill -15 ${ssh_pid}
   fi
 }
 
-function ssh_add_host() {
+function ssh_config_add_host() {
   local host=$1
   local port=${2:-22}
   local name=${3:-${host}}
