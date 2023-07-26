@@ -67,3 +67,7 @@ function net_is_ip() {
     log plain "false"
   fi
 }
+
+function net_my_ip() {
+  curl -s https://api.ipify.org
+}

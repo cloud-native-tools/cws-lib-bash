@@ -824,6 +824,20 @@ function k8s_ds() {
   fi
 }
 
+function k8s_current_context() {
+  kubectl config current-context
+}
+
 function k8s_current_cluster() {
-  kubectl config view -o jsonpath='{.contexts[?(@.name == "'"$(kubectl config current-context)"'")].context.cluster}'
+  local current_context=$(k8s_current_context)
+  kubectl config view -o jsonpath='{.contexts[?(@.name == "'"$(k8s_current_context)"'")].context.cluster}'
+}
+
+function k8s_contexts() {
+  kubectl config view -o jsonpath='{range .contexts[*]}{.name} {.context.cluster}{"\n"}{end}'
+}
+
+function k8s_use_context() {
+  local context=${1}
+  kubectl config use-context $(k8s_contexts | grep ${context} | awk '{print $1}')
 }

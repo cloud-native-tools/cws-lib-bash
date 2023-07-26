@@ -122,3 +122,27 @@ function git_tag_to_commit() {
     git ls-remote --tags ${url} | grep -w ${tag} | cut -f1
   fi
 }
+
+function git_remote_heads() {
+  local url=${1}
+  if [ -n "${url}" ]; then
+    git ls-remote --heads ${url}
+  fi
+}
+
+function git_clone_branches() {
+  local url=${1}
+  local filter=${2:-.*}
+
+  if [ -z "${url}" ]; then
+    log error "Usage: git_clone_branches <url>"
+    return 1
+  fi
+
+  log info "clone branches from ${url}"
+  git_remote_heads ${url} | grep -E "${filter}" | head -n 10 | while read commit_id ref_name; do
+    branch_name=${ref_name#refs/heads/}
+    git clone -b ${branch_name} --depth=1 ${url} ${branch_name}
+    log notice "branch ${branch_name}[${commit_id}] cloned into ${PWD}/${branch_name}"
+  done
+}

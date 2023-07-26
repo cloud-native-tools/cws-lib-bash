@@ -1,5 +1,9 @@
 function encode_stdin() {
-  echo "echo \"$(gzip -c - | base64 -w0)\"|base64 -d|gunzip -c -"
+  if [ "$(uname)" = "Darwin" ]; then
+    echo "echo \"$(gzip -c - | base64)\"|base64 -d|gunzip -c -"
+  else
+    echo "echo \"$(gzip -c - | base64 -w0)\"|base64 -d|gunzip -c -"
+  fi
 }
 
 function encode_files() {
