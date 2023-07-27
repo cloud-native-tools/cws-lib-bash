@@ -58,6 +58,10 @@ function git_push_all() {
   done
 }
 
+function git_init_submodule() {
+  git submodule update --init --recursive 
+}
+
 function git_update_submodule() {
   git submodule update --init --recursive --remote
 }

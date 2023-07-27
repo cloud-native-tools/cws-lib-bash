@@ -839,5 +839,14 @@ function k8s_contexts() {
 
 function k8s_use_context() {
   local context=${1}
+  if [ -z "${context}" ]; then
+    log warn "Usage: k8s_use_context <context or cluster>"
+    return 1
+  fi
   kubectl config use-context $(k8s_contexts | grep ${context} | awk '{print $1}')
+}
+
+function k8s_use_namespace() {
+  local namespace=${1}
+  kubectl config set-context --current --namespace=${namespace}
 }
