@@ -71,3 +71,8 @@ function net_is_ip() {
 function net_my_ip() {
   curl -s https://api.ipify.org
 }
+
+function net_trace_route() {
+  local target_host=${1}
+  traceroute -q 5 -w 2 ${target_host}
+}

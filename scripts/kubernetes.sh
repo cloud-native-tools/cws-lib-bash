@@ -17,10 +17,10 @@ function k8s_get_all() {
 
 function k8s_info() {
   log plain "-------  kubectl version   --------"
-  kubectl version
+  kubectl version --output=yaml
   log plain "-------  cluster info      --------"
   kubectl cluster-info
-  log plain "-------  component status  -------"
+  log plain "-------  component status  --------"
   kubectl get componentstatus
 }
 
@@ -601,6 +601,7 @@ function k8s_svc_avail_external_ip() {
   local namepsace=${1}
   local service=${2}
   local opt=${3:-available}
+
   if [ -n "${namepsace}" -a -n "${service}" ]; then
     local list_ip_tpl=$(
       cat <<'EOF'

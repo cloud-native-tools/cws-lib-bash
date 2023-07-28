@@ -159,3 +159,24 @@ function read_line() {
     fi
   done
 }
+
+function urlencode() {
+  local url="${1}"
+  local length="${#url}"
+  local encoded=""
+  local i
+
+  for ((i = 0; i < length; i++)); do
+    local char="${url:i:1}"
+    case "${char}" in
+    [a-zA-Z0-9.~_-:/])
+      encoded="${encoded}${char}"
+      ;;
+    *)
+      encoded="${encoded}$(printf '%%%02X' "'${char}")"
+      ;;
+    esac
+  done
+
+  echo "${encoded}"
+}

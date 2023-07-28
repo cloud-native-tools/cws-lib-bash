@@ -1,8 +1,5 @@
 function yum_download() {
-  local downloaddir=${1}
-  mkdir -pv ${downloaddir}
-  shift
-  yum reinstall --downloadonly --downloaddir ${downloaddir} $@
+  yum reinstall --downloadonly --downloaddir ${PWD} $@
 }
 
 function yum_mk_rootfs() {
