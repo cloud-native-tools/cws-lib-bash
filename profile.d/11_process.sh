@@ -43,3 +43,7 @@ function ps_inotify() {
     xargs grep -c '^inotify' |
     sort -n -t: -k2 -r
 }
+
+function ps_ns() {
+  ps -o pid,pidns,netns,mntns,ipcns,utsns,userns,args $@
+}
