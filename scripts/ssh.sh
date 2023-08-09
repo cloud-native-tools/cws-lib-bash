@@ -62,11 +62,15 @@ function ssh_config_add_host() {
   local name=${3:-${host}}
   local user=${4:-root}
   local key=${5:-~/.ssh/id_rsa}
-  {
-    echo "Host ${name}"
-    echo "  HostName ${host}"
-    echo "  Port ${port}"
-    echo "  User ${user}"
-    echo "  IdentityFile ${key}"
-  }
+  cat <<EOF
+Host ${name}
+  HostName ${host}
+  Port ${port}
+  User ${user}
+  IdentityFile ${key}
+  ServerAliveInterval 5
+  PubkeyAcceptedAlgorithms +ssh-rsa
+  UserKnownHostsFile /dev/null
+  StrictHostKeyChecking no
+EOF
 }

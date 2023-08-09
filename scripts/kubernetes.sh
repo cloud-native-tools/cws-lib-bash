@@ -69,6 +69,18 @@ function k8s_nodes() {
   kubectl get nodes -o wide $@
 }
 
+function k8s_node_images() {
+  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items}}{{.metadata.name}}{{":\n"}}
+  {{- range $image := .status.images -}}
+    {{- range $name := $image.names -}}
+      {{- printf "%-16d%s\n" $image.sizeBytes $name -}}
+    {{- end -}}
+  {{end}}
+{{end}}
+EOF
+}
+
 function k8s_node_labels() {
   kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
@@ -576,9 +588,12 @@ function k8s_configmap() {
   {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
   {{- printf "Name: %-60s\n" .metadata.name -}}
   {{- range $key, $value := .data -}}
-    {{- printf "data: %s\n%-80s\n" $key $value -}}
+    {{"-----\n"}}
+    {{- printf "%s=$(cat <<'EOF'\n" $key -}}
+    {{- printf "%s\n" $value -}}
+    {{- printf "EOF\n)\n" -}}
   {{- end -}}
-  {{"---\n"}}
+  {{"================================================\n"}}
 {{- end -}}
 EOF
 }
