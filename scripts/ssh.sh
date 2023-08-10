@@ -56,21 +56,19 @@ function ssh_kill_by_port() {
   fi
 }
 
-function ssh_config_add_host() {
+function ssh_host_config() {
   local host=$1
   local port=${2:-22}
   local name=${3:-${host}}
   local user=${4:-root}
   local key=${5:-~/.ssh/id_rsa}
-  cat <<EOF
-Host ${name}
-  HostName ${host}
-  Port ${port}
-  User ${user}
-  IdentityFile ${key}
-  ServerAliveInterval 5
-  PubkeyAcceptedAlgorithms +ssh-rsa
-  UserKnownHostsFile /dev/null
-  StrictHostKeyChecking no
-EOF
+  echo "Host ${name}"
+  echo "  HostName ${host}"
+  echo "  Port ${port}"
+  echo "  User ${user}"
+  echo "  IdentityFile ${key}"
+  echo "  ServerAliveInterval 5"
+  echo "  PubkeyAcceptedAlgorithms +ssh-rsa"
+  echo "  UserKnownHostsFile /dev/null"
+  echo "  StrictHostKeyChecking no"
 }
