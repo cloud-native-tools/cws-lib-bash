@@ -69,7 +69,7 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
-  curl -s https://api.ipify.org
+  curl -s https://api.ipify.org --connect-timeout 5
 }
 
 function net_trace_route() {
