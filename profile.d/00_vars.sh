@@ -50,3 +50,5 @@ if [ -x /usr/bin/pwd ] || [ -x /bin/pwd ]; then
   export PWD=$(pwd) # update PWD in vscode
 fi
 export TMOUT=0
+
+BASH_OS=$(uname -s)

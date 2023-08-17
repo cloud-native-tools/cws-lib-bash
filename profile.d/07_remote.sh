@@ -6,7 +6,7 @@ function remote_get_hosts() {
     fi
 }
 
-function remote_deploy() {
+function remote_upload() {
     local dest=$1
     shift
     local src=$@

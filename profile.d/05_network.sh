@@ -51,7 +51,7 @@ function net_namespaces() {
   done
 }
 
-function net_my() {
+function net_my_login_ip() {
   ip route get $(who | awk '{print $NF}' | tr -d '(' | tr -d ')') | grep src | awk '{print $7}'
 }
 
@@ -75,4 +75,23 @@ function net_my_ip() {
 function net_trace_route() {
   local target_host=${1}
   traceroute -q 5 -w 2 ${target_host}
+}
+
+function net_valid_ipv4() {
+  local ip="$1"
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || {
+    log error "[${ip}] address is invalid"
+    return 1
+  }
+  for i in ${ip//./ }; do
+    [[ "${#i}" -gt 1 && "${i:0:1}" == 0 ]] && {
+      log error "[${ip}] address is invalid"
+      return 1
+    }
+    [[ "$i" -gt 255 ]] && {
+      log error "[${ip}] address is invalid"
+      return 1
+    }
+  done
+  log notice "[${ip}] address is valid"
 }
