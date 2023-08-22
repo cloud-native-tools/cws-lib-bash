@@ -59,7 +59,7 @@ function git_push_all() {
 }
 
 function git_init_submodule() {
-  git submodule update --init --recursive 
+  git submodule update --init --recursive
 }
 
 function git_update_submodule() {
@@ -148,5 +148,14 @@ function git_clone_branches() {
     branch_name=${ref_name#refs/heads/}
     git clone -b ${branch_name} --depth=1 ${url} ${branch_name}
     log notice "branch ${branch_name}[${commit_id}] cloned into ${PWD}/${branch_name}"
+  done
+}
+
+function git_update_bare() {
+  local root=${1:-${PWD}}
+  for head in $(find ${root} -name HEAD); do
+    pushd $(dirname ${head}) >/dev/null 2>&1
+    git remote update
+    popd >/dev/null 2>&1
   done
 }
