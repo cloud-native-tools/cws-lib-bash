@@ -3,6 +3,11 @@ function is_zsh() { test "$(basename $SHELL)" = "zsh"; }
 function is_ash() { test "$(basename $SHELL)" = "ash"; }
 function is_dash() { test "$(basename $SHELL)" = "dash"; }
 
+is_bash && alias sh="bash"
+is_zsh && alias sh="zsh"
+is_ash && alias sh="ash"
+is_dash && alias sh="dash"
+
 function debug_on() {
   local log=$1
   if [ -n "${log}" ]; then

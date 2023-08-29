@@ -9,6 +9,3 @@ alias dfh="df -Th"
 alias freeh="free -mwh"
 alias psl="ps auxf"
 alias psearch="ps aux | grep -v grep | grep -i -e VSZ -e"
-
-is_bash && alias sh="bash"
-is_zsh && alias sh="zsh"
