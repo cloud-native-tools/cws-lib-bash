@@ -114,9 +114,14 @@ function git_https_url() {
 }
 
 function git_clone_into() {
-  local dir=${1:-${PWD}}
-  if [ $# -gt 0 ]; then shift; fi
-  git -C ${dir} clone --progress --recurse-submodules -j$(nproc) $@
+  local url=${1}
+  local dir=${2:-${PWD}}
+  if [ -z "${url}" ]; then
+    log error "Usage: git_clone_into <url> [dir]"
+    return 1
+  else
+    git -C ${dir} clone --progress --recurse-submodules -j$(nproc) ${url}
+  fi
 }
 
 function git_tag_to_commit() {
