@@ -167,3 +167,24 @@ function git_update_bare() {
     popd >/dev/null 2>&1
   done
 }
+
+function git_describe() {
+  local commit_id=${1}
+  git describe --tags --abbrev=0 ${commit_id}
+}
+
+function git_switch() {
+  local version=${1}
+  if [ -f .gitmodules ]; then
+    grep 'path =' .gitmodules | awk '{print $NF}' | xargs rm -rf
+  fi
+
+  if [ -n "${version}" ]; then
+    git status
+    git checkout ${version}
+  fi
+  if [ -f .gitmodules ]; then
+    git submodule sync
+    git submodule update --init --recursive
+  fi
+}
