@@ -52,8 +52,27 @@ function k8s_desc_pod() {
   kubectl describe -n ${namespace} pods ${pods}
 }
 
+function k8s_dump_pod() {
+  local namespace=$1
+  local pod=$2
+  if [ -z "${namespace}" ] || [ -z "${pod}" ]; then
+    log warn "Usage: k8s_dump_pod <namespace> <pod name>"
+    return 1
+  fi
+  kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
+}
+
 function k8s_desc_node() {
   kubectl describe node $@
+}
+
+function k8s_dump_node() {
+  local node=$1
+  if [ -z "${node}" ]; then
+    log warn "Usage: k8s_dump_node <node name>"
+    return 1
+  fi
+  kubectl get node -o yaml ${node} >${node}.yaml
 }
 
 function k8s_failed_pod() {
