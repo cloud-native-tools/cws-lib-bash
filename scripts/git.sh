@@ -71,7 +71,7 @@ function git_sync_ignore() {
 }
 
 function git_clean() {
-  git clean -dfX
+  git clean -d -x -f
   find . -type d -empty | grep -v .git | xargs rm -rfv
 }
 
@@ -108,23 +108,34 @@ function git_parse_url() {
   fi
 }
 
-function git_https_url() {
+function git_convert_to_https_url() {
   local root=${1:-.}
   git_list_url ${root} | sed -E "s~${GIT_URL_PATTERN}~https://\2/\4/\5\6~g"
 }
 
-function git_clone_into() {
-  local dir=${1}
-  local url=${2}
-  if [ -z "${dir}" ] || [ -z "${url}" ]; then
-    log error "Usage: git_clone_into <dir> <url> "
+function git_clone() {
+  local url=${1}
+  if [ -z "${url}" ]; then
+    log error "Usage: git_clone <url>"
     return 1
-  else
-    if [ ! -d "${dir}" ]; then
-      mkdir -p ${dir}
-    fi
-    git -C ${dir} clone --progress --recurse-submodules -j$(nproc) ${url}
   fi
+  shift
+  git clone --progress -j$(nproc) $@
+}
+
+function git_clone_into() {
+  local url=${1}
+  local dir=${2}
+  if [ -z "${dir}" ]; then
+    log error "Usage: git_clone_into <url> <dir>"
+    return 1
+  fi
+
+  if [ ! -d "${dir}" ]; then
+    mkdir -p ${dir}
+  fi
+  shift 2
+  git_clone ${url} -C ${dir} $@
 }
 
 function git_tag_to_commit() {
@@ -177,6 +188,7 @@ function git_switch() {
   local version=${1}
   if [ -f .gitmodules ]; then
     grep 'path =' .gitmodules | awk '{print $NF}' | xargs rm -rf
+    git clean -dfx
   fi
 
   if [ -n "${version}" ]; then
@@ -192,4 +204,24 @@ function git_switch() {
 function git_search() {
   local pattern="${1}"
   git log -p -S "${pattern}"
+}
+
+function git_mirror() {
+  local url=${1}
+  git_clone ${url} --mirror
+}
+
+function git_clone_local() {
+  local local_path=${1}
+  if [ ! -d "${local_path}" ] || [ ! -f "${local_path}/config" ]; then
+    log error "${local_path} not exist or it is not a git repository"
+    return 1
+  fi
+  shift
+  git_clone file://${local_path} \
+    --depth=1 \
+    --no-hardlinks \
+    --recurse-submodules \
+    --shallow-submodules \
+    $@
 }
