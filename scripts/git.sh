@@ -188,3 +188,8 @@ function git_switch() {
     git submodule update --init --recursive
   fi
 }
+
+function git_search() {
+  local pattern="${1}"
+  git log -p -S "${pattern}"
+}
