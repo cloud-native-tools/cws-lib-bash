@@ -120,7 +120,7 @@ function git_clone() {
     return 1
   fi
   shift
-  git clone --progress -j$(nproc) $@
+  git clone --progress -j$(nproc) ${url} $@
 }
 
 function git_clone_into() {
