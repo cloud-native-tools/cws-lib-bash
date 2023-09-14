@@ -69,7 +69,17 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
-  curl -s https://api.ipify.org --connect-timeout 5
+  local ip_apis=$(
+    cat <<EOF
+https://api.seeip.org
+https://api.ipify.org
+EOF
+  )
+  for url in ${ip_apis}; do
+    if curl -s --connect-timeout 5 ${url}; then
+      break
+    fi
+  done
 }
 
 function net_trace_route() {
