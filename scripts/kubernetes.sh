@@ -55,11 +55,15 @@ function k8s_desc_pod() {
 function k8s_dump_pod() {
   local namespace=$1
   local pod=$2
-  if [ -z "${namespace}" ] || [ -z "${pod}" ]; then
-    log warn "Usage: k8s_dump_pod <namespace> <pod name>"
+  if [ -z "${namespace}" ]; then
+    log warn "Usage: k8s_dump_pod <namespace> [pod name]"
     return 1
   fi
-  kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
+  if [ -z "${pod}" ]; then
+    k8s_rund_pod_list ${namespace} | awk '{print "kubectl get pod -n "$1" -o yaml "$2" >"$3"/"$3".yaml"}' | bash
+  else
+    kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
+  fi
 }
 
 function k8s_desc_node() {
@@ -906,6 +910,11 @@ function k8s_rund_pod_list() {
   {{- if eq (printf "%s" .spec.runtimeClassName) ("rund") -}}
     {{- printf "%-40s " .metadata.namespace -}}
     {{- printf "%-60s " .metadata.name -}}
+    {{- with .spec.nodeName -}}
+      {{- printf "%-20s " . -}}
+    {{- else -}}
+      {{- printf "%-20s " "None" -}}
+    {{- end -}}
     {{"\n"}}
   {{- end -}}
 {{- end -}}

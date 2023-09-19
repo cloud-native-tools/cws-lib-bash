@@ -199,6 +199,7 @@ function git_switch() {
     git submodule sync
     git submodule update --init --recursive
   fi
+  git reset --hard
 }
 
 function git_search() {

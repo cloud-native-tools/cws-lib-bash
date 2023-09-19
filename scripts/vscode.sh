@@ -45,3 +45,13 @@ function vscode_workspace_setup() {
   cat ${workspace_file} | jq ".folders |= . + ${main_projects_json}" | jq ".folders |= . + ${sub_projects_json}" >${workspace_file}.new
   mv -fv ${workspace_file}.new ${workspace_file}
 }
+
+function vscode_workspace_add_folder() {
+  local folder_path=${1}
+  local workspace_file=${2:-${VSCODE_DEFAULT_WORKSPACE}}
+  if [ ! -f ${workspace_file} ]; then
+    echo '{}' | jq ".folders = []" >${workspace_file}
+  fi
+  cat ${workspace_file} | jq ".folders |= . + $(realpath ${folder_path} | jq -R '{"path":.}' | jq -s .)" >${workspace_file}.tmp
+  mv -fv ${workspace_file}.tmp ${workspace_file}
+}
