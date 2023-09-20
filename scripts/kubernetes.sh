@@ -60,7 +60,7 @@ function k8s_dump_pod() {
     return 1
   fi
   if [ -z "${pod}" ]; then
-    k8s_rund_pod_list ${namespace} | awk '{print "kubectl get pod -n "$1" -o yaml "$2" >"$3"/"$3".yaml"}' | bash
+    k8s_rund_pod_list ${namespace} | awk '{print "kubectl get pod -n "$1" -o yaml "$2" >"$3"/"$2".yaml"}' | bash
   else
     kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
   fi
