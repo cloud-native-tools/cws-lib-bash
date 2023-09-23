@@ -135,7 +135,7 @@ function git_clone_into() {
     mkdir -p ${dir}
   fi
   shift 2
-  git_clone ${url} -C ${dir} $@
+  git -C ${dir} clone --progress -j$(nproc) --recurse-submodules ${url} $@
 }
 
 function git_tag_to_commit() {
