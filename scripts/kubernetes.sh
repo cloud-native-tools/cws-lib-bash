@@ -606,7 +606,9 @@ function k8s_configmap() {
     ;;
   esac
   shift
-  kubectl get configmap ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+  local cm_name=${1}
+  if [ -z "${cm_name}" ]; then
+    kubectl get configmap ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items -}}
   {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
   {{- printf "Name: %-60s\n" .metadata.name -}}
@@ -619,6 +621,20 @@ function k8s_configmap() {
   {{"================================================\n"}}
 {{- end -}}
 EOF
+  else
+    shift
+    kubectl get configmap ${ns_opt} ${cm_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- printf "Namespace: %-24s\n" .metadata.namespace -}}
+{{- printf "Name: %-60s\n" .metadata.name -}}
+{{- range $key, $value := .data -}}
+  {{"-----\n"}}
+  {{- printf "%s=$(cat <<'EOF'\n" $key -}}
+  {{- printf "%s\n" $value -}}
+  {{- printf "EOF\n)\n" -}}
+{{- end -}}
+{{"================================================\n"}}
+EOF
+  fi
 }
 
 function k8s_ns_export() {
