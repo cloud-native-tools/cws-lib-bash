@@ -6,14 +6,6 @@ function vscode_workspace_setup() {
   fi
 
   main_projects=$(find ${project_root} -maxdepth 1 -mindepth 1 -type d ${PROJECTS_CONDITION})
-  sub_projects=$({
-    for module in $(find ${main_projects} -name .gitmodules); do
-      module_dir=$(dirname ${module})
-      pushd ${module_dir} >/dev/null 2>&1
-      cat .gitmodules | grep -E '^\s*path\s*=' | awk '{print "'${module_dir}'/"$NF}'
-      popd >/dev/null 2>&1
-    done
-  } || true)
   main_projects_json=$({
     if [ -n "${main_projects}" ]; then
       ls -1d ${main_projects} |
@@ -27,22 +19,7 @@ function vscode_workspace_setup() {
       echo '[]'
     fi
   } || true)
-  sub_projects_json=$({
-    if [ -n "${sub_projects}" ]; then
-      ls -1d ${sub_projects} |
-        xargs realpath |
-        grep -E "${PROJECTS_INCLUDE:-.*}" |
-        grep -vE "${PROJECTS_EXCLUDE:-.*}" |
-        grep -vE '^$' |
-        sort |
-        uniq |
-        jq -R '{"path":.}' |
-        jq -s .
-    else
-      echo '[]'
-    fi
-  } || true)
-  cat ${workspace_file} | jq ".folders |= . + ${main_projects_json}" | jq ".folders |= . + ${sub_projects_json}" >${workspace_file}.new
+  cat ${workspace_file} | jq ".folders |= . + ${main_projects_json}" >${workspace_file}.new
   mv -fv ${workspace_file}.new ${workspace_file}
 }
 
