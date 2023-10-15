@@ -76,7 +76,7 @@ https://api.ipify.org
 EOF
   )
   for url in ${ip_apis}; do
-    if curl -s --connect-timeout 5 ${url}; then
+    if curl -s --connect-timeout 120 ${url}; then
       break
     fi
   done

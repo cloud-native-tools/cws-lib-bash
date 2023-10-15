@@ -32,7 +32,7 @@ function ps_user() {
 #   USER   show only trees rooted at processes of this user
 
 function ps_tree() {
-  local pid=${1}
+  local pid=${1:-$$}
   pstree -asnl -N net -H ${pid} ${pid}
 }
 
