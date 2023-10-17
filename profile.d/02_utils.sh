@@ -187,3 +187,12 @@ function urlencode() {
 
   echo "${encoded}"
 }
+
+function have() {
+  local cmd=${1}
+  if ! command -v ${cmd} >/dev/null 2>&1; then
+    log error "command [${cmd}] not found"
+    return 1
+  fi
+  return 0
+}

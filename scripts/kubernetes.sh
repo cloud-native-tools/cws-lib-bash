@@ -906,33 +906,6 @@ function k8s_use_namespace() {
   kubectl config set-context --current --namespace=${namespace}
 }
 
-function k8s_rund_pod_list() {
-  local namepsace=${1}
-  if [ -z "${namepsace}" ]; then
-    namepsace=all
-  else
-    shift
-  fi
-  case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
-  esac
-  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
-{{- range .items -}}
-  {{- if eq (printf "%s" .spec.runtimeClassName) ("rund") -}}
-    {{- printf "%-40s " .metadata.namespace -}}
-    {{- printf "%-60s " .metadata.name -}}
-    {{- with .spec.nodeName -}}
-      {{- printf "%-20s " . -}}
-    {{- else -}}
-      {{- printf "%-20s " "None" -}}
-    {{- end -}}
-    {{"\n"}}
-  {{- end -}}
-{{- end -}}
-EOF
+function k8s_runtime_class() {
+  kubectl get runtimeclass -o wide
 }
