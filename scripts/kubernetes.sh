@@ -113,7 +113,7 @@ EOF
 }
 
 function k8s_node_taints() {
-  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
+  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{"\n"}}{{end}}
 {{end}}
@@ -121,7 +121,7 @@ EOF
 }
 
 function k8s_node_annotations() {
-  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
+  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range $key,$value := .metadata.annotations}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
 {{end}}
@@ -129,7 +129,7 @@ EOF
 }
 
 function k8s_node_status() {
-  kubectl get nodes -o go-template-file=/dev/stdin <<'EOF'
+  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   CPU: {{.status.capacity.cpu}}
   Memory: {{.status.capacity.memory}}
