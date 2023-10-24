@@ -60,7 +60,7 @@ function k8s_dump_pod() {
     return 1
   fi
   if [ -z "${pod}" ]; then
-    k8s_rund_pod_list ${namespace} | awk '{print "kubectl get pod -n "$1" -o yaml "$2" >"$3"/"$2".yaml"}' | bash
+    k8s_pods ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
   else
     kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
   fi
@@ -186,55 +186,6 @@ function k8s_delete_pod() {
     log warn "Usage: k8s_delete_pod <namespace> <pod name> <args...>"
   else
     kubectl -n ${namepsace} delete pod ${pod_name} -- $@
-  fi
-}
-
-function k8s_login_container() {
-  local namepsace=$1
-  shift
-  local pod_name=$1
-  shift
-  local container_name=$1
-  shift
-  if [ -z "${namepsace}" -o -z "${pod_name}" -o -z "${container_name}" ]; then
-    log warn "Usage: k8s_login_container <namespace> <pod name> <container name> <cmd>"
-  else
-    kubectl -n ${namepsace} exec -it ${pod_name} -c ${container_name} -- $@
-  fi
-}
-
-function k8s_containers() {
-  local namepsace=${1:-default}
-  local pod_name=$2
-  printf "%-40s %-30s %-80s\n" "Pod Name" "Container Name" Image
-  local tpl=$(
-    cat <<'EOF'
-{{- $pod_name := .metadata.name -}}
-{{- range .spec.containers -}}
-  {{- printf "%-40s " $pod_name -}}
-  {{- printf "%-30s " .name -}}
-  {{- printf "%-80s " .image -}}
-  {{"\n"}}
-{{- end -}}
-{{- range .spec.initContainers -}}
-  {{- printf "%-40s " $pod_name -}}
-  {{- printf "(init) %-23s " .name -}}
-  {{- printf "%-80s " .image -}}
-  {{"\n"}}
-{{- end -}}
-EOF
-  )
-  if [ -z "${pod_name}" ]; then
-    local tpl_list=$(
-      cat <<EOF
-{{- range .items -}}
-  ${tpl}
-{{- end -}}
-EOF
-    )
-    kubectl -n ${namepsace} get pods -o go-template --template="${tpl_list}"
-  else
-    kubectl -n ${namepsace} get pods ${pod_name} -o go-template --template="${tpl}"
   fi
 }
 
@@ -908,4 +859,50 @@ function k8s_use_namespace() {
 
 function k8s_runtime_class() {
   kubectl get runtimeclass -o wide
+}
+
+function k8s_pod_container() {
+  local TPL=$(
+    cat <<'EOF'
+{{- $pod_name := .metadata.name -}}
+{{- range .spec.initContainers -}}
+  {{- printf "%-50s " $pod_name -}}
+  {{- printf "(init) %-23s " .name -}}
+  {{- printf "%-120s " .image -}}
+  {{"\n"}}
+{{- end -}}
+{{- range .spec.containers -}}
+  {{- printf "%-50s " $pod_name -}}
+  {{- printf "%-30s " .name -}}
+  {{- printf "%-120s " .image -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+  )
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  local pod_name=${1}
+  if [ -z "${pod_name}" ]; then
+    TPL=$(
+      cat <<EOF
+{{- range .items -}}
+  ${TPL}
+{{- end -}}
+EOF
+    )
+  fi
+  printf "%-50s %-30s %-120s\n" "Pod" "Container" Image
+  kubectl get pods ${ns_opt} $@ --template="${TPL}"
 }
