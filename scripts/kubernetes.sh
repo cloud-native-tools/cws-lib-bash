@@ -57,7 +57,7 @@ function k8s_dump_pod() {
   local pod=$2
   if [ -z "${namespace}" ]; then
     log warn "Usage: k8s_dump_pod <namespace> [pod name]"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   if [ -z "${pod}" ]; then
     k8s_pods ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
@@ -74,7 +74,7 @@ function k8s_dump_node() {
   local node=$1
   if [ -z "${node}" ]; then
     log warn "Usage: k8s_dump_node <node name>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   kubectl get node -o yaml ${node} >${node}.yaml
 }
@@ -272,7 +272,7 @@ function k8s_pod_by_node() {
   shift
   if [ -z "${node_name}" ]; then
     log warn "Usage: k8s_pod_by_node <node name> [kubectl options]"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   k8s_pods $@ --field-selector "spec.nodeName=${node_name}"
 }
@@ -282,7 +282,7 @@ function k8s_pod_by_runtime() {
   shift
   if [ -z "${runtime_class}" ]; then
     log warn "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   k8s_pods $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
@@ -294,7 +294,7 @@ function k8s_pod_by_node_and_runtime() {
   shift
   if [ -z "${node_name}" ] || [ -z "${runtime_class}" ]; then
     log warn "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   k8s_pods $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
@@ -563,8 +563,8 @@ function k8s_configmap() {
 {{- range .items -}}
   {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
   {{- printf "Name: %-60s\n" .metadata.name -}}
+  {{"------------------------------------------------\n"}}
   {{- range $key, $value := .data -}}
-    {{"-----\n"}}
     {{- printf "%s=$(cat <<'EOF'\n" $key -}}
     {{- printf "%s\n" $value -}}
     {{- printf "EOF\n)\n" -}}
@@ -577,8 +577,8 @@ EOF
     kubectl get configmap ${ns_opt} ${cm_name} $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
 {{- printf "Name: %-60s\n" .metadata.name -}}
+{{"------------------------------------------------\n"}}
 {{- range $key, $value := .data -}}
-  {{"-----\n"}}
   {{- printf "%s=$(cat <<'EOF'\n" $key -}}
   {{- printf "%s\n" $value -}}
   {{- printf "EOF\n)\n" -}}
@@ -847,7 +847,7 @@ function k8s_use_context() {
   local context=${1}
   if [ -z "${context}" ]; then
     log warn "Usage: k8s_use_context <context or cluster>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   kubectl config use-context $(k8s_contexts | grep ${context} | awk '{print $1}')
 }

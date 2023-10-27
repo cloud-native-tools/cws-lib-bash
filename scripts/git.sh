@@ -117,7 +117,7 @@ function git_clone() {
   local url=${1}
   if [ -z "${url}" ]; then
     log error "Usage: git_clone <url>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   shift
   git clone --progress -j$(nproc) ${url} $@
@@ -128,7 +128,7 @@ function git_clone_into() {
   local url=${2}
   if [ -z "${dir}" ] || [ -z "${url}" ]; then
     log error "Usage: git_clone_into <dir> <url>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
 
   if [ ! -d "${dir}" ]; then
@@ -159,7 +159,7 @@ function git_clone_branches() {
 
   if [ -z "${url}" ]; then
     log error "Usage: git_clone_branches <url>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
 
   log info "clone branches from ${url}"
@@ -216,7 +216,7 @@ function git_clone_local() {
   local local_path=${1}
   if [ ! -d "${local_path}" ] || [ ! -f "${local_path}/config" ]; then
     log error "${local_path} not exist or it is not a git repository"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   shift
   git_clone file://${local_path} \

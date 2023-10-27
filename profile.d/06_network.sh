@@ -91,16 +91,16 @@ function net_valid_ipv4() {
   local ip="$1"
   [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || {
     log error "[${ip}] address is invalid"
-    return 1
+    return ${RETURN_FAILURE}
   }
   for i in ${ip//./ }; do
     [[ "${#i}" -gt 1 && "${i:0:1}" == 0 ]] && {
       log error "[${ip}] address is invalid"
-      return 1
+      return ${RETURN_FAILURE}
     }
     [[ "$i" -gt 255 ]] && {
       log error "[${ip}] address is invalid"
-      return 1
+      return ${RETURN_FAILURE}
     }
   done
   log notice "[${ip}] address is valid"

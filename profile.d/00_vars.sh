@@ -46,6 +46,9 @@ HISTCONTROL=ignoreboth
 EXIT_SUCCESS=0
 EXIT_FAILURE=1
 
+RETURN_SUCCESS=0
+RETURN_FAILURE=1 
+
 if [ -x /usr/bin/pwd ] || [ -x /bin/pwd ]; then
   export PWD=$(pwd) # update PWD in vscode
 fi

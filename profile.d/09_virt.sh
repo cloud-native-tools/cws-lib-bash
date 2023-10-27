@@ -1,8 +1,8 @@
 function in_chroot() {
   if ! file_same /proc/1/root /; then
-    return 0
+    return ${RETURN_SUCCESS}
   else
-    return 1
+    return ${RETURN_FAILURE}
   fi
 }
 

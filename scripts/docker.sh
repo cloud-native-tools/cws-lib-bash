@@ -70,13 +70,13 @@ function docker_extract() {
   local dest=${2:-${PWD}/rootfs}
   if [ -z "${img}" ]; then
     log warn "Usage: docker_export <image> [dest=${PWD}]"
-    return 1
+    return ${RETURN_FAILURE}
   else
     local cid=$(docker create ${img})
     mkdir -pv ${dest}
     docker export ${cid} | tar -xC ${dest}
     docker rm -f ${cid}
-    return 0
+    return ${RETURN_SUCCESS}
   fi
 }
 

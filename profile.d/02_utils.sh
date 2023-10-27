@@ -192,7 +192,7 @@ function have() {
   local cmd=${1}
   if ! command -v ${cmd} >/dev/null 2>&1; then
     log error "command [${cmd}] not found"
-    return 1
+    return ${RETURN_FAILURE}
   fi
-  return 0
+  return ${RETURN_SUCCESS}
 }

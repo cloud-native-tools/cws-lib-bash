@@ -2,7 +2,7 @@ function pci_info() {
   local bdf=${1}
   if [ -z "${bdf}" ]; then
     echo "Usage: pci_info <bdf>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   lspci -vvv -s ${bdf}
 }
@@ -33,3 +33,6 @@ function pci_iommu_list() {
   fi
 }
 
+function pci_ali_nvme() {
+  for bdf in $(lspci -nn -v | grep 1ded:5004 | awk '{print $1}'); do echo $bdf; done
+}

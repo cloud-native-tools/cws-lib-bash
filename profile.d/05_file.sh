@@ -114,12 +114,12 @@ function extract() {
         *.exe) cabextract ./"$n" ;;
         *)
           log error "extract: '$n' - unknown archive method"
-          return 1
+          return ${RETURN_FAILURE}
           ;;
         esac
       else
         log error "'$n' - file does not exist"
-        return 1
+        return ${RETURN_FAILURE}
       fi
     done
   fi
@@ -142,9 +142,9 @@ function file_same() {
   local src_info=$(stat -L -c "%D %F %i %t %T %u %U" $1)
   local target_info=$(stat -L -c "%D %F %i %t %T %u %U" $2)
   if [ "${src_info}" = "${target_info}" ]; then
-    return 0
+    return ${RETURN_SUCCESS}
   else
-    return 1
+    return ${RETURN_FAILURE}
   fi
 }
 
@@ -176,11 +176,11 @@ function file_real_size() {
   local filepath=${1}
   if [ -z "${filepath}" ]; then
     echo "Usage: file_size <filepath>"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   if [ ! -e "${filepath}" ]; then
     echo "File not exist: ${filepath}"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   local logical_size=$(stat -c "%s" ${filepath})
   local physical_size=$(stat -c "%b" ${filepath})

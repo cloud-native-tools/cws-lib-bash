@@ -46,7 +46,7 @@ function ctr_export() {
   local img=${1}
   if [ -z "${img}" ]; then
     echo "Usage: ctr_export <image> [tar]"
-    return 1
+    return ${RETURN_FAILURE}
   fi
   local tar=${2:-$(basename ${img%:*}).tar}
   ${CTR} ${K8S_NS} images export ${tar} ${img}
