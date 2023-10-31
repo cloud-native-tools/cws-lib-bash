@@ -10,6 +10,10 @@ function remote_upload() {
     local dest=$1
     shift
     local src=$@
+    if [ -z "${dest}" ] || [ -z "${src}" ]; then
+        log warn "Usage: remote_upload <dest> <src1> [src2] ..."
+        return ${RETURN_FAILURE}
+    fi
     for host in $(remote_get_hosts); do
         log info "Deploy [${src}] to ${host}:${dest}"
         scp -r ${src} ${host}:${dest}

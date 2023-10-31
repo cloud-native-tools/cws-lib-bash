@@ -20,7 +20,7 @@ function mock_it() {
   target="$@"
   if [ ! -e "${target}" ]; then
     log error "${target} not exist"
-    exit 1
+    exit ${EXIT_FAIL}
   fi
 
   self_name=$(basename ${target})

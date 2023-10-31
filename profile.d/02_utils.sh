@@ -81,7 +81,7 @@ function log() {
 
 function die() {
   log plain "${RED}${@}${CLEAR}"
-  exit 1
+  exit ${EXIT_FAIL}
 }
 
 function matches() {
