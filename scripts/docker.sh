@@ -3,11 +3,11 @@ function docker_exec() {
 }
 
 function docker_run() {
-  docker run --rm -it --privileged -v /:/rootfs --network host --entrypoint /bin/sh $@
+  docker run --rm -it --privileged --network host --entrypoint /bin/sh $@
 }
 
-function docker_gc() {
-  docker system prune $@
+function docker_clean_exited() {
+  docker ps -a | grep Exited | awk '{print $1}' | xargs docker rm -f
 }
 
 function docker_prune() {
@@ -45,24 +45,20 @@ function dp() {
 }
 
 function dp_up() {
-  docker-compose up -d --compatibility --remove-orphans $@
+  dp up -d --compatibility --remove-orphans $@
 }
 
 function dp_recreate() {
-  docker-compose up -d --force-recreate --no-deps $@
+  dp up -d --force-recreate --no-deps $@
 }
 
 function dp_svc() {
-  docker-compose ps --services
+  dp ps --services
 }
 
 function docker_import_env() {
   local docker_file=${1}
   eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
-}
-
-function docker_prune() {
-  docker system prune -a
 }
 
 function docker_extract() {
