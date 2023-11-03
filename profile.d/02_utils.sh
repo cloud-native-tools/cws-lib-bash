@@ -196,3 +196,7 @@ function have() {
   fi
   return ${RETURN_SUCCESS}
 }
+
+function lesser() {
+  cat - | less -F -S -X -K
+}

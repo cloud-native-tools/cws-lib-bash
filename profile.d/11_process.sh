@@ -47,3 +47,8 @@ function ps_inotify() {
 function ps_ns() {
   ps -o pid,pidns,netns,mntns,ipcns,utsns,userns,args $@
 }
+
+function ps_top_mem() {
+  local topN=${1:-10}
+  ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -n ${topN}
+}
