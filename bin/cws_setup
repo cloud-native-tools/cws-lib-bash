@@ -1,0 +1,21 @@
+#!/bin/bash
+
+function add_line_if_not_exit() {
+  local file=$1
+  local line=$2
+  if [ -f ${file} ]; then
+    if ! grep -Fxq "${line}" ${file}; then
+      echo ${line} >>${file}
+    fi
+  fi
+}
+
+ROOT=$(readlink -f $(dirname $(dirname "${BASH_SOURCE[0]}")))
+ENV=${ROOT}/bin/cws_env
+
+# for login shell
+add_line_if_not_exit ~/.bash_profile ". ${ENV}"
+
+# for non-login shell
+add_line_if_not_exit ~/.bashrc ". ${ENV}"
+add_line_if_not_exit ~/.zshrc ". ${ENV}"
