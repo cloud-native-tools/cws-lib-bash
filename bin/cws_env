@@ -1,6 +1,10 @@
 #!/bin/bash
 
-ROOT=$(readlink -f $(dirname $(dirname "${BASH_SOURCE[0]}")))
+DIR=$(dirname "${BASH_SOURCE[0]}")
+if [ "${DIR}" == "." ]; then
+  DIR=$(pwd)
+fi
+ROOT=$(readlink -f $(dirname ${DIR}))
 
 PROFILED=${ROOT}/profile.d
 SCRIPTS=${ROOT}/scripts
