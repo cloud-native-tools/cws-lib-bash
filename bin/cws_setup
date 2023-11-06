@@ -5,12 +5,19 @@ function add_line_if_not_exit() {
   local line=$2
   if [ -f ${file} ]; then
     if ! grep -Fxq "${line}" ${file}; then
+      echo "add [${line}] to [${file}]"
       echo ${line} >>${file}
+    else
+      echo "[${line}] already exist in [${file}]"
     fi
   fi
 }
 
-ROOT=$(readlink -f $(dirname $(dirname "${BASH_SOURCE[0]}")))
+DIR=$(dirname "${BASH_SOURCE[0]}")
+if [ "${DIR}" == "." ]; then
+  DIR=$(pwd)
+fi
+ROOT=$(readlink -f $(dirname ${DIR}))
 ENV=${ROOT}/bin/cws_env
 
 # for login shell
