@@ -1,5 +1,3 @@
-CWS_LIB_COMMIT_ID=2be520d
-
 # Colors
 CLEAR='\033[0m'
 BLACK='\033[0;30m'

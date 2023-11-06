@@ -8,7 +8,6 @@ ROOT=$(readlink -f $(dirname ${DIR}))
 
 PROFILED=${ROOT}/profile.d
 SCRIPTS=${ROOT}/scripts
-BIN=${ROOT}/bin
 
 for i in ${PROFILED}/*.sh ${SCRIPTS}/*.sh; do
     if [ -r "$i" ]; then
@@ -21,5 +20,6 @@ for i in ${PROFILED}/*.sh ${SCRIPTS}/*.sh; do
 done
 unset i
 
-export PATH=${BIN}:${PATH}
+export CWS_BASH_LIB==${ROOT}
+export PATH=${CWS_BASH_LIB}/bin:${PATH}
 
