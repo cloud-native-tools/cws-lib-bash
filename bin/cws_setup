@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 function add_line_if_not_exit() {
   local file=$1
