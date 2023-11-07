@@ -227,13 +227,25 @@ function git_clone_local() {
     $@
 }
 
-function git_add_signed_off_hook(){
+function git_add_signed_off_hook() {
   local hook_file=${1:-.git/hooks/commit-msg}
-  cat <<'EOF' > ${hook_file}
+  cat <<'EOF' >${hook_file}
   #!/bin/sh
 
 SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
 grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
 EOF
   chmod +x ${hook_file}
+}
+
+function git_install() {
+  local dest_dir=${1}
+  if [ -z "${dest_dir}" ]; then
+    log error "Usage: git_install <dest_dir>"
+    return ${RETURN_FAILURE}
+  fi
+  if [ ! -d "${dest_dir}" ]; then
+    mkdir - p ${dest_dir}
+  fi
+  git archive --format=tar --output=/dev/stdout HEAD | tar xf - -C ${dest_dir}
 }
