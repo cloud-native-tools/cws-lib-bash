@@ -182,6 +182,7 @@ function git_update_bare() {
   local root=${1:-${PWD}}
   for head in $(find ${root} -name HEAD); do
     pushd $(dirname ${head}) >/dev/null 2>&1
+    git remote prune origin
     git remote update
     popd >/dev/null 2>&1
   done

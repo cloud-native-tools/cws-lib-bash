@@ -449,6 +449,11 @@ function k8s_delete() {
 function k8s_logs() {
   local namepsace=${1}
   local pod=${2}
+  if [ -z "${namepsace}" ] || [ -z "${pod}" ]; then
+    log warn "Usage: k8s_logs <namespace> <pod> [container]"
+    return ${RETURN_FAILURE}
+  fi
+
   local container=${3}
   if [ -z "${container}" ]; then
     kubectl -n ${namepsace} logs --all-containers=true ${pod}
@@ -806,7 +811,7 @@ function k8s_deployment() {
   fi
 }
 
-function k8s_ds() {
+function k8s_daemonset() {
   local namepsace=${1}
   if [ -n "${namepsace}" ]; then
     shift

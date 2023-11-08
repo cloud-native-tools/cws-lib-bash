@@ -200,3 +200,27 @@ function have() {
 function lesser() {
   cat - | less -F -S -X -K
 }
+
+function dump_stack() {
+  local current=$$
+  local indent=""
+  local count=50
+
+  local cmdline="$(cat /proc/${current}/cmdline | tr '\000' ' ')"
+  local parent="$(grep PPid /proc/${current}/status | awk '{ print $2; }')"
+  local frame="${indent}${BOLD_RED}[${current}]:${cmdline}${CLEAR}\n"
+
+  while [ ${count} -gt 0 ]; do
+    current=${parent}
+    indent="  ${indent}"
+    count=$((count - 1))
+
+    cmdline=$(cat /proc/${current}/cmdline | tr '\000' ' ')
+    parent=$(grep PPid /proc/${current}/status | awk '{ print $2; }')
+    frame="${frame}${indent}[${current}]:${cmdline}\n"
+    if [ "${current}" == "1" ]; then
+      break
+    fi
+  done
+  log color "${frame}"
+}
