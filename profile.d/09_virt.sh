@@ -34,10 +34,16 @@ function umount_chroot() {
 }
 
 function enter_chroot() {
-  local entry="$@"
-  if ! in_chroot; then
-    local root_dir=$(get_root)
+  local root_dir=${1}
 
+  if [ -z "${root_dir}" ]; then
+    root_dir=${PWD}
+  else
+    shift
+    local entry="$@"
+  fi
+
+  if ! in_chroot; then
     if [[ ! -d "${root_dir}" ]]; then
       die "${root_dir} is not a directory"
     else

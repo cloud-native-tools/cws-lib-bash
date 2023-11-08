@@ -538,7 +538,12 @@ function k8s_label_nodes() {
 function k8s_taint_nodes() {
   local node_name=${1}
   local taint_value=${2}
-  kubectl taint nodes --overwrite ${node_name} ${taint_value}
+  if [ -z "${node_name}" ] || [ -z "${taint_value}" ]; then
+    log warn "Usage: k8s_taint_nodes <node name> <taint value> [selector]"
+    return ${RETURN_FAILURE}
+  fi
+  shift 2
+  kubectl taint nodes $@ --overwrite ${node_name} ${taint_value}
 }
 
 function k8s_apis() {

@@ -31,8 +31,8 @@ function git_checkout_by_date() {
 }
 
 function git_update_all() {
-  for gf in $(find . -name .git); do
-    pushd "${gf%/.git}" >/dev/null 2>&1
+  for git_dir in $(git_list_repos); do
+    pushd "${git_dir}" >/dev/null 2>&1
     log info "update in $(pwd)"
     git pull --all
     popd >/dev/null 2>&1
@@ -79,10 +79,18 @@ function git_tag() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
 }
 
-function git_list_url() {
-  local root=${1:-.}
+function git_list_repos() {
+  local root=${1:-${PWD}}
   for git_dir in $(find ${root} -name '.git' -type d); do
-    grep -w 'url' ${git_dir}/config | cut -d' ' -f 3
+    if [ -f ${git_dir}/config ]; then
+      echo $(dirname ${git_dir})
+    fi
+  done
+}
+
+function git_list_url() {
+  for git_dir in $(git_list_repos $@); do
+    grep -w 'url' ${git_dir}/.git/config | cut -d' ' -f 3
   done
 }
 
