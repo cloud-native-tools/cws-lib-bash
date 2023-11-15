@@ -3,13 +3,8 @@
 function add_line_if_not_exit() {
   local file=$1
   local line=$2
-  if [ -f ${file} ]; then
-    if ! grep -Fxq "${line}" ${file}; then
-      echo "add [${line}] to [${file}]"
-      echo ${line} >>${file}
-    else
-      echo "[${line}] already exist in [${file}]"
-    fi
+  if ! grep -Fxq "${line}" ${file}; then
+    echo ${line} >>${file}
   fi
 }
 
