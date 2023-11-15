@@ -812,32 +812,17 @@ function k8s_deployment() {
 }
 
 function k8s_daemonset() {
-  local namepsace=${1}
-  if [ -n "${namepsace}" ]; then
-    shift
-  fi
-  #   printf "%-30s %-50s %-5s %-5s\n" Namespace Name Generation Replicas
-  #   local tpl=$(
-  #     cat <<'EOF'
-  # {{- range .items -}}
-  #   {{- printf "%-30s " .metadata.namespace -}}
-  #   {{- printf "%-50s " .metadata.name -}}
-  #   {{- printf "%-5s " .metadata.generation -}}
-  #   {{- printf "%-5s " .spec.replicas: -}}
-  #   {{"\n"}}
-  # {{- end -}}
-  # EOF
-  #   )
-  #   if [ -z "${namepsace}" ]; then
-  #     kubectl get deployment -A -o go-template --template="${tpl}" $@
-  #   else
-  #     kubectl get deployment -n ${namepsace} -o go-template --template="${tpl}" $@
-  #   fi
-  if [ -z "${namepsace}" ]; then
-    kubectl get daemonset -A $@
-  else
-    kubectl get daemonset -n ${namepsace} $@
-  fi
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get daemonset ${ns_opt} $@
 }
 
 function k8s_current_context() {

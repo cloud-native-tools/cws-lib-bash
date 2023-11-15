@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
-source /etc/profile
+source ~/.bash_profile
 
 script_entry $@
