@@ -1,6 +1,6 @@
 export CURL_VERBOSE_OPTS="--progress-bar --show-error"
 
-if [ "${BASH_OS}" = "Darwin" ]; then
+if [ "${BASH_OS}" = "darwin" ]; then
   export CURL_DOWNLOAD_OPTS="--compressed --insecure"
 else
   export CURL_DOWNLOAD_OPTS="--location --compressed --insecure"
