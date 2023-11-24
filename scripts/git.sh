@@ -43,6 +43,10 @@ function git_top_branch() {
   git branch -a --sort=-committerdate | head -n 20
 }
 
+function git_dead_branch() {
+  git branch -a --sort=-committerdate | tail -n 20
+}
+
 function git_push_all() {
   local branch=${1}
   if [ -z "${branch}" ]; then
@@ -75,8 +79,12 @@ function git_clean() {
   find . -type d -empty | grep -v .git | xargs rm -rfv
 }
 
-function git_tag() {
+function git_tags() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
+}
+
+function git_logs() {
+  git log --graph --oneline --all --decorate
 }
 
 function git_list_repos() {
@@ -249,6 +257,7 @@ EOF
 
 function git_install() {
   local dest_dir=${1}
+  local commit_id=${2:-HEAD}
   if [ -z "${dest_dir}" ]; then
     log error "Usage: git_install <dest_dir>"
     return ${RETURN_FAILURE}
@@ -256,5 +265,5 @@ function git_install() {
   if [ ! -d "${dest_dir}" ]; then
     mkdir - p ${dest_dir}
   fi
-  git archive --format=tar --output=/dev/stdout HEAD | tar xf - -C ${dest_dir}
+  git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
