@@ -34,6 +34,10 @@ function date_now() {
   date "+${DATE_TIME_FORMAT:-%Y-%m-%d %H:%M:%S}"
 }
 
+function date_id() {
+  date "+%Y-%m-%d-%H-%M-%S"
+}
+
 function log() {
   local level=$1
   local now=$(date_now)
