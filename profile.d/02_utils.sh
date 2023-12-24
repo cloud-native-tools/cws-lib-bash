@@ -228,3 +228,18 @@ function dump_stack() {
   done
   log color "${frame}"
 }
+
+function spin() {
+  if [ $# -eq 0 ]; then
+    log error "Usage: spin <command>"
+    return ${RETURN_FAILURE}
+  fi
+  $@ &
+  local pid=$!
+  local i=1
+  local sp="\|/-"
+  while kill -0 ${pid} >/dev/null 2>&1; do
+    printf "\b%c" "${sp:i++%4:1}"
+    sleep 0.1
+  done
+}

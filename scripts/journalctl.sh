@@ -55,7 +55,18 @@
 #      --setup-keys          Generate a new FSS key pair
 #      --verify              Verify journal file consistency
 
-function journalctl_clean() {
-    local duration=${1:-12h}
-    journalctl --vacuum-time=${duration}
+function journalctl_clean_by_time() {
+  local duration=${1}
+  if [ -z "${duration}" ]; then
+    log error "Usage: journalctl_clean_by_time <duration>, e.g. 1d, 12h, 15m, 30s"
+  fi
+  journalctl --vacuum-time=${duration}
+}
+
+function journalctl_clean_by_size() {
+  local size=${1}
+  if [ -z "${size}" ]; then
+    log error "Usage: journalctl_clean_by_size <size>, e.g. 100M, 1G"
+  fi
+  journalctl --vacuum-size=${size}
 }
