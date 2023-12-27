@@ -9,3 +9,4 @@ alias dfh="df -Th"
 alias freeh="free -mwh"
 alias psl="ps auxf"
 alias psearch="ps aux | grep -v grep | grep -i -e VSZ -e"
+alias awk=gawk

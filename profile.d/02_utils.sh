@@ -38,6 +38,19 @@ function date_id() {
   date "+%Y-%m-%d-%H-%M-%S"
 }
 
+function date_calc() {
+  local target=${1}
+  local now=$(date +%s)
+  local target_date=$(date -d "${target}" +%s)
+  local delta_hour=$(((now - target_date) / 3600))
+
+  echo "${delta_hour}h"
+}
+
+function date_utc_to_cst8(){
+  cat -|awk '{ gsub(/[-T:Z]/," ", $1); $1=strftime("%Y-%m-%d %H:%M:%S", mktime($1 " 0") + 8 * 60 * 60);print $0 }'
+}
+
 function log() {
   local level=$1
   local now=$(date_now)

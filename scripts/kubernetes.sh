@@ -16,12 +16,7 @@ function k8s_get_all() {
 }
 
 function k8s_info() {
-  log plain "-------  kubectl version   --------"
-  kubectl version --output=yaml
-  log plain "-------  cluster info      --------"
   kubectl cluster-info
-  log plain "-------  component status  --------"
-  kubectl get componentstatus
 }
 
 function k8s_ns() {
@@ -204,24 +199,17 @@ function k8s_pods() {
     ns_opt="-n ${namepsace}"
     ;;
   esac
-  printf "%-40s %-60s %-10s %-12s %-50s %-20s %-20s\n" Namespace Name Status OwnerType OwnerName Node Runtime
-  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+  printf "%-20s %-16s %-60s %-10s %-24s %-20s\n" Timestamp Namespace Name Status Node Runtime
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF' | sort -k2,2 -k1,1
 {{- range .items -}}
-  {{- printf "%-40s " .metadata.namespace -}}
+  {{- printf "%-20s " .metadata.creationTimestamp -}}
+  {{- printf "%-16s " .metadata.namespace -}}
   {{- printf "%-60s " .metadata.name -}}
   {{- printf "%-10s " .status.phase -}}
-  {{- with .metadata.ownerReferences -}}
-  {{- $owner := index . 0 -}}
-    {{- printf "%-12s " $owner.kind -}}
-    {{- printf "%-50s " $owner.name -}}
-  {{- else -}}
-    {{- printf "%-12s " "None" -}}
-    {{- printf "%-50s " "None" -}}
-  {{- end -}}
   {{- with .spec.nodeName -}}
-    {{- printf "%-20s " . -}}
+    {{- printf "%-24s " . -}}
   {{- else -}}
-    {{- printf "%-20s " "None" -}}
+    {{- printf "%-24s " "None" -}}
   {{- end -}}
   {{- with .spec.runtimeClassName -}}
     {{- printf "%-20s" . -}}
