@@ -35,6 +35,10 @@ function date_now() {
 }
 
 function date_id() {
+  date "+%Y-%m-%d"
+}
+
+function date_time_id() {
   date "+%Y-%m-%d-%H-%M-%S"
 }
 

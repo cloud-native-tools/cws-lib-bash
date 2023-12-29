@@ -199,7 +199,7 @@ function k8s_pods() {
     ns_opt="-n ${namepsace}"
     ;;
   esac
-  printf "%-20s %-16s %-60s %-10s %-24s %-20s\n" Timestamp Namespace Name Status Node Runtime
+  printf "%-20s %-16s %-60s %-10s %-24s %-20s %-12s %-40s\n" Timestamp Namespace Name Status Node Runtime OwnerType OwnerName
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF' | sort -k2,2 -k1,1
 {{- range .items -}}
   {{- printf "%-20s " .metadata.creationTimestamp -}}
@@ -215,6 +215,14 @@ function k8s_pods() {
     {{- printf "%-20s" . -}}
   {{- else -}}
     {{- printf "%-20s" "runc" -}}
+  {{- end -}}
+  {{- with .metadata.ownerReferences -}}
+    {{- $owner := index . 0 -}}
+    {{- printf "%-12s " $owner.kind -}}
+    {{- printf "%-40s " $owner.name -}}
+  {{- else -}}
+    {{- printf "%-12s " "None" -}}
+    {{- printf "%-40s " "None" -}}
   {{- end -}}
   {{"\n"}}
 {{- end -}}
@@ -396,21 +404,38 @@ function k8s_pods_images() {
   esac
   shift
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
-{{- range .items -}}
-  {{- $namespace_name := .metadata.namespace -}}
-  {{- $pod_name := .metadata.name -}}
-  {{- range .spec.containers -}}
-    {{- printf "%-24s " $namespace_name -}}
-    {{- printf "%-60s " $pod_name -}}
-    {{- printf "%-80s " .image -}}
-    {{"\n"}}
+{{- with .items -}}
+  {{- range . -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $pod_name := .metadata.name -}}
+    {{- range .spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $pod_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $pod_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
   {{- end -}}
-  {{- range .spec.initContainers -}}
-    {{- printf "%-24s " $namespace_name -}}
-    {{- printf "%-60s " $pod_name -}}
-    {{- printf "%-80s " .image -}}
-    {{"\n"}}
-  {{- end -}}
+{{- else -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $pod_name := .metadata.name -}}
+    {{- range .spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $pod_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $pod_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
 {{- end -}}
 EOF
 }
@@ -888,4 +913,132 @@ EOF
   fi
   printf "%-50s %-30s %-120s\n" "Pod" "Container" Image
   kubectl get pods ${ns_opt} $@ --template="${TPL}"
+}
+
+function k8s_pods_hostpath() {
+  printf "%-24s %-60s %-20s %-80s \n" Namespace Name Volume Hostpath
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $pod_name := .metadata.name -}}
+  {{- range .spec.volumes -}}
+    {{- $volume_name := .name -}}
+    {{- with .hostPath -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $pod_name -}}
+      {{- printf "%-20s " $volume_name -}}
+      {{- printf "%-80s " .path -}}
+      {{"\n"}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_deployment_images() {
+  printf "%-24s %-60s %-80s \n" Namespace Name Image
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get deployment ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- with .items -}}
+  {{- range . -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $deployment_name := .metadata.name -}}
+    {{- range .spec.template.spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.template.spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $deployment_name := .metadata.name -}}
+    {{- range .spec.template.spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.template.spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_daemonset_images() {
+  printf "%-24s %-60s %-80s \n" Namespace Name Image
+  local namepsace=${1:-all}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  kubectl get daemonset ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- with .items -}}
+  {{- range . -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $deployment_name := .metadata.name -}}
+    {{- range .spec.template.spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.template.spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+    {{- $namespace_name := .metadata.namespace -}}
+    {{- $deployment_name := .metadata.name -}}
+    {{- range .spec.template.spec.containers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+    {{- range .spec.template.spec.initContainers -}}
+      {{- printf "%-24s " $namespace_name -}}
+      {{- printf "%-60s " $deployment_name -}}
+      {{- printf "%-80s " .image -}}
+      {{"\n"}}
+    {{- end -}}
+{{- end -}}
+EOF
 }
