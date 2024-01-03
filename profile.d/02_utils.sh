@@ -51,8 +51,10 @@ function date_calc() {
   echo "${delta_hour}h"
 }
 
-function date_utc_to_cst8(){
-  cat -|awk '{ gsub(/[-T:Z]/," ", $1); $1=strftime("%Y-%m-%d %H:%M:%S", mktime($1 " 0") + 8 * 60 * 60);print $0 }'
+function date_utc_to_cst() {
+  local utc_time=${1}
+  # echo ${utc_time}|awk '{ gsub(/[-T:Z]/," ", $1); $1=strftime("%Y-%m-%d %H:%M:%S", mktime($1 " 0") + 8 * 60 * 60);print $0 }'
+  TZ='Asia/Shanghai' date -d "${utc_time}" '+%Y-%m-%d %H:%M:%S'
 }
 
 function log() {
