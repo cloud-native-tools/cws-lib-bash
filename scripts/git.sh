@@ -267,3 +267,9 @@ function git_install() {
   fi
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
+
+function git_backup() {
+  git add -A
+  git commit -m "backup at $(date_now)"
+  git push $(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote) $(git branch)
+}
