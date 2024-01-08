@@ -271,5 +271,8 @@ function git_install() {
 function git_backup() {
   git add -A
   git commit -m "backup at $(date_now)"
-  git push $(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote) $(git branch)
+  local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
+  local branch=$(git branch | awk '{print $NF}')
+  log notice "git push ${branch} to ${remote}"
+  git push ${remote} ${branch}
 }
