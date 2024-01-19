@@ -31,3 +31,12 @@ function curl_download_to_dir() {
     curl_download -O --output-dir "${dir}" ${url}
   fi
 }
+
+function curl_run_shell() {
+  local url=${1}
+  if [ -z "${url}" ]; then
+    log warn "Usage: curl_run_shell <url>"
+  else
+    curl -o- ${url} | bash
+  fi
+}

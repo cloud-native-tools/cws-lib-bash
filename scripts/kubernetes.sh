@@ -532,8 +532,6 @@ function k8s_event() {
   esac
   shift
   kubectl get event ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
-  local tpl=$(
-    cat <<'EOF'
 {{- range .items -}}
   {{- printf "%-24s " .metadata.namespace -}}
   {{- printf "%-10s " .involvedObject.kind -}}
