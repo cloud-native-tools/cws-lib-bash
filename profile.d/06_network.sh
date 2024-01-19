@@ -69,6 +69,10 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
+  if curl -s --connect-timeout 120 https://cip.cc | grep -E '^IP' | awk '{print $NF}'; then
+    return ${RETURN_SUCCESS}
+  fi
+
   local ip_apis=$(
     cat <<EOF
 https://api.seeip.org
@@ -77,9 +81,10 @@ EOF
   )
   for url in ${ip_apis}; do
     if curl -s --connect-timeout 120 ${url}; then
-      break
+      return ${RETURN_SUCCESS}
     fi
   done
+  return ${RETURN_FAILURE}
 }
 
 function net_trace_route() {
