@@ -1,5 +1,5 @@
-HOSTS_FILE_ROOT="${HOME}/.remote"
-SSH_CONFIG_FILE="${HOME}/.ssh/config"
+export HOSTS_FILE_ROOT="${HOME}/.remote"
+export SSH_CONFIG_FILE="${HOME}/.ssh/config"
 
 function remote_get_hosts() {
   local hosts_file=${1:-remote_hosts}
@@ -21,7 +21,7 @@ function remote_upload() {
   fi
   for host in $(remote_get_hosts); do
     log info "Deploy [${src}] to ${host}:${dest}"
-    scp -r ${src} ${host}:${dest}
+    scp -F ${SSH_CONFIG_FILE} -r ${src} ${host}:${dest}
   done
 }
 
@@ -69,7 +69,7 @@ function remote_download() {
     for host in $(remote_get_hosts); do
       log info "Get ${host}:${target} ${root}"
       mkdir -pv $(dirname ${root}/${host}/${target})
-      scp -r ${host}:${target} ${root}/${host}/${target}
+      scp -F ${SSH_CONFIG_FILE} -r ${host}:${target} ${root}/${host}/${target}
     done
   else
     log warn "Usage: remote_download <abs path> "
