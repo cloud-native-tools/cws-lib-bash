@@ -586,9 +586,7 @@ function k8s_configmap() {
   {{- printf "Name: %-60s\n" .metadata.name -}}
   {{"------------------------------------------------\n"}}
   {{- range $key, $value := .data -}}
-    {{- printf "%s=$(cat <<'EOF'\n" $key -}}
-    {{- printf "%s\n" $value -}}
-    {{- printf "EOF\n)\n" -}}
+    {{- printf "%s=%s\n" $key $value -}}
   {{- end -}}
   {{"================================================\n"}}
 {{- end -}}
@@ -600,9 +598,7 @@ EOF
 {{- printf "Name: %-60s\n" .metadata.name -}}
 {{"------------------------------------------------\n"}}
 {{- range $key, $value := .data -}}
-  {{- printf "%s=$(cat <<'EOF'\n" $key -}}
-  {{- printf "%s\n" $value -}}
-  {{- printf "EOF\n)\n" -}}
+  {{- printf "%s=%s\n" $key $value -}}
 {{- end -}}
 {{"================================================\n"}}
 EOF

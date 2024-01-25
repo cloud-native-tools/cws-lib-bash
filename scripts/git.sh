@@ -244,7 +244,7 @@ function git_clone_local() {
     $@
 }
 
-function git_add_signed_off_hook() {
+function git_config_signed_off_hook() {
   local hook_file=${1:-.git/hooks/commit-msg}
   cat <<'EOF' >${hook_file}
   #!/bin/sh
