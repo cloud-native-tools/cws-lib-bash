@@ -62,7 +62,7 @@ function encode_packed() {
   rm -f ${encode_tar}
 }
 
-function pack_binary() {
+function file_pack_binary() {
   ldconfig
   local file_list="$@"
   tar cfJ binary.tar.xz \
@@ -75,7 +75,7 @@ function pack_binary() {
     $(ldd ${file_list} | awk '$3~/^\//{print $3}' | sort | uniq | tr '\n' ' ')
 }
 
-function pack_system() {
+function file_pack_system() {
   local output_file=${1:-chroot.tar.gz}
   local output_dir=$(dirname ${output_file})
   mkdir -p ${output_dir}
@@ -91,7 +91,7 @@ function extract_source() {
   tar xf "${archive}" --strip-components=1 -C "${output}" $@
 }
 
-function extract() {
+function file_extract() {
   if [ -z "$1" ]; then
     die "Usage: extract <path/file_name>.<zip|rar|bz2|gz|tar|tbz2|tgz|Z|7z|xz|ex|tar.bz2|tar.gz|tar.xz>"
   else
@@ -162,7 +162,7 @@ function file_mv() {
   mv -fv $src $dest
 }
 
-function extract_file_to() {
+function file_extract_to() {
   local tar_file=${1}
   local dst_dir=${2}
   local file_in_tar=${3}
@@ -186,4 +186,14 @@ function file_real_size() {
   local physical_size=$(stat -c "%b" ${filepath})
   echo "Logical size: ${logical_size} bytes"
   echo "Physical size: $((physical_size * 512)) bytes"
+}
+
+function file_create() {
+  local filepath=${1}
+  if [ -z "${filepath}" ]; then
+    echo "Usage: file_create <filepath>"
+    return ${RETURN_FAILURE}
+  fi
+  mkdir -pv $(dirname ${filepath#/})
+  touch ${filepath#/}
 }

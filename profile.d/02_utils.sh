@@ -1,4 +1,4 @@
-function is_bash() { test "$(basename $SHELL)" = "bash"; }
+function is_bash() { test "$(basename $SHELL)" = "bash" -a -n "$BASH_VERSION" ; }
 function is_zsh() { test "$(basename $SHELL)" = "zsh"; }
 function is_ash() { test "$(basename $SHELL)" = "ash"; }
 function is_dash() { test "$(basename $SHELL)" = "dash"; }
