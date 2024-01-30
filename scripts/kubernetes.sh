@@ -172,6 +172,16 @@ function k8s_exec_pod() {
   fi
 }
 
+function k8s_foreach_pod_exec() {
+  local namepsace=$1
+  shift
+  for pod_name in $(kubectl get pods -n ${namepsace} \
+    --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+    kubectl -n ${namepsace} exec -it ${pod_name} -- $@
+  done
+}
+
 function k8s_delete_pod() {
   local namepsace=$1
   shift
