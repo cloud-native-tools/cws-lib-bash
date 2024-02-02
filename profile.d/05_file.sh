@@ -11,6 +11,15 @@ function encode_files() {
   echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64 -w0)\"|base64 -d|tar zx"
 }
 
+function encode_function(){
+  local funcname=${1}
+  if [ -z "${funcname}" ]; then
+    echo "Usage: encode_function <function_name>"
+    return ${RETURN_FAILURE}
+  fi
+  declare -f ${funcname} 2>&1 && printf "\n${funcname}"| encode_stdin
+}
+
 function encode_packed() {
   local INPUT="$@"
 
@@ -125,7 +134,7 @@ function file_extract() {
   fi
 }
 
-function fast_delete() {
+function file_fast_delete() {
   local target="$@"
   if [ -z "${target}" ]; then
     find . -delete

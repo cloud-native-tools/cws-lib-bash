@@ -776,6 +776,47 @@ function k8s_pv() {
 EOF
 }
 
+function k8s_pv_pvc() {
+  printf "%-64s %-64s\n" PV PVC
+  kubectl get pv $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items -}}
+  {{- printf "%-40s " .metadata.name -}}
+  {{- printf "%-40s " .spec.claimRef.name -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+}
+
+function k8s_pod_pvc() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  printf "%-64s %-64s\n" Pod PVC
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF' | sort -k2,2 -k1,1
+{{- range .items -}}
+  {{- $pod_name := .metadata.name -}}
+  {{- range .spec.volumes -}}
+    {{- if .persistentVolumeClaim -}}
+      {{- printf "%-64s " $pod_name -}}
+      {{- printf "%-64s " .persistentVolumeClaim.claimName -}}
+      {{"\n"}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
 function k8s_sc() {
   printf "%-40s %-40s %-20s %-20s\n" Name Provisioner ReclaimPolicy VolumeBindingMode
   local namepsace=${1:-all}
