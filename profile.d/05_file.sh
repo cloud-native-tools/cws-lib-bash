@@ -1,23 +1,25 @@
+if [ "${BASH_OS}" = "darwin" ]; then
+  alias base64="base64"
+else
+  alias base64="base64 -w0"
+fi
+
 function encode_stdin() {
-  if [ "${BASH_OS}" = "darwin" ]; then
-    echo "echo \"$(gzip -c - | base64)\"|base64 -d|gunzip -c -"
-  else
-    echo "echo \"$(gzip -c - | base64 -w0)\"|base64 -d|gunzip -c -"
-  fi
+  echo "echo \"$(gzip -c - | base64)\"|base64 -d|gunzip -c -"
 }
 
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64 -w0)\"|base64 -d|tar zx"
+  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64)\"|base64 -d|tar zx"
 }
 
-function encode_function(){
+function encode_function() {
   local funcname=${1}
   if [ -z "${funcname}" ]; then
     echo "Usage: encode_function <function_name>"
     return ${RETURN_FAILURE}
   fi
-  declare -f ${funcname} 2>&1 && printf "\n${funcname}"| encode_stdin
+  echo "echo \"$(printf "function $(declare -f ${funcname})\n${funcname}\n" | gzip -c - | base64)\"|base64 -d|gunzip -c -|bash"
 }
 
 function encode_packed() {
