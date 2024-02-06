@@ -1,4 +1,4 @@
-function is_bash() { test "$(basename $SHELL)" = "bash" -a -n "$BASH_VERSION" ; }
+function is_bash() { test "$(basename $SHELL)" = "bash" -a -n "$BASH_VERSION"; }
 function is_zsh() { test "$(basename $SHELL)" = "zsh"; }
 function is_ash() { test "$(basename $SHELL)" = "ash"; }
 function is_dash() { test "$(basename $SHELL)" = "dash"; }
@@ -149,6 +149,10 @@ function escape() {
 
 function escape_slashes() {
   log plain "$@" | sed 's/\\/\\\\/g'
+}
+
+function url_decode() {
+  echo ${1} | sed -E 's/%3F/?/g;s/%3D/=/g;s/%26/\&/g'
 }
 
 function source_scripts() {
