@@ -1,13 +1,13 @@
-export HOSTS_FILE_ROOT="${HOME}/.remote"
+export REMOTE_HOSTS_FILE="${HOME}/.remote/remote_hosts"
 export SSH_CONFIG_FILE="${HOME}/.ssh/config"
 
 function remote_get_hosts() {
-  local hosts_file=${1:-remote_hosts}
   if [ -f remote.rc ]; then
     . remote.rc
   fi
-  if ! cat ${HOSTS_FILE_ROOT}/${hosts_file}; then
-    log error "$? cannot find ${HOSTS_FILE_ROOT}/${hosts_file}"
+  local hosts_file=${1:-${REMOTE_HOSTS_FILE}}
+  if ! cat ${hosts_file}; then
+    log error "$? cannot find ${hosts_file}"
   fi
 }
 
