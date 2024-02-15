@@ -485,41 +485,40 @@ function k8s_logs() {
   fi
 }
 
-export SYSTEM_NAMESPACE=kube-system
 function k8s_sys_pod() {
-  k8s_pods ${SYSTEM_NAMESPACE} $@
+  k8s_pods kube-system $@
 }
 
 function k8s_sys_svc() {
-  k8s_svc ${SYSTEM_NAMESPACE} $@
+  k8s_svc kube-system $@
 }
 
 function k8s_sys_deployment() {
-  k8s_deployment ${SYSTEM_NAMESPACE} $@
+  k8s_deployment kube-system $@
 }
 
 function k8s_sys_desc() {
-  kubectl -n ${SYSTEM_NAMESPACE} describe $@
+  kubectl -n kube-system describe $@
 }
 
 function k8s_sys_logs() {
-  k8s_logs ${SYSTEM_NAMESPACE}
+  k8s_logs kube-system
 }
 
 function k8s_sys_ep() {
-  kubectl -n ${SYSTEM_NAMESPACE} get ep $@
+  kubectl -n kube-system get ep $@
 }
 
 function k8s_kubeadm_dump_config() {
-  kubectl -n ${SYSTEM_NAMESPACE} get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}'
+  local adm_conf=$1
+  kubectl -n kube-system get configmap kubeadm-config -o jsonpath='{.data.ClusterConfiguration}' >${adm_conf}
 }
 
 function k8s_kubeadm_update_certs() {
   local adm_conf=$1
-  # apiServer:
-  #   certSANs:
-  #   - ${INTERNAL_IP}
-  #   - ${EXTERNAL_IP}
+  local internal_ip=$2
+  local external_ip=$3
+  sed -i "/apiServer:/a \ \ certSANs:\n\ \ -\ ${internal_ip}\n\ \ -\ ${external_ip}" ${adm_conf}
   mv -fv /etc/kubernetes/pki/apiserver.crt /etc/kubernetes/pki/apiserver.crt.bak
   mv -fv /etc/kubernetes/pki/apiserver.key /etc/kubernetes/pki/apiserver.key.bak
   kubeadm init phase certs apiserver --v=5 --config ${adm_conf}
@@ -1086,4 +1085,27 @@ function k8s_daemonset_images() {
     {{- end -}}
 {{- end -}}
 EOF
+}
+
+function k8s_create_configmap_from() {
+  local target=${1}
+  if [ ! -f ${target} ] && [ ! -d ${target} ]; then
+    log error "No Such File: ${target}"
+    return ${RETURN_FAILURE}
+  fi
+  local name=${2:-$(basename ${target})}
+  if k8s_valid_name ${name}; then
+    kubectl create configmap ${name} --from-file=${target}
+  else
+    log error "Invalid Name: ${name}"
+  fi
+}
+
+function k8s_valid_name() {
+  local name=${1}
+  if grep -Ew '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*' >/dev/null 2>&1 <<<"${name}"; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
 }
