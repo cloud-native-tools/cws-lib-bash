@@ -20,6 +20,6 @@ for i in ${PROFILED}/*.sh ${SCRIPTS}/*.sh; do
 done
 unset i
 
-export CWS_BASH_LIB=${ROOT}
-export PATH=${CWS_BASH_LIB}/bin:${PATH}
+export CWS_BASH_LIB_HOME=${ROOT}
+export PATH=${CWS_BASH_LIB_HOME}/bin:${PATH}
 
