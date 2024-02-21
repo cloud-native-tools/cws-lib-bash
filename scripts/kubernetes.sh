@@ -455,17 +455,12 @@ function k8s_images_used() {
 }
 
 function k8s_apply() {
-  local namespace=$1
-  local file_dir=${2:-.}
-  if [ -z "${namespace}" ]; then
-    kubectl apply -R -f ${file_dir}
-  else
-    kubectl apply --namespace=${namespace} -R -f ${file_dir}
-  fi
+  local file_dir=${1:-${PWD}}
+  kubectl apply -R -f ${file_dir}
 }
 
 function k8s_delete() {
-  local file_dir=${1:-.}
+  local file_dir=${1:-${PWD}}
   kubectl delete -R -f ${file_dir}
 }
 
