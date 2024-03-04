@@ -42,19 +42,14 @@ function date_time_id() {
   date "+%Y-%m-%d-%H-%M-%S"
 }
 
-function date_calc() {
-  local target=${1}
-  local now=$(date +%s)
-  local target_date=$(date -d "${target}" +%s)
-  local delta_hour=$(((now - target_date) / 3600))
-
-  echo "${delta_hour}h"
-}
-
 function date_utc_to_cst() {
   local utc_time=${1}
-  # echo ${utc_time}|awk '{ gsub(/[-T:Z]/," ", $1); $1=strftime("%Y-%m-%d %H:%M:%S", mktime($1 " 0") + 8 * 60 * 60);print $0 }'
-  TZ='Asia/Shanghai' date -d "${utc_time}" '+%Y-%m-%d %H:%M:%S'
+
+  if is_macos; then
+    TZ='Asia/Shanghai' date -j -f "%Y-%m-%dT%H:%M:%SZ" "${utc_time}" "+%Y-%m-%d %H:%M:%S"
+  else
+    TZ='Asia/Shanghai' date -d "${utc_time}" '+%Y-%m-%d %H:%M:%S'
+  fi
 }
 
 function log() {
@@ -265,4 +260,20 @@ function spin() {
     printf "\b%c" "${sp:i++%4:1}"
     sleep 0.1
   done
+}
+
+function is_macos() {
+  if [ "${BASH_OS}" = "darwin" ]; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
+}
+
+function is_linux() {
+  if [ "${BASH_OS}" = "linux" ]; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
 }

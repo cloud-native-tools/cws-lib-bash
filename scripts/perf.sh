@@ -33,7 +33,7 @@ function perf_record_by_cgroup() {
     return 1
   fi
   shift
-  perf record -e cpu-clock -g -G ${cgroup_path} $@
+  perf record -a -g -e cpu-clock -G ${cgroup_path} $@
 }
 
 function perf_record_pod() {
@@ -45,6 +45,16 @@ function perf_record_pod() {
   fi
   shift 2
   perf_record_by_cgroup "kubepods/burstable/pod${pod_uuid}/${pod_sid}" -- ${@}
+}
+
+function perf_profiling_cgroup() {
+  # /sys/fs/cgroup/cpu/kubepods/burstable/pod${uuid}/
+  local cgroup=${1}
+  local pid=${2}
+  local duration=${3:-60}
+  top -d 1 -n ${duration} -b 2>&1 > top.log &
+  perf record -o perf-cgroup.data -a -g -e cpu-clock -G ${cgroup} -F 99999 -- sleep ${duration}
+  perf script -i perf-cgroup.data --symfs=/proc/${pid}/root >perf-cgroup.txt
 }
 
 function perf_record_by_cgroup_of_pid() {
@@ -66,13 +76,19 @@ function perf_report() {
 
 function perf_profiling_pid() {
   local pid=${1}
-  local duration=${2:-600}
-  perf record -o perf-${pid}.data -p ${pid} -F 999 -g -- sleep ${duration}
+  local duration=${2:-60}
+  top -d 1 -n ${duration} -b 2>&1 > top.log &
+  perf record -o perf-${pid}.data -p ${pid} -F 99999 -g -- sleep ${duration}
   perf script -i perf-${pid}.data --symfs=/proc/${pid}/root >perf-${pid}.txt
 }
 
 function perf_profiling() {
   local duration=${1:-120}
+  top -d 1 -n ${duration} -b 2>&1 > top.log &
   perf record -o perf.data -a -F 999 -g -- sleep ${time}
   perf script -i perf.data >perf.txt
 }
+
+# cat top.txt |awk 'BEGIN{boot_time="2024 01 29 23 02 24";boot_timestamp = mktime(boot_time)} $1 ~ /^top/{time=$3;gsub(":", " ", time); current_time = strftime("2024 03 01 "time);current_timestamp = mktime(current_time);next}  $9>50 {print (current_timestamp - boot_timestamp)" "$0}' > top-timed.txt
+
+# awk 'BEGIN {enable="false"} NR==FNR{cpu_usage[$1]=$10;next} {split($4,arr,".");if (arr[1] in cpu_usage){enable="true"};if ($0 ~ /^$/){if(enable=="true"){print};enable="false"};if (enable=="true"){print}}' top-timed.txt /Users/liuqiming.lqm/Downloads/perf-cgroup.txt > perf-cgroup-timed.txt
