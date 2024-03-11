@@ -24,3 +24,7 @@ function time_duration() {
   diff_seconds=$((to_seconds - from_seconds))
   echo "${diff_seconds}"
 }
+
+function uptime() {
+  date -d "$(awk '{print $1}' /proc/uptime) seconds ago" "${DATE_TIME_FORMAT}"
+}

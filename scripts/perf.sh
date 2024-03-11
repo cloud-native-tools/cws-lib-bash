@@ -75,10 +75,10 @@ function perf_report() {
 }
 
 function perf_profiling_pid() {
-  local pid=${1}
-  local duration=${2:-60}
-  top -d 1 -n ${duration} -b 2>&1 > top.log &
-  perf record -o perf-${pid}.data -p ${pid} -F 99999 -g -- sleep ${duration}
+  local pid=${1:-1}
+  local duration=${2:-120}
+  top -d 1 -n ${duration} -b 2>&1 >top-${pid}.txt &
+  perf record -o perf-${pid}.data -p ${pid} -F 9999 -g -- sleep ${duration}
   perf script -i perf-${pid}.data --symfs=/proc/${pid}/root >perf-${pid}.txt
 }
 
@@ -89,6 +89,3 @@ function perf_profiling() {
   perf script -i perf.data >perf.txt
 }
 
-# cat top.txt |awk 'BEGIN{boot_time="2024 01 29 23 02 24";boot_timestamp = mktime(boot_time)} $1 ~ /^top/{time=$3;gsub(":", " ", time); current_time = strftime("2024 03 01 "time);current_timestamp = mktime(current_time);next}  $9>50 {print (current_timestamp - boot_timestamp)" "$0}' > top-timed.txt
-
-# awk 'BEGIN {enable="false"} NR==FNR{cpu_usage[$1]=$10;next} {split($4,arr,".");if (arr[1] in cpu_usage){enable="true"};if ($0 ~ /^$/){if(enable=="true"){print};enable="false"};if (enable=="true"){print}}' top-timed.txt /Users/liuqiming.lqm/Downloads/perf-cgroup.txt > perf-cgroup-timed.txt

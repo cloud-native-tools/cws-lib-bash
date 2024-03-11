@@ -58,6 +58,7 @@ function git_push_all() {
     if [ "${remote}" != "origin" ]; then
       log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
       git push $@ ${remote} ${branch}
+      git push ${remote} --tags
     fi
   done
 }

@@ -36,3 +36,37 @@ function vscode_workspace_add_folder() {
   cat ${workspace_file} | jq ".folders |= . + $(realpath ${folder_path} | jq -R '{"path":.}' | jq -s .)" >${workspace_file}.tmp
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
+
+function vscode_ext_list() {
+  local ext_list_file=$@
+  if [ -z "${ext_list_file}" ]; then
+    code --list-extensions --show-versions
+  else
+    if [ -f ${ext_list_file} ]; then
+      cat ${ext_list_file}
+    else
+      echo $@
+    fi
+  fi
+}
+
+function vscode_ext_url() {
+  local ext=${1}
+  local publisher=$(echo ${ext} | awk -F. '{print $1}')
+  local name=$(echo ${ext} | awk -F. '{print $2}' | awk -F@ '{print $1}')
+  local version=$(echo $ext | awk -F@ '{print $NF}')
+  local vsix_url="https://marketplace.visualstudio.com/_apis/public/gallery/publishers/${publisher}/vsextensions/${name}/${version}/vspackage"
+  echo ${vsix_url}
+}
+
+function vscode_ext_download_scripts() {
+  for ext in $(code_ext_list $@); do
+    echo "curl ${CURL_VERBOSE_OPTS} ${CURL_RETRY_OPTS} -o ${ext}.vsix $(code_ext_url ${ext})"
+  done
+}
+
+function vscode_ext_download_all() {
+  code_ext_download_scripts $@ >download_ext.sh
+  sh download_ext.sh
+}
+
