@@ -69,7 +69,9 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
-  if curl -s --connect-timeout 120 https://cip.cc | grep -E '^IP' | awk '{print $NF}'; then
+  my_ip=$(curl -s --connect-timeout 30 https://cip.cc | grep -E '^IP' | awk '{print $NF}')
+  if [ -n "${my_ip}" ]; then
+    echo ${my_ip}
     return ${RETURN_SUCCESS}
   fi
 
@@ -80,7 +82,7 @@ https://api.ipify.org
 EOF
   )
   for url in ${ip_apis}; do
-    if curl -s --connect-timeout 120 ${url}; then
+    if curl -s --connect-timeout 30 ${url}; then
       return ${RETURN_SUCCESS}
     fi
   done

@@ -3,7 +3,7 @@ function vscode_workspace_setup() {
   local project_root=${2:-${PROJECTS_ROOT:-${WORK_DIR}}}
   if [ -z "${workspace_file}" ]; then
     log warn "skip setup vscode workspace when workspace_file is empty" >&2
-    return ${RETURN_FAILURE}
+    return ${RETURN_SUCCESS}
   fi
   if [ ! -f ${workspace_file} ]; then
     echo '{}' | jq ".folders = []" >${workspace_file}
