@@ -38,8 +38,9 @@ SYMBOL_SUCCESS="${BOLD_GREEN}✔${CLEAR}"
 
 DATE_TIME_FORMAT='%Y-%m-%d %H:%M:%S'
 
-HISTFILE=$HOME/.bash_history
+export HISTFILE=$HOME/.bash_history
 # HISTCONTROL=ignoreboth
+export HISTCONTROL=ignoredups:erasedups
 
 EXIT_SUCCESS=0
 EXIT_FAILURE=1

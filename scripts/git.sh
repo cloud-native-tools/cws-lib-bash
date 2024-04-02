@@ -270,6 +270,7 @@ function git_install() {
 }
 
 function git_backup() {
+  git pull --all --rebase
   git add -A
   git commit -m "backup at $(date_now)"
   local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
