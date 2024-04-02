@@ -208,3 +208,7 @@ function file_create() {
   mkdir -pv $(dirname ${filepath#/})
   touch ${filepath#/}
 }
+
+function install_executable_binary() {
+  install -D -v -m 0755 $@
+}
