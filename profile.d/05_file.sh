@@ -195,20 +195,32 @@ function file_real_size() {
   fi
   local logical_size=$(stat -c "%s" ${filepath})
   local physical_size=$(stat -c "%b" ${filepath})
-  echo "Logical size: ${logical_size} bytes"
-  echo "Physical size: $((physical_size * 512)) bytes"
+  log notice "Logical size: ${logical_size} bytes"
+  log notice "Physical size: $((physical_size * 512)) bytes"
 }
 
 function file_create() {
   local filepath=${1}
   if [ -z "${filepath}" ]; then
-    echo "Usage: file_create <filepath>"
+    log error "Usage: file_create <filepath>"
     return ${RETURN_FAILURE}
   fi
   mkdir -pv $(dirname ${filepath#/})
   touch ${filepath#/}
 }
 
-function install_executable_binary() {
+function install_executable_files() {
   install -D -v -m 0755 $@
+}
+
+function install_executable_binary() {
+  local binary_name=${1}
+  local target_path=${2}
+  if [ -z "${binary_name}" ] || [ -z "${target_path}" ]; then
+    log error "Usage: install_executable_binary <binary_name> <target_dir>"
+    return ${RETURN_FAILURE}
+  fi
+  install_executable_files \
+    $(find ./target/ -type f -executable -name ${binary_name}) \
+    ${target_path}
 }
