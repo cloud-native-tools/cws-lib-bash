@@ -1,0 +1,45 @@
+export ECS_META_URL="http://100.100.100.200/latest"
+
+function ecs_region() {
+  curl -s ${ECS_META_URL}/meta-data/region-id
+}
+
+function ecs_zone_id() {
+  curl -s ${ECS_META_URL}/meta-data/zone-id
+}
+
+function ecs_instance_type() {
+  curl -s ${ECS_META_URL}/meta-data/instance/instance-type
+}
+
+function ecs_info() {
+  curl -s ${ECS_META_URL}/dynamic/instance-identity/document
+}
+
+function ecs_uid() {
+  curl -s ${ECS_META_URL}/meta-data/owner-account-id
+}
+
+function ecs_private_ip() {
+  curl -s ${ECS_META_URL}/meta-data/private-ipv4
+}
+
+function ecs_public_ip() {
+  curl -s ${ECS_META_URL}/meta-data/eipv4
+}
+
+function ecs_cloud_init_path() {
+  readlink -f /var/lib/cloud/instance
+}
+
+function ecs_cloud_init_user_data() {
+  cat $(ecs_cloud_init_path)/user-data.txt
+}
+
+function ecs_cloud_init_output() {
+  cat /var/log/cloud-init-output.log
+}
+
+function ecs_cloud_init_log() {
+  cat /var/log/cloud-init.log
+}
