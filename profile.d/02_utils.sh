@@ -277,3 +277,9 @@ function is_linux() {
     return ${RETURN_FAILURE}
   fi
 }
+
+function set_default() {
+  if [ -z "${!1}" ]; then
+    export $1=$2
+  fi
+}

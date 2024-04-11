@@ -60,13 +60,11 @@ function vscode_ext_url() {
 }
 
 function vscode_ext_download_scripts() {
-  for ext in $(code_ext_list $@); do
-    echo "curl ${CURL_VERBOSE_OPTS} ${CURL_RETRY_OPTS} -o ${ext}.vsix $(code_ext_url ${ext})"
+  for ext in $(vscode_ext_list $@); do
+    echo "curl ${CURL_VERBOSE_OPTS} ${CURL_RETRY_OPTS} -o ${ext}.vsix $(vscode_ext_url ${ext})"
   done
 }
 
 function vscode_ext_download_all() {
-  code_ext_download_scripts $@ >download_ext.sh
-  sh download_ext.sh
+  vscode_ext_download_scripts $@ | bash
 }
-

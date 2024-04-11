@@ -57,7 +57,7 @@ function ssh_kill_by_port() {
 }
 
 function ssh_host_config() {
-  local host=$1
+  local host=${1}
   local port=${2:-22}
   local name=${3:-${host}}
   local user=${4:-root}

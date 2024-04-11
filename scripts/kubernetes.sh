@@ -1104,3 +1104,37 @@ function k8s_valid_name() {
     return ${RETURN_FAILURE}
   fi
 }
+
+function k8s_pod_forwarding() {
+  local namespace=${1}
+  local pod_name=${2}
+  local target_port=${3}
+  if [ -z "${namespace}" ] || [ -z "${pod_name}" ] || [ -z "${target_port}" ]; then
+    log error "Usage: k8s_pod_forwarding <namespace> <pod name> <target port> [local port]"
+    return ${RETURN_FAILURE}
+  fi
+
+  local local_port=${4:-""} # random port
+  if [ -z "${local_port}" ]; then
+    log warn "No Local Port Specified, Use Random Port"
+  fi
+
+  kubectl -n ${namespace} port-forward pods/${pod_name} ${local_port}:${target_port}
+}
+
+function k8s_service_forwarding() {
+  local namespace=${1}
+  local service_name=${2}
+  local target_port=${3}
+  if [ -z "${namespace}" ] || [ -z "${service_name}" ] || [ -z "${target_port}" ]; then
+    log error "Usage: k8s_service_forwarding <namespace> <service name> <target port> [local port]"
+    return ${RETURN_FAILURE}
+  fi
+
+  local local_port=${4:-""} # random port
+  if [ -z "${local_port}" ]; then
+    log warn "No Local Port Specified, Use Random Port"
+  fi
+
+  kubectl -n ${namespace} port-forward svc/${service_name} ${local_port}:${target_port}
+}
