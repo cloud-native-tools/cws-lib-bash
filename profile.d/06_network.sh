@@ -110,5 +110,14 @@ function net_valid_ipv4() {
       return ${RETURN_FAILURE}
     }
   done
-  log notice "[${ip}] address is valid"
+}
+
+function net_default_ip() {
+  for ip in $(ifconfig | grep -w inet | awk '{print $2}'); do
+    if net_valid_ipv4 ${ip}; then
+      echo ${ip}
+      return ${RETURN_SUCCESS}
+    fi
+  done
+  return ${RETURN_FAILURE}
 }
