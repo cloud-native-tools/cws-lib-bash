@@ -7,6 +7,7 @@ else
 fi
 export CURL_RETRY_OPTS="--retry 5 --retry-delay 1"
 export CURL_FAILED_OPTS="--fail --continue-at -"
+export CURL_FETCH_OPTS="--silent --insecure --connect-timeout 1"
 
 function curl_download() {
   curl ${CURL_VERBOSE_OPTS} ${CURL_DOWNLOAD_OPTS} ${CURL_RETRY_OPTS} ${CURL_FAILED_OPTS} $@
@@ -39,4 +40,8 @@ function curl_run_shell() {
   else
     curl -o- ${url} | bash
   fi
+}
+
+function curl_fetch() {
+  curl ${CURL_FETCH_OPTS} $@
 }

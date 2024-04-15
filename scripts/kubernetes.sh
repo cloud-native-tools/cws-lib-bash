@@ -1119,7 +1119,7 @@ function k8s_pod_forwarding() {
     log warn "No Local Port Specified, Use Random Port"
   fi
 
-  kubectl -n ${namespace} port-forward pods/${pod_name} ${local_port}:${target_port}
+  kubectl --v=0 -n ${namespace} port-forward pods/${pod_name} ${local_port}:${target_port}
 }
 
 function k8s_service_forwarding() {

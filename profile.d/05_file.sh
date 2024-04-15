@@ -215,12 +215,13 @@ function install_executable_files() {
 
 function install_executable_binary() {
   local binary_name=${1}
-  local target_path=${2}
-  if [ -z "${binary_name}" ] || [ -z "${target_path}" ]; then
-    log error "Usage: install_executable_binary <binary_name> <target_dir>"
+  local source_path=${2}
+  local target_path=${3}
+  if [ -z "${binary_name}" ] || [ -z "${source_path}" ] || [ -z "${target_path}" ]; then
+    log error "Usage: install_executable_binary <binary_name> <source_path> <target_dir>"
     return ${RETURN_FAILURE}
   fi
   install_executable_files \
-    $(find ./target/ -type f -executable -name ${binary_name}) \
+    $(find ${source_path} -type f -executable -name ${binary_name}) \
     ${target_path}
 }
