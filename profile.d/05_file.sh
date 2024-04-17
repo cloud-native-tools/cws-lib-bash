@@ -225,3 +225,33 @@ function install_executable_binary() {
     $(find ${source_path} -type f -executable -name ${binary_name}) \
     ${target_path}
 }
+
+function fix_files_name() {
+  local origin_pattern=${1:-'*_*'}
+  for p in $(find . -type f -name ${origin_pattern}); do
+    l=$(dirname $p)
+    f=$(basename $p)
+    pushd $l
+    mv -fv ${f} $(echo $f | tr '_' '-')
+    popd
+  done
+}
+
+function mirror_remote_file() {
+  local url=${1}
+  local dir=${2:-${HOME}/repo}
+  local path=$(dirname $(echo ${url} | sed 's@https\?://[^/]*/@@g'))
+  if [ -z "${url}" ]; then
+    log warn "Usage: download_file [url] "
+  else
+    mkdir -p ${dir}/${path}
+    pushd ${dir}/${path} >/dev/null 2>&1
+    if curl_download -O ${url}; then
+      log notice "download [${url}] into [${dir}/${path}] success"
+    else
+      log error "download [${url}] into [${dir}/${path}] failed"
+    fi
+    popd >/dev/null 2>&1
+    echo "${url} -> ${dir}/${path}"
+  fi
+}
