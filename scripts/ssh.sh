@@ -101,3 +101,14 @@ function ssh_wait_node_ready() {
     ((wait_time++))
   done
 }
+
+function ssh_generate_key() {
+  local email=${1}
+  local passphrase=${2:-""}
+  local key_file=${3:-./id_rsa}
+  if [ -z "${email}" ]; then
+    log error "Usage: ssh_generate_key {email} [passphrase] [key_file=./id_rsa]"
+    return ${RETURN_FAILURE}
+  fi
+  ssh-keygen -t rsa -b 4096 -f ${key_file} -C "${email}" -N "${passphrase}"
+}
