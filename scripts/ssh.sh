@@ -111,4 +111,5 @@ function ssh_generate_key() {
     return ${RETURN_FAILURE}
   fi
   ssh-keygen -t rsa -b 4096 -f ${key_file} -C "${email}" -N "${passphrase}"
+  chmod 400 ${key_file} ${key_file}.pub
 }
