@@ -49,3 +49,12 @@ EOF
     openssl x509 -req -in ${name}.csr -CA ${ca_cert} -CAkey ${ca_key} -CAcreateserial -out ${name}.crt -days ${CA_DAYS} -sha256 -extfile ${name}.ext
   fi
 }
+
+function openssl_view_crt() {
+  local crt_file=${1}
+  if [ -z "${crt_file}" ]; then
+    log warn "Usage: openssl_view_crt {crt_file}"
+  else
+    openssl x509 -in ${crt_file}  
+  fi
+}
