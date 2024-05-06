@@ -113,3 +113,8 @@ function ssh_generate_key() {
   ssh-keygen -t rsa -b 4096 -f ${key_file} -C "${email}" -N "${passphrase}"
   chmod 400 ${key_file} ${key_file}.pub
 }
+
+function ssh_fix_permission() {
+  local target=${1:-${PWD}}
+  find ${target} \( -name id_rsa -o -name id_rsa.pub -o -name authorized_keys -o -name known_hosts \) | xargs chmod 400
+}
