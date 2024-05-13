@@ -3,8 +3,9 @@
 function add_line_if_not_exit() {
   local file=$1
   local line=$2
-  if ! grep -Fxq "${line}" ${file}; then
+  if ! test -f ${file} || ! grep -Fxq "${line}" ${file}; then
     echo ${line} >>${file}
+    chmod a+rx ${file}
   fi
 }
 
@@ -14,9 +15,6 @@ if [ "${DIR}" == "." ]; then
 fi
 ROOT=$(readlink -f $(dirname ${DIR}))
 ENV=${ROOT}/bin/cws_env
-
-# for login shell
-add_line_if_not_exit ~/.bash_profile ". ${ENV}"
 
 # for non-login shell
 add_line_if_not_exit ~/.bashrc ". ${ENV}"
