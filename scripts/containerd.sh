@@ -13,7 +13,7 @@ export DOCKER_NS="-n=moby"
 
 function ctr_load_k8s_image_from_file() {
   local img_file=$1
-  ${CTR} ${K8S_NS} images import "${img_file}"
+  ${CTR} ${K8S_NS} images import --digests --all-platforms "${img_file}"
 }
 
 function ctr_load_k8s_image_from_docker() {
@@ -22,7 +22,7 @@ function ctr_load_k8s_image_from_docker() {
   if [[ "${img}" != "${new_name}" ]]; then
     docker tag ${img} ${new_name}
   fi
-  docker save ${new_name} | ${CTR} ${K8S_NS} image import -
+  docker save ${new_name} | ${CTR} ${K8S_NS} images import --digests --all-platforms -
 }
 
 function cri_pods() {
