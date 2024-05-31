@@ -26,10 +26,15 @@ function curl_download_to_file() {
 function curl_download_to_dir() {
   local dir=${1}
   local url=${2}
+  local rename=${3}
   if [ -z "${dir}" ] || [ -z "${url}" ]; then
-    log warn "Usage: curl_download_to_dir <dir> <url>"
+    log warn "Usage: curl_download_to_dir <dir> <url> [rename]"
   else
-    curl_download -O --output-dir "${dir}" ${url}
+    if [ -z "${rename}" ]; then
+      curl_download -O --output-dir "${dir}" ${url}
+    else
+      curl_download -o "${rename}" --output-dir "${dir}" ${url}
+    fi
   fi
 }
 
