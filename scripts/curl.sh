@@ -19,7 +19,7 @@ function curl_download_to_file() {
   if [ -z "${file}" ] || [ -z "${url}" ]; then
     log warn "Usage: curl_download_to_file <file> <url>"
   else
-    curl_download -o "${file}" ${url}
+    curl_download -o "${file}" "${url}"
   fi
 }
 
@@ -31,9 +31,9 @@ function curl_download_to_dir() {
     log warn "Usage: curl_download_to_dir <dir> <url> [rename]"
   else
     if [ -z "${rename}" ]; then
-      curl_download -O --output-dir "${dir}" ${url}
+      curl_download -O --output-dir "${dir}" "${url}"
     else
-      curl_download -o "${rename}" --output-dir "${dir}" ${url}
+      curl_download -o "${rename}" --output-dir "${dir}" "${url}"
     fi
   fi
 }
