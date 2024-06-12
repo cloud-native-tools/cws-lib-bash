@@ -34,6 +34,10 @@ function date_now() {
   date "+${DATE_TIME_FORMAT:-%Y-%m-%d %H:%M:%S}"
 }
 
+function date_tag() {
+  date "+%Y-%m"
+}
+
 function date_id() {
   date "+%Y-%m-%d"
 }

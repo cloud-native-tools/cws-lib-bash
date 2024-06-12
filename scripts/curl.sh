@@ -51,7 +51,7 @@ function curl_fetch() {
   curl ${CURL_FETCH_OPTS} $@
 }
 
-function mirror_file() {
+function curl_mirror_file() {
   local url=${1}
   local dir=${2:-${REPO_DIR:-/repo}}
   local path=$(dirname $(echo ${url} | sed 's@https\?://[^/]*/@@g'))
@@ -67,5 +67,18 @@ function mirror_file() {
     fi
     popd >/dev/null 2>&1
     echo "${url} -> ${dir}/${path}"
+  fi
+}
+
+function curl_test_server() {
+  local url=${1}
+  if [ -z "${url}" ]; then
+    log error "Usage: curl_test_server <url>"
+    return ${RETURN_FAILURE}
+  fi
+  if curl -o /dev/null -s ${ECS_META_URL}; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
   fi
 }

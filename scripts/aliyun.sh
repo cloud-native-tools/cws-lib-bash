@@ -43,3 +43,11 @@ function ecs_cloud_init_output() {
 function ecs_cloud_init_log() {
   cat /var/log/cloud-init.log
 }
+
+function ecs_in_aliyun() {
+  if curl_test_server ${ECS_META_URL}; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
+}

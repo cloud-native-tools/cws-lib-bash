@@ -53,5 +53,16 @@ if [ -x /usr/bin/pwd ] || [ -x /bin/pwd ]; then
 fi
 export TMOUT=0
 
+ARCH=$(uname -m)
 BASH_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-BASH_ARCH=$(uname -m)
+case ${ARCH} in
+x86_64)
+  BASH_ARCH=amd64
+  ;;
+aarch64)
+  BASH_ARCH=arm64
+  ;;
+*)
+  BASH_ARCH=${ARCH}
+  ;;
+esac
