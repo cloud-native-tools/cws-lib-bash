@@ -63,6 +63,10 @@ function git_push_all() {
   done
 }
 
+function git_pull_all() {
+  git pull --all --rebase
+}
+
 function git_init_submodule() {
   git submodule update --init --recursive
 }
