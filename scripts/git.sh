@@ -47,26 +47,6 @@ function git_dead_branch() {
   git branch -a --sort=-committerdate | tail -n 20
 }
 
-function git_push_all() {
-  local branch=${1}
-  if [ -z "${branch}" ]; then
-    branch=$(git branch --show-current)
-  else
-    shift
-  fi
-  for remote in $(git remote); do
-    if [ "${remote}" != "origin" ]; then
-      log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
-      git push $@ ${remote} ${branch}
-      git push ${remote} --tags
-    fi
-  done
-}
-
-function git_pull_all() {
-  git pull --all --rebase
-}
-
 function git_init_submodule() {
   git submodule update --init --recursive
 }
@@ -273,12 +253,45 @@ function git_install() {
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
 
-function git_backup() {
-  git pull --all
-  git add -A
-  git commit -m "backup at $(date_now)"
+function git_pull() {
+  git pull --rebase
+}
+
+function git_pull_all() {
+  git pull --all --rebase
+}
+
+function git_push() {
   local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
   local branch=$(git branch | awk '{print $NF}')
   log notice "git push ${branch} to ${remote}"
   git push ${remote} ${branch}
+}
+
+function git_push_all() {
+  local branch=${1}
+  if [ -z "${branch}" ]; then
+    branch=$(git branch --show-current)
+  else
+    shift
+  fi
+  for remote in $(git remote); do
+    if [ "${remote}" != "origin" ]; then
+      log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
+      git push $@ ${remote} ${branch}
+      git push ${remote} --tags
+    fi
+  done
+}
+
+function git_add() {
+  local msg=$@
+  git add -A
+  git commit -m "${msg}"
+}
+
+function git_backup() {
+  git_pull
+  git_add "backup at $(date_now)"
+  git_push
 }
