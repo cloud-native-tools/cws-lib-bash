@@ -55,7 +55,7 @@ function remote_sync_hostname() {
   for host in $(remote_get_hosts); do
     log plain "Run on [${host}]: [$@]"
     log plain "---"
-    ssh -t -q ${host} -F ${SSH_CONFIG_FILE} -- "echo ${host} > /etc/hostname; hostname ${host}; hostname"
+    ssh -t -q ${host} -F ${SSH_CONFIG_FILE} -- "hostnamectl set-hostname ${host}; hostname"
     log plain "---"
   done
 }
