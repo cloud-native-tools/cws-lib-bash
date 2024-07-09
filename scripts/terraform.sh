@@ -44,8 +44,9 @@ function terraform_read_json() {
 }
 
 function terraform_format() {
-  for f in $(find . -name '*.tf' -type f); do
-    pushd $(dirname $f) >/dev/null 2>&1
+  for d in $(find . -name '*.tf' -type f | xargs dirname | sort | uniq); do
+    pushd ${d} >/dev/null 2>&1
+    log info "Formatting terraform files in ${PWD}"
     terraform fmt
     popd >/dev/null 2>&1
   done
