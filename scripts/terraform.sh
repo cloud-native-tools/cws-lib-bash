@@ -1,12 +1,3 @@
-function terraform_alicloud_valid() {
-  if [ -z "${ALICLOUD_ACCESS_KEY}" ] || [ -z "${ALICLOUD_SECRET_KEY}" ]; then
-    log error "enviroment variable ALICLOUD_ACCESS_KEY or ALICLOUD_SECRET_KEY is not set."
-    return ${RETURN_FAILURE}
-  else
-    return ${RETURN_SUCCESS}
-  fi
-}
-
 function terraform_init() {
   local workdir=${1:-${PWD}}
   if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
@@ -50,4 +41,12 @@ function terraform_read_json() {
     return ${RETURN_FAILURE}
   fi
   echo "jsondecode(file(\"${json_file}\"))" | terraform console
+}
+
+function terraform_format() {
+  for f in $(find . -name '*.tf' -type f); do
+    pushd $(dirname $f) >/dev/null 2>&1
+    terraform fmt
+    popd >/dev/null 2>&1
+  done
 }
