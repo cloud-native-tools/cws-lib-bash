@@ -38,7 +38,7 @@ function cri_images() {
   ${CRI} images $@
 }
 
-function cri_prune() {
+function cri_image_prune() {
   $CRI rmi --prune
 }
 
@@ -81,10 +81,19 @@ function crictl_sandbox_id() {
 
 function crictl_sandbox_rootfs() {
   local pod_name=${1}
-  local sid=$(crictl_sandbox_id ${pod_name})
-  if [ -n "${sid}" ]; then
-    echo "${RUND_SERVICE_ROOT}/${sid}/fs/passthru"
+  local container_name=${2}
+  if [ -z "${pod_name}" ] || [ -z "${container_name}" ]; then
+    echo "Usage: rund_container_exec <pod_name> <container_name> <command> [args...]"
+    return ${RETURN_FAILURE}
   fi
+  local sid=$(crictl_sandbox_id ${pod_name})
+  local cid=$(crictl_container_id ${pod_name} ${container_name})
+  if [ -z "${sid}" ] || [ -z "${cid}" ]; then
+    echo "No such container: ${pod_name}/${container_name}"
+  fi
+  shift
+  shift
+  echo "/run/containerd/io.containerd.runtime.v2.task/k8s.io/${cid}/rootfs"
 }
 
 function crictl_container_ids() {
@@ -153,4 +162,10 @@ function crictl_pod_cgroup() {
   local pod_name=${1}
   local sid=$(crictl_sandbox_id ${pod_name})
   crictl inspectp ${sid} | jq -r '.info.runtimeSpec.linux.cgroupsPath'
+}
+
+function crictl_copy_file_to_container() {
+  local pod_name=${1}
+  local container_name=${2}
+  crictl_container_exec ${pod_name} ${container_name} -it sh -c "cat > /path/inside/container/target_file" </host/path
 }
