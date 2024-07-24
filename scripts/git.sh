@@ -240,7 +240,7 @@ EOF
   chmod +x ${hook_file}
 }
 
-function git_install() {
+function git_copy_workdir() {
   local dest_dir=${1}
   local commit_id=${2:-HEAD}
   if [ -z "${dest_dir}" ]; then
@@ -248,7 +248,7 @@ function git_install() {
     return ${RETURN_FAILURE}
   fi
   if [ ! -d "${dest_dir}" ]; then
-    mkdir - p ${dest_dir}
+    mkdir -p ${dest_dir}
   fi
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
@@ -294,4 +294,8 @@ function git_backup() {
   git_pull
   git_add "backup at $(date_now)"
   git_push
+}
+
+function git_current_commit_id() {
+  git rev-parse HEAD
 }
