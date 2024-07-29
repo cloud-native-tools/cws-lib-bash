@@ -51,3 +51,40 @@ function terraform_format() {
     popd >/dev/null 2>&1
   done
 }
+
+function terraform_cut_tf_file() {
+  local tf_file="${1}"
+  local tf_resource_pattern="${2:-alicloud_.*}"
+
+  cat <<'EOF' >cut.awk
+#!/usr/bin/awk
+
+BEGIN {
+  SELECTED = "false";
+  OUTPUT = "NONE";
+}
+
+($1 == TYPE && $2 ~ "\""RESOURCE"\"") {
+  SELECTED = "true";
+  system("mkdir -pv "$2);
+  OUTPUT = $2"/"$3".tf";
+  gsub("\"", "", OUTPUT)
+  print "output "$2" to "OUTPUT;
+}
+
+/^}/ {
+  if (OUTPUT != "NONE" && SELECTED == "true") {
+    print > OUTPUT;
+  }
+  SELECTED = "false";
+}
+
+(SELECTED == "true") {
+  print > OUTPUT;
+}
+EOF
+
+  for type in locals resource data; do
+    awk -f cut.awk -v TYPE=${type} -v RESOURCE="${tf_resource_pattern}" ${tf_file}
+  done
+}
