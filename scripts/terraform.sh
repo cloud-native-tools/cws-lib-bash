@@ -1,4 +1,4 @@
-function terraform_init() {
+function tf_init() {
   local workdir=${1:-${PWD}}
   if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
     terraform -chdir=${workdir} init
@@ -7,7 +7,7 @@ function terraform_init() {
   fi
 }
 
-function terraform_plan() {
+function tf_plan() {
   local workdir=${1:-${PWD}}
   if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
     terraform -chdir=${workdir} plan
@@ -16,7 +16,7 @@ function terraform_plan() {
   fi
 }
 
-function terraform_apply() {
+function tf_apply() {
   local workdir=${1:-${PWD}}
   if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
     terraform -chdir=${workdir} apply
@@ -25,7 +25,7 @@ function terraform_apply() {
   fi
 }
 
-function terraform_read_yaml() {
+function tf_read_yaml() {
   local yaml_file=${1}
   if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
     log error "Usage: terraform_read_yaml <yaml_file>"
@@ -34,7 +34,7 @@ function terraform_read_yaml() {
   echo "yamldecode(file(\"${yaml_file}\"))" | terraform console
 }
 
-function terraform_read_json() {
+function tf_read_json() {
   local json_file=${1}
   if [ -z "${json_file}" ] || [ ! -f "${json_file}" ]; then
     log error "Usage: terraform_read_json <json_file>"
@@ -43,7 +43,7 @@ function terraform_read_json() {
   echo "jsondecode(file(\"${json_file}\"))" | terraform console
 }
 
-function terraform_format() {
+function tf_format() {
   for d in $(find . -name '*.tf' -type f | xargs dirname | sort | uniq); do
     pushd ${d} >/dev/null 2>&1
     log info "Formatting terraform files in ${PWD}"
@@ -52,7 +52,7 @@ function terraform_format() {
   done
 }
 
-function terraform_cut_tf_file() {
+function tf_cut_tf_file() {
   local tf_file="${1}"
   local tf_resource_pattern="${2:-alicloud_.*}"
 
