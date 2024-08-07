@@ -87,4 +87,23 @@ EOF
   for type in locals resource data; do
     awk -f cut.awk -v TYPE=${type} -v RESOURCE="${tf_resource_pattern}" ${tf_file}
   done
+  rm -rfv cut.awk
+}
+
+function tf_clean_unused_tf_files() {
+  for f in $(find . -name *.tf); do
+    p_dir=$(dirname $f)
+    if [ -f "$p_dir/provider.tf" ] && [ -f "$p_dir/variable.tf" ]; then
+      pushd ${p_dir} >/dev/null 2>&1
+      for t in *.tf; do
+        case $t in
+        variable.tf | provider.tf | data.tf | resource.tf | output.tf) ;;
+        *)
+          rm -fv $t
+          ;;
+        esac
+      done
+      popd >/dev/null 2>&1
+    fi
+  done
 }
