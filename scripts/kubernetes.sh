@@ -1138,3 +1138,11 @@ function k8s_service_forwarding() {
 
   kubectl -n ${namespace} port-forward svc/${service_name} ${local_port}:${target_port}
 }
+
+function k8s_cluster_list() {
+  kubectl config get-clusters | while IFS= read -r line; do
+    local cluster_name="${line%_*}"
+    local cluster_id="${line##*_}"
+    echo "${cluster_name} ${cluster_id}"
+  done
+}

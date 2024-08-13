@@ -121,3 +121,18 @@ function net_default_ip() {
   done
   return ${RETURN_FAILURE}
 }
+
+
+function net_wait_tcp_port {
+    local host=${1}
+    local port=${2}
+    local max_tries=${3:-60} 
+    local tries=1
+
+    while ! exec 6<>/dev/tcp/${host}/${port} && [[ ${tries} -lt ${max_tries} ]]; do
+        sleep 1s
+        tries=$(( tries + 1 ))
+        echo "$(date) retrying to connect to ${host}:${port} (${tries}/${max_tries})"
+    done
+    exec 6>&-
+}

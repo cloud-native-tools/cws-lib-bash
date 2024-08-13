@@ -296,6 +296,6 @@ function git_backup() {
   git_push
 }
 
-function git_current_commit_id() {
+function git_commit_id() {
   git rev-parse HEAD
 }
