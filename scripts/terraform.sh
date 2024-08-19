@@ -91,9 +91,10 @@ EOF
 }
 
 function tf_clean_unused_tf_files() {
-  for f in $(find . -name *.tf); do
-    p_dir=$(dirname $f)
-    if [ -f "$p_dir/provider.tf" ] && [ -f "$p_dir/variable.tf" ]; then
+  local tf_dir="${1:-${PWD}}"
+  for f in $(find ${tf_dir} -name *.tf); do
+    local p_dir=$(dirname $f)
+    if [ -f "${p_dir}/provider.tf" ] && [ -f "${p_dir}/variable.tf" ]; then
       pushd ${p_dir} >/dev/null 2>&1
       for t in *.tf; do
         case $t in

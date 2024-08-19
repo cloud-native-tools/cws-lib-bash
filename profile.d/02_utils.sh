@@ -287,3 +287,10 @@ function set_default() {
     export $1=$2
   fi
 }
+
+function is_sourced() {
+  # https://unix.stackexchange.com/a/215279
+  [ "${#FUNCNAME[@]}" -ge 2 ] &&
+    [ "${FUNCNAME[0]}" = '_is_sourced' ] &&
+    [ "${FUNCNAME[1]}" = 'source' ]
+}
