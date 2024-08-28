@@ -92,19 +92,20 @@ EOF
 
 function tf_clean_unused_tf_files() {
   local tf_dir="${1:-${PWD}}"
-  for f in $(find ${tf_dir} -name *.tf); do
-    local p_dir=$(dirname $f)
-    if [ -f "${p_dir}/provider.tf" ] && [ -f "${p_dir}/variable.tf" ]; then
-      pushd ${p_dir} >/dev/null 2>&1
-      for t in *.tf; do
-        case $t in
-        variable.tf | provider.tf | data.tf | resource.tf | output.tf) ;;
-        *)
-          rm -fv $t
-          ;;
-        esac
-      done
-      popd >/dev/null 2>&1
+  for p_dir in $(find ${tf_dir} -name '*.tf'|xargs dirname|sort|uniq); do
+    if [ -f "${p_dir}/provider.tf" ]; then
+      if [ -f "${p_dir}/variable.tf" ] || [ -f "${p_dir}/data.tf" ] || [ -f "${p_dir}/resource.tf" ] || [ -f "${p_dir}/output.tf" ]; then
+        pushd ${p_dir} >/dev/null 2>&1
+        for t in *.tf; do
+          case $t in
+          variable.tf | provider.tf | data.tf | resource.tf | output.tf) ;;
+          *)
+            rm -fv $t
+            ;;
+          esac
+        done
+        popd >/dev/null 2>&1
+      fi
     fi
   done
 }
