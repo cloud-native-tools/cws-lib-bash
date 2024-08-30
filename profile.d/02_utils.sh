@@ -294,3 +294,12 @@ function is_sourced() {
     [ "${FUNCNAME[0]}" = '_is_sourced' ] &&
     [ "${FUNCNAME[1]}" = 'source' ]
 }
+
+function add_line_if_not_exit() {
+  local file=$1
+  local line=$2
+  if ! test -f ${file} || ! grep -Fxq "${line}" ${file}; then
+    echo ${line} >>${file}
+    chmod a+rx ${file}
+  fi
+}
