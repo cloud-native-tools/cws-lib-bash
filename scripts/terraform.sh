@@ -1,30 +1,3 @@
-function tf_init() {
-  local workdir=${1:-${PWD}}
-  if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
-    terraform -chdir=${workdir} init
-  else
-    terraform -chdir=${workdir} init -plugin-dir=${TERRAFORM_PROVIDER_HOME}
-  fi
-}
-
-function tf_plan() {
-  local workdir=${1:-${PWD}}
-  if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
-    terraform -chdir=${workdir} plan
-  else
-    terraform -chdir=${workdir} plan -plugin-dir=${TERRAFORM_PROVIDER_HOME}
-  fi
-}
-
-function tf_apply() {
-  local workdir=${1:-${PWD}}
-  if [ -z "${TERRAFORM_PROVIDER_HOME}" ]; then
-    terraform -chdir=${workdir} apply
-  else
-    terraform -chdir=${workdir} apply -plugin-dir=${TERRAFORM_PROVIDER_HOME}
-  fi
-}
-
 function tf_read_yaml() {
   local yaml_file=${1}
   if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
@@ -92,7 +65,7 @@ EOF
 
 function tf_clean_unused_tf_files() {
   local tf_dir="${1:-${PWD}}"
-  for p_dir in $(find ${tf_dir} -name '*.tf'|xargs dirname|sort|uniq); do
+  for p_dir in $(find ${tf_dir} -name '*.tf' | xargs dirname | sort | uniq); do
     if [ -f "${p_dir}/provider.tf" ]; then
       if [ -f "${p_dir}/variable.tf" ] || [ -f "${p_dir}/data.tf" ] || [ -f "${p_dir}/resource.tf" ] || [ -f "${p_dir}/output.tf" ]; then
         pushd ${p_dir} >/dev/null 2>&1
@@ -108,4 +81,22 @@ function tf_clean_unused_tf_files() {
       fi
     fi
   done
+}
+
+function tf_plan() {
+  terraform plan -out=plan.out
+  terraform show plan.out >plan.ansi
+}
+
+function tf_extract_example() {
+  find . \( -name '*.md' -or -name '*.markdown' \) -type f | xargs -I{} sed -n '/^```terraform$/,/^```$/p' {} | grep -v '^```' | sed '/^$/d'
+}
+
+function tf_replace() {
+  local resource_id="${1}"
+  if [ -z "${resource_id}" ]; then
+    log error "Usage: terraform_replace <resource_id>"
+    return ${RETURN_FAILURE:-1}
+  fi
+  terraform apply -replace="${resource_id}"
 }
