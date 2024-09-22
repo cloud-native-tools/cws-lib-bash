@@ -84,7 +84,7 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_plan() {
-  terraform plan -out=plan.out
+  terraform plan -out=plan.out 2>validate.ansi
   terraform show plan.out >plan.ansi
 }
 

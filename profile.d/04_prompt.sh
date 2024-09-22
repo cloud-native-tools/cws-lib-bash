@@ -1,9 +1,30 @@
 function bash_prompt() {
   if [[ "$?" != "0" ]]; then
-    log plain "[$(log plain ${SYMBOL_FAILURE})][\D{%Y-%m-%d} \t][\u@\h \w]\$\n "
+    local last_exit=$(log plain ${SYMBOL_FAILURE})
   else
-    log plain "[$(log plain ${SYMBOL_SUCCESS})][\D{%Y-%m-%d} \t][\u@\h \w]\$\n "
+    local last_exit=$(log plain ${SYMBOL_SUCCESS})
   fi
+
+  if [ $(id -u) = 0 ]; then
+    local user_indicator="#"
+  else
+    local user_indicator="\$"
+  fi
+
+  if command -v mamba &>/dev/null; then
+    local conda_env="${BOLD_CYAN}$(mamba info --envs | awk '$2=="*"{print "[mamba",$1"]"}')${CLEAR}"
+  elif command -v conda &>/dev/null; then
+    local conda_env="${BOLD_CYAN}$(conda info --envs | awk '$2=="*"{print "[conda",$1"]"}')${CLEAR}"
+  else
+    local conda_env=""
+  fi
+
+  if command -v systemd-detect-virt &>/dev/null; then
+    local BASH_OS=$(systemd-detect-virt 2>/dev/null || echo "${BASH_OS}")
+  fi
+  local env_info="[${BASH_ARCH}][${BASH_OS}]"
+
+  log plain "[${last_exit}]${env_info}${conda_env}[\D{%Y-%m-%d} \t][\u@\h \w]${user_indicator}\n "
 }
 
 is_bash && enable -n echo
