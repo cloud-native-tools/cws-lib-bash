@@ -20,7 +20,7 @@ function bash_prompt() {
   fi
 
   if command -v systemd-detect-virt &>/dev/null; then
-    local BASH_OS=$(systemd-detect-virt 2>/dev/null || echo "${BASH_OS}")
+    local BASH_OS="${BASH_OS}: $(systemd-detect-virt 2>/dev/null || echo '')"
   fi
   local env_info="[${BASH_ARCH}][${BASH_OS}]"
 
