@@ -299,3 +299,9 @@ function git_backup() {
 function git_commit_id() {
   git rev-parse HEAD
 }
+
+function git_tag() {
+  local tag_name=${1:-$(date_id)}
+  git tag ${tag_name}
+  git_push_all
+}
