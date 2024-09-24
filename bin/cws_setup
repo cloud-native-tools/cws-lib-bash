@@ -19,3 +19,8 @@ ENV=${ROOT}/bin/cws_env
 # for non-login shell
 add_line_if_not_exit ~/.bashrc ". ${ENV}"
 add_line_if_not_exit ~/.zshrc ". ${ENV}"
+
+if [ -f /etc/profile.d/bash_completion.sh ]; then
+  # disable bash completion which conflicts with cws_lib, FIXME: find a better way
+  mv -fv /etc/profile.d/bash_completion.sh /etc/profile.d/bash_completion.sh.bak
+fi
