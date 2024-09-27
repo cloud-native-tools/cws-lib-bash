@@ -100,3 +100,15 @@ function tf_replace() {
   fi
   terraform apply -replace="${resource_id}"
 }
+
+function tf_validate_module() {
+  find . -name '*.tf' -type f | xargs grep -E '\s+source\s+=' | grep -v '/provider.tf:' | grep '\.\./' | sort | uniq | sed -Er 's/^([^:]+):[^"]+"([^"]+)"/\1 \2/g' | while read -r tf_file tf_reference; do
+    pushd $(dirname ${tf_file}) >/dev/null 2>&1
+    if [ -d "${tf_reference}" ]; then
+      log notice "${tf_file} -> ${tf_reference}"
+    else
+      log error "${tf_file} -> ${tf_reference}"
+    fi
+    popd >/dev/null 2>&1
+  done
+}

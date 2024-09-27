@@ -183,7 +183,7 @@ function script_entry() {
   fi
 }
 
-function read_line() {
+function count_line() {
   local lineno=${1}
   while read -r line; do
     log plain "${lineno} ${line}"
