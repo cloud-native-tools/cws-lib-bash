@@ -1,10 +1,3 @@
-function k8s_sa_token() {
-  local namespace=${1:-kube-system}
-  local sa=${2:-kube-system}
-  local secrets_name=$(kubectl -n ${namespace} get sa/${sa} -o jsonpath="{.secrets[0].name}")
-  kubectl -n ${namespace} get secret "${secrets_name}" -o go-template="{{.data.token | base64decode}}"
-}
-
 function k8s_get_all() {
   local namespace="${1}"
   local k8s_fields="all,cm,secret,ing,sa,pvc"

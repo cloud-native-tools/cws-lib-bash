@@ -58,7 +58,7 @@ function dp_svc() {
 
 function docker_import_env() {
   local docker_file=${1}
-  eval $(grep -w "ENV" ${docker_file} | sed 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g')
+  grep -w "ENV" ${docker_file} | sed -E 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g'
 }
 
 function docker_extract() {
