@@ -43,10 +43,59 @@ function vscode_workspace_add_folder() {
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
 
+function vscode_get_bin() {
+  local code_bin="code"
+  if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
+    code_bin="${VSCODE_SERVER_HOME}/bin/code-server"
+  elif [ -f "${CODE_SERVER_HOME}/bin/code-server" ]; then
+    code_bin="${CODE_SERVER_HOME}/bin/code-server"
+  else
+    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+      code_bin="code"
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+      code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    elif [[ "$OSTYPE" == "cygwin" ]]; then
+      code_bin="/cygdrive/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
+    elif [[ "$OSTYPE" == "msys" ]]; then
+      code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
+    elif [[ "$OSTYPE" == "win32" ]]; then
+      code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
+    fi
+  fi
+  echo $code_bin
+}
+
+function vscode_insiders_get_bin() {
+  local code_bin="code-insiders"
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    code_bin="code-insiders"
+  elif [[ "$OSTYPE" == "darwin"* ]]; then
+    code_bin="/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
+  elif [[ "$OSTYPE" == "cygwin" ]]; then
+    code_bin="/cygdrive/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
+  elif [[ "$OSTYPE" == "msys" ]]; then
+    code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
+  elif [[ "$OSTYPE" == "win32" ]]; then
+    code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
+  fi
+  echo $code_bin
+}
+
+function vscode_open() {
+  local code_bin=$(vscode_get_bin)
+  ${code_bin} -r $@
+}
+
+function vscode_insiders_open() {
+  local code_bin=$(vscode_insiders_get_bin)
+  ${code_bin} -r $@
+}
+
 function vscode_ext_list() {
+  local vscode_bin=$(vscode_get_bin)
   local ext_list_file=$@
   if [ -z "${ext_list_file}" ]; then
-    code --list-extensions --show-versions
+    ${vscode_bin} --list-extensions --show-versions
   else
     if [ -f ${ext_list_file} ]; then
       cat ${ext_list_file}
@@ -54,6 +103,11 @@ function vscode_ext_list() {
       echo $@
     fi
   fi
+}
+
+function vscode_ext_install() {
+  local vscode_bin=$(vscode_get_bin)
+  ${vscode_bin} --install-extension ${@}
 }
 
 function vscode_ext_url() {
