@@ -24,3 +24,5 @@ if [ -f /etc/profile.d/bash_completion.sh ]; then
   # disable bash completion which conflicts with cws_lib, FIXME: find a better way
   mv -fv /etc/profile.d/bash_completion.sh /etc/profile.d/bash_completion.sh.bak
 fi
+
+echo "setup cws-lib-bash done"

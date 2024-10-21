@@ -43,7 +43,7 @@ function vscode_workspace_add_folder() {
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
 
-function vscode_workspace_add_python_extra_paths() {
+function vscode_workspace_add_python_search_paths() {
   local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
 
   if [ ! -f ${workspace_file} ]; then
@@ -64,6 +64,26 @@ function vscode_workspace_add_python_extra_paths() {
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
 
+function vscode_workspace_add_rust_search_paths() {
+  local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
+
+  if [ ! -f ${workspace_file} ]; then
+    echo '{}' | jq ".folders = []" >${workspace_file}
+  fi
+
+  rust_src_folders_json=$({
+    find . -name 'Cargo.toml' -type f |
+      sort |
+      uniq |
+      grep -vE '^$' |
+      jq -R . |
+      jq -s .
+  } || true)
+
+  cat ${workspace_file} | jq ".settings |= (. // {}) | .settings.\"rust-analyzer.linkedProjects\" = ${rust_src_folders_json}" >${workspace_file}.tmp
+  mv -fv ${workspace_file}.tmp ${workspace_file}
+}
+Ø
 function vscode_get_bin() {
   local code_bin="code"
   if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
