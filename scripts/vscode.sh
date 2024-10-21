@@ -43,6 +43,27 @@ function vscode_workspace_add_folder() {
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
 
+function vscode_workspace_add_python_extra_paths() {
+  local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
+
+  if [ ! -f ${workspace_file} ]; then
+    echo '{}' | jq ".folders = []" >${workspace_file}
+  fi
+
+  python_src_folders_json=$({
+    find . -name '*.py' -type f |
+      xargs dirname |
+      sort |
+      uniq |
+      grep -vE '^$' |
+      jq -R . |
+      jq -s .
+  } || true)
+
+  cat ${workspace_file} | jq ".settings |= (. // {}) | .settings.\"python.analysis.extraPaths\" = ${python_src_folders_json}" >${workspace_file}.tmp
+  mv -fv ${workspace_file}.tmp ${workspace_file}
+}
+
 function vscode_get_bin() {
   local code_bin="code"
   if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
@@ -107,7 +128,9 @@ function vscode_ext_list() {
 
 function vscode_ext_install() {
   local vscode_bin=$(vscode_get_bin)
-  ${vscode_bin} --install-extension ${@}
+  for ext in ${@}; do
+    ${vscode_bin} --install-extension ${ext}
+  done
 }
 
 function vscode_ext_url() {
