@@ -83,7 +83,7 @@ function vscode_workspace_add_rust_search_paths() {
   cat ${workspace_file} | jq ".settings |= (. // {}) | .settings.\"rust-analyzer.linkedProjects\" = ${rust_src_folders_json}" >${workspace_file}.tmp
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
-Ø
+
 function vscode_get_bin() {
   local code_bin="code"
   if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
