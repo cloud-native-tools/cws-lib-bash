@@ -13,6 +13,11 @@ function encode_files() {
   echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64)\"|base64 -d|tar zx"
 }
 
+function encode_script() {
+  local script_file=${1}
+  echo "echo \"$(cat ${script_file} | gzip -c - | base64)\"|base64 -d|gunzip -c -|bash"
+}
+
 function encode_function() {
   local funcname=${1}
   if [ -z "${funcname}" ]; then

@@ -103,7 +103,7 @@ function vscode_get_bin() {
       code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
     fi
   fi
-  echo $code_bin
+  echo ${code_bin}
 }
 
 function vscode_insiders_get_bin() {
@@ -119,24 +119,38 @@ function vscode_insiders_get_bin() {
   elif [[ "$OSTYPE" == "win32" ]]; then
     code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
   fi
-  echo $code_bin
+  echo ${code_bin}
 }
 
 function vscode_open() {
-  local code_bin=$(vscode_get_bin)
-  ${code_bin} -r $@
+  local vscode_bin=$(vscode_get_bin)
+  "${vscode_bin}" -r $@
 }
 
 function vscode_insiders_open() {
-  local code_bin=$(vscode_insiders_get_bin)
-  ${code_bin} -r $@
+  local vscode_bin=$(vscode_insiders_get_bin)
+  "${vscode_bin}" -r $@
 }
 
 function vscode_ext_list() {
   local vscode_bin=$(vscode_get_bin)
   local ext_list_file=$@
   if [ -z "${ext_list_file}" ]; then
-    ${vscode_bin} --list-extensions --show-versions
+    "${vscode_bin}" --list-extensions --show-versions
+  else
+    if [ -f ${ext_list_file} ]; then
+      cat ${ext_list_file}
+    else
+      echo $@
+    fi
+  fi
+}
+
+function vscode_insiders_ext_list() {
+  local vscode_bin=$(vscode_insiders_get_bin)
+  local ext_list_file=$@
+  if [ -z "${ext_list_file}" ]; then
+    "${vscode_bin}" --list-extensions --show-versions
   else
     if [ -f ${ext_list_file} ]; then
       cat ${ext_list_file}
@@ -149,7 +163,14 @@ function vscode_ext_list() {
 function vscode_ext_install() {
   local vscode_bin=$(vscode_get_bin)
   for ext in ${@}; do
-    ${vscode_bin} --install-extension ${ext}
+    "${vscode_bin}" --install-extension ${ext}
+  done
+}
+
+function vscode_insiders_ext_install() {
+  local vscode_bin=$(vscode_insiders_get_bin)
+  for ext in ${@}; do
+    "${vscode_bin}" --install-extension ${ext}
   done
 }
 

@@ -15,3 +15,13 @@ function jq_format() {
   local json_file=${1:--}
   cat ${json_file} | jq .
 }
+
+function jq_sort_file() {
+  local json_file=${1}
+
+  if [ -f "${json_file}" ]; then
+    jq -S . ${json_file} >temp.json && mv temp.json ${json_file}
+  else
+    log error "file not found: ${json_file}"
+  fi
+}
