@@ -305,3 +305,18 @@ function git_create_tag() {
   git tag ${tag_name}
   git_push_all
 }
+
+function git_recreate_tag() {
+  local tag_name=${1:-$(date_tag)}
+
+  # delete tag locally
+  git tag -d ${tag_name}
+  for remote in $(git remote); do
+    if [ "${remote}" != "origin" ]; then
+      log info "===================  delete Tag: [${remote}/${tag_name}] ==================="
+      git push --delete ${remote} ${tag_name}
+    fi
+  done
+
+  git_create_tag ${tag_name}
+}
