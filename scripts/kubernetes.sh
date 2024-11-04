@@ -48,7 +48,7 @@ function k8s_dump_pod() {
     return ${RETURN_FAILURE}
   fi
   if [ -z "${pod}" ]; then
-    k8s_pods ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
+    k8s_pod ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
   else
     kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
   fi
@@ -187,7 +187,7 @@ function k8s_delete_pod() {
   fi
 }
 
-function k8s_pods() {
+function k8s_pod() {
   local namepsace=${1}
   if [ -z "${namepsace}" ]; then
     namepsace=all
@@ -273,7 +273,7 @@ function k8s_pod_by_node() {
     log warn "Usage: k8s_pod_by_node <node name> [kubectl options]"
     return ${RETURN_FAILURE}
   fi
-  k8s_pods $@ --field-selector "spec.nodeName=${node_name}"
+  k8s_pod $@ --field-selector "spec.nodeName=${node_name}"
 }
 
 function k8s_pod_by_runtime() {
@@ -283,7 +283,7 @@ function k8s_pod_by_runtime() {
     log warn "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
     return ${RETURN_FAILURE}
   fi
-  k8s_pods $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
+  k8s_pod $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
 
 function k8s_pod_by_node_and_runtime() {
@@ -295,7 +295,7 @@ function k8s_pod_by_node_and_runtime() {
     log warn "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
     return ${RETURN_FAILURE}
   fi
-  k8s_pods $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
+  k8s_pod $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
 
 function k8s_svc() {
@@ -394,7 +394,7 @@ function k8s_ep() {
 EOF
 }
 
-function k8s_pods_images() {
+function k8s_pod_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local namepsace=${1:-all}
   case ${namepsace} in
@@ -444,7 +444,7 @@ EOF
 }
 
 function k8s_images_used() {
-  k8s_pods_images $@ | grep -vw Image | awk '{print $3}' | sort | uniq
+  k8s_pod_images $@ | grep -vw Image | awk '{print $3}' | sort | uniq
 }
 
 function k8s_apply() {
@@ -474,7 +474,7 @@ function k8s_logs() {
 }
 
 function k8s_sys_pod() {
-  k8s_pods kube-system $@
+  k8s_pod kube-system $@
 }
 
 function k8s_sys_svc() {
@@ -947,7 +947,7 @@ EOF
   kubectl get pods ${ns_opt} $@ --template="${TPL}"
 }
 
-function k8s_pods_hostpath() {
+function k8s_pod_hostpath() {
   printf "%-24s %-60s %-20s %-80s \n" Namespace Name Volume Hostpath
   local namepsace=${1:-all}
   case ${namepsace} in
@@ -1138,4 +1138,8 @@ function k8s_cluster_list() {
     local cluster_id="${line##*_}"
     echo "${cluster_name} ${cluster_id}"
   done
+}
+
+function k8s_config_from_env() {
+  kubectl config view --raw | sed "/client-certificate-data: REDACTED/{N;s/client-certificate-data: REDACTED\n    client-key-data: REDACTED/token: ${KUBECONFIG_TOKEN}/}"
 }

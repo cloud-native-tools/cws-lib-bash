@@ -303,3 +303,8 @@ function add_line_if_not_exit() {
     chmod a+rx ${file}
   fi
 }
+
+function random_string() {
+  local length=${1:-8}
+  head /dev/urandom | sha256sum | head -c "${length}"
+}
