@@ -48,7 +48,7 @@ function k8s_dump_pod() {
     return ${RETURN_FAILURE}
   fi
   if [ -z "${pod}" ]; then
-    k8s_pod ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
+    k8s_pods ${namespace} | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | bash
   else
     kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
   fi
@@ -187,7 +187,7 @@ function k8s_delete_pod() {
   fi
 }
 
-function k8s_pod() {
+function k8s_pods() {
   local namepsace=${1}
   if [ -z "${namepsace}" ]; then
     namepsace=all
@@ -266,36 +266,44 @@ EOF
   fi
 }
 
-function k8s_pod_by_node() {
+function k8s_pods_by_node() {
   local node_name=${1}
-  shift
+  local namespace=${2}
+
   if [ -z "${node_name}" ]; then
-    log warn "Usage: k8s_pod_by_node <node name> [kubectl options]"
+    log warn "Usage: k8s_pods_by_node <node name> [namespace] [kubectl options]"
     return ${RETURN_FAILURE}
+  else
+    shift
   fi
-  k8s_pod $@ --field-selector "spec.nodeName=${node_name}"
+  if [ -z "${namespace}" ]; then
+    namespace=all
+  else
+    shift
+  fi
+  k8s_pods ${namespace} --field-selector "spec.nodeName=${node_name}" $@
 }
 
-function k8s_pod_by_runtime() {
+function k8s_pods_by_runtime() {
   local runtime_class=${1}
   shift
   if [ -z "${runtime_class}" ]; then
-    log warn "Usage: k8s_pod_by_runtime <runtime class name> [kubectl options]"
+    log warn "Usage: k8s_pods_by_runtime <runtime class name> [kubectl options]"
     return ${RETURN_FAILURE}
   fi
-  k8s_pod $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
+  k8s_pods $@ -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
 
-function k8s_pod_by_node_and_runtime() {
+function k8s_pods_by_node_and_runtime() {
   local node_name=${1}
   shift
   local runtime_class=${1}
   shift
   if [ -z "${node_name}" ] || [ -z "${runtime_class}" ]; then
-    log warn "Usage: k8s_pod_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
+    log warn "Usage: k8s_pods_by_node_and_runtime <node name> <runtime class name> [kubectl options]"
     return ${RETURN_FAILURE}
   fi
-  k8s_pod $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
+  k8s_pods $@ --field-selector spec.nodeName=${node_name} -l "alibabacloud.com/runtime-class-name=${runtime_class}"
 }
 
 function k8s_svc() {
@@ -474,7 +482,7 @@ function k8s_logs() {
 }
 
 function k8s_sys_pod() {
-  k8s_pod kube-system $@
+  k8s_pods kube-system $@
 }
 
 function k8s_sys_svc() {
