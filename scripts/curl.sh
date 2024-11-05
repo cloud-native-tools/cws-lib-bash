@@ -51,6 +51,19 @@ function curl_fetch() {
   curl ${CURL_FETCH_OPTS} $@
 }
 
+function curl_detect() {
+  curl -s -o /dev/null -w "%{http_code}" $@
+}
+
+function curl_available() {
+  local http_status=$(curl_detect ${1})
+  if [ "${http_status}" = "200" ]; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
+}
+
 function curl_mirror_file() {
   local url=${1}
   local dir=${2:-${REPO_DIR:-/repo}}

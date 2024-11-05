@@ -1,5 +1,13 @@
 export ECS_META_URL="http://100.100.100.200/latest"
 
+function ecs_vpc_id() {
+  curl_fetch ${ECS_META_URL}/meta-data/vpc-id
+}
+
+function ecs_vswitch_id() {
+  curl_fetch ${ECS_META_URL}/meta-data/vswitch-id
+}
+
 function ecs_region() {
   curl_fetch ${ECS_META_URL}/meta-data/region-id
 }
@@ -55,17 +63,8 @@ function ecs_in_aliyun() {
 function ecs_interfaces() {
   local interface_url=${ECS_META_URL}/meta-data/network/interfaces/macs/
   # printf "%-40s %-40s %-16s %-24s\n" Namespace Service Name URL
-  printf "%-30s %-30s %-30s %-30s %-16s %-16s %-16s\n" vpc vswitch eni mac ip gateway netmask
+  printf "%-30s %-30s %-30s %-30s %-16s %-16s %-16s\n" VPC VSWITCH ENI MAC IP GATEWAY NETMASK
   for mac in $(curl_fetch ${interface_url}); do
-    # gateway
-    # netmask
-    # network-interface-id
-    # primary-ip-address
-    # private-ipv4s
-    # vpc-cidr-block
-    # vpc-id
-    # vswitch-cidr-block
-    # vswitch-id
     local gateway=$(curl_fetch ${interface_url}${mac}/gateway)
     local netmask=$(curl_fetch ${interface_url}${mac}/netmask)
     local network_interface_id=$(curl_fetch ${interface_url}${mac}/network-interface-id)
@@ -77,4 +76,24 @@ function ecs_interfaces() {
     local vswitch_id=$(curl_fetch ${interface_url}${mac}/vswitch-id)
     printf "%-30s %-30s %-30s %-30s %-16s %-16s %-16s\n" ${vpc_id} ${vswitch_id} ${network_interface_id} ${mac%/} ${primary_ip_address} ${gateway} ${netmask}
   done
+}
+
+function ecs_detect_endpoints() {
+  local root_url=${1:-${ECS_META_URL}}
+  if curl_available ${root_url}; then
+    for resource in $(curl_fetch ${root_url}); do
+      if [ "${resource}" = "user-data" ] || [ "${resource}" = "pkcs7" ]; then
+        continue
+      fi
+      if [ "${resource}" = "source-address" ]; then
+        echo "${root_url%/}/${resource} = $(curl_fetch ${root_url%/}/${resource})"
+      else
+        ecs_detect_endpoint ${root_url%/}/${resource}
+      fi
+    done
+  else
+    local url=$(dirname ${root_url})
+    local data=$(curl_fetch ${url})
+    echo "${url} = ${data}"
+  fi
 }
