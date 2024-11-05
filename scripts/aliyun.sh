@@ -85,15 +85,13 @@ function ecs_detect_endpoints() {
       if [ "${resource}" = "user-data" ] || [ "${resource}" = "pkcs7" ]; then
         continue
       fi
-      if [ "${resource}" = "source-address" ]; then
+      if [ "${resource}" = "source-address" ] || [ "${resource}" = "vpc-cidr-block" ] || [ "${resource}" = "vswitch-cidr-block" ]; then
         echo "${root_url%/}/${resource} = $(curl_fetch ${root_url%/}/${resource})"
       else
         ecs_detect_endpoints ${root_url%/}/${resource}
       fi
     done
   else
-    local url=$(dirname ${root_url})
-    local data=$(curl_fetch ${url})
-    echo "${url} = ${data}"
+    echo "$(dirname ${root_url}) = $(basename ${root_url})"
   fi
 }
