@@ -88,7 +88,7 @@ function ecs_detect_endpoints() {
       if [ "${resource}" = "source-address" ]; then
         echo "${root_url%/}/${resource} = $(curl_fetch ${root_url%/}/${resource})"
       else
-        ecs_detect_endpoint ${root_url%/}/${resource}
+        ecs_detect_endpoints ${root_url%/}/${resource}
       fi
     done
   else
