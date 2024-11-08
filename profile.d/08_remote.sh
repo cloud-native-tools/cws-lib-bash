@@ -76,3 +76,10 @@ function remote_download() {
     log warn "Usage: remote_download <abs path> "
   fi
 }
+
+function remote_add_pub_key() {
+  local local_key=${1:-~/.ssh/id_rsa.pub}
+  local remote_key=${2:-~/.ssh/authorized_keys}
+  remote_cmd "echo \"$(cat ${local_key})\" >> ${remote_key}"
+  remote_cmd "bash -c \"cat ${remote_key}\""
+}
