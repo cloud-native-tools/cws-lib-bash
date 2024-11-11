@@ -276,11 +276,9 @@ function git_push_all() {
     shift
   fi
   for remote in $(git remote); do
-    if [ "${remote}" != "origin" ]; then
-      log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
-      git push $@ ${remote} ${branch}
-      git push ${remote} --tags
-    fi
+    log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
+    git push $@ ${remote} ${branch}
+    git push ${remote} --tags
   done
 }
 
@@ -312,10 +310,8 @@ function git_recreate_tag() {
   # delete tag locally
   git tag -d ${tag_name}
   for remote in $(git remote); do
-    if [ "${remote}" != "origin" ]; then
-      log info "===================  delete Tag: [${remote}/${tag_name}] ==================="
-      git push --delete ${remote} ${tag_name}
-    fi
+    log info "===================  delete Tag: [${remote}/${tag_name}] ==================="
+    git push --delete ${remote} ${tag_name}
   done
 
   git_create_tag ${tag_name}
