@@ -79,6 +79,8 @@ function tf_clean_unused_tf_files() {
         done
         popd >/dev/null 2>&1
       fi
+    else
+      rm -rfv ${p_dir}
     fi
   done
 }
