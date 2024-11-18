@@ -68,7 +68,7 @@ function docker_extract() {
     log warn "Usage: docker_extract <image> [dest=${PWD}]"
     return ${RETURN_FAILURE}
   else
-    local cid=$(docker create ${img})
+    local cid=$(docker create --entrypoint 'sleep 99999' ${img})
     mkdir -pv ${dest}
     docker export ${cid} | tar -xC ${dest}
     docker rm -f ${cid}

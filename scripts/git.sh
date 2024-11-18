@@ -1,4 +1,4 @@
-GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/([^.]+)(.git)?'
+GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/(.+)(\.git)'
 
 function git_track_lfs() {
   local file_size=${1:-"+1M"}

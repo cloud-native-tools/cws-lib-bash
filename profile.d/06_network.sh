@@ -77,7 +77,7 @@ function net_my_ip() {
 
   local ip_apis=$(
     cat <<EOF
-https://api.seeip.org
+https://ipv4.seeip.org
 https://api.ipify.org
 EOF
   )

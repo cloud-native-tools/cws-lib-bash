@@ -66,3 +66,11 @@ aarch64)
   BASH_ARCH=${ARCH}
   ;;
 esac
+
+function cws_debug_enabled() {
+  if [ "${CWS_DEBUG}" == "true" ]; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
+}
