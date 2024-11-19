@@ -304,7 +304,7 @@ function git_create_tag() {
   git_push_all
 }
 
-function git_recreate_tag() {
+function git_delete_tag() {
   local tag_name=${1:-$(date_tag)}
 
   # delete tag locally
@@ -313,6 +313,10 @@ function git_recreate_tag() {
     log info "===================  delete Tag: [${remote}/${tag_name}] ==================="
     git push --delete ${remote} ${tag_name}
   done
+}
 
+function git_recreate_tag() {
+  local tag_name=${1:-$(date_tag)}
+  git_delete_tag ${tag_name}
   git_create_tag ${tag_name}
 }
