@@ -58,3 +58,25 @@ function yum_install_with_retry() {
     return ${RETURN_FAILURE}
   fi
 }
+
+function yum_prune() {
+  # remove packages as much as possible, only keep the base system
+  rm -rv /etc/dnf/protected.d
+  mkdir -p /etc/dnf/protected.d
+  {
+    echo 'setup'
+    echo 'glibc'
+    echo 'rpm'
+    echo 'dnf'
+  } >/etc/dnf/protected.d/keep.conf
+  {
+    for pkg in $(rpm -qa); do
+      echo -n "try to remove ${pkg}: "
+      if dnf remove -y ${pkg} >/dev/null 2>&1; then
+        echo -e "\033[1;32mremoved\033[0m"
+      else
+        echo -e "\033[1;31mskipped\033[0m"
+      fi
+    done
+  }
+}
