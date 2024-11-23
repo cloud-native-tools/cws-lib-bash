@@ -263,14 +263,19 @@ function fix_permissions() {
 
 function files_on_change() {
   local monitor_dir=${1}
-  local callback_script=${2}
-  local interval=${3:-5}
-
-  if [ -z "${monitor_dir}" ] || [ -z "${callback_script}" ]; then
-    log error "Usage: files_on_change <monitor_dir> <callback_script> [interval]"
+  local interval=${2}
+  if [ -z "${monitor_dir}" ] || [ -z "${interval}" ]; then
+    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [args]"
     return ${RETURN_FAILURE}
   fi
-
+  shift 2
+  local callback_script=${3}
+  if [ -z "${callback_script}" ]; then
+    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [args]"
+    return ${RETURN_FAILURE}
+  fi
+  shift
+  local callback_script_args=$@
   local state_dir="$(mktemp -d)"
   log notice "watching files in ${monitor_dir} using state directory: ${state_dir}"
   local previous_state_file=""
@@ -282,14 +287,14 @@ function files_on_change() {
     if [ -n "${previous_state_file}" ] && [ -f "${previous_state_file}" ]; then
       if ! cmp -s "${previous_state_file}" "${current_state_file}"; then
         # Changes detected
-        bash ${callback_script}
+        bash ${callback_script} ${callback_script_args}
       fi
     fi
-    
+
     rm -rf ${previous_state_file}
     previous_state_file=${current_state_file}
     current_state_file="${state_dir}/$(date '+%s').txt"
     sleep ${interval}
   done
-  
+
 }
