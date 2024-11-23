@@ -16,7 +16,8 @@ fi
 ROOT=$(readlink -f $(dirname ${DIR}))
 ENV=${ROOT}/bin/cws_env
 
-# for non-login shell
+# this library is used for interactive shell only, only sourced in a interactive shell environment
+# if you need use it in a script, you should source it manually
 add_line_if_not_exit ~/.bashrc ". ${ENV}"
 add_line_if_not_exit ~/.zshrc ". ${ENV}"
 
