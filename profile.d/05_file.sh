@@ -263,15 +263,23 @@ function fix_permissions() {
 
 function files_on_change() {
   local monitor_dir=${1}
-  local interval=${2}
-  if [ -z "${monitor_dir}" ] || [ -z "${interval}" ]; then
-    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [args]"
+  if [ -z "${monitor_dir}" ] || [ ! -d "${monitor_dir}" ]; then
+    log error "<monitor_dir> is required and must be a directory"
+    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [callback_script_args]"
     return ${RETURN_FAILURE}
   fi
-  shift 2
-  local callback_script=${3}
-  if [ -z "${callback_script}" ]; then
-    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [args]"
+  shift
+  local interval=${1}
+  if [ -z "${interval}" ] || [ ${interval} -lt 1 ] || [ ${interval} -gt 60 ]; then
+    log error "<interval> is required and must be a number between 1 and 60"
+    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [callback_script_args]"
+    return ${RETURN_FAILURE}
+  fi
+  shift
+  local callback_script=${1}
+  if [ -z "${callback_script}" ] || [ ! -f "${callback_script}" ]; then
+    log error "<callback_script> is required and must be a file"
+    log error "Usage: files_on_change <monitor_dir> <interval> <callback_script> [callback_script_args]"
     return ${RETURN_FAILURE}
   fi
   shift
