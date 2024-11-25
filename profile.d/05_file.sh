@@ -290,16 +290,21 @@ function files_on_change() {
   local current_state_file="${state_dir}/$(date '+%s').txt"
 
   while true; do
+    # record current state
     ls -lh "${monitor_dir}" | awk '{print $5, $1, $9}' >${current_state_file}
 
-    if [ -n "${previous_state_file}" ] && [ -f "${previous_state_file}" ]; then
-      if ! cmp -s "${previous_state_file}" "${current_state_file}"; then
-        # Changes detected
-        bash ${callback_script} ${callback_script_args}
-      fi
+    if [ -z "${previous_state_file}" ] || [ ! -f "${previous_state_file}" ]; then
+      # first run
+      bash ${callback_script} ${callback_script_args}
+    elif ! cmp -s "${previous_state_file}" "${current_state_file}"; then
+      # Changes detected
+      bash ${callback_script} ${callback_script_args}
+      rm -rf ${previous_state_file}
+    else
+      log notice "No changes detected"
+      rm -rf ${previous_state_file}
     fi
 
-    rm -rf ${previous_state_file}
     previous_state_file=${current_state_file}
     current_state_file="${state_dir}/$(date '+%s').txt"
     sleep ${interval}
