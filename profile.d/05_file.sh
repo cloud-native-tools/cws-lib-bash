@@ -301,7 +301,7 @@ function files_on_change() {
       bash ${callback_script} ${callback_script_args}
       rm -rf ${previous_state_file}
     else
-      log notice "No changes detected"
+      log notice "monitoring files in [${monitor_dir}] and no changes detected"
       rm -rf ${previous_state_file}
     fi
 
