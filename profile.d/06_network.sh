@@ -100,16 +100,6 @@ function net_valid_ipv4() {
     log error "[${ip}] address is invalid"
     return ${RETURN_FAILURE}
   }
-  for i in ${ip//./ }; do
-    [[ "${#i}" -gt 1 && "${i:0:1}" == 0 ]] && {
-      log error "[${ip}] address is invalid"
-      return ${RETURN_FAILURE}
-    }
-    [[ "$i" -gt 255 ]] && {
-      log error "[${ip}] address is invalid"
-      return ${RETURN_FAILURE}
-    }
-  done
 }
 
 function net_default_ip() {
