@@ -61,6 +61,7 @@ function mount_bootable() {
   local mountpoint=${2:-/media}
   local free_loop=$(losetup -f)
   losetup ${free_loop} ${target} -o $((2048 * 512))
+  mkdir -p ${mountpoint}
   mount ${free_loop} ${mountpoint}
-  log info "mount: ${target} -> ${free_loop} -> ${mountpoint}"
+  echo "mount: ${target} -> ${free_loop} -> ${mountpoint}"
 }

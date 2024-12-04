@@ -89,7 +89,7 @@ function curl_test_server() {
     log error "Usage: curl_test_server <url>"
     return ${RETURN_FAILURE}
   fi
-  if curl -o /dev/null -s ${ECS_META_URL}; then
+  if curl -o /dev/null -s ${url}; then
     return ${RETURN_SUCCESS}
   else
     return ${RETURN_FAILURE}
