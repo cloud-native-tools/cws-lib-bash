@@ -320,3 +320,13 @@ function git_recreate_tag() {
   git_delete_tag ${tag_name}
   git_create_tag ${tag_name}
 }
+
+function git_commit_to_patch() {
+  local commit_id=${1}
+  local output_dir=${2}
+  if [ -z "${commit_id}" ] || [ -z "${output_dir}" ]; then
+    log error "Usage: git_commit_to_patch <commit_id> <output_dir>"
+    return ${RETURN_FAILURE}
+  fi
+  git format-patch -1 ${commit_id} -o ${output_dir}
+}
