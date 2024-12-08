@@ -308,3 +308,8 @@ function random_string() {
   local length=${1:-8}
   head /dev/urandom | sha256sum | head -c "${length}"
 }
+
+function highlight() {
+  local pattern="${@}"
+  grep --color=always -Ew "${pattern}|\$"
+}
