@@ -19,7 +19,12 @@ function k8s_ns() {
 function k8s_ns_names() {
   local namespace="$1"
   local k8s_fields="all,cm,secret,ing,sa,pvc"
-  kubectl get ${k8s_fields} -n "${namespace}" -o name
+  if [ -z "${namespace}" ]; then
+    kubectl get ${k8s_fields} -A -o name
+  else
+    shift
+    kubectl get ${k8s_fields} -n "${namespace}" -o name $@
+  fi
 }
 
 function k8s_ns_all() {
