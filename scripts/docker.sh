@@ -41,7 +41,13 @@ function docker_images() {
 }
 
 function dp() {
-  docker-compose $@
+  if command -v docker-compose; then
+    docker-compose $@
+  fi
+
+  if docker compose version; then
+    docker compose $@
+  fi
 }
 
 function dp_up() {

@@ -5,7 +5,7 @@ function vscode_workspace_setup() {
     log warn "skip setup vscode workspace when workspace_file is empty" >&2
     return ${RETURN_SUCCESS}
   fi
-  if [ ! -f ${workspace_file} ]; then
+  if [ ! -f ${workspace_file} ] || [ ! -s ${workspace_file} ]; then
     echo '{}' | jq ".folders = []" >${workspace_file}
   fi
 
