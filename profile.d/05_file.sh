@@ -311,3 +311,37 @@ function files_on_change() {
   done
 
 }
+
+function cp_file() {
+  local args=("$@")
+  local last_index=$((${#args[@]} - 1))
+  local src=("${args[@]:0:${last_index}}")
+  local dest="${args[${last_index}]}"
+  if [ -f "${dest}" ]; then
+    if [ ${#src} -gt 1 ]; then
+      log error "copy multiple file into one: ${dest}"
+    else
+      cp -fv ${src} ${dest}
+    fi
+  elif [ -d "${dest}" ]; then
+    cp -fv ${src} ${dest}
+  else
+    mkdir -p $(dirname ${dest})
+    cp -fv ${src} ${dest}
+  fi
+}
+
+function mv_file() {
+  local args=("$@")
+  local last_index=$((${#args[@]} - 1))
+  local src=("${args[@]:0:${last_index}}")
+  local dest="${args[${last_index}]}"
+  if [ -f "${dest}" ]; then
+    log error "Destination file already exists: ${dest}"
+  elif [ -d "${dest}" ]; then
+    mv -fv ${src} ${dest}
+  else
+    mkdir -p $(dirname ${dest})
+    mv -fv ${src} ${dest}
+  fi
+}
