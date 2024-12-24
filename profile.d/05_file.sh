@@ -309,7 +309,6 @@ function files_on_change() {
     current_state_file="${state_dir}/$(date '+%s').txt"
     sleep ${interval}
   done
-
 }
 
 function cp_file() {
@@ -318,16 +317,16 @@ function cp_file() {
   local src=("${args[@]:0:${last_index}}")
   local dest="${args[${last_index}]}"
   if [ -f "${dest}" ]; then
-    if [ ${#src} -gt 1 ]; then
-      log error "copy multiple file into one: ${dest}"
+    if [ ${#src[@]} -gt 1 ]; then
+      log error "copy multiple file [${src[*]}] into one: ${dest}"
     else
-      cp -fv ${src} ${dest}
+      cp -fv ${src[@]} ${dest}
     fi
   elif [ -d "${dest}" ]; then
-    cp -fv ${src} ${dest}
+    cp -fv ${src[@]} ${dest}
   else
     mkdir -p $(dirname ${dest})
-    cp -fv ${src} ${dest}
+    cp -fv ${src[@]} ${dest}
   fi
 }
 
@@ -337,11 +336,15 @@ function mv_file() {
   local src=("${args[@]:0:${last_index}}")
   local dest="${args[${last_index}]}"
   if [ -f "${dest}" ]; then
-    log error "Destination file already exists: ${dest}"
+    if [ ${#src[@]} -gt 1 ]; then
+      log error "copy multiple file [${src[*]}] into one: ${dest}"
+    else
+      mv -fv ${src[@]} ${dest}
+    fi
   elif [ -d "${dest}" ]; then
-    mv -fv ${src} ${dest}
+    mv -fv ${src[@]} ${dest}
   else
     mkdir -p $(dirname ${dest})
-    mv -fv ${src} ${dest}
+    mv -fv ${src[@]} ${dest}
   fi
 }
