@@ -115,3 +115,7 @@ function tf_validate_module() {
     popd >/dev/null 2>&1
   done
 }
+
+function tf_failed_plan() {
+  find . -name validate.ansi | xargs ls -lh | awk '$5!=0{print}'
+}
