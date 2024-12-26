@@ -170,16 +170,6 @@ function k8s_exec_pod() {
   fi
 }
 
-function k8s_foreach_pod_exec() {
-  local namepsace=$1
-  shift
-  for pod_name in $(kubectl get pods -n ${namepsace} \
-    --field-selector=status.phase=Running \
-    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
-    kubectl -n ${namepsace} exec -it ${pod_name} -- $@
-  done
-}
-
 function k8s_delete_pod() {
   local namepsace=$1
   shift
@@ -1155,4 +1145,33 @@ function k8s_cluster_list() {
 
 function k8s_config_from_env() {
   kubectl config view --raw | sed "/client-certificate-data: REDACTED/{N;s/client-certificate-data: REDACTED\n    client-key-data: REDACTED/token: ${KUBECONFIG_TOKEN}/}"
+}
+
+function k8s_foreach_pod_exec() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    log error "Usage: k8s_foreach_pod_exec <namespace> <command>"
+    return ${RETURN_FAILURE}
+  fi
+  shift
+  for pod_name in $(kubectl get pods -n ${namepsace} \
+    --field-selector=status.phase=Running \
+    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}'); do
+    kubectl -n ${namepsace} exec -it ${pod_name} -- $@
+  done
+}
+
+function k8s_foreach_container_exec() {
+  local namepsace=${1}
+  local pod_name=${2}
+  if [ -z "${namepsace}" ] || [ -z "${pod_name}" ]; then
+    log error "Usage: k8s_foreach_container_exec <namespace> <pod name> <command>"
+    return ${RETURN_FAILURE}
+  fi
+  shift
+  shift
+  for container in $(kubectl get pod -n ${namepsace} ${pod_name} -o jsonpath='{.spec.containers[*].name}'); do
+    log notice "run [$@] in ${namepsace}->${pod_name}->${container}"
+    kubectl exec -n ${namepsace} -it ${pod_name} -c ${container} -- bash -l -c "\"$@\""
+  done
 }
