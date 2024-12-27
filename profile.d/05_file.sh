@@ -1,16 +1,10 @@
-if [ "${BASH_OS}" = "darwin" ]; then
-  alias base64="base64"
-else
-  alias base64="base64 -w0"
-fi
-
 function encode_stdin() {
   echo "echo \"$(gzip -c - | base64)\"|base64 -d|gunzip -c -"
 }
 
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64 -w0)\"|base64 -d|tar zx"
+  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64)\"|base64 -d|tar zx"
 }
 
 function encode_script() {
@@ -52,14 +46,14 @@ function encode_packed() {
   # handle each part of the splited file
   for part in $(ls ${encode_tar}.*); do
     # if the part not exist or not match checksum, generate it
-    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >>${encode_script}
+    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(base64 ${part})'|base64 -d > ${part}" >>${encode_script}
 
     # check sum of the part
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${merge_script}
 
     # this script is for upload part file only
-    log plain "echo '$(base64 -w0 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
+    log plain "echo '$(base64 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}${part#${encode_tar}}
 
     # merge part file to whole tar file

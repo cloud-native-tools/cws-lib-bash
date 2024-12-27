@@ -25,3 +25,8 @@ function jq_sort_file() {
     log error "file not found: ${json_file}"
   fi
 }
+
+function jq_otel_logs() {
+  local logs_file=${1:--}
+  cat ${logs_file} | jq -r '.resourceLogs[] | .scopeLogs[] | .logRecords[] |  "\(.attributes[].value.stringValue) \(.body.stringValue)"'
+}
