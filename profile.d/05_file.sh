@@ -19,12 +19,16 @@ function encode_script() {
 }
 
 function encode_function() {
-  local funcname=${1}
-  if [ -z "${funcname}" ]; then
-    echo "Usage: encode_function <function_name>"
+  local func_list=${@}
+  if [ -z "${func_list}" ]; then
+    echo "Usage: encode_function <function_name1> <function_name2> ..."
     return ${RETURN_FAILURE}
   fi
-  echo "echo \"$(printf "function $(declare -f ${funcname})\n${funcname}\n" | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -|bash"
+  echo "source <(echo \"$({
+    for funcname in ${func_list}; do
+      printf "function $(declare -f ${funcname})\n"
+    done
+  } | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -)"
 }
 
 function encode_packed() {

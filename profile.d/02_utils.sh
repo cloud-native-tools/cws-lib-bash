@@ -156,9 +156,10 @@ function url_decode() {
 
 function source_scripts() {
   local script_home=$1
+  local script_suffix=${2:-'*.sh'}
   if [[ -n "${script_home}" && -d ${script_home} ]]; then
-    for script in $(find "${script_home}" -name '*.sh'); do
-      log INFO "Run script ${script} in ${script_home}"
+    for script in $(find "${script_home}" -name ${script_suffix}); do
+      log INFO "source script ${script} in ${script_home}"
       source ${script}
     done
     unset script
