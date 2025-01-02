@@ -1,15 +1,21 @@
+if is_macos; then
+  BASE64_BIN=gbase64
+else
+  BASE64_BIN=base64
+fi
+
 function encode_stdin() {
-  echo "echo \"$(gzip -c - | base64)\"|base64 -d|gunzip -c -"
+  echo "echo \"$(gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -"
 }
 
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | base64)\"|base64 -d|tar zx"
+  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | ${BASE64_BIN} -w0)\"|base64 -d|tar zx"
 }
 
 function encode_script() {
   local script_file=${1}
-  echo "echo \"$(cat ${script_file} | gzip -c - | base64)\"|base64 -d|gunzip -c -|bash"
+  echo "echo \"$(cat ${script_file} | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -|bash"
 }
 
 function encode_function() {
@@ -18,7 +24,7 @@ function encode_function() {
     echo "Usage: encode_function <function_name>"
     return ${RETURN_FAILURE}
   fi
-  echo "echo \"$(printf "function $(declare -f ${funcname})\n${funcname}\n" | gzip -c - | base64)\"|base64 -d|gunzip -c -|bash"
+  echo "echo \"$(printf "function $(declare -f ${funcname})\n${funcname}\n" | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -|bash"
 }
 
 function encode_packed() {
@@ -46,14 +52,14 @@ function encode_packed() {
   # handle each part of the splited file
   for part in $(ls ${encode_tar}.*); do
     # if the part not exist or not match checksum, generate it
-    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(base64 ${part})'|base64 -d > ${part}" >>${encode_script}
+    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(${BASE64_BIN} -w0 ${part})'|base64 -d > ${part}" >>${encode_script}
 
     # check sum of the part
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${merge_script}
 
     # this script is for upload part file only
-    log plain "echo '$(base64 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
+    log plain "echo '$(${BASE64_BIN} -w0 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
     log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}${part#${encode_tar}}
 
     # merge part file to whole tar file

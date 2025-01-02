@@ -1171,7 +1171,7 @@ function k8s_foreach_container_exec() {
   shift
   shift
   for container in $(kubectl get pod -n ${namepsace} ${pod_name} -o jsonpath='{.spec.containers[*].name}'); do
-    log notice "run [$@] in ${namepsace}->${pod_name}->${container}"
-    kubectl exec -n ${namepsace} -it ${pod_name} -c ${container} -- bash -l -c "\"$@\""
+    log notice "run [$*] in ${namepsace}->${pod_name}->${container}"
+    kubectl exec -n ${namepsace} -it ${pod_name} -c ${container} -- $@
   done
 }
