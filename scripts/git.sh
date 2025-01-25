@@ -253,6 +253,11 @@ function git_copy_workdir() {
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
 
+function git_encode_workdir() {
+  local commit_id=${1:-HEAD}
+  git archive --format=tar --output=/dev/stdout ${commit_id} | encode_stdin
+}
+
 function git_pull() {
   git pull --rebase
 }

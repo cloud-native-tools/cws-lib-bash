@@ -141,3 +141,9 @@ function ssh_fix_permission() {
   local target=${1:-${PWD}}
   find ${target} \( -name id_rsa -o -name id_rsa.pub -o -name authorized_keys -o -name known_hosts \) | xargs chmod 400
 }
+
+function ssh_ping() {
+  local host_name=${1}
+  local config_file=${2:-~/.ssh/config}
+  ssh -o ConnectTimeout=5 -F ${config_file} ${host_name} $@ exit
+}
