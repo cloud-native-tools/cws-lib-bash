@@ -563,7 +563,10 @@ function k8s_taint_nodes() {
 }
 
 function k8s_apis() {
+  log notice "========== apis with namespace =========="
   kubectl api-resources --namespaced=true
+
+  log notice "========== apis without namespace =========="
   kubectl api-resources --namespaced=false
 }
 

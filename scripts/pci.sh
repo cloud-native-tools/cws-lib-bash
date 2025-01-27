@@ -34,5 +34,11 @@ function pci_iommu_list() {
 }
 
 function pci_ali_nvme() {
-  for bdf in $(lspci -nn -v | grep 1ded:5004 | awk '{print $1}'); do echo $bdf; done
+  local ali_nvme_vendor_id="1ded:5004"
+  lspci -nn -vvv -d ${ali_nvme_vendor_id} | grep -E "${ali_nvme_vendor_id}|Kernel driver"
+}
+
+function pci_ali_gpu() {
+  local ali_gpu_vendor_id="1ded:6001"
+  lspci -nn -vvv -d ${ali_gpu_vendor_id} | grep -E "${ali_gpu_vendor_id}|Kernel driver"
 }
