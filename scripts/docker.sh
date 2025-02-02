@@ -62,11 +62,6 @@ function dp_svc() {
   dp ps --services
 }
 
-function docker_import_env() {
-  local docker_file=${1}
-  grep -w "ENV" ${docker_file} | sed -E 's/^ *ENV \+\([^ ]\+\) \(.*\)/export \1="\2"/g'
-}
-
 function docker_extract() {
   local img=${1}
   local dest=${2:-${PWD}/rootfs}

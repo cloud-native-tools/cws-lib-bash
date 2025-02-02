@@ -86,9 +86,13 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_plan() {
-  terraform init
+  terraform init -upgrade
   terraform plan -out=plan.out 2>validate.ansi
   terraform show plan.out >plan.ansi
+}
+
+function tf_apply() {
+  terraform apply -auto-approve
 }
 
 function tf_extract_example() {
