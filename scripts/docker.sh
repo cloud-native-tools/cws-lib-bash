@@ -11,7 +11,11 @@ function docker_clean_exited() {
 }
 
 function docker_prune() {
-  docker system prune -a
+  docker system prune $@
+}
+
+function docker_prune_all() {
+  docker system prune -a $@
 }
 
 function docker_create_network() {
