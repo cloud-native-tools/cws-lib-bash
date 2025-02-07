@@ -324,13 +324,13 @@ function cp_file() {
     if [ ${#src[@]} -gt 1 ]; then
       log error "copy multiple file [${src[*]}] into one: ${dest}"
     else
-      cp -fv ${src[@]} ${dest}
+      cp -rfv ${src[@]} ${dest}
     fi
   elif [ -d "${dest}" ]; then
-    cp -fv ${src[@]} ${dest}
+    cp -rfv ${src[@]} ${dest}
   else
     mkdir -p $(dirname ${dest})
-    cp -fv ${src[@]} ${dest}
+    cp -rfv ${src[@]} ${dest}
   fi
 }
 

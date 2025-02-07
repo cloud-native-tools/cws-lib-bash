@@ -167,11 +167,21 @@ function vscode_ext_install() {
   done
 }
 
+function vscode_ext_update() {
+  local vscode_bin=$(vscode_get_bin)
+  "${vscode_bin}" --update-extensions
+}
+
 function vscode_insiders_ext_install() {
   local vscode_bin=$(vscode_insiders_get_bin)
   for ext in ${@}; do
     "${vscode_bin}" --install-extension ${ext}
   done
+}
+
+function vscode_insiders_ext_update() {
+  local vscode_bin=$(vscode_insiders_get_bin)
+  "${vscode_bin}" --update-extensions
 }
 
 function vscode_ext_url() {
