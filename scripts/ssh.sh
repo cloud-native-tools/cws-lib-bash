@@ -160,8 +160,14 @@ function ssh_expect_login() {
     log error "[expect] is required, use 'yum install expect' or 'apt-get install expect' to install it."
     return ${RETURN_FAILURE}
   fi
-  echo -n "Enter your password: "
-  read -s password
+  if [ -z "${SSH_EXPECT_PASSWORD}" ]; then
+    log warn "SSH_EXPECT_PASSWORD is not set, using prompt to input password."
+    echo -n "Enter your password: "
+    read -s password
+  else
+    local password="${SSH_EXPECT_PASSWORD}"
+  fi
+
   if [ -z "${password}" ]; then
     log error "Password is required."
     return ${RETURN_FAILURE}
@@ -191,8 +197,13 @@ function ssh_expect_add_auth_key() {
     return ${RETURN_FAILURE}
   fi
 
-  echo -n "Enter your password: "
-  read -s password
+  if [ -z "${SSH_EXPECT_PASSWORD}" ]; then
+    log warn "SSH_EXPECT_PASSWORD is not set, using prompt to input password."
+    echo -n "Enter your password: "
+    read -s password
+  else
+    local password="${SSH_EXPECT_PASSWORD}"
+  fi
   if [ -z "${password}" ]; then
     log error "Password is required."
     return ${RETURN_FAILURE}

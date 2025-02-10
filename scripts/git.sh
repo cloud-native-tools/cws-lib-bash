@@ -240,11 +240,11 @@ EOF
   chmod +x ${hook_file}
 }
 
-function git_copy_workdir() {
+function git_copy_commit() {
   local dest_dir=${1}
   local commit_id=${2:-HEAD}
   if [ -z "${dest_dir}" ]; then
-    log error "Usage: git_install <dest_dir>"
+    log error "Usage: git_copy_commit <dest_dir>"
     return ${RETURN_FAILURE}
   fi
   if [ ! -d "${dest_dir}" ]; then
@@ -253,7 +253,7 @@ function git_copy_workdir() {
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
 
-function git_encode_workdir() {
+function git_encode_commit() {
   local commit_id=${1:-HEAD}
   git archive --format=tar --output=/dev/stdout ${commit_id} | encode_tar_stream
 }

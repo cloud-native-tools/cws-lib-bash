@@ -30,3 +30,4 @@ expect "\[*@" {
   send "exit\r"
   expect eof
 }
+expect eof

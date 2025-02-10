@@ -20,3 +20,4 @@ send "sudo ls\r"
 expect "*password for*"
 send $password
 interact
+expect eof
