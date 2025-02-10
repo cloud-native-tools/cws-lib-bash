@@ -36,6 +36,10 @@ function remote_cmd() {
 }
 
 function remote_cmd_expect() {
+  if ! have expect; then
+    log error "expect is required"
+    return ${RETURN_FAILURE}
+  fi
   local password=$1
   shift
   for host in $(remote_get_hosts); do

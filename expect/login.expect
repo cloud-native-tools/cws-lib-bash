@@ -1,0 +1,22 @@
+#!/usr/bin/expect
+
+set timeout -1
+
+trap {
+  set rows [stty rows]
+  set cols [stty columns]
+  stty rows $rows columns $cols < $spawn_out(slave,name)
+ } WINCH
+
+set host [lindex $argv 0]
+set port [lindex $argv 1]
+set user [lindex $argv 2]
+set password [lindex $argv 3]
+spawn ssh -o StrictHostKeyChecking=no -o PreferredAuthentications=password -p $port $user@$host
+expect "*assword:"
+send "$password\r"
+expect "\[*@" 
+send "sudo ls\r"
+expect "*password for*"
+send $password
+interact

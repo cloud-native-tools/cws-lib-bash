@@ -147,3 +147,69 @@ function ssh_ping() {
   local config_file=${2:-~/.ssh/config}
   ssh -o ConnectTimeout=5 -F ${config_file} ${host_name} $@ exit
 }
+
+function ssh_expect_login() {
+  local host=${1}
+  local port=${2:-22}
+  local user=${3:-root}
+  if [ -z "${host}" ]; then
+    log error "Usage: ssh_expect_login <host> [port] [user]"
+    return ${RETURN_FAILURE}
+  fi
+  if ! have expect; then
+    log error "[expect] is required, use 'yum install expect' or 'apt-get install expect' to install it."
+    return ${RETURN_FAILURE}
+  fi
+  echo -n "Enter your password: "
+  read -s password
+  if [ -z "${password}" ]; then
+    log error "Password is required."
+    return ${RETURN_FAILURE}
+  fi
+  expect -f ${CWS_BASH_LIB_HOME}/expect/login.expect \
+    ${host} \
+    ${port} \
+    ${user} \
+    "${password}"
+}
+
+function ssh_expect_add_auth_key() {
+  local host=${1}
+  local port=${2:-22}
+  local user=${3:-root}
+  local keyfile=${4:-~/.ssh/id_rsa.pub}
+  if [ -z "${host}" ]; then
+    log error "Usage: ssh_expect_add_auth_key {host} [port=22] [user=root] [keyfile=~/.ssh/id_rsa.pub]"
+    return ${RETURN_FAILURE}
+  fi
+  if ! have expect; then
+    log error "[expect] is required, use 'yum install expect' or 'apt-get install expect' to install it."
+    return ${RETURN_FAILURE}
+  fi
+  if [ ! -f "${keyfile}" ]; then
+    log error "Keyfile ${keyfile} does not exist."
+    return ${RETURN_FAILURE}
+  fi
+
+  echo -n "Enter your password: "
+  read -s password
+  if [ -z "${password}" ]; then
+    log error "Password is required."
+    return ${RETURN_FAILURE}
+  fi
+  local cmd=$(
+    cat <<EOF
+sudo bash -c \"echo '$(cat ${keyfile})' >> /root/.ssh/authorized_keys\"
+EOF
+  )
+  expect -f ${CWS_BASH_LIB_HOME}/expect/cmd.expect \
+    ${host} \
+    ${port} \
+    ${user} \
+    "${password}\r" \
+    "${cmd}" ||
+    {
+      log error "Failed to add SSH key for ${host}."
+      return ${RETURN_FAILURE}
+    }
+}

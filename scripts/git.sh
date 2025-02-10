@@ -255,7 +255,7 @@ function git_copy_workdir() {
 
 function git_encode_workdir() {
   local commit_id=${1:-HEAD}
-  git archive --format=tar --output=/dev/stdout ${commit_id} | encode_stdin
+  git archive --format=tar --output=/dev/stdout ${commit_id} | encode_tar_stream
 }
 
 function git_pull() {

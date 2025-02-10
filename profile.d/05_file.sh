@@ -4,6 +4,10 @@ else
   BASE64_BIN=base64
 fi
 
+function encode_tar_stream() {
+  echo "echo \"$(gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|tar xz"
+}
+
 function encode_stdin() {
   echo "echo \"$(gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -"
 }
