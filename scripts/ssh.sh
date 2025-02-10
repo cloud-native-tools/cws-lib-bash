@@ -217,10 +217,12 @@ EOF
     ${host} \
     ${port} \
     ${user} \
-    "${password}\r" \
+    "${password}" \
     "${cmd}" ||
     {
       log error "Failed to add SSH key for ${host}."
       return ${RETURN_FAILURE}
     }
+  log info "SSH key added successfully for ${host}."
+  return ${RETURN_SUCCESS}
 }

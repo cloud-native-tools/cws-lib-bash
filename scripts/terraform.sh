@@ -17,7 +17,8 @@ function tf_read_json() {
 }
 
 function tf_format() {
-  for d in $(find . -name '*.tf' -type f | xargs dirname | sort | uniq); do
+  local target=${1:-${PWD}}
+  for d in $(find ${target} -name '*.tf' -type f | grep -vE "/\.terraform" | xargs dirname | sort | uniq); do
     pushd ${d} >/dev/null 2>&1
     log info "Formatting terraform files in ${PWD}"
     terraform fmt

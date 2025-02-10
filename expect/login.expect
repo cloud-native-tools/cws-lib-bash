@@ -13,11 +13,11 @@ set port [lindex $argv 1]
 set user [lindex $argv 2]
 set password [lindex $argv 3]
 spawn ssh -o StrictHostKeyChecking=no -o PreferredAuthentications=password -p $port $user@$host
-expect "*assword:"
-send "$password\r"
-expect "\[*@" 
-send "sudo ls\r"
-expect "*password for*"
-send $password
-interact
-expect eof
+expect "*assword:" {
+  send "$password\r"
+}
+interact {
+  eof {
+    exit
+  }
+}
