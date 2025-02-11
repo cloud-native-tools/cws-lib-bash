@@ -259,11 +259,11 @@ function git_encode_commit() {
 }
 
 function git_pull() {
-  git pull --rebase
+  git pull --rebase $@
 }
 
 function git_pull_all() {
-  git pull --all --rebase
+  git pull --all --rebase $@
 }
 
 function git_push() {

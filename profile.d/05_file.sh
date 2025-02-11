@@ -356,3 +356,48 @@ function mv_file() {
     mv -fv ${src[@]} ${dest}
   fi
 }
+
+function highlight_difference_files() {
+  local target_file=${1}
+  local target_dir=${2}
+  local find_root=${3:-.}
+
+  if [ -z "${target_file}" ]; then
+    log error "Usage: highlight_difference_files <target_file> [target_dir] [find_root]"
+    return ${RETURN_FAILURE}
+  fi
+
+  if [ -z "${target_dir}" ]; then
+    local file_list=$(find ${find_root} -type f -name "${target_file}")
+  else
+    local file_list=$(find ${find_root} -type d -name "${target_dir}" -exec find {} -type f -name "${target_file}" \;)
+  fi
+
+  # ANSI color codes
+  local colors=(
+    ${BLACK} ${RED} ${GREEN} ${YELLOW} ${BLUE} ${PURPLE} ${CYAN}
+  )
+  local color_count=${#colors[@]}
+  local color_index=0
+
+  declare -A checksum_map
+  for file in ${file_list}; do
+    local checksum=$(sha256sum "${file}" | awk '{print $1}' | cut -c 1-8)
+    if [[ -z "${checksum_map["${checksum}"]}" ]]; then
+      checksum_map["${checksum}"]="${file}"
+    else
+      checksum_map["${checksum}"]+=$'\n'${file}
+    fi
+  done
+
+  # Print files with different colors based on checksum
+  for checksum in "${!checksum_map[@]}"; do
+    local files=(${checksum_map[$checksum]//$'
+'/$'\n'}) # Split the newline-separated file list into an array
+    local color="${colors[${color_index}]}"
+    for file in "${files[@]}"; do
+      printf "${color}%s${CLEAR}\n" "${file}" # Print with color and reset
+    done
+    ((color_index = (color_index + 1) % color_count)) # Cycle through colors
+  done
+}

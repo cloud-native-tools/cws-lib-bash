@@ -86,7 +86,7 @@ function ssh_host_config() {
   local user=${4:-root}
   local key=${5:-~/.ssh/id_rsa}
   echo "Host ${name}"
-  echo "  HostName ${host}"
+  echo "  Hostname ${host}"
   echo "  Port ${port}"
   echo "  User ${user}"
   echo "  IdentityFile ${key}"
@@ -144,8 +144,22 @@ function ssh_fix_permission() {
 
 function ssh_ping() {
   local host_name=${1}
-  local config_file=${2:-~/.ssh/config}
-  ssh -o ConnectTimeout=5 -F ${config_file} ${host_name} $@ exit
+  local config_file=${2}
+  if [ -z "${host_name}" ]; then
+    return ${RETURN_FAILURE}
+  else
+    shift
+  fi
+  if [ -z "${config_file}" ]; then
+    config_file=~/.ssh/config
+  else
+    shift
+  fi
+  if ssh -o ConnectTimeout=5 -F ${config_file} ${host_name} $@ exit >/dev/null 2>&1; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
 }
 
 function ssh_expect_login() {
