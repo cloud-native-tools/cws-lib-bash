@@ -1,3 +1,10 @@
+TF_PLAN_OUT="plan.out"
+TF_INIT_ANSI="init.ansi"
+TF_PLAN_ANSI="plan.ansi"
+TF_VALIDATE_ANSI="validate.ansi"
+TF_APPLIED_ANSI="applied.ansi"
+TF_FAILED_ANSI="failed.ansi"
+
 function tf_read_yaml() {
   local yaml_file=${1}
   if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
@@ -87,13 +94,27 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_plan() {
-  terraform init -upgrade
-  terraform plan -out=plan.out 2>validate.ansi
-  terraform show plan.out >plan.ansi
+  terraform init -upgrade >${TF_INIT_ANSI} 2>&1
+  terraform plan -out=${TF_PLAN_OUT} 2>${TF_VALIDATE_ANSI}
+  terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}
 }
 
 function tf_apply() {
-  terraform apply -auto-approve
+  local target_dir="${1}"
+  if [ -n "${target_dir}" ]; then
+    pushd ${target_dir} >/dev/null 2>&1
+  fi
+
+  log notice "terraform apply in $(pwd)"
+  if [ ! -f "${TF_PLAN_OUT}" ]; then
+    log warn "no ${TF_PLAN_OUT} found, run terraform plan first"
+    tf_plan
+  fi
+  terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLIED_ANSI} 2>${TF_FAILED_ANSI}
+
+  if [ -n "${target_dir}" ]; then
+    popd >/dev/null 2>&1
+  fi
 }
 
 function tf_extract_example() {
@@ -105,8 +126,10 @@ function tf_replace() {
   if [ -z "${resource_id}" ]; then
     log error "Usage: terraform_replace <resource_id>"
     return ${RETURN_FAILURE:-1}
+  else
+    shift
   fi
-  terraform apply -replace="${resource_id}"
+  terraform apply -replace="${resource_id}" $@
 }
 
 function tf_validate_module() {
@@ -122,5 +145,9 @@ function tf_validate_module() {
 }
 
 function tf_failed_plan() {
-  find . -name validate.ansi | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_VALIDATE_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+}
+
+function tf_failed_apply() {
+  find . -name ${TF_FAILED_ANSI} | xargs ls -lh | awk '$5!=0{print}'
 }
