@@ -49,7 +49,7 @@ RETURN_SUCCESS=0
 RETURN_FAILURE=1
 
 if [ -x /usr/bin/pwd ] || [ -x /bin/pwd ]; then
-  export PWD=$(pwd) # update PWD in vscode
+  export PWD=${PWD} # update PWD in vscode
 fi
 export TMOUT=0
 

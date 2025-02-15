@@ -33,7 +33,7 @@ function git_checkout_by_date() {
 function git_update_all() {
   for git_dir in $(git_list_repos); do
     pushd "${git_dir}" >/dev/null 2>&1
-    log info "update in $(pwd)"
+    log info "update in ${PWD}"
     git pull --all
     popd >/dev/null 2>&1
   done

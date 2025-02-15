@@ -94,24 +94,28 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_plan() {
+  log notice "terraform plan in ${PWD}"
   terraform init -upgrade >${TF_INIT_ANSI} 2>&1
   terraform plan -out=${TF_PLAN_OUT} 2>${TF_VALIDATE_ANSI}
   terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}
 }
 
 function tf_apply() {
-  local target_dir="${1}"
-  if [ -n "${target_dir}" ]; then
-    pushd ${target_dir} >/dev/null 2>&1
-  fi
-
-  log notice "terraform apply in $(pwd)"
+  log notice "terraform apply in ${PWD}"
   if [ ! -f "${TF_PLAN_OUT}" ]; then
     log warn "no ${TF_PLAN_OUT} found, run terraform plan first"
     tf_plan
   fi
   terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLIED_ANSI} 2>${TF_FAILED_ANSI}
+}
 
+function tf_plan_and_apply() {
+  local target_dir="${1}"
+  if [ -n "${target_dir}" ]; then
+    pushd ${target_dir} >/dev/null 2>&1
+  fi
+  tf_plan $@
+  tf_apply $@
   if [ -n "${target_dir}" ]; then
     popd >/dev/null 2>&1
   fi

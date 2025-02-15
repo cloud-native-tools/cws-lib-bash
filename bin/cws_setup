@@ -11,7 +11,7 @@ function add_line_if_not_exit() {
 
 DIR=$(dirname "${BASH_SOURCE[0]}")
 if [ "${DIR}" == "." ]; then
-  DIR=$(pwd)
+  DIR=${PWD}
 fi
 ROOT=$(readlink -f $(dirname ${DIR}))
 ENV=${ROOT}/bin/cws_env
