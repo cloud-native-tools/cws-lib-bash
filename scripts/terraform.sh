@@ -93,6 +93,22 @@ function tf_clean_unused_tf_files() {
   done
 }
 
+function tf_clean_plan_files() {
+  log notice "clean terraorm plan files in ${PWD}"
+  find . -type f \
+    -name "${TF_VALIDATE_ANSI}" \
+    -or \
+    -name "${TF_PLAN_ANSI}" \
+    -or \
+    -name "${TF_INIT_ANSI}" \
+    -or \
+    -name "${TF_APPLIED_ANSI}" \
+    -or \
+    -name "${TF_FAILED_ANSI}" \
+    -or \
+    -name "${TF_PLAN_OUT}" | xargs rm -rfv
+}
+
 function tf_plan() {
   log notice "terraform plan in ${PWD}"
   terraform init -upgrade >${TF_INIT_ANSI} 2>&1
