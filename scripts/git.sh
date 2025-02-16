@@ -240,6 +240,11 @@ EOF
   chmod +x ${hook_file}
 }
 
+function git_archive() {
+  local branch_name=${1:-HEAD}
+  git archive --format=tar --output=$(basename ${PWD}).tar ${branch_name}
+}
+
 function git_copy_commit() {
   local dest_dir=${1}
   local commit_id=${2:-HEAD}
