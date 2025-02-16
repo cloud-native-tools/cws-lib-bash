@@ -111,8 +111,14 @@ function tf_clean_plan_files() {
 
 function tf_plan() {
   log notice "terraform plan in ${PWD}"
-  terraform init -upgrade >${TF_INIT_ANSI} 2>&1
-  terraform plan -out=${TF_PLAN_OUT} 2>${TF_VALIDATE_ANSI}
+  if ! terraform init -upgrade >${TF_INIT_ANSI} 2>&1; then
+    log error "Failed to initialize terraform"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if ! terraform plan -out=${TF_PLAN_OUT} 2>${TF_VALIDATE_ANSI}; then
+    log error "Failed to create terraform plan"
+    return ${RETURN_FAILURE:-1}
+  fi
   terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}
 }
 
@@ -122,18 +128,33 @@ function tf_apply() {
     log warn "no ${TF_PLAN_OUT} found, run terraform plan first"
     tf_plan
   fi
-  terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLIED_ANSI} 2>${TF_FAILED_ANSI}
+  if ! terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLIED_ANSI} 2>${TF_FAILED_ANSI}; then
+    log error "Failed to apply terraform"
+    return ${RETURN_FAILURE:-1}
+  fi
 }
 
 function tf_plan_and_apply() {
   local target_dir="${1}"
   if [ -n "${target_dir}" ]; then
-    pushd ${target_dir} >/dev/null 2>&1
+    if ! pushd ${target_dir} >/dev/null 2>&1; then
+      log error "Failed to change directory to ${target_dir}"
+      return ${RETURN_FAILURE:-1}
+    fi
   fi
-  tf_plan $@
-  tf_apply $@
+  if ! tf_plan $@; then
+    log error "Failed to plan terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if ! tf_apply $@; then
+    log error "Failed to apply terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
   if [ -n "${target_dir}" ]; then
-    popd >/dev/null 2>&1
+    if ! popd >/dev/null 2>&1; then
+      log error "Failed to return to the previous directory"
+      return ${RETURN_FAILURE:-1}
+    fi
   fi
 }
 
