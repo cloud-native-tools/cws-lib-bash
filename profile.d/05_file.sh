@@ -401,3 +401,9 @@ function highlight_difference_files() {
     ((color_index = (color_index + 1) % color_count)) # Cycle through colors
   done
 }
+
+function archive_current() {
+  local filename=${1:-$(basename ${PWD}).tar.gz}
+  tar zcf ${filename} --exclude-vcs *
+  mv -fv ${filename} $(sha256sum ${filename} | awk '{print $1}').tar.gz
+}
