@@ -545,10 +545,16 @@ function k8s_event() {
 EOF
 }
 
+function k8s_annotate_nodes() {
+  local node_name=${1}
+  local annotate_pair=${2}
+  kubectl annotate nodes --overwrite ${node_name} ${annotate_pair}
+}
+
 function k8s_label_nodes() {
   local node_name=${1}
-  local label_value=${2}
-  kubectl label nodes --overwrite ${node_name} ${label_value}
+  local label_pair=${2}
+  kubectl label nodes --overwrite ${node_name} ${label_pair}
 }
 
 function k8s_taint_nodes() {

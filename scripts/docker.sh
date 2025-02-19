@@ -88,3 +88,38 @@ function docker_ps() {
 function docker_names() {
   docker ps | awk '{print $NF}' | grep -v NAMES
 }
+
+function docker_logs() {
+  local cid=${1}
+  if [ -z "${cid}" ]; then
+    log error "Usage: docker_logs <container_id>"
+    return ${RETURN_FAILURE}
+  else
+    shift
+  fi
+  docker logs ${cid} $@ 2>&1
+}
+
+function docker_otlp_logs() {
+  local cid=${1}
+  if [ -z "${cid}" ]; then
+    log error "Usage: docker_otlp_logs <container_id>"
+    return ${RETURN_FAILURE}
+  else
+    shift
+  fi
+  docker_logs ${cid} $@ | grep '{"resourceLogs"' | parse_otlp_logs
+}
+
+function parse_otlp_logs() {
+  cat >/tmp/otlp.jq <<EOF
+# otlp-log-filter.jq
+.resourceLogs[]?.scopeLogs[]?.logRecords[]? |
+[
+    (.attributes[]? | select(.key == "from").value.stringValue // "unknown"),
+    (.observedTimeUnixNano | tonumber / 1e9 | strftime("%Y-%m-%dT%H:%M:%SZ")),
+    .body.stringValue
+] | join(" | ")
+EOF
+  jq -r -f /tmp/otlp.jq | column -t -s "|"
+}
