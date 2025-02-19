@@ -1,4 +1,10 @@
 .idea/
 .vscode/
 .DS_Store
-cws-lib-bash.tar
+*.tar
+*.tgz
+*.zip
+*.rar
+*.gz
+*.bz2
+*.7z

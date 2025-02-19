@@ -86,7 +86,9 @@ function k8s_nodes() {
 }
 
 function k8s_node_images() {
-  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+  local node_name=${1}
+  if [ -z "${node_name}" ]; then
+    kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{- range .items}}{{.metadata.name}}{{":\n"}}
   {{- range $image := .status.images -}}
     {{- range $name := $image.names -}}
@@ -95,40 +97,90 @@ function k8s_node_images() {
   {{end}}
 {{end}}
 EOF
+  else
+    shift
+    kubectl get nodes ${node_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{.metadata.name}}{{":\n"}}
+{{- range $image := .status.images -}}
+  {{- range $name := $image.names -}}
+    {{- printf "%-16d%s\n" $image.sizeBytes $name -}}
+  {{- end -}}
+{{end}}
+EOF
+  fi
 }
 
 function k8s_node_labels() {
-  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+  local node_name=${1}
+  if [ -z "${node_name}" ]; then
+    kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range $key,$value := .metadata.labels}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
 {{end}}
 EOF
+  else
+    shift
+    kubectl get nodes ${node_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{.metadata.name}}{{":"}}
+  {{range $key,$value := .metadata.labels}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
+EOF
+  fi
 }
 
 function k8s_node_taints() {
-  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+  local node_name=${1}
+  if [ -z "${node_name}" ]; then
+    kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{"\n"}}{{end}}
 {{end}}
 EOF
+  else
+    shift
+    kubectl get nodes ${node_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{.metadata.name}}{{":"}}
+  {{range .spec.taints}}{{"\t"}}{{range $key,$value := .}}{{" "}}{{$key}}={{$value}}{{","}}{{end}}{{"\n"}}{{end}}
+  {{end}}
+EOF
+  fi
 }
 
 function k8s_node_annotations() {
-  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+  local node_name=${1}
+  if [ -z "${node_name}" ]; then
+    kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   {{range $key,$value := .metadata.annotations}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
 {{end}}
 EOF
+  else
+    shift
+    kubectl get nodes ${node_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{.metadata.name}}{{":"}}
+  {{range $key,$value := .metadata.annotations}}{{"\t"}}{{$key}}={{$value}}{{"\n"}}{{end}}
+EOF
+  fi
 }
 
 function k8s_node_status() {
-  kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
+  local node_name=${1}
+  if [ -z "${node_name}" ]; then
+    kubectl get nodes $@ -o go-template-file=/dev/stdin <<'EOF'
 {{range .items}}{{.metadata.name}}{{":"}}
   CPU: {{.status.capacity.cpu}}
   Memory: {{.status.capacity.memory}}
   Pods: {{.status.capacity.pods}}
 {{end}}
 EOF
+  else
+    shift
+    kubectl get nodes ${node_name} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{.metadata.name}}{{":"}}
+  CPU: {{.status.capacity.cpu}}
+  Memory: {{.status.capacity.memory}}
+  Pods: {{.status.capacity.pods}}
+EOF
+  fi
 }
 
 function k8s_login_pod() {
