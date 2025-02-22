@@ -1,14 +1,13 @@
 export REMOTE_HOSTS_FILE="${HOME}/.remote/remote_hosts"
 export SSH_CONFIG_FILE="${HOME}/.ssh/config"
 
-if [ -f remote.rc ]; then
-  . remote.rc
-fi
-
 function remote_get_hosts() {
   local hosts_file=${1:-${REMOTE_HOSTS_FILE}}
-  if ! cat ${hosts_file}; then
-    log error "$? cannot find ${hosts_file}"
+  if [ -f .remote_hosts ]; then
+    cat .remote_hosts
+  fi
+  if [ -f ${hosts_file} ]; then
+    cat ${hosts_file}
   fi
 }
 

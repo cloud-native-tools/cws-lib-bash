@@ -192,3 +192,18 @@ function tf_failed_plan() {
 function tf_failed_apply() {
   find . -name ${TF_FAILED_ANSI} | xargs ls -lh | awk '$5!=0{print}'
 }
+
+function tf_find_module() {
+  find . -name '*.tf' -type f |
+    grep -vE 'output\.tf|provider\.tf|variable\.tf' |
+    xargs grep -EIn '^\s+source\s+=\s+' |
+    awk '{print $1,$NF}' |
+    tr -d '"' |
+    while IFS= read -r item; do
+      if [ -d "${item/* /}" ]; then
+        log notice "${item/ */} [${item/* /}] found"
+      else
+        log error "${item/ */} [${item/* /}] not found"
+      fi
+    done
+}
