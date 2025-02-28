@@ -19,10 +19,23 @@ function jq_format() {
 function jq_sort_file() {
   local json_file=${1}
 
-  if [ -f "${json_file}" ]; then
-    jq -S . ${json_file} >temp.json && mv temp.json ${json_file}
-  else
-    log error "file not found: ${json_file}"
+  if [ ! -f "${json_file}" ]; then
+    log error "Usage: jq_sort_file <json_file>"
+    return ${RETURN_FAILURE}
+  fi
+  local tmp_dir=$(mktemp -d)
+  trap 'rm -rf "${tmp_dir}"' EXIT
+
+  if jq -S --indent 2 '
+    def sort_keys:
+      if type == "object" then
+        to_entries | sort_by(.key) | map( .value |= sort_keys ) | from_entries
+      else
+        .
+      end;
+    sort_keys
+  ' "${json_file}" >"${tmp_dir}/sorted.json"; then
+    mv "${tmp_dir}/sorted.json" "${json_file}"
   fi
 }
 

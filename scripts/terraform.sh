@@ -1,9 +1,8 @@
 TF_PLAN_OUT="plan.out"
 TF_INIT_ANSI="init.ansi"
 TF_PLAN_ANSI="plan.ansi"
-TF_VALIDATE_ANSI="validate.ansi"
-TF_APPLIED_ANSI="applied.ansi"
-TF_FAILED_ANSI="failed.ansi"
+TF_APPLY_ANSI="apply.ansi"
+TF_DESTROY_ANSI="destroy.ansi"
 
 function tf_read_yaml() {
   local yaml_file=${1}
@@ -96,27 +95,25 @@ function tf_clean_unused_tf_files() {
 function tf_clean_plan_files() {
   log notice "clean terraorm plan files in ${PWD}"
   find . -type f \
-    -name "${TF_VALIDATE_ANSI}" \
-    -or \
-    -name "${TF_PLAN_ANSI}" \
+    -name "${TF_PLAN_OUT}" \
     -or \
     -name "${TF_INIT_ANSI}" \
     -or \
-    -name "${TF_APPLIED_ANSI}" \
+    -name "${TF_PLAN_ANSI}" \
     -or \
-    -name "${TF_FAILED_ANSI}" \
+    -name "${TF_APPLY_ANSI}" \
     -or \
-    -name "${TF_PLAN_OUT}" | xargs rm -rfv
+    -name "${TF_DESTROY_ANSI}" | xargs rm -rfv
 }
 
 function tf_plan() {
   log notice "terraform plan in ${PWD}"
   if ! terraform init -upgrade >${TF_INIT_ANSI} 2>&1; then
-    log error "Failed to initialize terraform"
+    log error "Failed to initialize terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! terraform plan -out=${TF_PLAN_OUT} 2>${TF_VALIDATE_ANSI}; then
-    log error "Failed to create terraform plan"
+  if ! terraform plan -out=${TF_PLAN_OUT} 2>${TF_PLAN_ANSI}; then
+    log error "Failed to create terraform plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
   terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}
@@ -125,11 +122,23 @@ function tf_plan() {
 function tf_apply() {
   log notice "terraform apply in ${PWD}"
   if [ ! -f "${TF_PLAN_OUT}" ]; then
-    log warn "no ${TF_PLAN_OUT} found, run terraform plan first"
+    log warn "no ${TF_PLAN_OUT} found in ${PWD}, run terraform plan first"
     tf_plan
   fi
-  if ! terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLIED_ANSI} 2>${TF_FAILED_ANSI}; then
-    log error "Failed to apply terraform"
+  if ! terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLY_ANSI} 2>&1; then
+    log error "Failed to apply terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+}
+
+function tf_destroy() {
+  log notice "terraform destroy in ${PWD}"
+  if ! terraform init -upgrade >${TF_INIT_ANSI} 2>&1; then
+    log error "Failed to initialize terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if ! terraform destroy -auto-approve >${TF_DESTROY_ANSI} 2>&1; then
+    log error "Failed to destroy terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
 }
@@ -186,11 +195,15 @@ function tf_validate_module() {
 }
 
 function tf_failed_plan() {
-  find . -name ${TF_VALIDATE_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_PLAN_ANSI} | xargs ls -lh | awk '$5!=0{print}'
 }
 
 function tf_failed_apply() {
-  find . -name ${TF_FAILED_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_APPLY_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+}
+
+function tf_failed_destroy() {
+  find . -name ${TF_DESTROY_ANSI} | xargs ls -lh | awk '$5!=0{print}'
 }
 
 function tf_find_module() {
