@@ -112,7 +112,7 @@ function tf_plan() {
     log error "Failed to initialize terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! terraform plan -out=${TF_PLAN_OUT} 2>${TF_PLAN_ANSI}; then
+  if ! terraform plan -out=${TF_PLAN_OUT} >${TF_PLAN_ANSI} 2>&1; then
     log error "Failed to create terraform plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
