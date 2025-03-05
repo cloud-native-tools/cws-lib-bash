@@ -93,7 +93,7 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_clean_plan_files() {
-  log notice "clean terraorm plan files in ${PWD}"
+  log notice "clean terraform plan files in ${PWD}"
   find . -type f \
     -name "${TF_PLAN_OUT}" \
     -or \
@@ -146,6 +146,7 @@ function tf_destroy() {
 function tf_plan_and_apply() {
   local target_dir="${1}"
   if [ -n "${target_dir}" ]; then
+    shift
     if ! pushd ${target_dir} >/dev/null 2>&1; then
       log error "Failed to change directory to ${target_dir}"
       return ${RETURN_FAILURE:-1}
@@ -157,6 +158,31 @@ function tf_plan_and_apply() {
   fi
   if ! tf_apply $@; then
     log error "Failed to apply terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if [ -n "${target_dir}" ]; then
+    if ! popd >/dev/null 2>&1; then
+      log error "Failed to return to the previous directory"
+      return ${RETURN_FAILURE:-1}
+    fi
+  fi
+}
+
+function tf_plan_and_destroy() {
+  local target_dir="${1}"
+  if [ -n "${target_dir}" ]; then
+    shift
+    if ! pushd ${target_dir} >/dev/null 2>&1; then
+      log error "Failed to change directory to ${target_dir}"
+      return ${RETURN_FAILURE:-1}
+    fi
+  fi
+  if ! tf_plan $@; then
+    log error "Failed to plan terraform in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if ! tf_destroy $@; then
+    log error "Failed to destroy terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
   if [ -n "${target_dir}" ]; then
