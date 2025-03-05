@@ -116,7 +116,11 @@ function tf_plan() {
     log error "Failed to create terraform plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}
+  if !terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
+    log error "Failed to show terraform plan in ${PWD}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  return ${RETURN_SUCCESS:-0}
 }
 
 function tf_apply() {
@@ -129,6 +133,7 @@ function tf_apply() {
     log error "Failed to apply terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
+  return ${RETURN_SUCCESS:-0}
 }
 
 function tf_destroy() {
@@ -141,6 +146,7 @@ function tf_destroy() {
     log error "Failed to destroy terraform in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
+  return ${RETURN_SUCCESS:-0}
 }
 
 function tf_plan_and_apply() {
@@ -152,13 +158,8 @@ function tf_plan_and_apply() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
-  if ! tf_plan $@; then
-    log error "Failed to plan terraform in ${PWD}"
-    return ${RETURN_FAILURE:-1}
-  fi
-  if ! tf_apply $@; then
-    log error "Failed to apply terraform in ${PWD}"
-    return ${RETURN_FAILURE:-1}
+  if ! tf_plan $@ || ! tf_apply $@; then
+    log error "Failed to plan and apply terraform in ${PWD}"
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -166,6 +167,7 @@ function tf_plan_and_apply() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
+  return ${RETURN_SUCCESS:-0}
 }
 
 function tf_plan_and_destroy() {
@@ -177,13 +179,8 @@ function tf_plan_and_destroy() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
-  if ! tf_plan $@; then
-    log error "Failed to plan terraform in ${PWD}"
-    return ${RETURN_FAILURE:-1}
-  fi
-  if ! tf_destroy $@; then
-    log error "Failed to destroy terraform in ${PWD}"
-    return ${RETURN_FAILURE:-1}
+  if ! tf_plan $@ || ! tf_destroy $@; then
+    log error "Failed to plan and destroy terraform in ${PWD}"
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -191,6 +188,7 @@ function tf_plan_and_destroy() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
+  return ${RETURN_SUCCESS:-0}
 }
 
 function tf_extract_example() {
