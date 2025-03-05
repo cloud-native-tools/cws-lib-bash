@@ -116,7 +116,7 @@ function tf_plan() {
     log error "Failed to create terraform plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if !terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
+  if ! terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
     log error "Failed to show terraform plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
@@ -154,7 +154,7 @@ function tf_plan_and_apply() {
   if [ -n "${target_dir}" ]; then
     shift
     if ! pushd ${target_dir} >/dev/null 2>&1; then
-      log error "Failed to change directory to ${target_dir}"
+      log error "Failed to change directory to [${target_dir}], current [${PWD}]"
       return ${RETURN_FAILURE:-1}
     fi
   fi
@@ -163,7 +163,7 @@ function tf_plan_and_apply() {
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
-      log error "Failed to return to the previous directory"
+      log error "Failed to return to the previous directory, current [${PWD}]"
       return ${RETURN_FAILURE:-1}
     fi
   fi
