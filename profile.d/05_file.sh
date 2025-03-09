@@ -404,6 +404,6 @@ function highlight_difference_files() {
 
 function archive_current() {
   local filename=${1:-$(basename ${PWD}).tar.gz}
-  tar zcf ${filename} --exclude-vcs *
+  tar zcf "${filename}" --exclude-vcs --exclude='*.tar.gz' ./*
   mv -fv ${filename} $(sha256sum ${filename} | awk '{print $1}')-$(date_id).tar.gz
 }
