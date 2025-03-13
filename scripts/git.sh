@@ -344,14 +344,13 @@ function git_commit_to_patch() {
   git format-patch -1 ${commit_id} -o ${output_dir}
 }
 
-function git_latest_files() {
+function git_latest_added_files() {
   local count=${1:-30}
   declare -A added_files=()
 
   while read -r timestamp commit_hash; do
     local break_flag=0
     while IFS= read -r file; do
-      # 增强型校验逻辑
       [[ -n "$file" && -z "${added_files[$file]}" ]] || continue
       git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
 
@@ -365,8 +364,32 @@ function git_latest_files() {
   done < <(git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
     awk '!/^commit/ {print $1, $2}')
 
-  # 输出结果排序优化
   for file in "${!added_files[@]}"; do
     printf "%s %s\n" "${added_files[$file]}" "$file"
+  done | sort -r | head -n "$count"
+}
+
+function git_latest_updated_files() {
+  local count=${1:-30}
+  declare -A updated_files=()
+
+  while read -r timestamp commit_hash; do
+    local break_flag=0
+    while IFS= read -r file; do
+      [[ -n "$file" && -z "${updated_files[$file]}" ]] || continue
+      git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
+
+      updated_files["$file"]="$timestamp"
+      ((${#updated_files[@]} >= count)) && {
+        break_flag=1
+        break
+      }
+    done < <(git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash")
+    ((break_flag)) && break
+  done < <(git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
+    awk '!/^commit/ {print $1, $2}')
+
+  for file in "${!updated_files[@]}"; do
+    printf "%s %s\n" "${updated_files[$file]}" "$file"
   done | sort -r | head -n "$count"
 }

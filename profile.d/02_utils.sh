@@ -8,6 +8,13 @@ is_zsh && alias sh="zsh"
 is_ash && alias sh="ash"
 is_dash && alias sh="dash"
 
+if is_bash; then
+  # source .bashrc if exists in working directory
+  if [ -f .bashrc ]; then
+    . .bashrc
+  fi
+fi
+
 function debug_on() {
   local log=$1
   if [ -n "${log}" ]; then
