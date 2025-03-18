@@ -18,8 +18,12 @@ ENV=${ROOT}/bin/cws_env
 
 # this library is used for interactive shell only, only sourced in a interactive shell environment
 # if you need use it in a script, you should source it manually
-add_line_if_not_exit ~/.bashrc ". ${ENV}"
-add_line_if_not_exit ~/.zshrc ". ${ENV}"
+if [ -f ~/.bashrc ]; then
+  add_line_if_not_exit ~/.bashrc ". ${ENV}"
+fi
+if [ -f ~/.zshrc ]; then
+  add_line_if_not_exit ~/.zshrc ". ${ENV}"
+fi
 
 if [ -f /etc/profile.d/bash_completion.sh ]; then
   # disable bash completion which conflicts with cws_lib, FIXME: find a better way
