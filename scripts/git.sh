@@ -393,3 +393,67 @@ function git_latest_updated_files() {
     printf "%s %s\n" "${updated_files[$file]}" "$file"
   done | sort -r | head -n "$count"
 }
+
+function git_setup_ssh_repo() {
+  local repo="${1}"
+  local home="${DATA_DIR}/git"
+  local username=git
+  local ssh_dir="${home}/.ssh"
+  local auth_keys_src="${HOME}/.ssh/authorized_keys"
+  local auth_keys_dst="${ssh_dir}/authorized_keys"
+
+  repo=${repo#/}
+  repo=${repo%.git}.git
+
+  # Validate source authorization file
+  if [ ! -f "${auth_keys_src}" ]; then
+    log error "Source SSH authorized_keys missing: ${auth_keys_src}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # User management with validation
+  if getent passwd "${username}" >/dev/null 2>&1; then
+    log info "User exists: '${username}'"
+  else
+    log info "Creating user: '${username}' with home: ${home}"
+    if ! useradd -m -U "${username}" -d "${home}" -s /usr/bin/git-shell; then
+      log error "User creation failed: ${username}"
+      ${RETURN_FAILURE:-1}
+    fi
+    # Ensure home directory ownership
+    [ -d "${home}" ] && chown "${username}:${username}" "${home}"
+  fi
+
+  # Create SSH directory with validation
+  if ! mkdir -p "${ssh_dir}"; then
+    log error "Directory creation failed: ${ssh_dir}"
+    ${RETURN_FAILURE:-1}
+  fi
+
+  # Copy keys with verification
+  if ! cp -fv "${auth_keys_src}" "${auth_keys_dst}"; then
+    log error "Key copy failed: ${auth_keys_src} -> ${auth_keys_dst}"
+    ${RETURN_FAILURE:-1}
+  fi
+
+  # Final validation
+  if [ ! -f "${auth_keys_dst}" ]; then
+    log error "SSH setup incomplete: ${auth_keys_dst} missing"
+    ${RETURN_FAILURE:-1}
+  fi
+
+  cd "${home}" || return ${RETURN_FAILURE:-1}
+  if ! git init --bare "${repo}"; then
+    log error "Git repository initialization failed: ${repo}"
+    ${RETURN_FAILURE:-1}
+  fi
+  # Permission hardening
+  if ! chown -R "${username}:${username}" "${home}"; then
+    log error "Ownership change failed: ${home}"
+    ${RETURN_FAILURE:-1}
+  fi
+  chmod 700 "${ssh_dir}" || ${RETURN_FAILURE:-1}
+  chmod 600 "${auth_keys_dst}" || ${RETURN_FAILURE:-1}
+
+  log notice "Git remote setup complete at [${repo}]. Add with: git remote add <remote_name> git@<ssh_name>:${repo}"
+}

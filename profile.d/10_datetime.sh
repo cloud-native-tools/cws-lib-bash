@@ -11,7 +11,7 @@ function time_duration() {
   local to="${2-$(date_now)}"
   if [ -z "${from}" ] || [ -z "${to}" ]; then
     echo "Usage: time_duration <from> <to>"
-    return 1
+    ${RETURN_FAILURE:-1}
   fi
   if is_macos; then
     from_seconds=$(date -j -f "%Y-%m-%d %H:%M:%S" "${from}" "+%s")

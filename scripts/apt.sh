@@ -2,7 +2,6 @@ function apt_prune() {
   # remove packages as much as possible, only keep the base system
   apt update
   apt-mark hold \
-    adduser \
     apt \
     bash \
     coreutils \

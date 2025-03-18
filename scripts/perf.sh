@@ -30,7 +30,7 @@ function perf_record_by_cgroup() {
   local cgroup_path=${1}
   if [ -z "${cgroup_path}" ]; then
     echo "Usage: perf_record_by_cgroup <cgroup_path>"
-    return 1
+    ${RETURN_FAILURE:-1}
   fi
   shift
   perf record -a -g -e cpu-clock -G ${cgroup_path} $@
@@ -41,7 +41,7 @@ function perf_record_pod() {
   local pod_sid=${2}
   if [ -z "${pod_uuid}" ] || [ -z "${pod_sid}" ]; then
     echo "Usage: perf_record_pod <pod_uuid> <pod_sid>"
-    return 1
+    ${RETURN_FAILURE:-1}
   fi
   shift 2
   perf_record_by_cgroup "kubepods/burstable/pod${pod_uuid}/${pod_sid}" -- ${@}
