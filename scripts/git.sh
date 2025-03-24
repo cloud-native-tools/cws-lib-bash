@@ -348,9 +348,9 @@ function git_latest_added_files() {
   local count=${1:-30}
   declare -A added_files=()
 
-  while read -r timestamp commit_hash; do
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | awk '!/^commit/ {print $1, $2}' | while read -r timestamp commit_hash; do
     local break_flag=0
-    while IFS= read -r file; do
+    git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash" | while IFS= read -r file; do
       [[ -n "$file" && -z "${added_files[$file]}" ]] || continue
       git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
 
@@ -359,10 +359,9 @@ function git_latest_added_files() {
         break_flag=1
         break
       }
-    done < <(git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash")
+    done
     ((break_flag)) && break
-  done < <(git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
-    awk '!/^commit/ {print $1, $2}')
+  done
 
   for file in "${!added_files[@]}"; do
     printf "%s %s\n" "${added_files[$file]}" "$file"
@@ -373,9 +372,9 @@ function git_latest_updated_files() {
   local count=${1:-30}
   declare -A updated_files=()
 
-  while read -r timestamp commit_hash; do
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | awk '!/^commit/ {print $1, $2}' | while read -r timestamp commit_hash; do
     local break_flag=0
-    while IFS= read -r file; do
+    git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash" | while IFS= read -r file; do
       [[ -n "$file" && -z "${updated_files[$file]}" ]] || continue
       git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
 
@@ -384,10 +383,9 @@ function git_latest_updated_files() {
         break_flag=1
         break
       }
-    done < <(git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash")
+    done
     ((break_flag)) && break
-  done < <(git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
-    awk '!/^commit/ {print $1, $2}')
+  done
 
   for file in "${!updated_files[@]}"; do
     printf "%s %s\n" "${updated_files[$file]}" "$file"
