@@ -219,15 +219,15 @@ function tf_validate_module() {
 }
 
 function tf_failed_plan() {
-  find . -name ${TF_PLAN_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_PLAN_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
 }
 
 function tf_failed_apply() {
-  find . -name ${TF_APPLY_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_APPLY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
 }
 
 function tf_failed_destroy() {
-  find . -name ${TF_DESTROY_ANSI} | xargs ls -lh | awk '$5!=0{print}'
+  find . -name ${TF_DESTROY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
 }
 
 function tf_find_module() {
