@@ -274,7 +274,10 @@ function git_pull_all() {
 function git_push() {
   local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
   local branch=$(git branch | awk '{print $NF}')
-  log notice "git push ${branch} to ${remote}"
+  if [ -z "${remote}" ]; then
+    remote="origin"
+  fi
+  log notice "git push [${branch}] to [${remote}]"
   git push ${remote} ${branch}
 }
 
