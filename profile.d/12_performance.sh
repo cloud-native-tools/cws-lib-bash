@@ -1,6 +1,6 @@
 #!/bin/bash
 
-function huge_pg() {
+function huge_page() {
     FORMAT="%-10s\t%-20s\t%-20s\n"
 
     PID=$1
