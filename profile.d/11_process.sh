@@ -57,3 +57,8 @@ function ps_top_mem() {
   local topN=${1:-10}
   ps -eo pid,ppid,cmd,%mem,%cpu --sort=-%mem | head -n ${topN}
 }
+
+function search_bin_path() {
+  local pattern=${1:-*}
+  env | grep -E '^PATH=' | tr ':' '\n' | xargs -I{} find "{}" -name "${pattern}" 2>&1 | grep -v 'No such file or directory' | sort | uniq
+}

@@ -24,21 +24,22 @@ function bash_prompt() {
   fi
   local env_info="[${BASH_ARCH}][${BASH_OS}]"
 
-  if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
-    local git_branch=$(
-      git symbolic-ref --short HEAD 2>/dev/null ||
-        git describe --tags --exact-match 2>/dev/null ||
-        git rev-parse --short HEAD 2>/dev/null ||
-        echo "(detached)"
-    )
-    local git_status=$(git status --porcelain 2>/dev/null)
-    if [ -z "${git_status}" ]; then
-      local git_info="[git: ${BOLD_GREEN}${git_branch}${CLEAR}]"
-    else
-      local git_info="[git: ${BOLD_RED}${git_branch}*${CLEAR}]"
+  local git_info=""
+  if [ -d .git ] && [ -f .git/config ]; then
+    if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+      local git_branch=$(
+        git symbolic-ref --short HEAD 2>/dev/null ||
+          git describe --tags --exact-match 2>/dev/null ||
+          git rev-parse --short HEAD 2>/dev/null ||
+          echo "(detached)"
+      )
+      local git_status=$(git status --porcelain 2>/dev/null)
+      if [ -z "${git_status}" ]; then
+        local git_info="[git: ${BOLD_GREEN}${git_branch}${CLEAR}]"
+      else
+        local git_info="[git: ${BOLD_RED}${git_branch}*${CLEAR}]"
+      fi
     fi
-  else
-    local git_info=""
   fi
 
   log plain "[${last_exit}]${env_info}${conda_env}[\D{%Y-%m-%d} \t][\u@\h \w]${git_info}${user_indicator}\n "
