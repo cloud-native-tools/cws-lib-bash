@@ -4,13 +4,21 @@ TF_PLAN_ANSI="plan.ansi"
 TF_APPLY_ANSI="apply.ansi"
 TF_DESTROY_ANSI="destroy.ansi"
 
+function tf_bin() {
+  if ! command -v tofu 2>&1; then
+    if ! command -v terraform 2>&1; then
+      command -v false
+    fi
+  fi
+}
+
 function tf_read_yaml() {
   local yaml_file=${1}
   if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
     log error "Usage: terraform_read_yaml <yaml_file>"
     return ${RETURN_FAILURE}
   fi
-  echo "yamldecode(file(\"${yaml_file}\"))" | terraform console
+  echo "yamldecode(file(\"${yaml_file}\"))" | $(tf_bin) console
 }
 
 function tf_read_json() {
@@ -19,15 +27,15 @@ function tf_read_json() {
     log error "Usage: terraform_read_json <json_file>"
     return ${RETURN_FAILURE}
   fi
-  echo "jsondecode(file(\"${json_file}\"))" | terraform console
+  echo "jsondecode(file(\"${json_file}\"))" | $(tf_bin) console
 }
 
 function tf_format() {
   local target=${1:-${PWD}}
-  for d in $(find ${target} -name '*.tf' -type f | grep -vE "/\.terraform" | xargs dirname | sort | uniq); do
+  for d in $(find ${target} -name '*.tf' -type f | grep -vE "/\.$(tf_bin)" | xargs dirname | sort | uniq); do
     pushd ${d} >/dev/null 2>&1
-    log info "Formatting terraform files in ${PWD}"
-    terraform fmt
+    log info "Formatting $(tf_bin) files in ${PWD}"
+    $(tf_bin) fmt
     popd >/dev/null 2>&1
   done
 }
@@ -93,7 +101,7 @@ function tf_clean_unused_tf_files() {
 }
 
 function tf_clean_plan_files() {
-  log notice "clean terraform plan files in ${PWD}"
+  log notice "clean $(tf_bin) plan files in ${PWD}"
   find . -type f \
     -name "${TF_PLAN_OUT}" \
     -or \
@@ -107,43 +115,43 @@ function tf_clean_plan_files() {
 }
 
 function tf_plan() {
-  log notice "terraform plan in ${PWD}"
-  if ! terraform init -upgrade >${TF_INIT_ANSI} 2>&1; then
-    log error "Failed to initialize terraform in ${PWD}"
+  log notice "$(tf_bin) plan in ${PWD}"
+  if ! $(tf_bin) init -upgrade >${TF_INIT_ANSI} 2>&1; then
+    log error "Failed to initialize $(tf_bin) in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! terraform plan -out=${TF_PLAN_OUT} >${TF_PLAN_ANSI} 2>&1; then
-    log error "Failed to create terraform plan in ${PWD}"
+  if ! $(tf_bin) plan -out=${TF_PLAN_OUT} >${TF_PLAN_ANSI} 2>&1; then
+    log error "Failed to create $(tf_bin) plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! terraform show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
-    log error "Failed to show terraform plan in ${PWD}"
+  if ! $(tf_bin) show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
+    log error "Failed to show $(tf_bin) plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
   return ${RETURN_SUCCESS:-0}
 }
 
 function tf_apply() {
-  log notice "terraform apply in ${PWD}"
+  log notice "$(tf_bin) apply in ${PWD}"
   if [ ! -f "${TF_PLAN_OUT}" ]; then
-    log warn "no ${TF_PLAN_OUT} found in ${PWD}, run terraform plan first"
+    log warn "no ${TF_PLAN_OUT} found in ${PWD}, run $(tf_bin) plan first"
     tf_plan
   fi
-  if ! terraform apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLY_ANSI} 2>&1; then
-    log error "Failed to apply terraform in ${PWD}"
+  if ! $(tf_bin) apply -auto-approve ${TF_PLAN_OUT} >${TF_APPLY_ANSI} 2>&1; then
+    log error "Failed to apply $(tf_bin) in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
   return ${RETURN_SUCCESS:-0}
 }
 
 function tf_destroy() {
-  log notice "terraform destroy in ${PWD}"
-  if ! terraform init -upgrade >${TF_INIT_ANSI} 2>&1; then
-    log error "Failed to initialize terraform in ${PWD}"
+  log notice "$(tf_bin) destroy in ${PWD}"
+  if ! $(tf_bin) init -upgrade >${TF_INIT_ANSI} 2>&1; then
+    log error "Failed to initialize $(tf_bin) in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! terraform destroy -auto-approve >${TF_DESTROY_ANSI} 2>&1; then
-    log error "Failed to destroy terraform in ${PWD}"
+  if ! $(tf_bin) destroy -auto-approve >${TF_DESTROY_ANSI} 2>&1; then
+    log error "Failed to destroy $(tf_bin) in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
   return ${RETURN_SUCCESS:-0}
@@ -159,7 +167,7 @@ function tf_plan_and_apply() {
     fi
   fi
   if ! tf_plan $@ || ! tf_apply $@; then
-    log error "Failed to plan and apply terraform in ${PWD}"
+    log error "Failed to plan and apply $(tf_bin) in ${PWD}"
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -180,7 +188,7 @@ function tf_plan_and_destroy() {
     fi
   fi
   if ! tf_plan $@ || ! tf_destroy $@; then
-    log error "Failed to plan and destroy terraform in ${PWD}"
+    log error "Failed to plan and destroy $(tf_bin) in ${PWD}"
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -192,7 +200,7 @@ function tf_plan_and_destroy() {
 }
 
 function tf_extract_example() {
-  find . \( -name '*.md' -or -name '*.markdown' \) -type f | xargs -I{} sed -n '/^```terraform$/,/^```$/p' {} | grep -v '^```' | sed '/^$/d'
+  find . \( -name '*.md' -or -name '*.markdown' \) -type f | xargs -I{} sed -n '/^```$(tf_bin)$/,/^```$/p' {} | grep -v '^```' | sed '/^$/d'
 }
 
 function tf_replace() {
@@ -203,7 +211,7 @@ function tf_replace() {
   else
     shift
   fi
-  terraform apply -replace="${resource_id}" $@
+  $(tf_bin) apply -replace="${resource_id}" $@
 }
 
 function tf_validate_module() {

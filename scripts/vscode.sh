@@ -84,8 +84,9 @@ function vscode_workspace_add_rust_search_paths() {
   mv -fv ${workspace_file}.tmp ${workspace_file}
 }
 
-function vscode_get_bin() {
+function vscode_bin() {
   local code_bin="code"
+
   if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
     code_bin="${VSCODE_SERVER_HOME}/bin/code-server"
   elif [ -f "${CODE_SERVER_HOME}/bin/code-server" ]; then
@@ -123,7 +124,7 @@ function vscode_insiders_get_bin() {
 }
 
 function vscode_open() {
-  local vscode_bin=$(vscode_get_bin)
+  local vscode_bin=$(vscode_bin)
   "${vscode_bin}" -r $@
 }
 
@@ -133,7 +134,7 @@ function vscode_insiders_open() {
 }
 
 function vscode_ext_list() {
-  local vscode_bin=$(vscode_get_bin)
+  local vscode_bin=$(vscode_bin)
   local ext_list_file=$@
   if [ -z "${ext_list_file}" ]; then
     "${vscode_bin}" --list-extensions --show-versions
@@ -161,14 +162,14 @@ function vscode_insiders_ext_list() {
 }
 
 function vscode_ext_install() {
-  local vscode_bin=$(vscode_get_bin)
+  local vscode_bin=$(vscode_bin)
   for ext in ${@}; do
     "${vscode_bin}" --install-extension ${ext}
   done
 }
 
 function vscode_ext_update() {
-  local vscode_bin=$(vscode_get_bin)
+  local vscode_bin=$(vscode_bin)
   "${vscode_bin}" --update-extensions
 }
 
