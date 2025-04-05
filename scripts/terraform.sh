@@ -4,6 +4,7 @@ TF_PLAN_ANSI="plan.ansi"
 TF_APPLY_ANSI="apply.ansi"
 TF_DESTROY_ANSI="destroy.ansi"
 
+# Determines which Terraform binary to use, preferring tofu over terraform if available
 function tf_bin() {
   if ! command -v tofu 2>&1; then
     if ! command -v terraform 2>&1; then
@@ -12,6 +13,7 @@ function tf_bin() {
   fi
 }
 
+# Reads and parses YAML files using Terraform console
 function tf_read_yaml() {
   local yaml_file=${1}
   if [ -z "${yaml_file}" ] || [ ! -f "${yaml_file}" ]; then
@@ -21,6 +23,7 @@ function tf_read_yaml() {
   echo "yamldecode(file(\"${yaml_file}\"))" | $(tf_bin) console
 }
 
+# Reads and parses JSON files using Terraform console
 function tf_read_json() {
   local json_file=${1}
   if [ -z "${json_file}" ] || [ ! -f "${json_file}" ]; then

@@ -1,7 +1,9 @@
+# Downloads RPM packages without installing them to the current directory
 function yum_download() {
   yum reinstall --downloadonly --downloaddir ${PWD} $@
 }
 
+# Creates a minimal rootfs with basic packages
 function yum_mk_rootfs() {
   local rootfs="${1:-/tmp/rootfs}"
   mkdir -pv ${rootfs}
@@ -28,10 +30,12 @@ function yum_mk_rootfs() {
   # umount
 }
 
+# Lists all available versions of specified packages
 function yum_list() {
   yum list --showduplicates $@
 }
 
+# Installs packages with retry functionality for reliability
 function yum_install_with_retry() {
   local retries=${1}
   local count=0
@@ -59,6 +63,7 @@ function yum_install_with_retry() {
   fi
 }
 
+# Removes non-essential packages while preserving the base system
 function yum_prune() {
   # remove packages as much as possible, only keep the base system
   rm -rv /etc/dnf/protected.d

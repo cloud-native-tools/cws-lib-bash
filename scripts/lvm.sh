@@ -1,9 +1,11 @@
+# Creates a logical volume with specified parameters
 function lvm_create() {
     local vg_name=${1}
     local lvm_size=${2}
     lvcreate -y -L ${lvm_size} -i 5 -I 4096 ${vg_name} -n "${vg_name}-test-${i}"
 }
 
+# Removes test logical volumes from a volume group
 function lvm_remove() {
     local vg_name=${1:-adb-vg}
     for lv in $(ls /dev/${vg_name}/${vg_name}-test-*); do
@@ -11,6 +13,7 @@ function lvm_remove() {
     done
 }
 
+# Tests filesystem creation performance on logical volumes
 function lvm_test_mkfs() {
     local vg_name=${1:-adb-vg}
     local fs_type=${2:-ext4}

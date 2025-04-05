@@ -1,6 +1,8 @@
 function systemd_list_unit_file() {
   find ${@} -regex '.*\.service\|.*\.socket|.*\.device|.*\.mount|.*\.automount|.*\.swap|.*\.target|.*\.path|.*\.timer' 2>/dev/null
 }
+
+# Lists system unit files across specified paths
 function systemd_list_system_unit_file() {
   systemd_list_unit_file \
     /etc/systemd/system.control/ \
@@ -16,6 +18,7 @@ function systemd_list_system_unit_file() {
     /run/systemd/generator.late/
 }
 
+# Lists user unit files across specified paths
 function systemd_list_user_unit_file() {
   systemd_list_unit_file \
     ~/.config/systemd/user.control/ \
@@ -34,6 +37,7 @@ function systemd_list_user_unit_file() {
     $XDG_CONFIG_DIRS/systemd/user/
 }
 
+# Lists all unit files (both system and user)
 function systemd_list_all_unit_file() {
   systemd_list_system_unit_file
   systemd_list_user_unit_file

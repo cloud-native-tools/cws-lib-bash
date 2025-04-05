@@ -1,3 +1,4 @@
+# Creates an SSH tunnel from local port to remote port through a jump host
 function ssh_local_to_remote() {
   local local_ip=127.0.0.1
   local local_port=${1}
@@ -26,6 +27,7 @@ function ssh_local_to_remote() {
   fi
 }
 
+# Creates an SSH tunnel from remote port to local port through a jump host
 function ssh_remote_to_local() {
   local remote_ip=127.0.0.1
   local remote_port=${1}
@@ -56,6 +58,7 @@ function ssh_remote_to_local() {
   fi
 }
 
+# Creates an SSH proxy on a local port through a jump host
 function ssh_proxy() {
   local local_port=${1}
   local jumper_ip=${2}
@@ -70,6 +73,7 @@ function ssh_proxy() {
   fi
 }
 
+# Kills an SSH process listening on a specific port
 function ssh_kill_by_port() {
   local port=${1}
   local ssh_pid=$(lsof -i -n -P | grep LISTEN | grep ${port} -w | grep ssh -w | tr -s ' ' | cut -d' ' -f2)
@@ -79,6 +83,7 @@ function ssh_kill_by_port() {
   fi
 }
 
+# Generates an SSH host configuration
 function ssh_host_config() {
   local host=${1}
   local port=${2:-22}
@@ -96,6 +101,7 @@ function ssh_host_config() {
   echo "  StrictHostKeyChecking no"
 }
 
+# Waits for an SSH node to be ready
 function ssh_wait_node_ready() {
   local name=${1}
   local timeout=${2}
@@ -125,6 +131,7 @@ function ssh_wait_node_ready() {
   done
 }
 
+# Generates an SSH key pair
 function ssh_generate_key() {
   local email=${1}
   local passphrase=${2:-""}
@@ -137,11 +144,13 @@ function ssh_generate_key() {
   chmod 400 ${key_file} ${key_file}.pub
 }
 
+# Fixes permissions for SSH-related files
 function ssh_fix_permission() {
   local target=${1:-${PWD}}
   find ${target} \( -name id_rsa -o -name id_rsa.pub -o -name authorized_keys -o -name known_hosts \) | xargs chmod 400
 }
 
+# Pings an SSH host
 function ssh_ping() {
   local host_name=${1}
   local config_file=${2}
@@ -162,6 +171,7 @@ function ssh_ping() {
   fi
 }
 
+# Logs into an SSH host using expect
 function ssh_expect_login() {
   local host=${1}
   local port=${2:-22}
@@ -193,6 +203,7 @@ function ssh_expect_login() {
     "${password}"
 }
 
+# Adds an SSH key to an authorized_keys file on a remote host using expect
 function ssh_expect_add_auth_key() {
   local host=${1}
   local port=${2:-22}
