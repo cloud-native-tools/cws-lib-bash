@@ -13,6 +13,8 @@ function tf_bin() {
   fi
 }
 
+alias tf="$(tf_bin)"
+
 # Reads and parses YAML files using Terraform console
 function tf_read_yaml() {
   local yaml_file=${1}
@@ -35,7 +37,7 @@ function tf_read_json() {
 
 function tf_format() {
   local target=${1:-${PWD}}
-  for d in $(find ${target} -name '*.tf' -type f | grep -vE "/\.$(tf_bin)" | xargs dirname | sort | uniq); do
+  for d in $(find ${target} -name '*.tf' -type f | grep -vE "/\.terrafrom" | xargs dirname | sort | uniq); do
     pushd ${d} >/dev/null 2>&1
     log info "Formatting $(tf_bin) files in ${PWD}"
     $(tf_bin) fmt
@@ -230,15 +232,15 @@ function tf_validate_module() {
 }
 
 function tf_failed_plan() {
-  find . -name ${TF_PLAN_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
+  find . -name ${TF_PLAN_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}' | sort | uniq
 }
 
 function tf_failed_apply() {
-  find . -name ${TF_APPLY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
+  find . -name ${TF_APPLY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}' | sort | uniq
 }
 
 function tf_failed_destroy() {
-  find . -name ${TF_DESTROY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}'
+  find . -name ${TF_DESTROY_ANSI} | xargs grep 'Error:' | awk -F: '{print $1}' | sort | uniq
 }
 
 function tf_find_module() {
