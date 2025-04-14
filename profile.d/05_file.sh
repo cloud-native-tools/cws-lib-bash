@@ -396,7 +396,7 @@ function highlight_difference_files() {
 '/$'\n'}) # Split the newline-separated file list into an array
     local color="${colors[${color_index}]}"
     for file in "${files[@]}"; do
-      printf "${color}%s${CLEAR}\n" "${file}" # Print with color and reset
+      printf "${checksum}  ${color}%s${CLEAR}\n" "${file}" # Print with color and reset
     done
     ((color_index = (color_index + 1) % color_count)) # Cycle through colors
   done

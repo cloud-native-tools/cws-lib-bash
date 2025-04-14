@@ -10,16 +10,15 @@ PROFILED=${ROOT}/profile.d
 SCRIPTS=${ROOT}/scripts
 
 for i in ${PROFILED}/*.sh ${SCRIPTS}/*.sh; do
-    if [ -r "$i" ]; then
-        if [ "${-#*i}" != "$-" ]; then
-            . "$i"
-        else
-            . "$i" >/dev/null
-        fi
+  if [ -r "$i" ]; then
+    if [ "${-#*i}" != "$-" ]; then
+      . "$i"
+    else
+      . "$i" >/dev/null
     fi
+  fi
 done
 unset i
 
-export CWS_BASH_LIB_HOME=${ROOT}
-export PATH=${CWS_BASH_LIB_HOME}/bin:${PATH}
-
+export CWS_LIB_BASH_HOME=${ROOT}
+export PATH=${CWS_LIB_BASH_HOME}/bin:${PATH}

@@ -96,7 +96,6 @@ function ssh_host_config() {
   echo "  User ${user}"
   echo "  IdentityFile ${key}"
   echo "  ServerAliveInterval 5"
-  echo "  PubkeyAcceptedAlgorithms +ssh-rsa"
   echo "  UserKnownHostsFile /dev/null"
   echo "  StrictHostKeyChecking no"
 }
@@ -196,7 +195,7 @@ function ssh_expect_login() {
     log error "Password is required."
     return ${RETURN_FAILURE}
   fi
-  expect -f ${CWS_BASH_LIB_HOME}/expect/login.expect \
+  expect -f ${CWS_LIB_BASH_HOME}/expect/login.expect \
     ${host} \
     ${port} \
     ${user} \
@@ -238,7 +237,7 @@ function ssh_expect_add_auth_key() {
 sudo bash -c \"echo '$(cat ${keyfile})' >> /root/.ssh/authorized_keys\"
 EOF
   )
-  expect -f ${CWS_BASH_LIB_HOME}/expect/cmd.expect \
+  expect -f ${CWS_LIB_BASH_HOME}/expect/cmd.expect \
     ${host} \
     ${port} \
     ${user} \
