@@ -26,9 +26,10 @@ function otelcol_generate_config() {
   ' >"${config_file}"
   fi
 
+  log info "Adding stdout/stderr log receivers"
   for file in *.stdout *.stderr; do
     [[ -e "${file}" ]] || continue
-    local name="${file%.*}" type="filelog"
+    local type="filelog"
     [[ -p "${file}" ]] && type="namedpipe"
 
     local config_value
@@ -37,14 +38,15 @@ function otelcol_generate_config() {
     else
       config_value="{\"include\": [\"${log_dir}/${file}\"]}"
     fi
-
-    yq eval -i ".receivers.\"${type}/${name}\" = ${config_value}" "${config_file}"
+    log notice "Adding [${type}] receiver for ${file}"
+    yq eval -i ".receivers.\"${type}/${file}\" = ${config_value}" "${config_file}"
   done
 
+  log info "Adding processors"
   for file in *.stdout *.stderr; do
     [[ -e "${file}" ]] || continue
-    local name="${file%.*}"
-    yq eval -i ".processors.\"attributes/${name}\".actions = [{\"action\": \"insert\", \"key\": \"from\", \"value\": \"${name}\"}]" "${config_file}"
+    log notice "Adding attributes processor for ${file}"
+    yq eval -i ".processors.\"attributes/${file}\".actions = [{\"action\": \"insert\", \"key\": \"from\", \"value\": \"${file}\"}]" "${config_file}"
   done
 
   for stream in stdout stderr; do
@@ -52,15 +54,16 @@ function otelcol_generate_config() {
     yq eval -i ".exporters.\"file/${stream}\" = {\"path\": \"/dev/${stream}\"}" "${config_file}"
   done
 
+  log info "Adding file exporters for stdout and stderr"
   for file in *.stdout *.stderr; do
     [[ -e "${file}" ]] || continue
-    local name="${file%.*}" receiver_type="filelog"
+    local receiver_type="filelog"
     [[ -p "${file}" ]] && receiver_type="namedpipe"
-
+    log notice "Adding [${receiver_type}] exporter for ${file}"
     local exporter="file/${file##*.}"
-    yq eval -i ".service.pipelines.\"logs/${name}\" = {
-      \"receivers\": [\"${receiver_type}/${name}\"],
-      \"processors\": [\"attributes/${name}\", \"transform\"],
+    yq eval -i ".service.pipelines.\"logs/${file}\" = {
+      \"receivers\": [\"${receiver_type}/${file}\"],
+      \"processors\": [\"attributes/${file}\", \"transform\"],
       \"exporters\": [\"${exporter}\"]
     }" "${config_file}"
   done
