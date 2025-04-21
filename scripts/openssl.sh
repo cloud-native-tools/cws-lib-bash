@@ -1,18 +1,18 @@
-######################
-# Become a Certificate Authority
-######################
-
 CA_DAYS=$((365 * 3))
-CA_SUBJ="/C=CN/ST=ZHEJIANG/L=HANGZHOU/O=CWS/OU=IT/CN=www.cws.com"
+CA_SUBJ="/C=CN/ST=ZHEJIANG/L=HANGZHOU/O=CWS/OU=IT/CN=code-workspace.cloud"
 
 function openssl_create_ca() {
   local name=${1}
   if [ -n "${name}" ]; then
     openssl genrsa -des3 -out ${name}.key 2048
-    openssl req -x509 -new -nodes -key ${name}.key -sha256 -days ${CA_DAYS} -out ${name}.pem -subj "${CA_SUBJ}"
-    log "CA ${name}: ${name}.key ${name}.pem"
+    openssl req -x509 -new -nodes -sha256 \
+      -subj "${CA_SUBJ}" \
+      -days ${CA_DAYS} \
+      -out ${name}.cert \
+      -key ${name}.key
+    log "CA ${name}: ${name}.key ${name}.cert"
   else
-    log warn "Usage: openssl_create_ca {ca_name}"
+    log error "Usage: openssl_create_ca {ca_name}"
   fi
 }
 
@@ -55,6 +55,6 @@ function openssl_view_crt() {
   if [ -z "${crt_file}" ]; then
     log warn "Usage: openssl_view_crt {crt_file}"
   else
-    openssl x509 -in ${crt_file}  
+    openssl x509 -in ${crt_file}
   fi
 }
