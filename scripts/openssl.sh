@@ -4,7 +4,7 @@ CA_SUBJ="/C=CN/ST=ZHEJIANG/L=HANGZHOU/O=CWS/OU=IT/CN=code-workspace.cloud"
 function openssl_create_ca() {
   local name=${1}
   if [ -n "${name}" ]; then
-    openssl genrsa -des3 -out ${name}.key 2048
+    openssl genrsa -out ${name}.key 2048
     openssl req -x509 -new -nodes -sha256 \
       -subj "${CA_SUBJ}" \
       -days ${CA_DAYS} \

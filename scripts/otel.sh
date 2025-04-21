@@ -44,7 +44,7 @@ function otelcol_generate_config() {
   for file in *.stdout *.stderr; do
     [[ -e "${file}" ]] || continue
     local name="${file%.*}"
-    yq eval -i ".processors.\"attributes/${name}\".actions += [{\"action\": \"insert\", \"key\": \"from\", \"value\": \"${name}\"}]" "${config_file}"
+    yq eval -i ".processors.\"attributes/${name}\".actions = [{\"action\": \"insert\", \"key\": \"from\", \"value\": \"${name}\"}]" "${config_file}"
   done
 
   for stream in stdout stderr; do
