@@ -375,7 +375,7 @@ function highlight_difference_files() {
 
   # ANSI color codes
   local colors=(
-    ${BLACK} ${RED} ${GREEN} ${YELLOW} ${BLUE} ${PURPLE} ${CYAN}
+    ${RED} ${GREEN} ${YELLOW} ${BLUE} ${PURPLE} ${CYAN} ${WHITE}
   )
   local color_count=${#colors[@]}
   local color_index=0

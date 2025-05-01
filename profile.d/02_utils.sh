@@ -314,3 +314,14 @@ function highlight() {
   local pattern="${@}"
   grep --color=always -Ew "${pattern}|\$"
 }
+
+# Define core count function for cross-platform compatibility
+function get_core_count() {
+  if command -v nproc >/dev/null 2>&1; then
+    nproc
+  elif command -v sysctl >/dev/null 2>&1 && [[ "$(uname)" == "Darwin" ]]; then
+    sysctl -n hw.ncpu
+  else
+    echo "1" # Default to 1 if can't determine
+  fi
+}

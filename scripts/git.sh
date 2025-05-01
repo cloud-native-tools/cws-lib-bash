@@ -2,7 +2,7 @@ GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/(.+)(\.git)
 
 function git_track_lfs() {
   local file_size=${1:-"+1M"}
-  log info "using git lfs track file large than ${file_size}"
+  log info "using git lfs track files larger than ${file_size}"
   find . -type f -size "${file_size}" | grep -v /.git/ | xargs git lfs track
 }
 
@@ -13,11 +13,23 @@ function git_checkout_by_date() {
   local end=${4:-$(date '+%Y-%m-%d')}
   local step=${5:-"1days"}
 
+  if [ -z "${git_url}" ] || [ -z "${git_dir}" ]; then
+    log error "Usage: git_checkout_by_date <git_url> <git_dir> [begin_date] [end_date] [step]"
+    return ${RETURN_FAILURE:-1}
+  fi
+
   git clone "${git_url}" "${git_dir}"
-  pushd "${git_dir}" >/dev/null 2>&1
+  pushd "${git_dir}" >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
   commit_log=commit.log
 
   git log --pretty="%cd_%h" --date="short" --after="${begin}" >${commit_log}
+  # Check if commit log was created and has content
+  if [ ! -s "${commit_log}" ]; then
+    log warning "No commits found between ${begin} and ${end}"
+    popd >/dev/null 2>&1
+    return ${RETURN_FAILURE:-1}
+  fi
+
   iter=$(date '+%Y-%m-%d' -d "${begin}")
   while [[ true ]]; do
     if [[ $(date '+%s' -d ${iter}) -gt $(date '+%s' -d ${end}) ]]; then break; fi
@@ -27,7 +39,7 @@ function git_checkout_by_date() {
     fi
     iter=$(date '+%Y-%m-%d' -d "${iter}+${step}")
   done
-  popd || exit
+  popd >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
 }
 
 function git_update_all() {
@@ -56,12 +68,19 @@ function git_update_submodule() {
 }
 
 function git_sync_ignore() {
-  git ls-files -ci --exclude-standard | xargs git rm --cached
+  # Check if there are any files to remove from cache
+  if git ls-files -ci --exclude-standard | grep -q .; then
+    git ls-files -ci --exclude-standard | xargs git rm --cached
+    log info "Removed ignored files from git cache"
+  else
+    log info "No ignored files to remove from cache"
+  fi
 }
 
 function git_clean() {
   git clean -d -x -f
-  find . -type d -empty | grep -v .git | xargs rm -rfv
+  # Handle empty directory lists safely
+  find . -type d -empty | grep -v .git | xargs -r rm -rfv
 }
 
 function git_tags() {
@@ -118,10 +137,10 @@ function git_clone() {
   local url=${1}
   if [ -z "${url}" ]; then
     log error "Usage: git_clone <url>"
-    return ${RETURN_FAILURE}
+    return ${RETURN_FAILURE:-1}
   fi
   shift
-  git clone --progress -j$(nproc) ${url} $@
+  git clone --progress -j$(get_core_count) ${url} "$@"
 }
 
 function git_clone_into() {
@@ -129,14 +148,14 @@ function git_clone_into() {
   local url=${2}
   if [ -z "${dir}" ] || [ -z "${url}" ]; then
     log error "Usage: git_clone_into <dir> <url>"
-    return ${RETURN_FAILURE}
+    return ${RETURN_FAILURE:-1}
   fi
 
   if [ ! -d "${dir}" ]; then
-    mkdir -p ${dir}
+    mkdir -p "${dir}"
   fi
   shift 2
-  git -C ${dir} clone --progress -j$(nproc) --recurse-submodules ${url} $@
+  git -C "${dir}" clone --progress -j$(get_core_count) --recurse-submodules ${url} "$@"
 }
 
 function git_tag_to_commit() {
@@ -273,7 +292,7 @@ function git_pull_all() {
 
 function git_push() {
   local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
-  local branch=$(git branch | awk '{print $NF}')
+  local branch=$(git branch --show-current)
   if [ -z "${remote}" ]; then
     remote="origin"
   fi
@@ -349,55 +368,59 @@ function git_commit_to_patch() {
 
 function git_latest_added_files() {
   local count=${1:-30}
-  declare -A added_files=()
-
-  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | awk '!/^commit/ {print $1, $2}' | while read -r timestamp commit_hash; do
-    local break_flag=0
-    git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash" | while IFS= read -r file; do
-      [[ -n "$file" && -z "${added_files[$file]}" ]] || continue
-      git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
-
-      added_files["$file"]="$timestamp"
-      ((${#added_files[@]} >= count)) && {
-        break_flag=1
-        break
-      }
+  local tmp_file=$(mktemp)
+  
+  # First collect all file additions in the temp file
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | 
+    awk '!/^commit/ {print $1, $2}' | 
+    while read -r timestamp commit_hash; do
+      git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash" | 
+        while read -r file; do
+          # Only include files that still exist
+          if [[ -n "$file" ]] && git ls-files --error-unmatch -- "$file" >/dev/null 2>&1; then
+            if ! grep -q " $file\$" "$tmp_file"; then
+              echo "$timestamp $file" >> "$tmp_file"
+            fi
+          fi
+        done
     done
-    ((break_flag)) && break
-  done
-
-  for file in "${!added_files[@]}"; do
-    printf "%s %s\n" "${added_files[$file]}" "$file"
-  done | sort -r | head -n "$count"
+  
+  # Sort by timestamp and output the results
+  if [[ -f "$tmp_file" ]]; then
+    sort -r "$tmp_file" | head -n "$count"
+    rm -f "$tmp_file"
+  fi
 }
 
 function git_latest_updated_files() {
   local count=${1:-30}
-  declare -A updated_files=()
-
-  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | awk '!/^commit/ {print $1, $2}' | while read -r timestamp commit_hash; do
-    local break_flag=0
-    git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash" | while IFS= read -r file; do
-      [[ -n "$file" && -z "${updated_files[$file]}" ]] || continue
-      git ls-files --error-unmatch -- "$file" >/dev/null 2>&1 || continue
-
-      updated_files["$file"]="$timestamp"
-      ((${#updated_files[@]} >= count)) && {
-        break_flag=1
-        break
-      }
+  local tmp_file=$(mktemp)
+  
+  # First collect all file modifications in the temp file
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | 
+    awk '!/^commit/ {print $1, $2}' | 
+    while read -r timestamp commit_hash; do
+      git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash" | 
+        while read -r file; do
+          # Only include files that still exist
+          if [[ -n "$file" ]] && git ls-files --error-unmatch -- "$file" >/dev/null 2>&1; then
+            if ! grep -q " $file\$" "$tmp_file"; then
+              echo "$timestamp $file" >> "$tmp_file"
+            fi
+          fi
+        done
     done
-    ((break_flag)) && break
-  done
-
-  for file in "${!updated_files[@]}"; do
-    printf "%s %s\n" "${updated_files[$file]}" "$file"
-  done | sort -r | head -n "$count"
+  
+  # Sort by timestamp and output the results
+  if [[ -f "$tmp_file" ]]; then
+    sort -r "$tmp_file" | head -n "$count"
+    rm -f "$tmp_file"
+  fi
 }
 
 function git_setup_ssh_repo() {
   local repo="${1}"
-  local home="${DATA_DIR}/git"
+  local home="${DATA_DIR:-/data}/git"
   local username=git
   local ssh_dir="${home}/.ssh"
   local auth_keys_src="${HOME}/.ssh/authorized_keys"
@@ -419,7 +442,7 @@ function git_setup_ssh_repo() {
     log info "Creating user: '${username}' with home: ${home}"
     if ! useradd -m -U "${username}" -d "${home}" -s /usr/bin/git-shell; then
       log error "User creation failed: ${username}"
-      ${RETURN_FAILURE:-1}
+      return ${RETURN_FAILURE:-1}
     fi
     # Ensure home directory ownership
     [ -d "${home}" ] && chown "${username}:${username}" "${home}"
@@ -428,33 +451,33 @@ function git_setup_ssh_repo() {
   # Create SSH directory with validation
   if ! mkdir -p "${ssh_dir}"; then
     log error "Directory creation failed: ${ssh_dir}"
-    ${RETURN_FAILURE:-1}
+    return ${RETURN_FAILURE:-1}
   fi
 
   # Copy keys with verification
   if ! cp -fv "${auth_keys_src}" "${auth_keys_dst}"; then
     log error "Key copy failed: ${auth_keys_src} -> ${auth_keys_dst}"
-    ${RETURN_FAILURE:-1}
+    return ${RETURN_FAILURE:-1}
   fi
 
   # Final validation
   if [ ! -f "${auth_keys_dst}" ]; then
     log error "SSH setup incomplete: ${auth_keys_dst} missing"
-    ${RETURN_FAILURE:-1}
+    return ${RETURN_FAILURE:-1}
   fi
 
   cd "${home}" || return ${RETURN_FAILURE:-1}
   if ! git init --bare "${repo}"; then
     log error "Git repository initialization failed: ${repo}"
-    ${RETURN_FAILURE:-1}
+    return ${RETURN_FAILURE:-1}
   fi
   # Permission hardening
   if ! chown -R "${username}:${username}" "${home}"; then
     log error "Ownership change failed: ${home}"
-    ${RETURN_FAILURE:-1}
+    return ${RETURN_FAILURE:-1}
   fi
-  chmod 700 "${ssh_dir}" || ${RETURN_FAILURE:-1}
-  chmod 600 "${auth_keys_dst}" || ${RETURN_FAILURE:-1}
+  chmod 700 "${ssh_dir}" || return ${RETURN_FAILURE:-1}
+  chmod 600 "${auth_keys_dst}" || return ${RETURN_FAILURE:-1}
 
   log notice "Git remote setup complete at [${repo}]. Add with: git remote add <remote_name> git@<ssh_name>:${repo}"
 }
