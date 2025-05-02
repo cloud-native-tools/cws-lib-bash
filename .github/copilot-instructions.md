@@ -161,6 +161,7 @@ fi
 8. Implement cross-platform compatibility where needed
 9. Document the function's purpose and usage
 10. Handle edge cases and provide safe defaults
+11. If an existing function implements the required functionality, call that function instead of reimplementing it.
 
 ## Common Constants
 

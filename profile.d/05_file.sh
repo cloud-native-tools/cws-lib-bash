@@ -407,3 +407,8 @@ function archive_current() {
   tar zcf "${filename}" --exclude-vcs --exclude='*.tar.gz' ./*
   mv -fv ${filename} $(sha256sum ${filename} | awk '{print $1}')-$(date_id).tar.gz
 }
+
+function find_files_by_size() {
+  local size=$1
+  find . -type f -size "${size}" | grep -v /.git/
+}

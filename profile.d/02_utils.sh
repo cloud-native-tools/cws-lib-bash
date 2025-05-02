@@ -325,3 +325,18 @@ function get_core_count() {
     echo "1" # Default to 1 if can't determine
   fi
 }
+
+# Utility helper functions
+function safe_pushd() {
+  local dir=$1
+  pushd "${dir}" >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
+}
+
+function safe_popd() {
+  popd >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
+}
+
+function ensure_dir() {
+  local dir=$1
+  [ -d "${dir}" ] || mkdir -p "${dir}"
+}

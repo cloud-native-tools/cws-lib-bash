@@ -1,9 +1,15 @@
 GIT_URL_PATTERN='^(https://|http://|git@|git://)([^/:]+)(/|:)([^/]+)/(.+)(\.git)'
 
+function get_commit_list() {
+  local log_file=$1
+  local begin=$2
+  git log --pretty="%cd_%h" --date="short" --after="${begin}" >"${log_file}"
+}
+
 function git_track_lfs() {
   local file_size=${1:-"+1M"}
   log info "using git lfs track files larger than ${file_size}"
-  find . -type f -size "${file_size}" | grep -v /.git/ | xargs git lfs track
+  find_files_by_size "${file_size}" | xargs git lfs track
 }
 
 function git_checkout_by_date() {
@@ -19,14 +25,14 @@ function git_checkout_by_date() {
   fi
 
   git clone "${git_url}" "${git_dir}"
-  pushd "${git_dir}" >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
+  safe_pushd "${git_dir}" || return ${RETURN_FAILURE:-1}
   commit_log=commit.log
 
-  git log --pretty="%cd_%h" --date="short" --after="${begin}" >${commit_log}
+  get_commit_list "${commit_log}" "${begin}"
   # Check if commit log was created and has content
   if [ ! -s "${commit_log}" ]; then
     log warning "No commits found between ${begin} and ${end}"
-    popd >/dev/null 2>&1
+    safe_popd
     return ${RETURN_FAILURE:-1}
   fi
 
@@ -39,15 +45,15 @@ function git_checkout_by_date() {
     fi
     iter=$(date '+%Y-%m-%d' -d "${iter}+${step}")
   done
-  popd >/dev/null 2>&1 || return ${RETURN_FAILURE:-1}
+  safe_popd || return ${RETURN_FAILURE:-1}
 }
 
 function git_update_all() {
   for git_dir in $(git_list_repos); do
-    pushd "${git_dir}" >/dev/null 2>&1
+    safe_pushd "${git_dir}"
     log info "update in ${PWD}"
     git pull --all
-    popd >/dev/null 2>&1
+    safe_popd
   done
 }
 
@@ -151,9 +157,7 @@ function git_clone_into() {
     return ${RETURN_FAILURE:-1}
   fi
 
-  if [ ! -d "${dir}" ]; then
-    mkdir -p "${dir}"
-  fi
+  ensure_dir "${dir}"
   shift 2
   git -C "${dir}" clone --progress -j$(get_core_count) --recurse-submodules ${url} "$@"
 }
@@ -193,10 +197,10 @@ function git_clone_branches() {
 function git_update_bare() {
   local root=${1:-${PWD}}
   for head in $(find ${root} -name HEAD); do
-    pushd $(dirname ${head}) >/dev/null 2>&1
+    safe_pushd $(dirname ${head})
     git remote prune origin
     git remote update
-    popd >/dev/null 2>&1
+    safe_popd
   done
 }
 
@@ -271,9 +275,7 @@ function git_copy_commit() {
     log error "Usage: git_copy_commit <dest_dir>"
     return ${RETURN_FAILURE}
   fi
-  if [ ! -d "${dest_dir}" ]; then
-    mkdir -p ${dest_dir}
-  fi
+  ensure_dir ${dest_dir}
   git archive --format=tar --output=/dev/stdout ${commit_id} | tar xf - -C ${dest_dir}
 }
 
@@ -369,22 +371,22 @@ function git_commit_to_patch() {
 function git_latest_added_files() {
   local count=${1:-30}
   local tmp_file=$(mktemp)
-  
+
   # First collect all file additions in the temp file
-  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | 
-    awk '!/^commit/ {print $1, $2}' | 
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
+    awk '!/^commit/ {print $1, $2}' |
     while read -r timestamp commit_hash; do
-      git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash" | 
+      git diff-tree --no-commit-id --name-only --diff-filter=AR -r "$commit_hash" |
         while read -r file; do
           # Only include files that still exist
           if [[ -n "$file" ]] && git ls-files --error-unmatch -- "$file" >/dev/null 2>&1; then
             if ! grep -q " $file\$" "$tmp_file"; then
-              echo "$timestamp $file" >> "$tmp_file"
+              echo "$timestamp $file" >>"$tmp_file"
             fi
           fi
         done
     done
-  
+
   # Sort by timestamp and output the results
   if [[ -f "$tmp_file" ]]; then
     sort -r "$tmp_file" | head -n "$count"
@@ -395,22 +397,22 @@ function git_latest_added_files() {
 function git_latest_updated_files() {
   local count=${1:-30}
   local tmp_file=$(mktemp)
-  
+
   # First collect all file modifications in the temp file
-  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" | 
-    awk '!/^commit/ {print $1, $2}' | 
+  git rev-list --all --no-merges --first-parent --format='%aI %H' --since="2 years ago" |
+    awk '!/^commit/ {print $1, $2}' |
     while read -r timestamp commit_hash; do
-      git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash" | 
+      git diff-tree --no-commit-id --name-only --diff-filter=M -r "$commit_hash" |
         while read -r file; do
           # Only include files that still exist
           if [[ -n "$file" ]] && git ls-files --error-unmatch -- "$file" >/dev/null 2>&1; then
             if ! grep -q " $file\$" "$tmp_file"; then
-              echo "$timestamp $file" >> "$tmp_file"
+              echo "$timestamp $file" >>"$tmp_file"
             fi
           fi
         done
     done
-  
+
   # Sort by timestamp and output the results
   if [[ -f "$tmp_file" ]]; then
     sort -r "$tmp_file" | head -n "$count"
@@ -480,4 +482,42 @@ function git_setup_ssh_repo() {
   chmod 600 "${auth_keys_dst}" || return ${RETURN_FAILURE:-1}
 
   log notice "Git remote setup complete at [${repo}]. Add with: git remote add <remote_name> git@<ssh_name>:${repo}"
+}
+
+function git_list_unstaged_repo() {
+  local root=${1:-${PWD}}
+  for repo in $(git_list_repos "${root}"); do
+    safe_pushd "${repo}" || continue
+    local info=$(git_info)
+    # '*' in branch indicates uncommitted changes
+    if [[ "${info}" == *"*"* ]]; then
+      echo "${repo}"
+    fi
+    safe_popd
+  done
+}
+
+function git_info() {
+  local git_info=""
+  if [ -d .git ] && [ -f .git/config ]; then
+    if command -v git &>/dev/null && git rev-parse --is-inside-work-tree &>/dev/null; then
+      local git_branch=$(
+        git symbolic-ref --short HEAD 2>/dev/null ||
+          git describe --tags --exact-match 2>/dev/null ||
+          git rev-parse --short HEAD 2>/dev/null ||
+          echo "(detached)"
+      )
+      local git_status=$(git status --porcelain 2>/dev/null)
+      if [ -z "${git_status}" ]; then
+        local git_info="[git: ${BOLD_GREEN}${git_branch}${CLEAR}]"
+      else
+        local git_info="[git: ${BOLD_RED}${git_branch}*${CLEAR}]"
+      fi
+    fi
+  fi
+  if is_macos; then
+    echo "${git_info}"
+  else
+    echo -e "${git_info}"
+  fi
 }
