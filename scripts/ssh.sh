@@ -84,7 +84,7 @@ function ssh_kill_by_port() {
 }
 
 # Generates an SSH host configuration
-function ssh_host_config() {
+function ssh_add_host_config() {
   local host=${1}
   local port=${2:-22}
   local name=${3:-${host}}
