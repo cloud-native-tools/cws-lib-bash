@@ -368,6 +368,40 @@ function git_commit_to_patch() {
   git format-patch -1 ${commit_id} -o ${output_dir}
 }
 
+function git_revert_patch() {
+  local commit_id=${1}
+  local output_dir=${2:-$(pwd)}
+  
+  if [ -z "${commit_id}" ]; then
+    log error "Usage: git_revert_patch <commit_id> [output_dir]"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Validate commit ID exists
+  if ! git rev-parse --quiet --verify "${commit_id}" >/dev/null; then
+    log error "Invalid commit ID: ${commit_id}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Ensure output directory exists
+  ensure_dir "${output_dir}"
+  
+  # Create revert patch filename based on commit
+  local short_hash=$(git rev-parse --short "${commit_id}")
+  local revert_filename="${output_dir}/revert-${short_hash}.patch"
+  
+  log info "Generating revert patch for commit ${short_hash} to ${revert_filename}"
+  
+  # Generate the revert patch
+  if ! git show --pretty="From %H %cd%nFrom: %an <%ae>%nDate: %ad%nSubject: [PATCH] Revert \"$(git log -1 --pretty=%s ${commit_id})\"%n%nThis reverts commit ${commit_id}.%n" --binary -R "${commit_id}" > "${revert_filename}"; then
+    log error "Failed to create revert patch for commit ${short_hash}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  log notice "Revert patch created: ${revert_filename}"
+  return ${RETURN_SUCCESS:-0}
+}
+
 function git_latest_added_files() {
   local count=${1:-30}
   local tmp_file=$(mktemp)

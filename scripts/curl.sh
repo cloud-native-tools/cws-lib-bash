@@ -66,7 +66,7 @@ function curl_available() {
 
 function curl_mirror_file() {
   local url=${1}
-  local dir=${2:-${REPO_DIR:-/repo}}
+  local dir=${2:-${REPO_DIR:-/oss_code/repo}}
   local path=$(dirname $(echo ${url} | sed 's@https\?://[^/]*/@@g'))
   if [ -z "${url}" ]; then
     log warn "Usage: download_file [url] "
