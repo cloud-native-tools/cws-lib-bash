@@ -1,4 +1,7 @@
 function ansible_ping_hosts() {
+  # Check dependencies first
+  ansible_check || return ${RETURN_FAILURE}
+
   # Validate required environment variables
   if [ -z "${ANSIBLE_USER_INVENTORY}" ]; then
     log error "ANSIBLE_USER_INVENTORY environment variable is not set"
@@ -52,6 +55,9 @@ function ansible_run_playbook() {
   local hosts=${2:-""}
   local inventory=${3:-""}
   local variables=${4:-""}
+
+  # Check dependencies first
+  ansible_check || return ${RETURN_FAILURE}
 
   # Parameter validation
   if [ -z "${playbook}" ]; then
@@ -130,6 +136,9 @@ function ansible_run_playbook() {
 function ansible_check_vault() {
   local vault_file=${1}
   
+  # Check dependencies first
+  ansible_check || return ${RETURN_FAILURE}
+  
   # Parameter validation
   if [ -z "${vault_file}" ]; then
     log error "Usage: ansible_check_vault <vault_file>"
@@ -205,6 +214,9 @@ function ansible_run_task() {
   local inventory=${4:-""}
   local variables=${5:-""}
 
+  # Check dependencies first
+  ansible_check || return ${RETURN_FAILURE}
+
   # Parameter validation
   if [ -z "${role_name}" ] || [ -z "${task_file}" ] || [ -z "${hosts}" ]; then
     log error "Usage: ansible_run_task <role_name> <task_file> <hosts> [inventory] [variables]"
@@ -269,11 +281,8 @@ function ansible_run_task() {
 }
 
 function ansible_dump_config() {
-  # Check if ansible-config command is available
-  if ! command -v ansible-config >/dev/null 2>&1; then
-    log error "ansible-config command not found. Please install ansible first."
-    return ${RETURN_FAILURE}
-  fi
+  # Check dependencies first
+  ansible_check || return ${RETURN_FAILURE}
 
   log notice "Dumping Official Ansible Environment Variables"
   
@@ -328,28 +337,32 @@ function ansible_dump_config() {
   return ${RETURN_SUCCESS}
 }
 
-# Check if the 'log' function is available, which is required by all functions
-if ! type log >/dev/null 2>&1; then
-  echo "ERROR: 'log' function is required but not available"
-  echo "This script depends on the CWS-Lib-Bash logging utilities"
-  echo "Make sure to source the core utilities before using ansible.sh"
-  return ${RETURN_FAILURE}
-fi
+function ansible_check() {
+  # Check if the 'log' function is available, which is required by all functions
+  if ! type log >/dev/null 2>&1; then
+    echo "ERROR: 'log' function is required but not available"
+    echo "This script depends on the CWS-Lib-Bash logging utilities"
+    echo "Make sure to source the core utilities before using ansible.sh"
+    return ${RETURN_FAILURE:-1}
+  fi
 
-# Check if ansible command is available
-if ! command -v ansible >/dev/null 2>&1; then
-  log error "ansible command not found. Please install ansible first."
-  return ${RETURN_FAILURE}
-fi
+  # Check if ansible command is available
+  if ! command -v ansible >/dev/null 2>&1; then
+    log error "ansible command not found. Please install ansible first."
+    return ${RETURN_FAILURE:-1}
+  fi
 
-# Check if ansible-playbook command is available
-if ! command -v ansible-playbook >/dev/null 2>&1; then
-  log error "ansible-playbook command not found. Please install ansible first."
-  return ${RETURN_FAILURE}
-fi
+  # Check if ansible-playbook command is available
+  if ! command -v ansible-playbook >/dev/null 2>&1; then
+    log error "ansible-playbook command not found. Please install ansible first."
+    return ${RETURN_FAILURE:-1}
+  fi
 
-# Check if ansible-vault command is available
-if ! command -v ansible-vault >/dev/null 2>&1; then
-  log error "ansible-vault command not found. Please install ansible first."
-  return ${RETURN_FAILURE}
-fi
+  # Check if ansible-vault command is available
+  if ! command -v ansible-vault >/dev/null 2>&1; then
+    log error "ansible-vault command not found. Please install ansible first."
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  return ${RETURN_SUCCESS:-0}
+}

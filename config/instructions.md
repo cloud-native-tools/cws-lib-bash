@@ -43,6 +43,23 @@ function git_clone_into() {
 }
 ```
 
+## Script Sourcing Behavior
+
+- All files in `/scripts/` are automatically sourced in `.bashrc`
+- Do not include directly executed code outside of function definitions
+- All executable logic must be encapsulated in functions
+- Use initialization checks if needed:
+  ```bash
+  # Check dependencies when script is sourced
+  function domain_check_dependencies() {
+    # Implementation
+  }
+  
+  # Then call at the end of the file with proper error handling
+  domain_check_dependencies || return ${RETURN_FAILURE:-1}
+  ```
+- This prevents unintentional execution when scripts are sourced
+
 ## Variables
 
 - Use lowercase with underscores
