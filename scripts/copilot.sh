@@ -9,6 +9,7 @@ function copilot_generate_instructions() {
 - 如果目录中包含README.md文件需要参考其内容
 - 如果需要完成的动作较多，就先把需要做的动作写入一个TODO.md文件中,然后再进行代码生成
 - 如果文件比较大，生成代码之后不需要进行错误修复
+- 生成文档用中文，生成代码注释和日志用英文
 EOF
     fi
   fi
