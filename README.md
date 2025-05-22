@@ -1,71 +1,75 @@
 # CWS-Lib-Bash
 
-CWS-Lib-Bash是一个用于云原生环境运维、系统管理和开发工作流的Bash工具库。它提供了一系列针对常见操作的实用函数，让日常运维和开发工作更加高效。
+A Bash utility library for cloud-native environment operations, system management, and development workflows.
 
-## 功能特点
+## Overview
 
-- 模块化设计，按不同技术领域组织函数库
-- 跨平台支持，兼容Linux和macOS系统
-- 统一的日志和错误处理机制
-- 统一的命名规范和代码风格
+CWS-Lib-Bash provides a comprehensive set of utility functions for common operations in cloud-native environments, making daily operations and development work more efficient. The library follows consistent design patterns and provides standardized approaches to common tasks.
 
-## 项目结构
+## Features
+
+- Modular design with function libraries organized by technology domain
+- Cross-platform support for Linux and macOS systems
+- Unified logging and error handling mechanisms
+- Consistent naming conventions and coding style
+
+## Project Structure
 
 ```
 .
-├── bin/              # 可执行脚本，用于设置和使用库
-├── expect/           # 自动化交互脚本
-├── profile.d/        # shell初始化时加载的核心功能
-└── scripts/          # 按技术领域组织的工具函数
+├── bin/              # Executable scripts for setting up and using the library
+├── expect/           # Automation interaction scripts
+├── profile.d/        # Core functionality loaded during shell initialization
+└── scripts/          # Utility functions organized by technology domain
 ```
 
-## 快速开始
+## Quick Start
 
-### 安装
+### Installation
 
-1. 克隆仓库到本地：
+1. Clone the repository:
 
 ```bash
 git clone https://github.com/cloud-native-tools/cws-lib-bash.git
 cd cws-lib-bash
 ```
 
-2. 运行安装脚本：
+2. Run the installation script:
 
 ```bash
 ./bin/cws_setup
 ```
 
-### 使用方法
+### Usage
 
-1. 在当前Shell会话中加载库：
+1. Load the library in the current shell session:
 
 ```bash
 source ./bin/cws_env
 ```
 
-2. 或使用`cws_run`执行命令：
+2. Or use `cws_run` to execute commands:
 
 ```bash
 ./bin/cws_run <function_name> [arguments...]
 ```
 
-## 开发规范
+## Development Guidelines
 
-- 函数命名使用snake_case并带有领域前缀
-- 使用本地变量并正确引用(${variable})
-- 使用标准的错误返回码(${RETURN_SUCCESS}和${RETURN_FAILURE})
-- 使用日志函数(log info/notice/warn/error)记录重要信息
+- Function naming uses snake_case with domain prefix
+- Use local variables with proper referencing (${variable})
+- Use standard return codes (${RETURN_SUCCESS} and ${RETURN_FAILURE})
+- Use logging functions (log info/notice/warn/error) to record important information
 
-## 许可证
+## License
 
 [MIT License](LICENSE)
 
-## 贡献指南
+## Contributing
 
-欢迎提交问题报告和代码贡献。请确保遵循项目的代码风格和开发规范。
+Contributions and issue reports are welcome. Please ensure you follow the project's coding style and development guidelines.
 
-## 项目地址
+## Repository
 
 https://github.com/cloud-native-tools/cws-lib-bash
 

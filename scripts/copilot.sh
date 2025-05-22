@@ -5,11 +5,11 @@ function copilot_generate_instructions() {
       mv -fv config/instructions.md docs/instructions.md
     else
       cat <<EOF >docs/instructions.md
-## 代码生成
-- 如果目录中包含README.md文件需要参考其内容
-- 如果需要完成的动作较多，就先把需要做的动作写入一个TODO.md文件中,然后再进行代码生成
-- 如果文件比较大，生成代码之后不需要进行错误修复
-- 生成文档用中文，生成代码注释和日志用英文
+## 代码生成规范
+- 参考目录中README.md文件内容
+- 复杂任务先创建TODO.md列出步骤
+- 大型文件生成后无需错误修复
+- 文档使用中文，代码注释和日志使用英文
 EOF
     fi
   fi

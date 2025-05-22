@@ -1,1 +1,1 @@
-../config/instructions.md
+../docs/instructions.md
