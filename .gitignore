@@ -1,6 +1,16 @@
+# IDE and OS files
 .idea/
 .vscode/
 .DS_Store
+*~
+*.swp
+*.swo
+
+# Logs
+*.log
+logs/
+
+# Compressed files
 *.tar
 *.tgz
 *.zip
@@ -8,3 +18,16 @@
 *.gz
 *.bz2
 *.7z
+
+# Backup files
+*.bak
+*-bak
+*.backup
+*~
+
+# Runtime data
+.bash_history
+.cache/
+
+# Test artifacts
+test-results/
