@@ -87,6 +87,44 @@ function vscode_workspace_add_rust_search_paths() {
 function vscode_bin() {
   local code_bin="code"
 
+  # Check for VS Code Server (remote SSH scenario)
+  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # First check for VS Code Server remote-cli in user home directory
+    local vscode_server_dir="${HOME}/.vscode-server"
+    if [ -d "${vscode_server_dir}" ]; then
+      local remote_cli_bin=$(find "${vscode_server_dir}" -path "*/remote-cli/code" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${remote_cli_bin}" ]; then
+        code_bin="${remote_cli_bin}"
+        echo ${code_bin}
+        return
+      fi
+      # Fallback to any code-* executable in the server directory
+      local server_bin=$(find "${vscode_server_dir}" -name "code-*" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${server_bin}" ]; then
+        code_bin="${server_bin}"
+        echo ${code_bin}
+        return
+      fi
+    fi
+    
+    # Check for system-wide VS Code Server
+    if [ -d "/root/.vscode-server" ]; then
+      local remote_cli_bin=$(find "/root/.vscode-server" -path "*/remote-cli/code" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${remote_cli_bin}" ]; then
+        code_bin="${remote_cli_bin}"
+        echo ${code_bin}
+        return
+      fi
+      # Fallback to any code-* executable in the server directory
+      local server_bin=$(find "/root/.vscode-server" -name "code-*" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${server_bin}" ]; then
+        code_bin="${server_bin}"
+        echo ${code_bin}
+        return
+      fi
+    fi
+  fi
+
   if [ -f "${VSCODE_SERVER_HOME}/bin/code-server" ]; then
     code_bin="${VSCODE_SERVER_HOME}/bin/code-server"
   elif [ -f "${CODE_SERVER_HOME}/bin/code-server" ]; then
@@ -109,7 +147,45 @@ function vscode_bin() {
 
 function vscode_insiders_get_bin() {
   local code_bin="code-insiders"
+
+  # Check for VS Code Insiders Server (remote SSH scenario)
   if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    # First check for VS Code Insiders Server remote-cli in user home directory
+    local vscode_server_dir="${HOME}/.vscode-server-insiders"
+    if [ -d "${vscode_server_dir}" ]; then
+      local remote_cli_bin=$(find "${vscode_server_dir}" -path "*/remote-cli/code-insiders" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${remote_cli_bin}" ]; then
+        code_bin="${remote_cli_bin}"
+        echo ${code_bin}
+        return
+      fi
+      # Fallback to any code-insiders-* executable in the server directory
+      local server_bin=$(find "${vscode_server_dir}" -name "code-insiders-*" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${server_bin}" ]; then
+        code_bin="${server_bin}"
+        echo ${code_bin}
+        return
+      fi
+    fi
+    
+    # Check for system-wide VS Code Insiders Server
+    if [ -d "/root/.vscode-server-insiders" ]; then
+      local remote_cli_bin=$(find "/root/.vscode-server-insiders" -path "*/remote-cli/code-insiders" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${remote_cli_bin}" ]; then
+        code_bin="${remote_cli_bin}"
+        echo ${code_bin}
+        return
+      fi
+      # Fallback to any code-insiders-* executable in the server directory
+      local server_bin=$(find "/root/.vscode-server-insiders" -name "code-insiders-*" -type f -executable 2>/dev/null | head -1)
+      if [ -n "${server_bin}" ]; then
+        code_bin="${server_bin}"
+        echo ${code_bin}
+        return
+      fi
+    fi
+    
+    # Fallback to regular code-insiders command
     code_bin="code-insiders"
   elif [[ "$OSTYPE" == "darwin"* ]]; then
     code_bin="/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
