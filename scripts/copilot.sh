@@ -1,10 +1,12 @@
 function copilot_generate_instructions() {
   local lang=${1:-cn}
 
-  if [ "$lang" != "en" ] || [ "$lang" != "cn" ]; then
+  if [ "${lang}" != "en" ] && [ "${lang}" != "cn" ]; then
     log error "lang must be 'en' or 'cn'"
     return 1
   fi
+
+  touch .copilotignore
 
   mkdir -pv docs
   if [ ! -f docs/instructions.cn.md ]; then
