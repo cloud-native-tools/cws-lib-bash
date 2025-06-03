@@ -6,7 +6,58 @@ function copilot_generate_instructions() {
     return 1
   fi
 
-  touch .copilotignore
+  # Create .copilotignore based on .gitignore
+  if [ -f .gitignore ]; then
+    log info "Creating .copilotignore based on .gitignore"
+    cat .gitignore > .copilotignore
+
+    # Add additional patterns that should be ignored by Copilot but not git
+    cat <<EOF >>.copilotignore
+
+# Additional patterns for Copilot indexing exclusion
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+node_modules/
+target/
+build/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+EOF
+  else
+    log warn ".gitignore not found, creating basic .copilotignore"
+    cat <<EOF >.copilotignore
+# Basic patterns for Copilot indexing exclusion
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.cache/
+node_modules/
+target/
+build/
+dist/
+*.class
+*.jar
+*.war
+*.ear
+EOF
+  fi
 
   mkdir -pv docs
   if [ ! -f docs/instructions.cn.md ]; then

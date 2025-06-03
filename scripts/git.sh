@@ -371,33 +371,33 @@ function git_commit_to_patch() {
 function git_revert_patch() {
   local commit_id=${1}
   local output_dir=${2:-$(pwd)}
-  
+
   if [ -z "${commit_id}" ]; then
     log error "Usage: git_revert_patch <commit_id> [output_dir]"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Validate commit ID exists
   if ! git rev-parse --quiet --verify "${commit_id}" >/dev/null; then
     log error "Invalid commit ID: ${commit_id}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Ensure output directory exists
   ensure_dir "${output_dir}"
-  
+
   # Create revert patch filename based on commit
   local short_hash=$(git rev-parse --short "${commit_id}")
   local revert_filename="${output_dir}/revert-${short_hash}.patch"
-  
+
   log info "Generating revert patch for commit ${short_hash} to ${revert_filename}"
-  
+
   # Generate the revert patch
   if ! git show --pretty="From %H %cd%nFrom: %an <%ae>%nDate: %ad%nSubject: [PATCH] Revert \"$(git log -1 --pretty=%s ${commit_id})\"%n%nThis reverts commit ${commit_id}.%n" --binary -R "${commit_id}" > "${revert_filename}"; then
     log error "Failed to create revert patch for commit ${short_hash}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   log notice "Revert patch created: ${revert_filename}"
   return ${RETURN_SUCCESS:-0}
 }
@@ -461,20 +461,38 @@ function git_setup_ssh_repo() {
   local ssh_dir="${home}/.ssh"
   local auth_keys_src="${HOME}/.ssh/authorized_keys"
   local auth_keys_dst="${ssh_dir}/authorized_keys"
+  local ssh_setup_needed=false
+
+  if [ -z "${repo}" ]; then
+    log error "Usage: git_setup_ssh_repo <repo>"
+    return ${RETURN_FAILURE:-1}
+  fi
 
   repo=${repo#/}
   repo=${repo%.git}.git
 
-  # Validate source authorization file
-  if [ ! -f "${auth_keys_src}" ]; then
+  # Check if SSH setup is needed
+  if [ ! -d "${ssh_dir}" ] || [ ! -f "${auth_keys_dst}" ]; then
+    ssh_setup_needed=true
+    log info "SSH infrastructure not found, will initialize"
+  else
+    # Verify SSH setup integrity
+    if [ ! -r "${auth_keys_dst}" ] || [ "$(stat -c '%U:%G' "${ssh_dir}" 2>/dev/null)" != "${username}:${username}" ]; then
+      ssh_setup_needed=true
+      log info "SSH infrastructure needs repair"
+    else
+      log info "SSH infrastructure already configured, skipping setup"
+    fi
+  fi
+
+  # Validate source authorization file only if SSH setup is needed
+  if [ "${ssh_setup_needed}" = "true" ] && [ ! -f "${auth_keys_src}" ]; then
     log error "Source SSH authorized_keys missing: ${auth_keys_src}"
     return ${RETURN_FAILURE:-1}
   fi
 
-  # User management with validation
-  if getent passwd "${username}" >/dev/null 2>&1; then
-    log info "User exists: '${username}'"
-  else
+  # User management - check if user exists and create if needed
+  if ! getent passwd "${username}" >/dev/null 2>&1; then
     log info "Creating user: '${username}' with home: ${home}"
     if ! useradd -m -U "${username}" -d "${home}" -s /usr/bin/git-shell; then
       log error "User creation failed: ${username}"
@@ -482,40 +500,72 @@ function git_setup_ssh_repo() {
     fi
     # Ensure home directory ownership
     [ -d "${home}" ] && chown "${username}:${username}" "${home}"
+    ssh_setup_needed=true
+  else
+    log info "User already exists: '${username}'"
   fi
 
-  # Create SSH directory with validation
-  if ! mkdir -p "${ssh_dir}"; then
-    log error "Directory creation failed: ${ssh_dir}"
-    return ${RETURN_FAILURE:-1}
+  # SSH setup only if needed
+  if [ "${ssh_setup_needed}" = "true" ]; then
+    log info "Setting up SSH infrastructure"
+
+    # Create SSH directory with validation
+    if ! mkdir -p "${ssh_dir}"; then
+      log error "Directory creation failed: ${ssh_dir}"
+      return ${RETURN_FAILURE:-1}
+    fi
+
+    # Copy keys with verification
+    if ! cp -fv "${auth_keys_src}" "${auth_keys_dst}"; then
+      log error "Key copy failed: ${auth_keys_src} -> ${auth_keys_dst}"
+      return ${RETURN_FAILURE:-1}
+    fi
+
+    # Final validation
+    if [ ! -f "${auth_keys_dst}" ]; then
+      log error "SSH setup incomplete: ${auth_keys_dst} missing"
+      return ${RETURN_FAILURE:-1}
+    fi
+
+    # Permission hardening
+    if ! chown -R "${username}:${username}" "${home}"; then
+      log error "Ownership change failed: ${home}"
+      return ${RETURN_FAILURE:-1}
+    fi
+    chmod 700 "${ssh_dir}" || return ${RETURN_FAILURE:-1}
+    chmod 600 "${auth_keys_dst}" || return ${RETURN_FAILURE:-1}
+
+    log notice "SSH infrastructure setup completed"
   fi
 
-  # Copy keys with verification
-  if ! cp -fv "${auth_keys_src}" "${auth_keys_dst}"; then
-    log error "Key copy failed: ${auth_keys_src} -> ${auth_keys_dst}"
-    return ${RETURN_FAILURE:-1}
-  fi
-
-  # Final validation
-  if [ ! -f "${auth_keys_dst}" ]; then
-    log error "SSH setup incomplete: ${auth_keys_dst} missing"
-    return ${RETURN_FAILURE:-1}
-  fi
-
+  # Git repository setup
   cd "${home}" || return ${RETURN_FAILURE:-1}
-  if ! git init --bare "${repo}"; then
-    log error "Git repository initialization failed: ${repo}"
-    return ${RETURN_FAILURE:-1}
+
+  if [ -d "${repo}" ]; then
+    if [ -f "${repo}/config" ] && grep -q "bare = true" "${repo}/config"; then
+      log info "Git repository already exists: ${repo}"
+    else
+      log error "Directory exists but is not a bare git repository: ${repo}"
+      return ${RETURN_FAILURE:-1}
+    fi
+  else
+    log info "Creating bare git repository: ${repo}"
+    if ! git init --bare "${repo}"; then
+      log error "Git repository initialization failed: ${repo}"
+      return ${RETURN_FAILURE:-1}
+    fi
+
+    # Ensure repository ownership
+    if ! chown -R "${username}:${username}" "${repo}"; then
+      log error "Repository ownership change failed: ${repo}"
+      return ${RETURN_FAILURE:-1}
+    fi
+
+    log notice "Git repository created: ${repo}"
   fi
-  # Permission hardening
-  if ! chown -R "${username}:${username}" "${home}"; then
-    log error "Ownership change failed: ${home}"
-    return ${RETURN_FAILURE:-1}
-  fi
-  chmod 700 "${ssh_dir}" || return ${RETURN_FAILURE:-1}
-  chmod 600 "${auth_keys_dst}" || return ${RETURN_FAILURE:-1}
 
   log notice "Git remote setup complete at [${repo}]. Add with: git remote add <remote_name> git@<ssh_name>:${repo}"
+  return ${RETURN_SUCCESS:-0}
 }
 
 function git_list_unstaged_repo() {
@@ -559,31 +609,31 @@ function git_info() {
 function git_status_repos() {
   local root=${1:-${PWD}}
   local show_all=${2:-false}
-  
+
   if [ ! -d "${root}" ]; then
     log error "Directory does not exist: ${root}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Print table header
   printf "%-40s | %-15s | %-10s | %s\n" "Repository" "Branch" "Status" "Details"
   printf "%-40s-|-%-15s-|-%-10s-|-%s\n" "$(printf '%0.s-' {1..40})" "$(printf '%0.s-' {1..15})" "$(printf '%0.s-' {1..7})" "$(printf '%0.s-' {1..20})"
-  
+
   # Process each repository
   for repo_path in $(git_list_repos "${root}"); do
     safe_pushd "${repo_path}" >/dev/null || continue
-    
+
     # Get repository name (last component of path)
     local repo_name=$(basename "${repo_path}")
-    
+
     # Get current branch
     local branch=$(git symbolic-ref --short HEAD 2>/dev/null || git describe --tags --exact-match 2>/dev/null || git rev-parse --short HEAD 2>/dev/null || echo "(detached)")
-    
+
     # Get status information
     local status_output=$(git status --porcelain 2>/dev/null)
     local status_count=$(echo "${status_output}" | grep -v '^$$' | wc -l | tr -d ' ')
     local status_details=""
-    
+
     # Determine status and details
     if [ -z "${status_output}" ]; then
       local status="Clean"
@@ -601,16 +651,16 @@ function git_status_repos() {
       local modified=$(echo "${status_output}" | grep -c '^M')
       local deleted=$(echo "${status_output}" | grep -c '^D')
       local untracked=$(echo "${status_output}" | grep -c '^\?')
-      
+
       status_details="M:${modified} A:${added} D:${deleted} ?:${untracked}"
     fi
-    
+
     # Print repository info in table row
     printf "%-40s | %-15s | %-10s | %s\n" "${repo_name}" "${branch}" "${status}" "${status_details}"
-    
+
     safe_popd >/dev/null
   done
-  
+
   return ${RETURN_SUCCESS:-0}
 }
 
@@ -619,20 +669,20 @@ function git_status_repos() {
 function git_hook_install() {
   local hook_type=${1}
   local target_dir=${2:-.git/hooks}
-  
+
   if [ -z "${hook_type}" ]; then
     log error "Usage: git_hook_install <hook_type> [target_dir]"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   if [ ! -d "${target_dir}" ]; then
     log error "Target directory does not exist: ${target_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   local hook_content=""
   local hook_file="${target_dir}/${hook_type}"
-  
+
   # Generate hook content based on type
   case "${hook_type}" in
     pre-commit)
@@ -680,22 +730,22 @@ function git_hook_install() {
       return ${RETURN_FAILURE:-1}
       ;;
   esac
-  
+
   echo "${hook_content}" > "${hook_file}"
   chmod +x "${hook_file}"
   log notice "Git hook installed: ${hook_file}"
-  
+
   return ${RETURN_SUCCESS:-0}
 }
 
 function git_hook_install_all() {
   local target_dir=${1:-.git/hooks}
-  
+
   if [ ! -d "${target_dir}" ]; then
     log error "Target directory does not exist: ${target_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Install all common hooks
   git_hook_install pre-commit "${target_dir}"
   git_hook_install commit-msg "${target_dir}"
@@ -703,14 +753,14 @@ function git_hook_install_all() {
   git_hook_install pre-merge-commit "${target_dir}"
   git_hook_install prepare-commit-msg "${target_dir}"
   git_hook_install pre-rebase "${target_dir}"
-  
+
   # Server-side hooks (usually only needed for git servers)
   if [ -n "${2}" ] && [ "${2}" = "server" ]; then
     git_hook_install update "${target_dir}"
     git_hook_install pre-receive "${target_dir}"
     git_hook_install post-update "${target_dir}"
   fi
-  
+
   log notice "All git hooks installed in ${target_dir}"
   return ${RETURN_SUCCESS:-0}
 }
@@ -820,7 +870,7 @@ while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
         # Branch deletion, do nothing
         continue
     fi
-    
+
     if [ "${REMOTE_SHA}" = ${Z40} ]; then
         # New branch, examine all commits
         RANGE="${LOCAL_SHA}"
@@ -834,12 +884,12 @@ while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
         echo "Error: WIP commit detected. Please remove WIP commits before pushing."
         exit 1
     fi
-    
+
     # Check for TODO commits
     if git log --grep="TODO" "${RANGE}" | grep -q "TODO"; then
         echo "Warning: TODO found in commit message. Consider addressing TODOs before pushing."
     fi
-    
+
     # Run tests if applicable
     # if [ -f "run_tests.sh" ]; then
     #     echo "Running tests..."
@@ -869,7 +919,7 @@ while read OLD_REV NEW_REV REF_NAME; do
         echo "Deleting ${REF_NAME}"
         continue
     fi
-    
+
     # New branch or tag
     if [ "${OLD_REV}" = ${Z40} ]; then
         echo "Creating ${REF_NAME}"
@@ -879,7 +929,7 @@ while read OLD_REV NEW_REV REF_NAME; do
         echo "Updating ${REF_NAME}"
         RANGE="${OLD_REV}..${NEW_REV}"
     fi
-    
+
     # Check for protected branches
     if [ "${REF_NAME}" = "refs/heads/main" ] || [ "${REF_NAME}" = "refs/heads/master" ]; then
         # Check if user has permission (example)
@@ -890,12 +940,12 @@ while read OLD_REV NEW_REV REF_NAME; do
         # fi
         echo "Warning: Pushing to protected branch ${REF_NAME}"
     fi
-    
+
     # Check for file size limits
     TOO_LARGE_FILES=$(git rev-list --objects ${RANGE} | \
         git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | \
         awk '/^blob/ && $3 >= 10485760 {print $4}' | sort -u)
-    
+
     if [ -n "${TOO_LARGE_FILES}" ]; then
         echo "Error: Files exceeding size limit (10MB) found:"
         echo "${TOO_LARGE_FILES}"
@@ -961,10 +1011,10 @@ else
 fi
 
 # Check for force pushes
-if [ "${OLD_REV}" != "0000000000000000000000000000000000000000" ] && 
+if [ "${OLD_REV}" != "0000000000000000000000000000000000000000" ] &&
    ! git merge-base --is-ancestor "${OLD_REV}" "${NEW_REV}"; then
     echo "Warning: Force push detected on ${REF_NAME}"
-    
+
     # Optionally prevent force pushes to specific branches
     if [ "${BRANCH_NAME}" = "main" ] || [ "${BRANCH_NAME}" = "master" ]; then
         echo "Error: Force pushing to ${BRANCH_NAME} is not allowed"
@@ -1048,11 +1098,11 @@ fi
 # For regular commits, prepend branch name if it contains a ticket number
 if [ -z "${COMMIT_SOURCE}" ] || [ "${COMMIT_SOURCE}" = "message" ]; then
     BRANCH_NAME=$(git symbolic-ref --short HEAD)
-    
+
     # Extract ticket number from branch name (e.g., feature/JIRA-123-description)
     if [[ "${BRANCH_NAME}" =~ [A-Z]+-[0-9]+ ]]; then
         TICKET="${BASH_REMATCH[0]}"
-        
+
         # Only prepend if not already in the message
         if ! grep -q "${TICKET}" "${COMMIT_MSG_FILE}"; then
             TEMP_FILE=$(mktemp)
@@ -1096,7 +1146,7 @@ REMOTE_REF=$(git for-each-ref --format='%(upstream:short)' refs/heads/"${BRANCH}
 if [ -n "${REMOTE_REF}" ]; then
     echo "Warning: Branch ${BRANCH} has a remote counterpart (${REMOTE_REF})."
     echo "Rebasing will rewrite history and require a force push."
-    
+
     # Uncomment to prevent rebasing of pushed branches
     # echo "Error: Rebasing a pushed branch is not allowed."
     # exit 1
@@ -1250,7 +1300,7 @@ if [ "${EMAIL_FORMAT}" = "patch" ]; then
     if ! grep -q "^---$" "${EMAIL_FILE}"; then
         echo "Warning: Patch might not be correctly formatted."
     fi
-    
+
     # Check for sufficient context lines
     if grep -q "^@@ .* @@$" "${EMAIL_FILE}"; then
         CONTEXT_LINES=$(grep -E "^@@ .* @@$" "${EMAIL_FILE}" | grep -oE ',[0-9]+' | sed 's/,//' | sort -n | head -n 1)
@@ -1258,7 +1308,7 @@ if [ "${EMAIL_FORMAT}" = "patch" ]; then
             echo "Warning: Patch has less than 3 context lines. Consider using more context."
         fi
     fi
-    
+
     # Check subject prefix
     if ! grep -q "^\[PATCH\]" "${EMAIL_FILE}"; then
         echo "Warning: Subject line should start with [PATCH]."
