@@ -1,17 +1,9 @@
 # CWS-Lib-Bash Guidelines
 
 ## Code Generation
-- Reference README.md if present
-- Create TODO.md for multi-step tasks before generating code
-- Skip error fixes for large files
-- Documentation in English
-- Comments and logs in English
-
-## Core Structure
-- `/bin/`: Executable scripts
-- `/expect/`: Expect scripts for automation
-- `/profile.d/`: Shell initialization
-- `/scripts/`: Domain-specific utilities
+- Refer to the contents of the README.md file in the project directory to understand the basic information of the project. If there is a docs directory in the project root directory, refer to the contents within it.
+- For complex tasks, create a TODO.md file first to list the plan and steps, then execute step by step. Update the corresponding records in the TODO.md document each time a step is completed, and check whether all items in TODO.md are completed after the task is finished.
+- Generate documentation in English, and use English for code comments and logs.
 
 ## Function Guidelines
 - **Naming**: Use `snake_case` with domain prefix (e.g., `git_clone`)

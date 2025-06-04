@@ -1,1 +1,1 @@
-../docs/instructions.md
+../docs/instructions.cn.md
