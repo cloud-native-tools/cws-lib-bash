@@ -393,7 +393,7 @@ function git_revert_patch() {
   log info "Generating revert patch for commit ${short_hash} to ${revert_filename}"
 
   # Generate the revert patch
-  if ! git show --pretty="From %H %cd%nFrom: %an <%ae>%nDate: %ad%nSubject: [PATCH] Revert \"$(git log -1 --pretty=%s ${commit_id})\"%n%nThis reverts commit ${commit_id}.%n" --binary -R "${commit_id}" > "${revert_filename}"; then
+  if ! git show --pretty="From %H %cd%nFrom: %an <%ae>%nDate: %ad%nSubject: [PATCH] Revert \"$(git log -1 --pretty=%s ${commit_id})\"%n%nThis reverts commit ${commit_id}.%n" --binary -R "${commit_id}" >"${revert_filename}"; then
     log error "Failed to create revert patch for commit ${short_hash}"
     return ${RETURN_FAILURE:-1}
   fi
@@ -685,53 +685,53 @@ function git_hook_install() {
 
   # Generate hook content based on type
   case "${hook_type}" in
-    pre-commit)
-      hook_content=$(git_hook_pre_commit)
-      ;;
-    commit-msg)
-      hook_content=$(git_hook_commit_msg)
-      ;;
-    pre-push)
-      hook_content=$(git_hook_pre_push)
-      ;;
-    pre-receive)
-      hook_content=$(git_hook_pre_receive)
-      ;;
-    post-update)
-      hook_content=$(git_hook_post_update)
-      ;;
-    update)
-      hook_content=$(git_hook_update)
-      ;;
-    pre-merge-commit)
-      hook_content=$(git_hook_pre_merge_commit)
-      ;;
-    prepare-commit-msg)
-      hook_content=$(git_hook_prepare_commit_msg)
-      ;;
-    pre-rebase)
-      hook_content=$(git_hook_pre_rebase)
-      ;;
-    applypatch-msg)
-      hook_content=$(git_hook_applypatch_msg)
-      ;;
-    pre-applypatch)
-      hook_content=$(git_hook_pre_applypatch)
-      ;;
-    push-to-checkout)
-      hook_content=$(git_hook_push_to_checkout)
-      ;;
-    sendemail-validate)
-      hook_content=$(git_hook_sendemail_validate)
-      ;;
-    *)
-      log error "Unknown hook type: ${hook_type}"
-      log notice "Available hook types: pre-commit, commit-msg, pre-push, pre-receive, post-update, update, pre-merge-commit, prepare-commit-msg, pre-rebase, applypatch-msg, pre-applypatch, push-to-checkout, sendemail-validate"
-      return ${RETURN_FAILURE:-1}
-      ;;
+  pre-commit)
+    hook_content=$(git_hook_pre_commit)
+    ;;
+  commit-msg)
+    hook_content=$(git_hook_commit_msg)
+    ;;
+  pre-push)
+    hook_content=$(git_hook_pre_push)
+    ;;
+  pre-receive)
+    hook_content=$(git_hook_pre_receive)
+    ;;
+  post-update)
+    hook_content=$(git_hook_post_update)
+    ;;
+  update)
+    hook_content=$(git_hook_update)
+    ;;
+  pre-merge-commit)
+    hook_content=$(git_hook_pre_merge_commit)
+    ;;
+  prepare-commit-msg)
+    hook_content=$(git_hook_prepare_commit_msg)
+    ;;
+  pre-rebase)
+    hook_content=$(git_hook_pre_rebase)
+    ;;
+  applypatch-msg)
+    hook_content=$(git_hook_applypatch_msg)
+    ;;
+  pre-applypatch)
+    hook_content=$(git_hook_pre_applypatch)
+    ;;
+  push-to-checkout)
+    hook_content=$(git_hook_push_to_checkout)
+    ;;
+  sendemail-validate)
+    hook_content=$(git_hook_sendemail_validate)
+    ;;
+  *)
+    log error "Unknown hook type: ${hook_type}"
+    log notice "Available hook types: pre-commit, commit-msg, pre-push, pre-receive, post-update, update, pre-merge-commit, prepare-commit-msg, pre-rebase, applypatch-msg, pre-applypatch, push-to-checkout, sendemail-validate"
+    return ${RETURN_FAILURE:-1}
+    ;;
   esac
 
-  echo "${hook_content}" > "${hook_file}"
+  echo "${hook_content}" >"${hook_file}"
   chmod +x "${hook_file}"
   log notice "Git hook installed: ${hook_file}"
 
@@ -1318,4 +1318,14 @@ fi
 echo "Email validation passed."
 exit 0
 EOF
+}
+
+function git_pull_repos() {
+  local root=${1:-${PWD}}
+  for repo_path in $(git_list_repos "${root}"); do
+    safe_pushd "${repo_path}" || continue
+    log info "Pulling updates in ${repo_path}"
+    git pull || log warning "Failed to pull updates in ${repo_path}"
+    safe_popd
+  done
 }
