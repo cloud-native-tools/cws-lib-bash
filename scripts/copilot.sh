@@ -67,6 +67,7 @@ EOF
 - 复杂任务先创建TODO.md文件列出计划和步骤，然后一步一步执行，每完成一项更新一次TODO.md文档中对应的记录，在任务结束之后再检查TODO.md中是否都完成。
 - 在执行复杂的文件操作时，先生成一个python或者shell脚本，然后通过执行脚本来进行操作。
 - 生成文档时使用中文，生成代码中的注释和日志使用英文。
+- 当编程语言代码文件（*.go、*.java、*.py、*.ts、*.js、*.c、*.cpp、*.cs、*.php、*.rb、*.rs等）超过1500行时，需要进行拆分以提高代码的可维护性和可读性。数据文件（*.json、*.yaml、*.csv、*.xml等）不受此限制。
 EOF
   fi
   if [ ! -f docs/instructions.en.md ]; then
@@ -76,6 +77,7 @@ EOF
 - For complex tasks, create a TODO.md file first to list the plan and steps, then execute step by step. Update the corresponding records in the TODO.md document each time a step is completed, and check whether all items in TODO.md are completed after the task is finished.
 - For complex file operations, first generate a Python or shell script, then perform the operations by executing the script.
 - Generate documentation in English, and use English for code comments and logs.
+- When programming language code files (*.go, *.java, *.py, *.ts, *.js, *.c, *.cpp, *.cs, *.php, *.rb, *.rs, etc.) exceed 1500 lines, they should be split to improve code maintainability and readability. Data files (*.json, *.yaml, *.csv, *.xml, etc.) are not subject to this limitation.
 EOF
   fi
 
