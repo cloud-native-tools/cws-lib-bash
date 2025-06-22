@@ -1,11 +1,4 @@
 function copilot_generate_instructions() {
-  local lang=${1:-cn}
-
-  if [ "${lang}" != "en" ] && [ "${lang}" != "cn" ]; then
-    log error "lang must be 'en' or 'cn'"
-    return 1
-  fi
-
   # Create .copilotignore based on .gitignore
   if [ -f .gitignore ]; then
     log info "Creating .copilotignore based on .gitignore"
@@ -83,21 +76,21 @@ EOF
 
   mkdir -p .clinerules
   pushd .clinerules
-  ln -sfv ../docs/instructions.${lang}.md project_rules.md
+  ln -sfv ../docs/instructions.en.md project_rules.md
   popd
 
   mkdir -p .github
   pushd .github
-  ln -sfv ../docs/instructions.${lang}.md copilot-instructions.md
+  ln -sfv ../docs/instructions.en.md copilot-instructions.md
   popd
 
   mkdir -p .lingma/rules
   pushd .lingma/rules
-  ln -sfv ../../docs/instructions.${lang}.md project_rule.md
+  ln -sfv ../../docs/instructions.cn.md project_rule.md
   popd
 
   mkdir -p .trae/rules
   pushd .trae/rules
-  ln -sfv ../../docs/instructions.${lang}.md project_rules.md
+  ln -sfv ../../docs/instructions.cn.md project_rules.md
   popd
 }
