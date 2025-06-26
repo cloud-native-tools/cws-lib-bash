@@ -48,11 +48,13 @@ function jq_otel_logs() {
 function jq_smash_file() {
   local json_file=${1}
   local max_size=${2:-16384}  # Default 1MB in bytes
+  local keep_source=${3:-true}  # Default to keep source file
   
   if [ -z "${json_file}" ]; then
-    log error "Usage: jq_smash_file <json_file> [max_size_bytes]"
+    log error "Usage: jq_smash_file <json_file> [max_size_bytes] [keep_source]"
     log info "  json_file: Path to the JSON file to split"
     log info "  max_size_bytes: Maximum file size in bytes (default: 1048576 = 1MB)"
+    log info "  keep_source: Whether to keep source file after splitting (default: true)"
     return ${RETURN_FAILURE:-1}
   fi
   
@@ -186,13 +188,22 @@ function jq_smash_file() {
   
   log info "Successfully split ${json_file} into ${split_count} files"
   
+  # Delete source file if keep_source is false
+  if [ "${keep_source}" = "false" ] || [ "${keep_source}" = "0" ]; then
+    if rm -f "${json_file}"; then
+      log info "Deleted source file: ${json_file}"
+    else
+      log warn "Failed to delete source file: ${json_file}"
+    fi
+  fi
+  
   # Recursively process the split files
   local recursive_count=0
   for split_file in "${split_files[@]}"; do
     local full_split_path="${dir}/${split_file}"
     if [ -f "${full_split_path}" ]; then
       # Recursively call jq_smash_file on each split file
-      if jq_smash_file "${full_split_path}" "${max_size}"; then
+      if jq_smash_file "${full_split_path}" "${max_size}" "${keep_source}"; then
         recursive_count=$((recursive_count + 1))
       fi
     fi
