@@ -57,12 +57,42 @@ function git_update_all() {
   done
 }
 
-function git_top_branch() {
-  git branch -a --sort=-committerdate | head -n 20
+function git_active_branch() {
+  local topn=${1:-20}
+
+  # Print table header
+  printf "%-40s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
+  printf "%-40s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..40})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..30})"
+
+  # Get branch information with commit details, sorted by most recent commits first
+  git for-each-ref --sort=-committerdate --format='%(refname:short)|%(committerdate:relative)|%(authorname)|%(subject)' refs/heads refs/remotes | head -n ${topn} | while IFS='|' read -r branch_name commit_date author subject; do
+    # Truncate long values to fit in columns
+    branch_display=$(printf "%-40.40s" "${branch_name}")
+    date_display=$(printf "%-20.20s" "${commit_date}")
+    author_display=$(printf "%-25.25s" "${author}")
+    subject_display=$(printf "%-30.30s" "${subject}")
+
+    printf "%-40s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject_display}"
+  done
 }
 
 function git_dead_branch() {
-  git branch -a --sort=-committerdate | tail -n 20
+  local topn=${1:-20}
+
+  # Print table header
+  printf "%-40s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
+  printf "%-40s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..40})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..30})"
+
+  # Get branch information with commit details, sorted by oldest commits first
+  git for-each-ref --sort=committerdate --format='%(refname:short)|%(committerdate:relative)|%(authorname)|%(subject)' refs/heads refs/remotes | head -n ${topn} | while IFS='|' read -r branch_name commit_date author subject; do
+    # Truncate long values to fit in columns
+    branch_display=$(printf "%-40.40s" "${branch_name}")
+    date_display=$(printf "%-20.20s" "${commit_date}")
+    author_display=$(printf "%-25.25s" "${author}")
+    subject_display=$(printf "%-30.30s" "${subject}")
+
+    printf "%-40s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject_display}"
+  done
 }
 
 function git_init_submodule() {
