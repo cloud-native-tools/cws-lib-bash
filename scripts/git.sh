@@ -60,38 +60,38 @@ function git_update_all() {
 function git_active_branch() {
   local topn=${1:-20}
 
-  # Print table header
-  printf "%-40s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
-  printf "%-40s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..40})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..30})"
+  # Print table header with wider columns for Branch and Commit Message
+  printf "%-60s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
+  printf "%-60s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..60})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..50})"
 
   # Get branch information with commit details, sorted by most recent commits first
   git for-each-ref --sort=-committerdate --format='%(refname:short)|%(committerdate:relative)|%(authorname)|%(subject)' refs/heads refs/remotes | head -n ${topn} | while IFS='|' read -r branch_name commit_date author subject; do
-    # Truncate long values to fit in columns
-    branch_display=$(printf "%-40.40s" "${branch_name}")
+    # Adjust column widths - Branch: 60, Date: 20, Author: 25, Message: no truncation
+    branch_display=$(printf "%-60.60s" "${branch_name}")
     date_display=$(printf "%-20.20s" "${commit_date}")
     author_display=$(printf "%-25.25s" "${author}")
-    subject_display=$(printf "%-30.30s" "${subject}")
+    # Don't truncate the commit message, let it display fully
 
-    printf "%-40s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject_display}"
+    printf "%-60s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject}"
   done
 }
 
 function git_dead_branch() {
   local topn=${1:-20}
 
-  # Print table header
-  printf "%-40s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
-  printf "%-40s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..40})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..30})"
+  # Print table header with wider columns for Branch and Commit Message
+  printf "%-60s | %-20s | %-25s | %s\n" "Branch" "Last Commit" "Author" "Commit Message"
+  printf "%-60s-|-%-20s-|-%-25s-|-%s\n" "$(printf '%0.s-' {1..60})" "$(printf '%0.s-' {1..20})" "$(printf '%0.s-' {1..25})" "$(printf '%0.s-' {1..50})"
 
   # Get branch information with commit details, sorted by oldest commits first
   git for-each-ref --sort=committerdate --format='%(refname:short)|%(committerdate:relative)|%(authorname)|%(subject)' refs/heads refs/remotes | head -n ${topn} | while IFS='|' read -r branch_name commit_date author subject; do
-    # Truncate long values to fit in columns
-    branch_display=$(printf "%-40.40s" "${branch_name}")
+    # Adjust column widths - Branch: 60, Date: 20, Author: 25, Message: no truncation
+    branch_display=$(printf "%-60.60s" "${branch_name}")
     date_display=$(printf "%-20.20s" "${commit_date}")
     author_display=$(printf "%-25.25s" "${author}")
-    subject_display=$(printf "%-30.30s" "${subject}")
+    # Don't truncate the commit message, let it display fully
 
-    printf "%-40s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject_display}"
+    printf "%-60s | %-20s | %-25s | %s\n" "${branch_display}" "${date_display}" "${author_display}" "${subject}"
   done
 }
 
@@ -1213,7 +1213,7 @@ fi
 
 # Check for imperative mood in the first line
 FIRST_LINE=$(head -n 1 "${COMMIT_MSG_FILE}")
-if ! echo "${FIRST_LINE}" | grep -qE '^(Add|Fix|Update|Change|Remove|Refactor|Document|Style|Test|Optimize|Merge|Revert|Bump)'; then
+if ! echo "${FIRST_LINE}" | grep -qE '^(Add|Fix|Update|Change|Remove|Refactor|Document|Style|Test|Optimize|Merge|Revert)'; then
     echo "Warning: First line should begin with a verb in the imperative mood."
     echo "Examples: Add, Fix, Update, Change, Remove, Refactor, etc."
 fi
