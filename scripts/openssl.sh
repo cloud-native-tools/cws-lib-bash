@@ -58,3 +58,7 @@ function openssl_view_crt() {
     openssl x509 -in ${crt_file}
   fi
 }
+
+function openssl_generate_private_key() {
+  openssl rand -hex 32
+}

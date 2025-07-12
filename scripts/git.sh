@@ -282,17 +282,6 @@ function git_clone_local() {
     $@
 }
 
-function git_config_signed_off_hook() {
-  local hook_file=${1:-.git/hooks/commit-msg}
-  cat <<'EOF' >${hook_file}
-  #!/bin/sh
-
-SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
-grep -qs "^$SOB" "$1" || echo "$SOB" >> "$1"
-EOF
-  chmod +x ${hook_file}
-}
-
 function git_archive() {
   local branch_name=${1:-HEAD}
   git archive --format=tar --output=$(basename ${PWD}).tar ${branch_name}
