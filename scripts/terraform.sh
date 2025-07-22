@@ -3,6 +3,7 @@ TF_INIT_ANSI="init.ansi"
 TF_PLAN_ANSI="plan.ansi"
 TF_APPLY_ANSI="apply.ansi"
 TF_DESTROY_ANSI="destroy.ansi"
+TF_RC_FILE="tf.rc"
 
 # Determines which Terraform binary to use, preferring tofu over terraform if available
 function tf_bin() {
@@ -171,6 +172,10 @@ function tf_plan_and_apply() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
+  if [ -f "${TF_RC_FILE}" ]; then
+    log notice "found a [${TF_RC_FILE}] file in ${PWD}"
+    . "${TF_RC_FILE}"
+  fi
   if ! tf_plan $@ || ! tf_apply $@; then
     log error "Failed to plan and apply $(tf_bin) in ${PWD}"
   fi
@@ -191,6 +196,10 @@ function tf_plan_and_destroy() {
       log error "Failed to change directory to ${target_dir}"
       return ${RETURN_FAILURE:-1}
     fi
+  fi
+  if [ -f "${TF_RC_FILE}" ]; then
+    log notice "found a [${TF_RC_FILE}] file in ${PWD}"
+    . "${TF_RC_FILE}"
   fi
   if ! tf_plan $@ || ! tf_destroy $@; then
     log error "Failed to plan and destroy $(tf_bin) in ${PWD}"
