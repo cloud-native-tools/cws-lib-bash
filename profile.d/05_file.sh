@@ -38,7 +38,7 @@ function encode_function() {
 function encode_packed() {
   local INPUT="$@"
 
-  [[ -z "$INPUT" ]] && die "Usage: pack_file <file>"
+  [[ -z $INPUT ]] && die "Usage: pack_file <file>"
 
   encode_tar=encoded.tar.xz
   encode_script=packed.sh
@@ -122,24 +122,24 @@ function file_extract() {
     for n in $@; do
       if [ -f "$n" ]; then
         case "${n%,}" in
-        *.tar.bz2 | *.tar.gz | *.tar.xz | *.tbz2 | *.tgz | *.txz | *.tar)
-          tar xvf "$n"
-          ;;
-        *.lzma) unlzma ./"$n" ;;
-        *.bz2) bunzip2 ./"$n" ;;
-        *.rar) unrar x -ad ./"$n" ;;
-        *.gz) gunzip ./"$n" ;;
-        *.zip) unzip ./"$n" ;;
-        *.z) uncompress ./"$n" ;;
-        *.7z | *.arj | *.cab | *.chm | *.deb | *.dmg | *.iso | *.lzh | *.msi | *.rpm | *.udf | *.wim | *.xar)
-          7z x ./"$n"
-          ;;
-        *.xz) unxz ./"$n" ;;
-        *.exe) cabextract ./"$n" ;;
-        *)
-          log error "extract: '$n' - unknown archive method"
-          return ${RETURN_FAILURE}
-          ;;
+          *.tar.bz2 | *.tar.gz | *.tar.xz | *.tbz2 | *.tgz | *.txz | *.tar)
+            tar xvf "$n"
+            ;;
+          *.lzma) unlzma ./"$n" ;;
+          *.bz2) bunzip2 ./"$n" ;;
+          *.rar) unrar x -ad ./"$n" ;;
+          *.gz) gunzip ./"$n" ;;
+          *.zip) unzip ./"$n" ;;
+          *.z) uncompress ./"$n" ;;
+          *.7z | *.arj | *.cab | *.chm | *.deb | *.dmg | *.iso | *.lzh | *.msi | *.rpm | *.udf | *.wim | *.xar)
+            7z x ./"$n"
+            ;;
+          *.xz) unxz ./"$n" ;;
+          *.exe) cabextract ./"$n" ;;
+          *)
+            log error "extract: '$n' - unknown archive method"
+            return ${RETURN_FAILURE}
+            ;;
         esac
       else
         log error "'$n' - file does not exist"
@@ -322,7 +322,7 @@ function files_on_change() {
 function cp_file() {
   local args=("$@")
   local last_index=$((${#args[@]} - 1))
-  local src=("${args[@]:0:${last_index}}")
+  local src=("${args[@]:0:last_index}")
   local dest="${args[${last_index}]}"
   if [ -f "${dest}" ]; then
     if [ ${#src[@]} -gt 1 ]; then
@@ -341,7 +341,7 @@ function cp_file() {
 function mv_file() {
   local args=("$@")
   local last_index=$((${#args[@]} - 1))
-  local src=("${args[@]:0:${last_index}}")
+  local src=("${args[@]:0:last_index}")
   local dest="${args[${last_index}]}"
   if [ -f "${dest}" ]; then
     if [ ${#src[@]} -gt 1 ]; then
@@ -383,7 +383,7 @@ function highlight_difference_files() {
   declare -A checksum_map
   for file in ${file_list}; do
     local checksum=$(sha256sum "${file}" | awk '{print $1}' | cut -c 1-8)
-    if [[ -z "${checksum_map["${checksum}"]}" ]]; then
+    if [[ -z ${checksum_map["${checksum}"]} ]]; then
       checksum_map["${checksum}"]="${file}"
     else
       checksum_map["${checksum}"]+=$'\n'${file}
@@ -411,4 +411,24 @@ function archive_current() {
 function find_files_by_size() {
   local size=$1
   find . -type f -size "${size}" | grep -v /.git/
+}
+
+function find_files() {
+  local first_file=${1}
+
+  if [ -z "${first_file}" ]; then
+    log error "no file pattern provide"
+    log error "Usage: find_files <file pattern> [file pattern]"
+    return ${RETURN_FAILURE}
+  else
+    shift
+  fi
+
+  local find_parameters=()
+  find_parameters+=("-name" "${first_file}")
+  for pattern in "${@}"; do
+    find_parameters+=("-o" "-name" "${pattern}")
+  done
+
+  find . \( "${find_parameters[@]}" \)
 }
