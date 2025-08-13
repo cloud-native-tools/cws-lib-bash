@@ -74,3 +74,7 @@ function cws_debug_enabled() {
     return ${RETURN_FAILURE}
   fi
 }
+
+# NOTE: When CWS_DEBUG is enabled, scripts will generate excessive debug output.
+# This may affect logic that depends on clean output (e.g., functions used in if conditions,
+# command substitutions, or pipes). Use debug logging carefully in utility functions.

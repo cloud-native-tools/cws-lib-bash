@@ -69,23 +69,35 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
-  my_ip=$(curl -s --connect-timeout 30 https://cip.cc | grep -E '^IP' | awk '{print $NF}')
-  if [ -n "${my_ip}" ]; then
-    echo ${my_ip}
-    return ${RETURN_SUCCESS}
-  fi
-
-  local ip_apis=$(
-    cat <<EOF
-https://ipv4.seeip.org
-https://api.ipify.org
-EOF
+  local timeout=${1:-3}
+  
+  # Quick fallback for when speed is critical (ordered by current environment performance)
+  local -a quick_services=(
+    "https://cip.cc"
+    "https://ipv4.seeip.org"
+    "https://myip.ipip.net/"
+    "https://api.ipify.org"
   )
-  for url in ${ip_apis}; do
-    if curl -s --connect-timeout 30 ${url}; then
+  
+  for url in "${quick_services[@]}"; do
+    case "${url}" in
+      *cip.cc*)
+        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null | grep -E '^IP' | awk '{print $NF}' 2>/dev/null)
+        ;;
+      *myip.ipip.net*)
+        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null | grep -E '当前 IP：' | awk '{print $3}' 2>/dev/null)
+        ;;
+      *)
+        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null)
+        ;;
+    esac
+    
+    if net_valid_ipv4 "${my_ip}"; then
+      echo "${my_ip}"
       return ${RETURN_SUCCESS}
     fi
   done
+  
   return ${RETURN_FAILURE}
 }
 
@@ -96,10 +108,35 @@ function net_trace_route() {
 
 function net_valid_ipv4() {
   local ip="$1"
-  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || {
-    log error "[${ip}] address is invalid"
+  
+  # Check if IP parameter is provided
+  if [ -z "${ip}" ]; then
+    log debug "IP address parameter is required"
     return ${RETURN_FAILURE}
-  }
+  fi
+  
+  # Basic format validation: four groups of 1-3 digits separated by dots
+  if ! [[ "${ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    log debug "[${ip}] address format is invalid"
+    return ${RETURN_FAILURE}
+  fi
+  
+  # Validate each octet is in range 0-255
+  local IFS='.'
+  local -a octets=($ip)
+  
+  for octet in "${octets[@]}"; do
+    # Remove leading zeros to avoid octal interpretation
+    octet=$(echo "$octet" | sed 's/^0*//')
+    [ -z "$octet" ] && octet=0
+    
+    if [ "$octet" -gt 255 ] || [ "$octet" -lt 0 ]; then
+      log debug "[${ip}] contains invalid octet: $octet (must be 0-255)"
+      return ${RETURN_FAILURE}
+    fi
+  done
+  
+  return ${RETURN_SUCCESS}
 }
 
 function net_default_ip() {

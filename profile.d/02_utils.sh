@@ -71,6 +71,14 @@ function log() {
     # like plain, but with color
     printf "%b\n" "$@"
     ;;
+  DEBUG | debug)
+    shift
+    # only print debug messages when CWS_DEBUG is enabled
+    # WARNING: enabling debug will generate excessive output, which may affect logic that depends on clean output
+    if cws_debug_enabled; then
+      printf "%b\n" "${CYAN}[${now}][$$][DEBUG] $@${CLEAR}" >&2
+    fi
+    ;;
   INFO | info)
     shift
     printf "%b\n" "[${now}][$$][INFO] $@"
