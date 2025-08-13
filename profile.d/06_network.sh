@@ -115,26 +115,11 @@ function net_valid_ipv4() {
     return ${RETURN_FAILURE}
   fi
   
-  # Basic format validation: four groups of 1-3 digits separated by dots
-  if ! [[ "${ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+  # IPv4 validation with proper range checking and no leading zeros
+  if ! [[ "${ip}" =~ ^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$ ]]; then
     log debug "[${ip}] address format is invalid"
     return ${RETURN_FAILURE}
   fi
-  
-  # Validate each octet is in range 0-255
-  local IFS='.'
-  local -a octets=($ip)
-  
-  for octet in "${octets[@]}"; do
-    # Remove leading zeros to avoid octal interpretation
-    octet=$(echo "$octet" | sed 's/^0*//')
-    [ -z "$octet" ] && octet=0
-    
-    if [ "$octet" -gt 255 ] || [ "$octet" -lt 0 ]; then
-      log debug "[${ip}] contains invalid octet: $octet (must be 0-255)"
-      return ${RETURN_FAILURE}
-    fi
-  done
   
   return ${RETURN_SUCCESS}
 }
