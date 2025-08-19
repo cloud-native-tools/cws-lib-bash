@@ -41,7 +41,7 @@ function shfmt_file() {
     local temp_file="${file_path}.shfmt_temp"
     
     if shfmt ${shfmt_opts} "${file_path}" > "${temp_file}"; then
-      mv "${temp_file}" "${file_path}"
+      mv -f "${temp_file}" "${file_path}"
       log info "Successfully formatted: ${file_path}"
       return ${RETURN_SUCCESS:-0}
     else
