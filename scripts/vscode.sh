@@ -252,13 +252,13 @@ function vscode_ext_update() {
 function vscode_insiders_ext_install() {
   local vscode_bin=$(vscode_insiders_get_bin)
   for ext in ${@}; do
-    "${vscode_bin}" --install-extension ${ext}
+    "${vscode_bin}" --install-extension ${ext} --ignore-certificate-errors
   done
 }
 
 function vscode_insiders_ext_update() {
   local vscode_bin=$(vscode_insiders_get_bin)
-  "${vscode_bin}" --update-extensions
+  "${vscode_bin}" --update-extensions --ignore-certificate-errors
 }
 
 function vscode_ext_url() {
