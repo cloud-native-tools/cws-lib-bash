@@ -47,9 +47,9 @@ function jq_otel_logs() {
 # Recursively splits large JSON files into smaller ones based on size threshold
 function jq_smash_file() {
   local json_file=${1}
-  local max_size=${2:-16384}  # Default 1MB in bytes
-  local keep_source=${3:-true}  # Default to keep source file
-  
+  local max_size=${2:-16384}   # Default 1MB in bytes
+  local keep_source=${3:-true} # Default to keep source file
+
   if [ -z "${json_file}" ]; then
     log error "Usage: jq_smash_file <json_file> [max_size_bytes] [keep_source]"
     log info "  json_file: Path to the JSON file to split"
@@ -57,46 +57,46 @@ function jq_smash_file() {
     log info "  keep_source: Whether to keep source file after splitting (default: true)"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   if [ ! -f "${json_file}" ]; then
     log error "JSON file not found: ${json_file}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Check if jq command is available
   if ! have jq; then
     log error "jq command not found. Please install jq to use this function."
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Get file size in bytes
   local file_size=$(stat -c%s "${json_file}" 2>/dev/null || stat -f%z "${json_file}" 2>/dev/null)
   if [ -z "${file_size}" ]; then
     log error "Failed to get file size for: ${json_file}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # If file size is within limit, no need to split
   if [ "${file_size}" -le "${max_size}" ]; then
     log info "File ${json_file} (${file_size} bytes) is within size limit (${max_size} bytes), skipping"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   log info "Splitting ${json_file} (${file_size} bytes) - exceeds limit (${max_size} bytes)"
-  
+
   # Get the directory and base filename
   local dir=$(dirname "${json_file}")
   local filename=$(basename "${json_file}")
   local basename="${filename%.*}"
   local extension="${filename##*.}"
-  
+
   # Change to the file's directory
   local original_dir=$(pwd)
   cd "${dir}" || {
     log error "Failed to change to directory: ${dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Determine JSON structure type
   local json_type=$(jq -r 'type' "${filename}" 2>/dev/null)
   if [ -z "${json_type}" ]; then
@@ -104,10 +104,10 @@ function jq_smash_file() {
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   local split_count=0
   local split_files=()
-  
+
   case "${json_type}" in
     "object")
       log info "Processing JSON object: ${filename}"
@@ -118,7 +118,7 @@ function jq_smash_file() {
         cd "${original_dir}"
         return ${RETURN_SUCCESS:-0}
       fi
-      
+
       # Create subdirectory for split files
       local output_dir="${basename}"
       if ! mkdir -p "${output_dir}"; then
@@ -126,11 +126,11 @@ function jq_smash_file() {
         cd "${original_dir}"
         return ${RETURN_FAILURE:-1}
       fi
-      
+
       # Split each key-value pair into separate files
       for key in ${keys}; do
         local output_file="${output_dir}/${key}.${extension}"
-        if jq ".\"${key}\"" "${filename}" > "${output_file}" 2>/dev/null; then
+        if jq ".\"${key}\"" "${filename}" >"${output_file}" 2>/dev/null; then
           log info "Created: ${output_file}"
           split_files+=("${output_file}")
           split_count=$((split_count + 1))
@@ -139,7 +139,7 @@ function jq_smash_file() {
         fi
       done
       ;;
-      
+
     "array")
       log info "Processing JSON array: ${filename}"
       # Get array length
@@ -149,7 +149,7 @@ function jq_smash_file() {
         cd "${original_dir}"
         return ${RETURN_SUCCESS:-0}
       fi
-      
+
       # Create subdirectory for split files
       local output_dir="${basename}"
       if ! mkdir -p "${output_dir}"; then
@@ -157,11 +157,11 @@ function jq_smash_file() {
         cd "${original_dir}"
         return ${RETURN_FAILURE:-1}
       fi
-      
+
       # Split each array element into separate files
-      for ((i=0; i<array_length; i++)); do
+      for ((i = 0; i < array_length; i++)); do
         local output_file="${output_dir}/${i}.${extension}"
-        if jq ".[$i]" "${filename}" > "${output_file}" 2>/dev/null; then
+        if jq ".[$i]" "${filename}" >"${output_file}" 2>/dev/null; then
           log info "Created: ${output_file}"
           split_files+=("${output_file}")
           split_count=$((split_count + 1))
@@ -170,24 +170,24 @@ function jq_smash_file() {
         fi
       done
       ;;
-      
+
     *)
       # Skip files that are not objects or arrays (strings, numbers, booleans, null)
       cd "${original_dir}"
       return ${RETURN_SUCCESS:-0}
       ;;
   esac
-  
+
   # Return to original directory
   cd "${original_dir}"
-  
+
   if [ ${split_count} -eq 0 ]; then
     log warn "No files were created from: ${json_file}"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   log info "Successfully split ${json_file} into ${split_count} files"
-  
+
   # Delete source file if keep_source is false
   if [ "${keep_source}" = "false" ] || [ "${keep_source}" = "0" ]; then
     if rm -f "${json_file}"; then
@@ -196,7 +196,7 @@ function jq_smash_file() {
       log warn "Failed to delete source file: ${json_file}"
     fi
   fi
-  
+
   # Recursively process the split files
   local recursive_count=0
   for split_file in "${split_files[@]}"; do
@@ -208,7 +208,90 @@ function jq_smash_file() {
       fi
     fi
   done
-  
+
   log info "Recursively processed ${recursive_count} split files from: ${json_file}"
   return ${RETURN_SUCCESS:-0}
+}
+
+# Convert JSON array to CSV format
+function jq_json_to_csv() {
+  local json_file=${1}
+  local json_path=${2}
+  local fields=${3}
+
+  if [ -z "${json_file}" ] || [ -z "${json_path}" ] || [ -z "${fields}" ]; then
+    log error "Usage: jq_json_to_csv <json_file> <json_path> <fields>"
+    log info "  json_file: Path to the JSON file"
+    log info "  json_path: JSONPath to the array (e.g., '.data.list' or '.[]')"
+    log info "  fields: Comma-separated list of fields to extract (e.g., 'id,node_name,status,result')"
+    log info "Example: jq_json_to_csv data.json '.data.list' 'id,node_name,status,result'"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if [ ! -f "${json_file}" ]; then
+    log error "JSON file not found: ${json_file}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if ! have jq; then
+    log error "jq command not found. Please install jq to use this function."
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local array_type=$(jq -r "try (${json_path} | type) catch \"null\"" "${json_file}" 2>/dev/null)
+  if [ "${array_type}" = "null" ]; then
+    log error "Invalid JSON path or path does not exist: ${json_path}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if [ "${array_type}" != "array" ]; then
+    log error "JSON path does not point to an array. Found type: ${array_type}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local array_length=$(jq -r "try (${json_path} | length) catch 0" "${json_file}" 2>/dev/null)
+  if [ "${array_length}" -eq 0 ]; then
+    log warn "Array at path '${json_path}' is empty"
+    return ${RETURN_SUCCESS:-0}
+  fi
+
+  # Build jq accessors for fields (support nested paths already containing '.')
+  local IFS=','
+  read -r -a field_array <<<"${fields}"
+  local jq_accessors=""
+  local f raw
+  for raw in "${field_array[@]}"; do
+    f=$(echo "${raw}" | sed 's/^ *//;s/ *$//')
+    [ -z "${f}" ] && continue
+    if [ -n "${jq_accessors}" ]; then
+      jq_accessors+=" , "
+    fi
+    if [[ ${f} == .* ]]; then
+      # Already starts with dot (explicit path)
+      jq_accessors+="(${f} // \"\")"
+    elif [[ ${f} == *.* ]]; then
+      # Nested path like a.b.c
+      jq_accessors+="(.${f} // \"\")"
+    else
+      jq_accessors+="(.${f} // \"\")"
+    fi
+  done
+
+  if [ -z "${jq_accessors}" ]; then
+    log error "No valid fields parsed from: ${fields}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Header
+  echo "${fields}"
+
+  # Data rows
+  jq -r "
+    ${json_path} | .[] | [ ${jq_accessors} ] | @csv
+  " "${json_file}" 2>/dev/null
+  local rc=$?
+  if [ $rc -eq 0 ]; then
+    return ${RETURN_SUCCESS:-0}
+  else
+    return ${RETURN_FAILURE:-1}
+  fi
 }
