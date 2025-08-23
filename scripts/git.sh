@@ -345,8 +345,25 @@ function git_add() {
 }
 
 function git_backup() {
-  git_pull
-  git_add "backup at $(date_now)"
+  local msg=${1:-"backup at $(date_now)"}
+  
+  # Check if there are any changes to commit
+  if ! git diff-index --quiet HEAD -- 2>/dev/null; then
+    log info "Committing local changes"
+    git_add "${msg}"
+  else
+    log info "No local changes to commit"
+  fi
+  
+  # Pull with rebase to integrate remote changes
+  log info "Pulling remote changes with rebase"
+  if ! git_pull; then
+    log error "Failed to pull and rebase remote changes"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Push the changes
+  log info "Pushing changes to remote"
   git_push
 }
 
@@ -1376,4 +1393,81 @@ function git_pull_repos() {
     git pull || log warning "Failed to pull updates in ${repo_path}"
     safe_popd
   done
+}
+
+function git_ignored() {
+  local root=${1:-${PWD}}
+  local show_stats=${2:-false}
+  local max_files=${3:-100}
+  
+  # Check if we're in a git repository
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    log error "Not in a git repository"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Check if .gitignore exists
+  if [ ! -f "${root}/.gitignore" ]; then
+    log warning "No .gitignore file found in ${root}"
+  fi
+  
+  log info "Listing files ignored by git in ${root}"
+  
+  # Use a temporary file to avoid "Argument list too long" error
+  local temp_file=$(mktemp)
+  
+  # Use git ls-files to list ignored files and write to temp file
+  # The -i flag shows ignored files
+  # The --exclude-standard flag uses standard ignore rules (.gitignore, .git/info/exclude, etc.)
+  # The -o flag shows untracked files (optional, to get all ignored files)
+  git ls-files -i --exclude-standard --others 2>/dev/null | sort > "${temp_file}"
+  
+  if [ ! -s "${temp_file}" ]; then
+    log notice "No ignored files found in the working directory"
+    rm -f "${temp_file}"
+    return ${RETURN_SUCCESS:-0}
+  fi
+  
+  # Count total ignored files
+  local total_count=$(wc -l < "${temp_file}" | tr -d ' ')
+  
+  # Display the results
+  if [ "${show_stats}" = "true" ]; then
+    log notice "Found ${total_count} ignored files (showing first ${max_files}):"
+    echo
+    printf "%-60s | %s\n" "File Path" "Size"
+    printf "%-60s-|-%s\n" "$(printf '%0.s-' {1..60})" "$(printf '%0.s-' {1..10})"
+    
+    head -n "${max_files}" "${temp_file}" | while IFS= read -r file; do
+      if [ -n "${file}" ]; then
+        if [ -f "${file}" ]; then
+          local file_size=$(du -h "${file}" 2>/dev/null | cut -f1)
+          printf "%-60s | %s\n" "${file}" "${file_size:-0}"
+        elif [ -d "${file}" ]; then
+          local dir_size=$(du -sh "${file}" 2>/dev/null | cut -f1)
+          printf "%-60s | %s (dir)\n" "${file}" "${dir_size:-0}"
+        else
+          printf "%-60s | %s\n" "${file}" "N/A"
+        fi
+      fi
+    done
+    
+    if [ "${total_count}" -gt "${max_files}" ]; then
+      echo
+      log notice "... and $((total_count - max_files)) more files (use 'git_ignored . false <max_files>' to show more)"
+    fi
+  else
+    log notice "Found ${total_count} ignored files (showing first ${max_files}):"
+    head -n "${max_files}" "${temp_file}"
+    
+    if [ "${total_count}" -gt "${max_files}" ]; then
+      echo
+      log notice "... and $((total_count - max_files)) more files (use 'git_ignored . false <max_files>' to show more)"
+    fi
+  fi
+  
+  # Clean up temporary file
+  rm -f "${temp_file}"
+  
+  return ${RETURN_SUCCESS:-0}
 }
