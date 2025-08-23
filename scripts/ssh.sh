@@ -163,7 +163,19 @@ function ssh_ping() {
   else
     shift
   fi
-  if ssh -o ConnectTimeout=5 -F ${config_file} ${host_name} $@ exit >/dev/null 2>&1; then
+  # Use batch mode and disable all interactive authentication methods
+  if ssh -o BatchMode=yes \
+         -o ConnectTimeout=5 \
+         -o PasswordAuthentication=no \
+         -o PubkeyAuthentication=yes \
+         -o ChallengeResponseAuthentication=no \
+         -o KbdInteractiveAuthentication=no \
+         -o PreferredAuthentications=publickey \
+         -o StrictHostKeyChecking=no \
+         -o UserKnownHostsFile=/dev/null \
+         -o LogLevel=ERROR \
+         -F ${config_file} \
+         ${host_name} $@ exit >/dev/null 2>&1; then
     return ${RETURN_SUCCESS}
   else
     return ${RETURN_FAILURE}

@@ -729,662 +729,6 @@ function git_status_repos() {
   return ${RETURN_SUCCESS:-0}
 }
 
-# Git hook functions - Generate content for each type of git hook
-
-function git_hook_install() {
-  local hook_type=${1}
-  local target_dir=${2:-.git/hooks}
-
-  if [ -z "${hook_type}" ]; then
-    log error "Usage: git_hook_install <hook_type> [target_dir]"
-    return ${RETURN_FAILURE:-1}
-  fi
-
-  if [ ! -d "${target_dir}" ]; then
-    log error "Target directory does not exist: ${target_dir}"
-    return ${RETURN_FAILURE:-1}
-  fi
-
-  local hook_content=""
-  local hook_file="${target_dir}/${hook_type}"
-
-  # Generate hook content based on type
-  case "${hook_type}" in
-    pre-commit)
-      hook_content=$(git_hook_pre_commit)
-      ;;
-    commit-msg)
-      hook_content=$(git_hook_commit_msg)
-      ;;
-    pre-push)
-      hook_content=$(git_hook_pre_push)
-      ;;
-    pre-receive)
-      hook_content=$(git_hook_pre_receive)
-      ;;
-    post-update)
-      hook_content=$(git_hook_post_update)
-      ;;
-    update)
-      hook_content=$(git_hook_update)
-      ;;
-    pre-merge-commit)
-      hook_content=$(git_hook_pre_merge_commit)
-      ;;
-    prepare-commit-msg)
-      hook_content=$(git_hook_prepare_commit_msg)
-      ;;
-    pre-rebase)
-      hook_content=$(git_hook_pre_rebase)
-      ;;
-    applypatch-msg)
-      hook_content=$(git_hook_applypatch_msg)
-      ;;
-    pre-applypatch)
-      hook_content=$(git_hook_pre_applypatch)
-      ;;
-    push-to-checkout)
-      hook_content=$(git_hook_push_to_checkout)
-      ;;
-    sendemail-validate)
-      hook_content=$(git_hook_sendemail_validate)
-      ;;
-    *)
-      log error "Unknown hook type: ${hook_type}"
-      log notice "Available hook types: pre-commit, commit-msg, pre-push, pre-receive, post-update, update, pre-merge-commit, prepare-commit-msg, pre-rebase, applypatch-msg, pre-applypatch, push-to-checkout, sendemail-validate"
-      return ${RETURN_FAILURE:-1}
-      ;;
-  esac
-
-  echo "${hook_content}" >"${hook_file}"
-  chmod +x "${hook_file}"
-  log notice "Git hook installed: ${hook_file}"
-
-  return ${RETURN_SUCCESS:-0}
-}
-
-function git_hook_install_all() {
-  local target_dir=${1:-.git/hooks}
-
-  if [ ! -d "${target_dir}" ]; then
-    log error "Target directory does not exist: ${target_dir}"
-    return ${RETURN_FAILURE:-1}
-  fi
-
-  # Install all common hooks
-  git_hook_install pre-commit "${target_dir}"
-  git_hook_install commit-msg "${target_dir}"
-  git_hook_install pre-push "${target_dir}"
-  git_hook_install pre-merge-commit "${target_dir}"
-  git_hook_install prepare-commit-msg "${target_dir}"
-  git_hook_install pre-rebase "${target_dir}"
-
-  # Server-side hooks (usually only needed for git servers)
-  if [ -n "${2}" ] && [ "${2}" = "server" ]; then
-    git_hook_install update "${target_dir}"
-    git_hook_install pre-receive "${target_dir}"
-    git_hook_install post-update "${target_dir}"
-  fi
-
-  log notice "All git hooks installed in ${target_dir}"
-  return ${RETURN_SUCCESS:-0}
-}
-
-function git_hook_pre_commit() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-commit hook to run checks before committing
-# Exit with non-zero status to abort the commit
-
-# Get list of staged files
-STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM)
-if [ -z "${STAGED_FILES}" ]; then
-    echo "No files staged for commit"
-    exit 0
-fi
-
-EXIT_CODE=0
-
-# Check for whitespace errors
-echo "Checking for whitespace errors..."
-if ! git diff-index --check --cached HEAD --; then
-    echo "Whitespace errors found. Please fix them before committing."
-    EXIT_CODE=1
-fi
-
-# Check for large files
-echo "Checking for large files..."
-for FILE in ${STAGED_FILES}; do
-    FILE_SIZE=$(du -k "${FILE}" | cut -f1)
-    if [ "${FILE_SIZE}" -gt 500 ]; then
-        echo "Warning: ${FILE} is ${FILE_SIZE}KB - consider using Git LFS for large files"
-    fi
-done
-
-# Run custom checks here
-# ...
-
-if [ ${EXIT_CODE} -ne 0 ]; then
-    echo "Pre-commit checks failed. Commit aborted."
-fi
-
-exit ${EXIT_CODE}
-EOF
-}
-
-function git_hook_commit_msg() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git commit-msg hook to validate commit messages
-# $1 is the path to the temporary file containing the commit message
-
-COMMIT_MSG_FILE=$1
-COMMIT_MSG=$(cat "${COMMIT_MSG_FILE}")
-
-# Check commit message format
-# Example: require a ticket number at the beginning of the message
-if ! grep -qE "^(feat|fix|docs|style|refactor|test|chore|perf|ci|build|revert)(\([a-z0-9_-]+\))?: .+" "${COMMIT_MSG_FILE}"; then
-    echo "Invalid commit message format."
-    echo "Please use the format: <type>(<scope>): <description>"
-    echo "Where <type> is one of: feat, fix, docs, style, refactor, test, chore, perf, ci, build, revert"
-    exit 1
-fi
-
-# Check minimum length
-if [ ${#COMMIT_MSG} -lt 10 ]; then
-    echo "Commit message is too short (minimum 10 characters)"
-    exit 1
-fi
-
-# Check maximum length of first line
-FIRST_LINE=$(head -n 1 "${COMMIT_MSG_FILE}")
-if [ ${#FIRST_LINE} -gt 72 ]; then
-    echo "First line of commit message is too long (maximum 72 characters)"
-    exit 1
-fi
-
-# Add Signed-off-by line if not present
-SOB=$(git var GIT_AUTHOR_IDENT | sed -n 's/^\(.*>\).*$/Signed-off-by: \1/p')
-if ! grep -qs "^$SOB" "${COMMIT_MSG_FILE}"; then
-    echo "" >> "${COMMIT_MSG_FILE}"
-    echo "$SOB" >> "${COMMIT_MSG_FILE}"
-fi
-
-exit 0
-EOF
-}
-
-function git_hook_pre_push() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-push hook
-# $1 is the name of the remote to which the push is being done
-# $2 is the URL to which the push is being done
-
-REMOTE="$1"
-URL="$2"
-
-Z40=0000000000000000000000000000000000000000
-
-# Get the list of refs being pushed
-while read LOCAL_REF LOCAL_SHA REMOTE_REF REMOTE_SHA; do
-    if [ "${LOCAL_SHA}" = ${Z40} ]; then
-        # Branch deletion, do nothing
-        continue
-    fi
-
-    if [ "${REMOTE_SHA}" = ${Z40} ]; then
-        # New branch, examine all commits
-        RANGE="${LOCAL_SHA}"
-    else
-        # Update to existing branch, examine new commits
-        RANGE="${REMOTE_SHA}..${LOCAL_SHA}"
-    fi
-
-    # Check for WIP commits
-    if git log --grep="WIP" "${RANGE}" | grep -q "WIP"; then
-        echo "Error: WIP commit detected. Please remove WIP commits before pushing."
-        exit 1
-    fi
-
-    # Check for TODO commits
-    if git log --grep="TODO" "${RANGE}" | grep -q "TODO"; then
-        echo "Warning: TODO found in commit message. Consider addressing TODOs before pushing."
-    fi
-
-    # Run tests if applicable
-    # if [ -f "run_tests.sh" ]; then
-    #     echo "Running tests..."
-    #     if ! ./run_tests.sh; then
-    #         echo "Tests failed. Push aborted."
-    #         exit 1
-    #     fi
-    # fi
-done
-
-exit 0
-EOF
-}
-
-function git_hook_pre_receive() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-receive hook (server-side)
-# Reads stdin in the format: <old-value> <new-value> <ref-name>
-
-Z40=0000000000000000000000000000000000000000
-
-while read OLD_REV NEW_REV REF_NAME; do
-    # Branch or tag deletion
-    if [ "${NEW_REV}" = ${Z40} ]; then
-        echo "Deleting ${REF_NAME}"
-        continue
-    fi
-
-    # New branch or tag
-    if [ "${OLD_REV}" = ${Z40} ]; then
-        echo "Creating ${REF_NAME}"
-        RANGE="${NEW_REV}"
-    else
-        # Update to existing branch or tag
-        echo "Updating ${REF_NAME}"
-        RANGE="${OLD_REV}..${NEW_REV}"
-    fi
-
-    # Check for protected branches
-    if [ "${REF_NAME}" = "refs/heads/main" ] || [ "${REF_NAME}" = "refs/heads/master" ]; then
-        # Check if user has permission (example)
-        # CURRENT_USER=$(git config user.name)
-        # if ! echo "${AUTHORIZED_USERS}" | grep -q "${CURRENT_USER}"; then
-        #     echo "Error: You don't have permission to push to ${REF_NAME}"
-        #     exit 1
-        # fi
-        echo "Warning: Pushing to protected branch ${REF_NAME}"
-    fi
-
-    # Check for file size limits
-    TOO_LARGE_FILES=$(git rev-list --objects ${RANGE} | \
-        git cat-file --batch-check='%(objecttype) %(objectname) %(objectsize) %(rest)' | \
-        awk '/^blob/ && $3 >= 10485760 {print $4}' | sort -u)
-
-    if [ -n "${TOO_LARGE_FILES}" ]; then
-        echo "Error: Files exceeding size limit (10MB) found:"
-        echo "${TOO_LARGE_FILES}"
-        echo "Consider using Git LFS for large files."
-        exit 1
-    fi
-done
-
-exit 0
-EOF
-}
-
-function git_hook_post_update() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git post-update hook (server-side)
-# This hook is called after a successful push to update secondary services
-# $@ contains the list of refs that were updated
-
-echo "Running post-update hook"
-
-# Update reference repository for git daemon
-# git update-server-info
-
-# Update any deployment systems
-# ./deploy.sh "$@"
-
-# Notify CI/CD system
-# curl -s -X POST "https://ci.example.com/trigger?refs=$*"
-
-# Notify team chat
-# MESSAGE="Repository updated with refs: $*"
-# curl -s -X POST -H "Content-Type: application/json" -d "{\"text\":\"${MESSAGE}\"}" "https://chat.example.com/webhook"
-
-echo "Post-update hook completed"
-exit 0
-EOF
-}
-
-function git_hook_update() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git update hook (server-side)
-# $1 is the ref being updated
-# $2 is the old object name
-# $3 is the new object name
-
-REF_NAME="$1"
-OLD_REV="$2"
-NEW_REV="$3"
-
-# Get the branch or tag name
-if [[ "${REF_NAME}" =~ ^refs/heads/ ]]; then
-    BRANCH_NAME="${REF_NAME#refs/heads/}"
-    echo "Branch ${BRANCH_NAME} is being updated"
-elif [[ "${REF_NAME}" =~ ^refs/tags/ ]]; then
-    TAG_NAME="${REF_NAME#refs/tags/}"
-    echo "Tag ${TAG_NAME} is being updated"
-else
-    echo "Ref ${REF_NAME} is being updated"
-fi
-
-# Check for force pushes
-if [ "${OLD_REV}" != "0000000000000000000000000000000000000000" ] &&
-   ! git merge-base --is-ancestor "${OLD_REV}" "${NEW_REV}"; then
-    echo "Warning: Force push detected on ${REF_NAME}"
-
-    # Optionally prevent force pushes to specific branches
-    if [ "${BRANCH_NAME}" = "main" ] || [ "${BRANCH_NAME}" = "master" ]; then
-        echo "Error: Force pushing to ${BRANCH_NAME} is not allowed"
-        exit 1
-    fi
-fi
-
-# Check for specific file patterns
-RESTRICTED_FILES=$(git diff --name-only "${OLD_REV}" "${NEW_REV}" | grep -E '\.env$|password|secret|credential' || true)
-if [ -n "${RESTRICTED_FILES}" ]; then
-    echo "Warning: Potentially sensitive files detected:"
-    echo "${RESTRICTED_FILES}"
-    echo "Make sure these files don't contain sensitive information."
-    # Uncomment to block the push
-    # exit 1
-fi
-
-exit 0
-EOF
-}
-
-function git_hook_pre_merge_commit() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-merge-commit hook
-# This hook is called before a merge commit is created
-
-# Get the name of the branch being merged
-MERGE_BRANCH=$(git symbolic-ref --short HEAD)
-echo "Preparing to create merge commit on ${MERGE_BRANCH}"
-
-# Check for conflicts
-CONFLICTS=$(git diff --name-only --diff-filter=U)
-if [ -n "${CONFLICTS}" ]; then
-    echo "Warning: Unresolved conflicts in the following files:"
-    echo "${CONFLICTS}"
-    echo "Please resolve conflicts before continuing."
-    # Uncomment to block the commit
-    # exit 1
-fi
-
-# Run tests or other validations
-# if [ -f "./run_tests.sh" ]; then
-#     echo "Running tests before merge commit..."
-#     if ! ./run_tests.sh; then
-#         echo "Tests failed. Merge commit aborted."
-#         exit 1
-#     fi
-# fi
-
-exit 0
-EOF
-}
-
-function git_hook_prepare_commit_msg() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git prepare-commit-msg hook
-# $1 is the name of the file containing the commit message
-# $2 is the source of the commit message (message|template|merge|squash|commit)
-# $3 is the commit SHA1 (only given when amending)
-
-COMMIT_MSG_FILE="$1"
-COMMIT_SOURCE="$2"
-SHA1="$3"
-
-# For merge commits, add the merged branch name
-if [ "${COMMIT_SOURCE}" = "merge" ]; then
-    MERGE_BRANCH=$(git rev-parse --abbrev-ref MERGE_HEAD)
-    echo "Merge branch '${MERGE_BRANCH}'" > "${COMMIT_MSG_FILE}"
-    exit 0
-fi
-
-# For squash commits, keep the original messages
-if [ "${COMMIT_SOURCE}" = "squash" ]; then
-    exit 0
-fi
-
-# For regular commits, prepend branch name if it contains a ticket number
-if [ -z "${COMMIT_SOURCE}" ] || [ "${COMMIT_SOURCE}" = "message" ]; then
-    BRANCH_NAME=$(git symbolic-ref --short HEAD)
-
-    # Extract ticket number from branch name (e.g., feature/JIRA-123-description)
-    if [[ "${BRANCH_NAME}" =~ [A-Z]+-[0-9]+ ]]; then
-        TICKET="${BASH_REMATCH[0]}"
-
-        # Only prepend if not already in the message
-        if ! grep -q "${TICKET}" "${COMMIT_MSG_FILE}"; then
-            TEMP_FILE=$(mktemp)
-            echo "[${TICKET}] $(cat ${COMMIT_MSG_FILE})" > "${TEMP_FILE}"
-            cat "${TEMP_FILE}" > "${COMMIT_MSG_FILE}"
-            rm "${TEMP_FILE}"
-        fi
-    fi
-fi
-
-exit 0
-EOF
-}
-
-function git_hook_pre_rebase() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-rebase hook
-# $1 is the upstream branch we're rebasing onto
-# $2 is the branch being rebased (or empty when rebasing the current branch)
-
-UPSTREAM="$1"
-BRANCH="$2"
-
-# If branch is empty, get the current branch
-if [ -z "${BRANCH}" ]; then
-    BRANCH=$(git symbolic-ref --short HEAD)
-fi
-
-echo "Preparing to rebase ${BRANCH} onto ${UPSTREAM}"
-
-# Prevent rebasing of protected branches
-if [ "${BRANCH}" = "master" ] || [ "${BRANCH}" = "main" ]; then
-    echo "Error: Rebasing ${BRANCH} is not allowed. Please create a new branch instead."
-    exit 1
-fi
-
-# Check if the branch has been pushed
-REMOTE_REF=$(git for-each-ref --format='%(upstream:short)' refs/heads/"${BRANCH}")
-if [ -n "${REMOTE_REF}" ]; then
-    echo "Warning: Branch ${BRANCH} has a remote counterpart (${REMOTE_REF})."
-    echo "Rebasing will rewrite history and require a force push."
-
-    # Uncomment to prevent rebasing of pushed branches
-    # echo "Error: Rebasing a pushed branch is not allowed."
-    # exit 1
-fi
-
-# Additional checks before rebasing
-# ...
-
-exit 0
-EOF
-}
-
-function git_hook_applypatch_msg() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git applypatch-msg hook
-# $1 is the name of the file that contains the proposed commit message
-
-COMMIT_MSG_FILE="$1"
-COMMIT_MSG=$(cat "${COMMIT_MSG_FILE}")
-
-# Check if the commit message meets our standards
-if [ ${#COMMIT_MSG} -lt 10 ]; then
-    echo "Error: Commit message is too short (minimum 10 characters)"
-    exit 1
-fi
-
-# Check for ticket reference
-if ! grep -qE '\b[A-Z]+-[0-9]+\b' "${COMMIT_MSG_FILE}"; then
-    echo "Warning: No ticket reference found in the commit message."
-    echo "Consider adding a ticket reference like JIRA-123."
-fi
-
-# Check for imperative mood in the first line
-FIRST_LINE=$(head -n 1 "${COMMIT_MSG_FILE}")
-if ! echo "${FIRST_LINE}" | grep -qE '^(Add|Fix|Update|Change|Remove|Refactor|Document|Style|Test|Optimize|Merge|Revert)'; then
-    echo "Warning: First line should begin with a verb in the imperative mood."
-    echo "Examples: Add, Fix, Update, Change, Remove, Refactor, etc."
-fi
-
-exit 0
-EOF
-}
-
-function git_hook_pre_applypatch() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git pre-applypatch hook
-# This hook is invoked by git-am after the patch is applied but before a commit is made
-
-# Run tests to verify that the patch doesn't break anything
-echo "Running tests before applying patch..."
-
-# Example: Run project-specific tests
-# if [ -f "./run_tests.sh" ]; then
-#     if ! ./run_tests.sh; then
-#         echo "Tests failed. Patch will not be applied."
-#         exit 1
-#     fi
-# fi
-
-# Verify coding standards
-echo "Checking coding standards..."
-
-# Example: Run linters or style checkers
-# if command -v shellcheck >/dev/null 2>&1; then
-#     SHELL_SCRIPTS=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.sh$')
-#     if [ -n "${SHELL_SCRIPTS}" ]; then
-#         if ! shellcheck ${SHELL_SCRIPTS}; then
-#             echo "Shell script issues found. Please fix before applying patch."
-#             exit 1
-#         fi
-#     fi
-# fi
-
-echo "Pre-applypatch checks passed."
-exit 0
-EOF
-}
-
-function git_hook_push_to_checkout() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git push-to-checkout hook
-# This hook is invoked when a git-receive-pack runs with the option to update the working tree
-# $1 is the branch being updated
-# $2 is the old object name
-# $3 is the new object name
-
-BRANCH="$1"
-OLD_REV="$2"
-NEW_REV="$3"
-
-echo "Updating working tree for branch ${BRANCH}"
-
-# Check if we need to run any build processes
-if [ -f "package.json" ]; then
-    echo "Node.js project detected, running npm install..."
-    npm install
-
-    if grep -q "build" package.json; then
-        echo "Running build script..."
-        npm run build
-    fi
-fi
-
-# Check if we need to restart any services
-if [ -f "docker-compose.yml" ]; then
-    echo "Docker Compose project detected, restarting services..."
-    docker-compose down && docker-compose up -d
-fi
-
-# Example: Reload a web server if configuration changed
-if git diff --name-only "${OLD_REV}" "${NEW_REV}" | grep -q "nginx.conf"; then
-    echo "Nginx configuration changed, reloading nginx..."
-    # systemctl reload nginx
-fi
-
-echo "Working tree updated successfully."
-exit 0
-EOF
-}
-
-function git_hook_sendemail_validate() {
-  cat <<'EOF'
-#!/bin/bash
-
-# Git sendemail-validate hook
-# This hook validates patch emails before they are sent
-# $1 is the file containing the email to be sent
-# $2 is the email format (patch|suppress-cc|cc|compose|default)
-
-EMAIL_FILE="$1"
-EMAIL_FORMAT="$2"
-
-echo "Validating email before sending (${EMAIL_FORMAT})"
-
-# Check for sensitive information
-if grep -i -E "password|secret|token|key|credential" "${EMAIL_FILE}"; then
-    echo "Error: Potential sensitive information found in email."
-    echo "Please review the email content before sending."
-    exit 1
-fi
-
-# Verify patch formatting
-if [ "${EMAIL_FORMAT}" = "patch" ]; then
-    # Check patch format
-    if ! grep -q "^---$" "${EMAIL_FILE}"; then
-        echo "Warning: Patch might not be correctly formatted."
-    fi
-
-    # Check for sufficient context lines
-    if grep -q "^@@ .* @@$" "${EMAIL_FILE}"; then
-        CONTEXT_LINES=$(grep -E "^@@ .* @@$" "${EMAIL_FILE}" | grep -oE ',[0-9]+' | sed 's/,//' | sort -n | head -n 1)
-        if [ -n "${CONTEXT_LINES}" ] && [ "${CONTEXT_LINES}" -lt 3 ]; then
-            echo "Warning: Patch has less than 3 context lines. Consider using more context."
-        fi
-    fi
-
-    # Check subject prefix
-    if ! grep -q "^\[PATCH\]" "${EMAIL_FILE}"; then
-        echo "Warning: Subject line should start with [PATCH]."
-    fi
-fi
-
-echo "Email validation passed."
-exit 0
-EOF
-}
-
 function git_pull_repos() {
   local root=${1:-${PWD}}
   for repo_path in $(git_list_repos "${root}"); do
@@ -1468,6 +812,343 @@ function git_ignored() {
   
   # Clean up temporary file
   rm -f "${temp_file}"
+  
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_confirm_dangerous_operation() {
+  local operation_name=${1:-"dangerous git operation"}
+  local force=${2:-false}
+  local warning_lines=("${@:3}")
+  
+  if [ ${#warning_lines[@]} -eq 0 ]; then
+    warning_lines=(
+      "This operation will:"
+      "  1. Remove ALL git history permanently"
+      "  2. Force push to ALL remote repositories"
+      "  3. Make the current state the new initial commit"
+    )
+  fi
+  
+  log warn "${operation_name}:"
+  for line in "${warning_lines[@]}"; do
+    echo "${line}"
+  done
+  echo ""
+  log error "WARNING: This action cannot be undone!"
+  echo ""
+  
+  if [ "${force}" = "true" ]; then
+    log notice "Force mode enabled, skipping confirmation"
+    return ${RETURN_SUCCESS:-0}
+  fi
+  
+  read -p "Do you want to continue? Type 'YES' to confirm: " confirmation
+  
+  if [ "${confirmation}" != "YES" ]; then
+    log notice "Operation cancelled by user"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_backup_repository() {
+  local repo_dir=${1:-$(pwd)}
+  local backup_base_dir=${2:-""}
+  local exclude_git=${3:-false}
+  
+  if [ ! -d "${repo_dir}" ]; then
+    log error "Repository directory does not exist: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  if [ ! -d "${repo_dir}/.git" ]; then
+    log error "Not a git repository: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Generate backup directory name
+  local repo_name=$(basename "${repo_dir}")
+  if [ -n "${backup_base_dir}" ]; then
+    local backup_dir="${backup_base_dir}/${repo_name}_backup_$(date +%Y%m%d_%H%M%S)"
+  else
+    local backup_dir="${repo_dir}_backup_$(date +%Y%m%d_%H%M%S)"
+  fi
+  
+  log info "Creating backup of repository: ${repo_dir}"
+  
+  # Create backup directory
+  mkdir -p "${backup_dir}" || {
+    log error "Failed to create backup directory: ${backup_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Use rsync to handle symlinks properly if available, otherwise use cp
+  if have rsync; then
+    if [ "${exclude_git}" = "true" ]; then
+      rsync -av --exclude='.git' "${repo_dir}/" "${backup_dir}/"
+    else
+      rsync -av "${repo_dir}/" "${backup_dir}/"
+    fi
+  else
+    # Fallback to cp if rsync is not available
+    if [ "${exclude_git}" = "true" ]; then
+      find "${repo_dir}" -type f -not -path "*/.git/*" -exec cp --parents {} "${backup_dir}/" \; 2>/dev/null || {
+        log warn "Some files may not have been copied due to permissions"
+      }
+    else
+      cp -r "${repo_dir}"/* "${backup_dir}/" 2>/dev/null || true
+      cp -r "${repo_dir}/.git" "${backup_dir}/" 2>/dev/null || true
+    fi
+  fi
+  
+  log notice "Backup created at: ${backup_dir}"
+  echo "${backup_dir}"
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_repository_info() {
+  local repo_dir=${1:-$(pwd)}
+  local verbose=${2:-true}
+  
+  # Change to repository directory
+  local original_dir=$(pwd)
+  cd "${repo_dir}" 2>/dev/null || {
+    log error "Directory does not exist: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Check if we're in a git repository
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    log error "Not a git repository: ${repo_dir}"
+    cd "${original_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  if [ "${verbose}" = "true" ]; then
+    log info "Repository information for: ${repo_dir}"
+  fi
+  
+  local current_branch=$(git branch --show-current 2>/dev/null || echo 'detached HEAD')
+  local current_commit=$(git rev-parse HEAD 2>/dev/null || echo 'no commits')
+  local repo_size=$(du -sh .git 2>/dev/null | cut -f1 || echo 'unknown')
+  local total_commits=$(git rev-list --count HEAD 2>/dev/null || echo '0')
+  local status=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
+  
+  if [ "${verbose}" = "true" ]; then
+    echo "  Repository path: ${repo_dir}"
+    echo "  Current branch: ${current_branch}"
+    echo "  Current commit: ${current_commit}"
+    echo "  Repository size: ${repo_size}"
+    echo "  Total commits: ${total_commits}"
+    echo "  Modified files: ${status}"
+    
+    log info "Remote repositories:"
+    if git remote -v >/dev/null 2>&1; then
+      git remote -v | sed 's/^/  /' || true
+    else
+      echo "  No remotes configured"
+    fi
+  else
+    # Output in machine-readable format
+    echo "path=${repo_dir}"
+    echo "branch=${current_branch}"
+    echo "commit=${current_commit}"
+    echo "size=${repo_size}"
+    echo "commits=${total_commits}"
+    echo "modified=${status}"
+  fi
+  
+  cd "${original_dir}"
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_reset_history() {
+  local repo_dir=${1:-$(pwd)}
+  local commit_message=${2:-"Fresh start - removed all history $(date '+%Y-%m-%d %H:%M:%S')"}
+  
+  # Change to repository directory
+  local original_dir=$(pwd)
+  cd "${repo_dir}" 2>/dev/null || {
+    log error "Directory does not exist: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Check if we're in a git repository
+  if ! git rev-parse --is-inside-work-tree &>/dev/null; then
+    log error "Not a git repository: ${repo_dir}"
+    cd "${original_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  log info "Starting git history reset..."
+  
+  # Get current branch name
+  local current_branch=$(git branch --show-current 2>/dev/null)
+  if [ -z "${current_branch}" ]; then
+    current_branch="main"
+    log warn "No current branch detected, using 'main' as default"
+  fi
+  log info "Current branch: ${current_branch}"
+  
+  # Get list of all remotes
+  local remotes=($(git remote 2>/dev/null || true))
+  if [ ${#remotes[@]} -gt 0 ]; then
+    log info "Found remotes: ${remotes[*]}"
+  else
+    log warn "No remote repositories found"
+  fi
+  
+  # Stage all files
+  log info "Staging all files..."
+  git add -A
+  
+  # Check if there are any changes to commit
+  if git diff --staged --quiet 2>/dev/null; then
+    log info "No changes to commit, using current HEAD"
+    # Get current commit message if it exists
+    commit_message=$(git log -1 --pretty=format:"%s" 2>/dev/null || echo "Initial commit")
+  else
+    log info "Committing current changes..."
+    git commit -m "${commit_message}" || {
+      log error "Failed to commit current changes"
+      cd "${original_dir}"
+      return ${RETURN_FAILURE:-1}
+    }
+  fi
+  
+  # Create orphan branch
+  local temp_branch="temp_fresh_start_$(date +%s)"
+  log info "Creating orphan branch: ${temp_branch}"
+  git checkout --orphan "${temp_branch}" || {
+    log error "Failed to create orphan branch"
+    cd "${original_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Add all files to the orphan branch
+  log info "Adding all files to orphan branch..."
+  git add -A
+  
+  # Create initial commit
+  log info "Creating initial commit..."
+  git commit -m "${commit_message}" || {
+    log error "Failed to create initial commit"
+    cd "${original_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Delete old branch if it exists
+  if git show-ref --verify --quiet "refs/heads/${current_branch}"; then
+    log info "Deleting old branch: ${current_branch}"
+    git branch -D "${current_branch}" || {
+      log warn "Failed to delete old branch: ${current_branch}"
+    }
+  fi
+  
+  # Rename orphan branch to original branch name
+  log info "Renaming branch ${temp_branch} to ${current_branch}"
+  git branch -m "${temp_branch}" "${current_branch}" || {
+    log error "Failed to rename branch"
+    cd "${original_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  # Force push to all remotes
+  for remote in "${remotes[@]}"; do
+    log info "Force pushing to remote: ${remote}"
+    if ! git push --force "${remote}" "${current_branch}" 2>/dev/null; then
+      log warn "Failed to push to remote: ${remote}"
+    fi
+  done
+  
+  # Clean up local repository
+  log info "Cleaning up local repository..."
+  git gc --aggressive --prune=now >/dev/null 2>&1 || {
+    log warn "Git cleanup failed, but continuing..."
+  }
+  
+  log notice "Git history reset completed!"
+  cd "${original_dir}"
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_show_cleanup_results() {
+  local repo_dir=${1:-$(pwd)}
+  local backup_dir=${2:-""}
+  
+  # Change to repository directory
+  local original_dir=$(pwd)
+  cd "${repo_dir}" 2>/dev/null || {
+    log error "Directory does not exist: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  }
+  
+  log info "Final repository information:"
+  echo "  Current branch: $(git branch --show-current 2>/dev/null || echo 'unknown')"
+  echo "  Current commit: $(git rev-parse HEAD 2>/dev/null || echo 'unknown')"
+  echo "  Repository size: $(du -sh .git 2>/dev/null | cut -f1 || echo 'unknown')"
+  echo "  Total commits: $(git rev-list --count HEAD 2>/dev/null || echo '1')"
+  
+  log notice "Repository cleanup completed successfully!"
+  if [ -n "${backup_dir}" ] && [ -d "${backup_dir}" ]; then
+    log notice "Backup is available at: ${backup_dir}"
+    log warn "You can remove the backup directory when you're satisfied with the results"
+  fi
+  
+  cd "${original_dir}"
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_clean_history() {
+  local repo_dir=${1:-$(pwd)}
+  local force=${2:-false}
+  
+  # Validate input parameters
+  if [ ! -d "${repo_dir}" ]; then
+    log error "Directory does not exist: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Check if we're in a git repository
+  if [ ! -d "${repo_dir}/.git" ]; then
+    log error "Not a git repository: ${repo_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Check if git command is available
+  if ! have git; then
+    log error "Git command not found"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Main execution flow
+  log info "Starting Git History Cleanup for repository: ${repo_dir}"
+  
+  # Get initial repository info
+  git_repository_info "${repo_dir}"
+  
+  # Confirm operation (unless force mode is enabled)
+  if ! git_confirm_dangerous_operation "Git History Cleanup" "${force}"; then
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Create backup
+  local backup_dir=$(git_backup_repository "${repo_dir}")
+  if [ $? -ne 0 ]; then
+    log error "Failed to create backup"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Reset git history
+  if ! git_reset_history "${repo_dir}"; then
+    log error "Git history cleanup failed"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
+  # Show final results
+  git_show_cleanup_results "${repo_dir}" "${backup_dir}"
   
   return ${RETURN_SUCCESS:-0}
 }
