@@ -143,4 +143,5 @@ EOF
 
   ln -sf .ai/instructions.md QWEN.md
   ln -sf .ai/instructions.md CLAUDE.md
+  ln -sf .ai/instructions.md IFLOW.md
 }
