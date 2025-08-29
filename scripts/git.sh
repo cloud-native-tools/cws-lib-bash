@@ -123,7 +123,7 @@ function git_tags() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
 }
 
-function git_logs() {
+function git_logs() { 
   git log --graph --oneline --all --decorate
 }
 
