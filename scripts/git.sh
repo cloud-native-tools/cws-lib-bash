@@ -123,7 +123,7 @@ function git_tags() {
   git log --tags --simplify-by-decoration --pretty="format:%ci %d"
 }
 
-function git_logs() { 
+function git_logs() {
   git log --graph --oneline --all --decorate
 }
 
@@ -346,7 +346,7 @@ function git_add() {
 
 function git_backup() {
   local msg=${1:-"backup at $(date_now)"}
-  
+
   # Check if there are any changes to commit
   if ! git diff-index --quiet HEAD -- 2>/dev/null; then
     log info "Committing local changes"
@@ -354,14 +354,14 @@ function git_backup() {
   else
     log info "No local changes to commit"
   fi
-  
+
   # Pull with rebase to integrate remote changes
   log info "Pulling remote changes with rebase"
   if ! git_pull; then
     log error "Failed to pull and rebase remote changes"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Push the changes
   log info "Pushing changes to remote"
   git_push
@@ -492,8 +492,8 @@ function git_latest_updated_files() {
 
 function git_setup_ssh_repo() {
   local repo="${1}"
-  local home="${DATA_DIR:-/data}/git"
   local username=git
+  local home="${GIT_STORAGE:-/home/${username}}"
   local ssh_dir="${home}/.ssh"
   local auth_keys_src="${HOME}/.ssh/authorized_keys"
   local auth_keys_dst="${ssh_dir}/authorized_keys"
@@ -743,45 +743,45 @@ function git_ignored() {
   local root=${1:-${PWD}}
   local show_stats=${2:-false}
   local max_files=${3:-100}
-  
+
   # Check if we're in a git repository
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     log error "Not in a git repository"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Check if .gitignore exists
   if [ ! -f "${root}/.gitignore" ]; then
     log warning "No .gitignore file found in ${root}"
   fi
-  
+
   log info "Listing files ignored by git in ${root}"
-  
+
   # Use a temporary file to avoid "Argument list too long" error
   local temp_file=$(mktemp)
-  
+
   # Use git ls-files to list ignored files and write to temp file
   # The -i flag shows ignored files
   # The --exclude-standard flag uses standard ignore rules (.gitignore, .git/info/exclude, etc.)
   # The -o flag shows untracked files (optional, to get all ignored files)
-  git ls-files -i --exclude-standard --others 2>/dev/null | sort > "${temp_file}"
-  
+  git ls-files -i --exclude-standard --others 2>/dev/null | sort >"${temp_file}"
+
   if [ ! -s "${temp_file}" ]; then
     log notice "No ignored files found in the working directory"
     rm -f "${temp_file}"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   # Count total ignored files
-  local total_count=$(wc -l < "${temp_file}" | tr -d ' ')
-  
+  local total_count=$(wc -l <"${temp_file}" | tr -d ' ')
+
   # Display the results
   if [ "${show_stats}" = "true" ]; then
     log notice "Found ${total_count} ignored files (showing first ${max_files}):"
     echo
     printf "%-60s | %s\n" "File Path" "Size"
     printf "%-60s-|-%s\n" "$(printf '%0.s-' {1..60})" "$(printf '%0.s-' {1..10})"
-    
+
     head -n "${max_files}" "${temp_file}" | while IFS= read -r file; do
       if [ -n "${file}" ]; then
         if [ -f "${file}" ]; then
@@ -795,7 +795,7 @@ function git_ignored() {
         fi
       fi
     done
-    
+
     if [ "${total_count}" -gt "${max_files}" ]; then
       echo
       log notice "... and $((total_count - max_files)) more files (use 'git_ignored . false <max_files>' to show more)"
@@ -803,16 +803,16 @@ function git_ignored() {
   else
     log notice "Found ${total_count} ignored files (showing first ${max_files}):"
     head -n "${max_files}" "${temp_file}"
-    
+
     if [ "${total_count}" -gt "${max_files}" ]; then
       echo
       log notice "... and $((total_count - max_files)) more files (use 'git_ignored . false <max_files>' to show more)"
     fi
   fi
-  
+
   # Clean up temporary file
   rm -f "${temp_file}"
-  
+
   return ${RETURN_SUCCESS:-0}
 }
 
@@ -820,7 +820,7 @@ function git_confirm_dangerous_operation() {
   local operation_name=${1:-"dangerous git operation"}
   local force=${2:-false}
   local warning_lines=("${@:3}")
-  
+
   if [ ${#warning_lines[@]} -eq 0 ]; then
     warning_lines=(
       "This operation will:"
@@ -829,7 +829,7 @@ function git_confirm_dangerous_operation() {
       "  3. Make the current state the new initial commit"
     )
   fi
-  
+
   log warn "${operation_name}:"
   for line in "${warning_lines[@]}"; do
     echo "${line}"
@@ -837,19 +837,19 @@ function git_confirm_dangerous_operation() {
   echo ""
   log error "WARNING: This action cannot be undone!"
   echo ""
-  
+
   if [ "${force}" = "true" ]; then
     log notice "Force mode enabled, skipping confirmation"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   read -p "Do you want to continue? Type 'YES' to confirm: " confirmation
-  
+
   if [ "${confirmation}" != "YES" ]; then
     log notice "Operation cancelled by user"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   return ${RETURN_SUCCESS:-0}
 }
 
@@ -857,17 +857,17 @@ function git_backup_repository() {
   local repo_dir=${1:-$(pwd)}
   local backup_base_dir=${2:-""}
   local exclude_git=${3:-false}
-  
+
   if [ ! -d "${repo_dir}" ]; then
     log error "Repository directory does not exist: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   if [ ! -d "${repo_dir}/.git" ]; then
     log error "Not a git repository: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Generate backup directory name
   local repo_name=$(basename "${repo_dir}")
   if [ -n "${backup_base_dir}" ]; then
@@ -875,15 +875,15 @@ function git_backup_repository() {
   else
     local backup_dir="${repo_dir}_backup_$(date +%Y%m%d_%H%M%S)"
   fi
-  
+
   log info "Creating backup of repository: ${repo_dir}"
-  
+
   # Create backup directory
   mkdir -p "${backup_dir}" || {
     log error "Failed to create backup directory: ${backup_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Use rsync to handle symlinks properly if available, otherwise use cp
   if have rsync; then
     if [ "${exclude_git}" = "true" ]; then
@@ -902,7 +902,7 @@ function git_backup_repository() {
       cp -r "${repo_dir}/.git" "${backup_dir}/" 2>/dev/null || true
     fi
   fi
-  
+
   log notice "Backup created at: ${backup_dir}"
   echo "${backup_dir}"
   return ${RETURN_SUCCESS:-0}
@@ -911,31 +911,31 @@ function git_backup_repository() {
 function git_repository_info() {
   local repo_dir=${1:-$(pwd)}
   local verbose=${2:-true}
-  
+
   # Change to repository directory
   local original_dir=$(pwd)
   cd "${repo_dir}" 2>/dev/null || {
     log error "Directory does not exist: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Check if we're in a git repository
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     log error "Not a git repository: ${repo_dir}"
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   if [ "${verbose}" = "true" ]; then
     log info "Repository information for: ${repo_dir}"
   fi
-  
+
   local current_branch=$(git branch --show-current 2>/dev/null || echo 'detached HEAD')
   local current_commit=$(git rev-parse HEAD 2>/dev/null || echo 'no commits')
   local repo_size=$(du -sh .git 2>/dev/null | cut -f1 || echo 'unknown')
   local total_commits=$(git rev-list --count HEAD 2>/dev/null || echo '0')
   local status=$(git status --porcelain 2>/dev/null | wc -l | tr -d ' ')
-  
+
   if [ "${verbose}" = "true" ]; then
     echo "  Repository path: ${repo_dir}"
     echo "  Current branch: ${current_branch}"
@@ -943,7 +943,7 @@ function git_repository_info() {
     echo "  Repository size: ${repo_size}"
     echo "  Total commits: ${total_commits}"
     echo "  Modified files: ${status}"
-    
+
     log info "Remote repositories:"
     if git remote -v >/dev/null 2>&1; then
       git remote -v | sed 's/^/  /' || true
@@ -959,7 +959,7 @@ function git_repository_info() {
     echo "commits=${total_commits}"
     echo "modified=${status}"
   fi
-  
+
   cd "${original_dir}"
   return ${RETURN_SUCCESS:-0}
 }
@@ -967,23 +967,23 @@ function git_repository_info() {
 function git_reset_history() {
   local repo_dir=${1:-$(pwd)}
   local commit_message=${2:-"Fresh start - removed all history $(date '+%Y-%m-%d %H:%M:%S')"}
-  
+
   # Change to repository directory
   local original_dir=$(pwd)
   cd "${repo_dir}" 2>/dev/null || {
     log error "Directory does not exist: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Check if we're in a git repository
   if ! git rev-parse --is-inside-work-tree &>/dev/null; then
     log error "Not a git repository: ${repo_dir}"
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   log info "Starting git history reset..."
-  
+
   # Get current branch name
   local current_branch=$(git branch --show-current 2>/dev/null)
   if [ -z "${current_branch}" ]; then
@@ -991,7 +991,7 @@ function git_reset_history() {
     log warn "No current branch detected, using 'main' as default"
   fi
   log info "Current branch: ${current_branch}"
-  
+
   # Get list of all remotes
   local remotes=($(git remote 2>/dev/null || true))
   if [ ${#remotes[@]} -gt 0 ]; then
@@ -999,11 +999,11 @@ function git_reset_history() {
   else
     log warn "No remote repositories found"
   fi
-  
+
   # Stage all files
   log info "Staging all files..."
   git add -A
-  
+
   # Check if there are any changes to commit
   if git diff --staged --quiet 2>/dev/null; then
     log info "No changes to commit, using current HEAD"
@@ -1017,7 +1017,7 @@ function git_reset_history() {
       return ${RETURN_FAILURE:-1}
     }
   fi
-  
+
   # Create orphan branch
   local temp_branch="temp_fresh_start_$(date +%s)"
   log info "Creating orphan branch: ${temp_branch}"
@@ -1026,11 +1026,11 @@ function git_reset_history() {
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Add all files to the orphan branch
   log info "Adding all files to orphan branch..."
   git add -A
-  
+
   # Create initial commit
   log info "Creating initial commit..."
   git commit -m "${commit_message}" || {
@@ -1038,7 +1038,7 @@ function git_reset_history() {
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Delete old branch if it exists
   if git show-ref --verify --quiet "refs/heads/${current_branch}"; then
     log info "Deleting old branch: ${current_branch}"
@@ -1046,7 +1046,7 @@ function git_reset_history() {
       log warn "Failed to delete old branch: ${current_branch}"
     }
   fi
-  
+
   # Rename orphan branch to original branch name
   log info "Renaming branch ${temp_branch} to ${current_branch}"
   git branch -m "${temp_branch}" "${current_branch}" || {
@@ -1054,7 +1054,7 @@ function git_reset_history() {
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Force push to all remotes
   for remote in "${remotes[@]}"; do
     log info "Force pushing to remote: ${remote}"
@@ -1062,13 +1062,13 @@ function git_reset_history() {
       log warn "Failed to push to remote: ${remote}"
     fi
   done
-  
+
   # Clean up local repository
   log info "Cleaning up local repository..."
   git gc --aggressive --prune=now >/dev/null 2>&1 || {
     log warn "Git cleanup failed, but continuing..."
   }
-  
+
   log notice "Git history reset completed!"
   cd "${original_dir}"
   return ${RETURN_SUCCESS:-0}
@@ -1077,26 +1077,26 @@ function git_reset_history() {
 function git_show_cleanup_results() {
   local repo_dir=${1:-$(pwd)}
   local backup_dir=${2:-""}
-  
+
   # Change to repository directory
   local original_dir=$(pwd)
   cd "${repo_dir}" 2>/dev/null || {
     log error "Directory does not exist: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   log info "Final repository information:"
   echo "  Current branch: $(git branch --show-current 2>/dev/null || echo 'unknown')"
   echo "  Current commit: $(git rev-parse HEAD 2>/dev/null || echo 'unknown')"
   echo "  Repository size: $(du -sh .git 2>/dev/null | cut -f1 || echo 'unknown')"
   echo "  Total commits: $(git rev-list --count HEAD 2>/dev/null || echo '1')"
-  
+
   log notice "Repository cleanup completed successfully!"
   if [ -n "${backup_dir}" ] && [ -d "${backup_dir}" ]; then
     log notice "Backup is available at: ${backup_dir}"
     log warn "You can remove the backup directory when you're satisfied with the results"
   fi
-  
+
   cd "${original_dir}"
   return ${RETURN_SUCCESS:-0}
 }
@@ -1104,51 +1104,51 @@ function git_show_cleanup_results() {
 function git_clean_history() {
   local repo_dir=${1:-$(pwd)}
   local force=${2:-false}
-  
+
   # Validate input parameters
   if [ ! -d "${repo_dir}" ]; then
     log error "Directory does not exist: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Check if we're in a git repository
   if [ ! -d "${repo_dir}/.git" ]; then
     log error "Not a git repository: ${repo_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Check if git command is available
   if ! have git; then
     log error "Git command not found"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Main execution flow
   log info "Starting Git History Cleanup for repository: ${repo_dir}"
-  
+
   # Get initial repository info
   git_repository_info "${repo_dir}"
-  
+
   # Confirm operation (unless force mode is enabled)
   if ! git_confirm_dangerous_operation "Git History Cleanup" "${force}"; then
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Create backup
   local backup_dir=$(git_backup_repository "${repo_dir}")
   if [ $? -ne 0 ]; then
     log error "Failed to create backup"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Reset git history
   if ! git_reset_history "${repo_dir}"; then
     log error "Git history cleanup failed"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Show final results
   git_show_cleanup_results "${repo_dir}" "${backup_dir}"
-  
+
   return ${RETURN_SUCCESS:-0}
 }
