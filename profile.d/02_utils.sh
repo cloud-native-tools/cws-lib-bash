@@ -61,52 +61,80 @@ function log() {
   local now=$(date_now)
 
   case ${level} in
-  PLAIN | plain)
-    shift
-    # print what as-is, no color
-    printf "%s\n" "$*"
-    ;;
-  COLOR | color)
-    shift
-    # like plain, but with color
-    printf "%b\n" "$@"
-    ;;
-  DEBUG | debug)
-    shift
-    # only print debug messages when CWS_DEBUG is enabled
-    # WARNING: enabling debug will generate excessive output, which may affect logic that depends on clean output
-    if cws_debug_enabled; then
-      printf "%b\n" "${CYAN}[${now}][$$][DEBUG] $@${CLEAR}" >&2
-    fi
-    ;;
-  INFO | info)
-    shift
-    printf "%b\n" "[${now}][$$][INFO] $@"
-    ;;
-  NOTICE | notice)
-    shift
-    printf "%b\n" "${GREEN}[${now}][$$][NOTICE] $@${CLEAR}"
-    ;;
-  WARN | warn)
-    shift
-    # use yellow color for warning
-    printf "%b\n" "${YELLOW}[${now}][$$][WARN] $@${CLEAR}" >&2
-    ;;
-  ERROR | error)
-    shift
-    # use red color for error
-    printf "%b\n" "${RED}[${now}][$$][ERROR] $@${CLEAR}" >&2
-    ;;
-  FATAL | fatal)
-    shift
-    # use red color for fatal error, NOTICE: this will exit the script
-    printf "%b\n" "${RED}[${now}][$$][FATAL] $@${CLEAR}" >&2
-    exit ${EXIT_FAILURE}
-    ;;
-  *)
-    log plain $@
-    ;;
+    PLAIN | plain)
+      shift
+      # print what as-is, no color
+      printf "%s\n" "$*"
+      ;;
+    COLOR | color)
+      shift
+      # like plain, but with color
+      printf "%b\n" "$@"
+      ;;
+    DEBUG | debug)
+      shift
+      # only print debug messages when CWS_DEBUG is enabled
+      # WARNING: enabling debug will generate excessive output, which may affect logic that depends on clean output
+      if cws_debug_enabled; then
+        printf "%b\n" "${CYAN}[${now}][$$][DEBUG] $@${CLEAR}" >&2
+      fi
+      ;;
+    INFO | info)
+      shift
+      printf "%b\n" "[${now}][$$][INFO] $@"
+      ;;
+    NOTICE | notice)
+      shift
+      printf "%b\n" "${GREEN}[${now}][$$][NOTICE] $@${CLEAR}"
+      ;;
+    WARN | warn)
+      shift
+      # use yellow color for warning
+      printf "%b\n" "${YELLOW}[${now}][$$][WARN] $@${CLEAR}" >&2
+      ;;
+    ERROR | error)
+      shift
+      # use red color for error
+      printf "%b\n" "${RED}[${now}][$$][ERROR] $@${CLEAR}" >&2
+      ;;
+    FATAL | fatal)
+      shift
+      # use red color for fatal error, NOTICE: this will exit the script
+      printf "%b\n" "${RED}[${now}][$$][FATAL] $@${CLEAR}" >&2
+      exit ${EXIT_FAILURE}
+      ;;
+    *)
+      log plain $@
+      ;;
   esac
+}
+
+function log_with_context() {
+  local level=$1
+  local context=$2
+  shift 2
+
+  # If no context provided, fallback to regular log
+  if [ -z "${context}" ]; then
+    log "${level}" "$@"
+    return
+  fi
+
+  # Handle multi-line messages by splitting on newlines
+  local message="$*"
+  if [[ ${message} == *$'\n'* ]]; then
+    # Multi-line message - process each line
+    while IFS= read -r line || [[ -n $line ]]; do
+      if [ -n "${line}" ]; then
+        log "${level}" "[${context}] ${line}"
+      else
+        log "${level}" ""
+      fi
+    done <<<"${message}"
+  else
+    # Single line message
+    log "${level}" "[${context}] ${message}"
+  fi
 }
 
 function die() {
@@ -165,7 +193,7 @@ function url_decode() {
 function source_scripts() {
   local script_home=$1
   local script_suffix=${2:-'*.sh'}
-  if [[ -n "${script_home}" && -d ${script_home} ]]; then
+  if [[ -n ${script_home} && -d ${script_home} ]]; then
     for script in $(find "${script_home}" -name ${script_suffix}); do
       log INFO "source script ${script} in ${script_home}"
       source ${script}
@@ -211,12 +239,12 @@ function urlencode() {
   for ((i = 0; i < length; i++)); do
     local char="${url:i:1}"
     case "${char}" in
-    [a-zA-Z0-9.~_-:/])
-      encoded="${encoded}${char}"
-      ;;
-    *)
-      encoded="${encoded}$(printf '%%%02X' "'${char}")"
-      ;;
+      [a-zA-Z0-9.~_-:/])
+        encoded="${encoded}${char}"
+        ;;
+      *)
+        encoded="${encoded}$(printf '%%%02X' "'${char}")"
+        ;;
     esac
   done
 
