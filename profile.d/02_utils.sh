@@ -76,31 +76,31 @@ function log() {
       # only print debug messages when CWS_DEBUG is enabled
       # WARNING: enabling debug will generate excessive output, which may affect logic that depends on clean output
       if cws_debug_enabled; then
-        printf "%b\n" "${CYAN}[${now}][$$][DEBUG] $@${CLEAR}" >&2
+        printf "%b\n" "${CYAN}[${now}][$$][DEBUG]$@${CLEAR}" >&2
       fi
       ;;
     INFO | info)
       shift
-      printf "%b\n" "[${now}][$$][INFO] $@"
+      printf "%b\n" "[${now}][$$][INFO]$@"
       ;;
     NOTICE | notice)
       shift
-      printf "%b\n" "${GREEN}[${now}][$$][NOTICE] $@${CLEAR}"
+      printf "%b\n" "${GREEN}[${now}][$$][NOTICE]$@${CLEAR}"
       ;;
     WARN | warn)
       shift
       # use yellow color for warning
-      printf "%b\n" "${YELLOW}[${now}][$$][WARN] $@${CLEAR}" >&2
+      printf "%b\n" "${YELLOW}[${now}][$$][WARN]$@${CLEAR}" >&2
       ;;
     ERROR | error)
       shift
       # use red color for error
-      printf "%b\n" "${RED}[${now}][$$][ERROR] $@${CLEAR}" >&2
+      printf "%b\n" "${RED}[${now}][$$][ERROR]$@${CLEAR}" >&2
       ;;
     FATAL | fatal)
       shift
       # use red color for fatal error, NOTICE: this will exit the script
-      printf "%b\n" "${RED}[${now}][$$][FATAL] $@${CLEAR}" >&2
+      printf "%b\n" "${RED}[${now}][$$][FATAL]$@${CLEAR}" >&2
       exit ${EXIT_FAILURE}
       ;;
     *)
@@ -112,29 +112,14 @@ function log() {
 function log_with_context() {
   local level=$1
   local context=$2
+  
+  if [ -z "${level}" ] || [ -z "${context}" ]; then
+    log error "Usage: log_with_context <level> <context> <message...>"
+    return ${RETURN_FAILURE:-1}
+  fi
+  
   shift 2
-
-  # If no context provided, fallback to regular log
-  if [ -z "${context}" ]; then
-    log "${level}" "$@"
-    return
-  fi
-
-  # Handle multi-line messages by splitting on newlines
-  local message="$*"
-  if [[ ${message} == *$'\n'* ]]; then
-    # Multi-line message - process each line
-    while IFS= read -r line || [[ -n $line ]]; do
-      if [ -n "${line}" ]; then
-        log "${level}" "[${context}] ${line}"
-      else
-        log "${level}" ""
-      fi
-    done <<<"${message}"
-  else
-    # Single line message
-    log "${level}" "[${context}] ${message}"
-  fi
+  log "${level}" "[${context}] $@"
 }
 
 function die() {

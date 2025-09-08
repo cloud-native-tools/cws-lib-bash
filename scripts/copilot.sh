@@ -29,6 +29,8 @@ EOF
   mkdir -p .ai
   if [ ! -f .ai/instructions.md ]; then
     cat <<'EOF' >.ai/instructions.md
+**IMPORTANT: This is a one-time initialization document. After completing the following initialization tasks, you must immediately replace this file's content with the project's specific guidance documentation.**
+
 Your task is to "onboard" this repository to a coding agent by adding a .ai/instructions.md file. It should contain information describing how the agent, seeing the repo for the first time, can work most efficiently.
 
 You will do this task only one time per repository, and doing a good job can SIGNIFICANTLY improve the quality of the agent's work, so take your time, think carefully, and search thoroughly before writing the instructions.
