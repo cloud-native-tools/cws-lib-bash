@@ -21,4 +21,6 @@ done
 unset i
 
 export CWS_LIB_BASH_HOME=${ROOT}
-export PATH=${CWS_LIB_BASH_HOME}/bin:${PATH}
+
+# Use env_append function to manage PATH (auto-prunes duplicates)
+env_append PATH "${CWS_LIB_BASH_HOME}/bin"

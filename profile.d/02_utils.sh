@@ -396,6 +396,9 @@ function env_append() {
   # Append new value to the environment variable
   export "${env_name}=${new_value}${separator}${current_value}"
   
+  # Automatically prune duplicates after appending
+  env_prune "${env_name}" "${separator}"
+  
   return ${RETURN_SUCCESS:-0}
 }
 
