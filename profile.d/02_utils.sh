@@ -429,14 +429,17 @@ function env_prune() {
   
   # Remove duplicates while preserving order (first occurrence wins)
   local -a unique_items
-  local -A seen
   local item
+  local seen_items=""
   
   for item in "${items[@]}"; do
     # Skip empty items
-    if [ -n "${item}" ] && [ -z "${seen[${item}]}" ]; then
-      unique_items+=("${item}")
-      seen["${item}"]=1
+    if [ -n "${item}" ]; then
+      # Check if item already seen using string matching (bash 3.x compatible)
+      if [[ "${seen_items}" != *":${item}:"* ]]; then
+        unique_items+=("${item}")
+        seen_items="${seen_items}:${item}:"
+      fi
     fi
   done
   
