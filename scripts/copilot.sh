@@ -20,7 +20,7 @@ function copilot_generate_instructions() {
 .github/
 .lingma/
 .trae/
-
+.qoder/
 EOF
   else
     log info ".copilotignore already exists, skipping"
@@ -89,6 +89,11 @@ EOF
   mkdir -p .trae/rules
   pushd .trae/rules
   ln -sfv ../../.ai/instructions.md project_rules.md
+  popd
+
+  mkdir -p .qoder
+  pushd .qoder
+  ln -sfv ../.ai/instructions.md project_rules.md
   popd
 
   ln -sf .ai/instructions.md QWEN.md
