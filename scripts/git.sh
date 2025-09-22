@@ -349,21 +349,21 @@ function git_backup() {
 
   # Check if there are any changes to commit
   if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-    log info "Committing local changes"
+    log notice "Committing local changes"
     git_add "${msg}"
   else
     log info "No local changes to commit"
   fi
 
   # Pull with rebase to integrate remote changes
-  log info "Pulling remote changes with rebase"
+  log notice "Pulling remote changes with rebase"
   if ! git_pull; then
     log error "Failed to pull and rebase remote changes"
     return ${RETURN_FAILURE:-1}
   fi
 
   # Push the changes
-  log info "Pushing changes to remote"
+  log notice "Pushing changes to remote"
   git_push
 }
 
