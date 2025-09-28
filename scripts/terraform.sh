@@ -117,7 +117,7 @@ function tf_clean_plan_files() {
     -or \
     -name "${TF_APPLY_ANSI}" \
     -or \
-    -name "${TF_DESTROY_ANSI}" | xargs rm -rfv
+    -name "${TF_DESTROY_ANSI}" | xargs rm -rf
 }
 
 function tf_plan() {
