@@ -14,18 +14,75 @@ function specify_ensure() {
 
 # Install Specify kit from GitHub repository
 function specify_install(){
-  log info "Installing Specify kit from GitHub repository..."
+  log info "Installing Specify kit from multiple sources..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."
     return "${RETURN_FAILURE:-1}"
   fi
 
-  if pip3 install git+https://github.com/github/spec-kit.git; then
-    log notice "Specify kit installed successfully"
+  # Uninstall any existing Specify kit first
+  log info "Uninstalling existing Specify kit (if any)..."
+  specify_uninstall
+
+  # Define installation sources in order of preference
+  local sources=(
+    "git+http://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git@master"
+    "git+https://gitee.com/cloud-native-ai/spec-kit.git@master"
+    "git+https://github.com/cloud-native-ai/spec-kit.git@master"
+    "git+https://github.com/github/spec-kit.git@main"
+  )
+
+  # Test and try each source in order
+  for source in "${sources[@]}"; do
+    log info "Trying to install from: ${source}"
+
+    # Extract hostname from the source URL for network testing
+    local hostname=""
+    if [[ "${source}" == *"gitlab.alibaba-inc.com"* ]]; then
+      hostname="gitlab.alibaba-inc.com"
+    elif [[ "${source}" == *"gitee.com"* ]]; then
+      hostname="gitee.com"
+    elif [[ "${source}" == *"github.com"* ]]; then
+      hostname="github.com"
+    fi
+
+    # Test network connectivity if we can extract a hostname
+    if [ -n "${hostname}" ]; then
+      log info "Testing network connectivity to ${hostname}..."
+      if ! net_ping "${hostname}"; then
+        log warn "Network connectivity to ${hostname} failed, skipping this source"
+        continue
+      fi
+      log info "Network connectivity to ${hostname} successful"
+    fi
+
+    # Try to install from this source with timeout
+    if pip3 install --timeout 20 "${source}"; then
+      log notice "Specify kit installed successfully from ${source}"
+      return "${RETURN_SUCCESS:-0}"
+    else
+      log warn "Failed to install from ${source}, trying next source..."
+    fi
+  done
+
+  log error "Failed to install Specify kit from all available sources"
+  return "${RETURN_FAILURE:-1}"
+}
+
+# Uninstall Specify kit
+function specify_uninstall(){
+  log info "Uninstalling Specify kit..."
+  if ! have pip3; then
+    log error "pip3 command not found. Please install pip3 first."
+    return "${RETURN_FAILURE:-1}"
+  fi
+
+  if pip3 uninstall -y specify-cli; then
+    log notice "Specify kit uninstalled successfully"
     return "${RETURN_SUCCESS:-0}"
   else
-    log error "Failed to install Specify kit"
-    return "${RETURN_FAILURE:-1}"
+    log warn "Failed to uninstall Specify kit (it might not be installed)"
+    return "${RETURN_SUCCESS:-0}"
   fi
 }
 
