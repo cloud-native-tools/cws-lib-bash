@@ -26,7 +26,7 @@ function specify_install(){
 
   # Define installation sources in order of preference
   local sources=(
-    "git+http://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git@master"
+    "git+https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git@master"
     "git+https://gitee.com/cloud-native-ai/spec-kit.git@master"
     "git+https://github.com/cloud-native-ai/spec-kit.git@master"
     "git+https://github.com/github/spec-kit.git@main"
