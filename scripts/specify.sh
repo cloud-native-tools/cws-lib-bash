@@ -133,6 +133,11 @@ function specify_init(){
   fi
 }
 
+function specify_deinit(){
+  rm -rfv .github/prompts/speckit.*.prompt.md
+  rm -rfv .specify/
+}
+
 # Initialize a Specify project with Claude AI
 function specify_init_claude_project(){
   local project_name=${1:-.}
