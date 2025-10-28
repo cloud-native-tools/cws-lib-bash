@@ -1152,3 +1152,208 @@ function git_clean_history() {
 
   return ${RETURN_SUCCESS:-0}
 }
+
+#############################################
+# Convert between git workdir and plain folder
+#############################################
+
+# git_to_folder [path] [--force|-f]
+# Convert a git working directory into a plain folder by:
+# 1) Capturing git metadata into a .git-origin file
+# 2) Removing the .git directory/file
+#
+# .git-origin format:
+#   # Original Git Repository Information
+#   Remote URL: <url>
+#   Commit ID: <sha1>
+#   Date: YYYY-MM-DD
+function git_to_folder() {
+  local target_dir=""
+  local force=false
+
+  # Parse args
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--force)
+        force=true
+        shift
+        ;;
+      *)
+        target_dir="$1"
+        shift
+        ;;
+    esac
+  done
+
+  if [ -z "${target_dir}" ]; then
+    target_dir="${PWD}"
+  fi
+
+  if [ ! -d "${target_dir}" ]; then
+    log error "Directory does not exist: ${target_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Ensure it's a git repo (use -C to avoid changing PWD)
+  if ! git -C "${target_dir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log error "Not a git repository: ${target_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Determine repo root and git dir path
+  local repo_root
+  repo_root=$(git -C "${target_dir}" rev-parse --show-toplevel 2>/dev/null)
+  if [ -z "${repo_root}" ] || [ ! -d "${repo_root}" ]; then
+    log error "Failed to determine repository root for: ${target_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local git_dir="${repo_root}/.git"
+  local origin_file="${repo_root}/.git-origin"
+
+  if [ -f "${origin_file}" ] && [ "${force}" != "true" ]; then
+    log error ".git-origin already exists. Use --force to overwrite: ${origin_file}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Collect metadata
+  local remote_url
+  remote_url=$(git -C "${repo_root}" config --get remote.origin.url 2>/dev/null)
+  if [ -z "${remote_url}" ]; then
+    log error "Remote 'origin' URL not found. Please configure a remote before converting."
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local commit_id
+  if ! commit_id=$(git -C "${repo_root}" rev-parse HEAD 2>/dev/null); then
+    log error "Failed to determine HEAD commit id"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local today
+  today=$(date +%F)
+
+  # Write .git-origin atomically
+  local tmp_file
+  tmp_file=$(mktemp "${origin_file}.XXXXXX") || {
+    log error "Failed to create temp file for .git-origin"
+    return ${RETURN_FAILURE:-1}
+  }
+  {
+    echo "# Original Git Repository Information"
+    echo "Remote URL: ${remote_url}"
+    echo "Commit ID: ${commit_id}"
+    echo "Date: ${today}"
+  } >"${tmp_file}"
+
+  if [ ! -s "${tmp_file}" ]; then
+    log error "Failed to write .git-origin metadata"
+    rm -f "${tmp_file}" || true
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  mv -f "${tmp_file}" "${origin_file}" || {
+    log error "Failed to place .git-origin at ${origin_file}"
+    rm -f "${tmp_file}" || true
+    return ${RETURN_FAILURE:-1}
+  }
+
+  log notice "Saved git metadata to ${origin_file}"
+
+  # Remove .git (directory or file, handles worktrees/submodules)
+  if [ -e "${git_dir}" ]; then
+    rm -rf "${git_dir}" || {
+      log error "Failed to remove ${git_dir}"
+      return ${RETURN_FAILURE:-1}
+    }
+    log notice "Removed git directory: ${git_dir}"
+  else
+    # Should not happen if rev-parse succeeded, but be defensive
+    log warning ".git not found at ${git_dir} — repository may be a linked worktree"
+  fi
+
+  log notice "Converted git repository to plain folder: ${repo_root}"
+  return ${RETURN_SUCCESS:-0}
+}
+
+# git_from_folder [path]
+# Convert a plain folder (created by git_to_folder) back to a git workdir.
+# Reads .git-origin and restores remote and commit.
+function git_from_folder() {
+  local target_dir=${1:-${PWD}}
+
+  if [ ! -d "${target_dir}" ]; then
+    log error "Directory does not exist: ${target_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local origin_file="${target_dir}/.git-origin"
+  if [ ! -f "${origin_file}" ]; then
+    log error ".git-origin not found in ${target_dir}. Cannot restore git repository."
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Must not already be a git repository
+  if git -C "${target_dir}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log error "Directory is already a git repository: ${target_dir}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Parse .git-origin
+  local remote_url commit_id
+  remote_url=$(grep -E '^Remote URL:' "${origin_file}" | sed 's/^Remote URL:[[:space:]]*//')
+  commit_id=$(grep -E '^Commit ID:' "${origin_file}" | sed 's/^Commit ID:[[:space:]]*//')
+
+  if [ -z "${remote_url}" ] || [ -z "${commit_id}" ]; then
+    log error "Invalid .git-origin: missing Remote URL or Commit ID"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Basic validation for commit hash (7..64 hex characters)
+  if ! echo "${commit_id}" | grep -Eq '^[0-9a-fA-F]{7,64}$'; then
+    log error "Invalid Commit ID in .git-origin: ${commit_id}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  log info "Initializing git repository in ${target_dir}"
+  if ! git -C "${target_dir}" init >/dev/null 2>&1; then
+    # Fallback if -C fails (older git), change directory temporarily
+    ( cd "${target_dir}" && git init ) || {
+      log error "Failed to initialize git repository in ${target_dir}"
+      return ${RETURN_FAILURE:-1}
+    }
+  fi
+
+  # Add origin
+  if ! git -C "${target_dir}" remote add origin "${remote_url}" 2>/dev/null; then
+    # If remote exists, verify it matches
+    local existing_url
+    existing_url=$(git -C "${target_dir}" remote get-url origin 2>/dev/null || true)
+    if [ -n "${existing_url}" ] && [ "${existing_url}" != "${remote_url}" ]; then
+      log error "Existing origin URL (${existing_url}) differs from .git-origin (${remote_url})"
+      return ${RETURN_FAILURE:-1}
+    fi
+  fi
+
+  # Fetch the specific commit (prefer shallow)
+  local temp_ref="refs/temp/restore-$(date +%s)"
+  if ! git -C "${target_dir}" fetch --depth=1 origin "${commit_id}:${temp_ref}" 2>/dev/null; then
+    log warning "Shallow fetch failed or unsupported. Trying full fetch of commit..."
+    if ! git -C "${target_dir}" fetch origin "${commit_id}:${temp_ref}" 2>/dev/null; then
+      log error "Failed to fetch commit ${commit_id} from ${remote_url}"
+      return ${RETURN_FAILURE:-1}
+    fi
+  fi
+
+  # Check out the restored state (force to overwrite untracked files that match the commit)
+  if ! git -C "${target_dir}" checkout -q -f -B restored "${commit_id}" 2>/dev/null; then
+    # Fallback to detached HEAD
+    if ! git -C "${target_dir}" checkout -q -f --detach "${commit_id}" 2>/dev/null; then
+      log error "Failed to check out commit ${commit_id} in ${target_dir}"
+      return ${RETURN_FAILURE:-1}
+    fi
+  fi
+
+  log notice "Restored git repository at commit ${commit_id} with remote ${remote_url}"
+  return ${RETURN_SUCCESS:-0}
+}
