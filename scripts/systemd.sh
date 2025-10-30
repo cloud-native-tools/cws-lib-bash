@@ -1,3 +1,34 @@
+# Checks if the current environment is running under systemd
+function systemd_available() {
+  # Check if systemctl command exists
+  if ! command -v systemctl >/dev/null 2>&1; then
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Check if we're in a systemd environment by looking for systemd PID 1
+  if [[ "$(ps -o comm= 1)" != "systemd" ]]; then
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # Check if we can communicate with systemd
+  if systemctl is-system-running --quiet 2>/dev/null; then
+    return ${RETURN_SUCCESS:-0}
+  else
+    # Even if systemd is not fully running, we're still in a systemd environment
+    # Check if systemd boot environment variables are set
+    if [[ -n "$XDG_RUNTIME_DIR" ]] && [[ -d "$XDG_RUNTIME_DIR" ]]; then
+      return ${RETURN_SUCCESS:-0}
+    fi
+    
+    # Fallback: check if systemd process exists
+    if pgrep -f "/lib/systemd/systemd" >/dev/null 2>&1; then
+      return ${RETURN_SUCCESS:-0}
+    fi
+  fi
+
+  return ${RETURN_FAILURE:-1}
+}
+
 function systemd_list_unit_file() {
   find ${@} -regex '.*\.service\|.*\.socket|.*\.device|.*\.mount|.*\.automount|.*\.swap|.*\.target|.*\.path|.*\.timer' 2>/dev/null
 }
