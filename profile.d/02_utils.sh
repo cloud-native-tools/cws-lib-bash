@@ -42,6 +42,10 @@ function date_id() {
   date "+%Y-%m-%d"
 }
 
+function date_tag_with_seconds() {
+  date "+%Y%m%d%H%M%S"
+}
+
 function date_time_id() {
   date "+%Y-%m-%d-%H-%M-%S"
 }
@@ -112,12 +116,12 @@ function log() {
 function log_with_context() {
   local level=$1
   local context=$2
-  
+
   if [ -z "${level}" ] || [ -z "${context}" ]; then
     log error "Usage: log_with_context <level> <context> <message...>"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   shift 2
   log "${level}" "[${context}] $@"
 }
@@ -366,72 +370,72 @@ function env_append() {
   local env_name=$1
   local new_value=$2
   local separator=${3:-:}
-  
+
   # Validate required parameters
   if [ -z "${env_name}" ] || [ -z "${new_value}" ]; then
     log error "Usage: env_append <env_name> <new_value> [separator]"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Get current environment variable value
   local current_value
   eval "current_value=\$${env_name}"
-  
+
   # If environment variable is empty, just set the new value
   if [ -z "${current_value}" ]; then
     export "${env_name}=${new_value}"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   # Check if new_value already exists in current_value
   local temp_string="${separator}${current_value}${separator}"
   local search_string="${separator}${new_value}${separator}"
-  
+
   if [[ "${temp_string}" == *"${search_string}"* ]]; then
     # Value already exists, no need to add
     log debug "Value '${new_value}' already exists in ${env_name}"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   # Append new value to the environment variable
   export "${env_name}=${new_value}${separator}${current_value}"
-  
+
   # Automatically prune duplicates after appending
   env_prune "${env_name}" "${separator}"
-  
+
   return ${RETURN_SUCCESS:-0}
 }
 
 function env_prune() {
   local env_name=$1
   local separator=${2:-:}
-  
+
   # Validate required parameters
   if [ -z "${env_name}" ]; then
     log error "Usage: env_prune <env_name> [separator]"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Get current environment variable value
   local current_value
   eval "current_value=\$${env_name}"
-  
+
   # If environment variable is empty, nothing to do
   if [ -z "${current_value}" ]; then
     log debug "Environment variable '${env_name}' is empty, nothing to prune"
     return ${RETURN_SUCCESS:-0}
   fi
-  
+
   # Split the value into array using the separator
   local IFS="${separator}"
   local -a items
   read -ra items <<< "${current_value}"
-  
+
   # Remove duplicates while preserving order (first occurrence wins)
   local -a unique_items
   local item
   local seen_items=""
-  
+
   for item in "${items[@]}"; do
     # Skip empty items
     if [ -n "${item}" ]; then
@@ -442,7 +446,7 @@ function env_prune() {
       fi
     fi
   done
-  
+
   # Join the unique items back together
   local pruned_value
   if [ ${#unique_items[@]} -gt 0 ]; then
@@ -452,10 +456,10 @@ function env_prune() {
   else
     pruned_value=""
   fi
-  
+
   # Update the environment variable
   export "${env_name}=${pruned_value}"
-  
+
   log debug "Pruned '${env_name}' from ${#items[@]} to ${#unique_items[@]} items"
   return ${RETURN_SUCCESS:-0}
 }
