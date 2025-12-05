@@ -69,26 +69,44 @@ function net_is_ip() {
 }
 
 function net_my_ip() {
-  local timeout=${1:-3}
+  local specified_url=${1}
+  local timeout=${2:-3}
   
-  # Quick fallback for when speed is critical (ordered by current environment performance)
+  # Common curl options
+  local curl_opts="-sL --connect-timeout ${timeout} --max-time ${timeout}"
+  
+  # Quick fallback for when speed is critical (ordered by reliability based on testing)
   local -a quick_services=(
-    "https://cip.cc"
-    "https://ipv4.seeip.org"
-    "https://myip.ipip.net/"
-    "https://api.ipify.org"
+    "cip.cc"
+    "ipv4.seeip.org"
+    "ifconfig.me"
+    "ipinfo.io/ip"
+    "ip.sb"
+    "ident.me"
+    "ifconfig.io"
+    "myip.ipip.net/"
+    "api.ipify.org"
+    "ipx.sh"
+    "httpbin.org/ip"
   )
   
-  for url in "${quick_services[@]}"; do
+  # If a specific URL is provided, test only that URL
+  if [ -n "${specified_url}" ]; then
+    local urls_to_test=("${specified_url}")
+  else
+    local urls_to_test=("${quick_services[@]}")
+  fi
+  
+  for url in "${urls_to_test[@]}"; do
     case "${url}" in
       *cip.cc*)
-        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null | grep -E '^IP' | awk '{print $NF}' 2>/dev/null)
+        local my_ip=$(curl ${curl_opts} "${url}" 2>/dev/null | grep -E '^IP' | awk '{print $NF}' 2>/dev/null)
         ;;
       *myip.ipip.net*)
-        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null | grep -E '当前 IP：' | awk '{print $3}' 2>/dev/null)
+        local my_ip=$(curl ${curl_opts} "${url}" 2>/dev/null | grep -E '当前 IP：' | awk '{print $3}' 2>/dev/null)
         ;;
       *)
-        local my_ip=$(curl -s --connect-timeout ${timeout} --max-time ${timeout} "${url}" 2>/dev/null)
+        local my_ip=$(curl ${curl_opts} "${url}" 2>/dev/null)
         ;;
     esac
     
