@@ -1,5 +1,5 @@
 function bash_prompt() {
-  if [[ "$?" != "0" ]]; then
+  if [[ $? != "0" ]]; then
     local last_exit=$(log plain ${SYMBOL_FAILURE})
   else
     local last_exit=$(log plain ${SYMBOL_SUCCESS})
@@ -8,7 +8,7 @@ function bash_prompt() {
   if [ $(id -u) = 0 ]; then
     local user_indicator="#"
   else
-    local user_indicator="\$"
+    local user_indicator='$'
   fi
 
   if command -v mamba &>/dev/null; then
@@ -31,7 +31,7 @@ is_bash && enable -n echo
 is_bash && PROMPT_COMMAND='PS1=$(bash_prompt)'
 
 function precmd() {
-  if [[ "$?" != "0" ]]; then
+  if [[ $? != "0" ]]; then
     export PROMPT="[$(log plain ${SYMBOL_FAILURE})][%D{%Y-%m-%d} %T][%n@%M %d]\$"$'\n'
   else
     export PROMPT="[$(log plain ${SYMBOL_SUCCESS})][%D{%Y-%m-%d} %T][%n@%M %d]\$"$'\n'

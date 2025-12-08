@@ -44,7 +44,7 @@ function enter_chroot() {
   fi
 
   if ! in_chroot; then
-    if [[ ! -d "${root_dir}" ]]; then
+    if [[ ! -d ${root_dir} ]]; then
       die "${root_dir} is not a directory"
     else
       mount_chroot ${root_dir}

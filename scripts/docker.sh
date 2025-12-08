@@ -146,37 +146,37 @@ EOF
 function docker_reload() {
   local config_file=${1:-"/etc/docker/daemon.json"}
   local show_info=${2:-"true"}
-  
+
   # Check if configuration file exists
   if [ ! -f "${config_file}" ]; then
     log error "Docker configuration file not found: ${config_file}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Validate JSON syntax
-  if ! python3 -m json.tool "${config_file}" > /dev/null 2>&1; then
+  if ! python3 -m json.tool "${config_file}" >/dev/null 2>&1; then
     log error "Invalid JSON syntax in configuration file: ${config_file}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Get Docker daemon PID
   local docker_pid=$(pgrep dockerd)
   if [ -z "${docker_pid}" ]; then
     log error "Docker daemon is not running"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   log info "Reloading Docker daemon configuration..."
   log info "Configuration file: ${config_file}"
   log info "Docker daemon PID: ${docker_pid}"
-  
+
   # Send SIGHUP signal to reload configuration
   if sudo kill -SIGHUP ${docker_pid}; then
     log info "SIGHUP signal sent successfully to Docker daemon"
-    
+
     # Wait a moment for configuration to take effect
     sleep 2
-    
+
     # Show configuration status if requested
     if [ "${show_info}" = "true" ]; then
       log info "Current Docker configuration:"
@@ -184,11 +184,11 @@ function docker_reload() {
       docker system info | grep -A 10 -E "Registry Mirrors|Insecure Registries|Experimental|Docker Root Dir" || true
       echo "----------------------------------------"
     fi
-    
+
     log info "Docker configuration reloaded successfully"
     log warn "Note: Only certain configuration options support dynamic reload"
     log warn "Options like data-root, storage-driver require service restart"
-    
+
     return ${RETURN_SUCCESS:-0}
   else
     log error "Failed to send SIGHUP signal to Docker daemon"

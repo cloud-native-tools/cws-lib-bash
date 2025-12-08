@@ -12,7 +12,7 @@ function ansible_ping_hosts() {
     log error "Ansible inventory file not found: ${ANSIBLE_USER_INVENTORY}"
     return ${RETURN_FAILURE}
   fi
-  
+
   log info "Pinging hosts from inventory: ${ANSIBLE_USER_INVENTORY}"
   printf "%-120s %-16s %s\n" "HOST" "STATE" "MESSAGE"
   ansible all -i ${ANSIBLE_USER_INVENTORY} -m ping |
@@ -46,7 +46,7 @@ function ansible_ping_hosts() {
         msg = arr[1]
         printf "%-120s %s%-16s%s %s\n", $1, yellow, $3, clear, msg
       }'
-      
+
   return ${RETURN_SUCCESS}
 }
 
@@ -62,15 +62,15 @@ function ansible_run_playbook() {
   # Parameter validation
   if [ -z "${playbook}" ]; then
     log error "Usage: ansible_run_playbook <playbook> [hosts] [inventory] [variables]"
-    log error "Example: ansible_run_playbook playbook.yaml host1,host2 inventory.yaml \"var1=value1 var2=value2\""
+    log error 'Example: ansible_run_playbook playbook.yaml host1,host2 inventory.yaml "var1=value1 var2=value2"'
     return ${RETURN_FAILURE}
   fi
-  
+
   if [ ! -f "${playbook}" ]; then
     log error "Playbook file not found: ${playbook}"
     return ${RETURN_FAILURE}
   fi
-  
+
   # If inventory is not provided as parameter, use the environment variable
   if [ -z "${inventory}" ]; then
     if [ -z "${ANSIBLE_USER_INVENTORY}" ]; then
@@ -79,7 +79,7 @@ function ansible_run_playbook() {
     fi
     inventory="${ANSIBLE_USER_INVENTORY}"
   fi
-  
+
   if [ ! -f "${inventory}" ]; then
     log error "Inventory file not found: ${inventory}"
     return ${RETURN_FAILURE}
@@ -122,23 +122,23 @@ function ansible_run_playbook() {
     ${debug_options} \
     ${vault_option} \
     ${playbook}
-    
+
   local exit_code=$?
   if [ ${exit_code} -eq 0 ]; then
     log info "Playbook execution completed successfully"
   else
     log error "Playbook execution failed with exit code ${exit_code}"
   fi
-  
+
   return ${exit_code}
 }
 
 function ansible_check_vault() {
   local vault_file=${1}
-  
+
   # Check dependencies first
   ansible_check || return ${RETURN_FAILURE}
-  
+
   # Parameter validation
   if [ -z "${vault_file}" ]; then
     log error "Usage: ansible_check_vault <vault_file>"
@@ -150,7 +150,7 @@ function ansible_check_vault() {
     log error "Vault file not found: ${vault_file}"
     return ${RETURN_FAILURE}
   fi
-  
+
   # Check if ANSIBLE_USER_VAULT_PASS is set
   if [ -z "${ANSIBLE_USER_VAULT_PASS}" ]; then
     log error "ANSIBLE_USER_VAULT_PASS environment variable is not set"
@@ -158,9 +158,9 @@ function ansible_check_vault() {
   fi
 
   log notice "Checking vault file: ${vault_file}"
-  
+
   # Check if vault is encrypted properly
-  if grep -q "^\$ANSIBLE_VAULT;" "${vault_file}"; then
+  if grep -q '^$ANSIBLE_VAULT;' "${vault_file}"; then
     log info "Vault file is encrypted: ${vault_file}"
   else
     log warn "Vault file is NOT encrypted: ${vault_file}"
@@ -186,12 +186,12 @@ function ansible_check_vault() {
   local temp_output
   temp_output=$(ANSIBLE_VAULT_PASSWORD_FILE=${ANSIBLE_USER_VAULT_PASS} ansible-vault view "${vault_file}" 2>&1)
   local exit_code=$?
-  
+
   if [ ${exit_code} -eq 0 ]; then
     log info "Vault password is correct. Vault can be decrypted successfully."
     log info "Variables defined in vault file:"
     echo "${temp_output}" | grep -E "^[a-zA-Z0-9_]+:" | awk '{print "  - " $1}'
-    
+
     # Check specifically for docker_registry_password
     if echo "${temp_output}" | grep -q "docker_registry_password:"; then
       log info "docker_registry_password is defined in the vault file"
@@ -220,10 +220,10 @@ function ansible_run_task() {
   # Parameter validation
   if [ -z "${role_name}" ] || [ -z "${task_file}" ] || [ -z "${hosts}" ]; then
     log error "Usage: ansible_run_task <role_name> <task_file> <hosts> [inventory] [variables]"
-    log error "Example: ansible_run_task docker setup.yml web_servers inventory.yaml \"var1=value1 var2=value2\""
+    log error 'Example: ansible_run_task docker setup.yml web_servers inventory.yaml "var1=value1 var2=value2"'
     return ${RETURN_FAILURE}
   fi
-  
+
   # If inventory is not provided as parameter, use the environment variable
   if [ -z "${inventory}" ]; then
     if [ -z "${ANSIBLE_USER_INVENTORY}" ]; then
@@ -232,7 +232,7 @@ function ansible_run_task() {
     fi
     inventory="${ANSIBLE_USER_INVENTORY}"
   fi
-  
+
   if [ ! -f "${inventory}" ]; then
     log error "Inventory file not found: ${inventory}"
     return ${RETURN_FAILURE}
@@ -260,7 +260,7 @@ function ansible_run_task() {
   fi
 
   log notice "Running task '${task_file}' from role '${role_name}' on hosts: ${hosts}"
-  
+
   # shellcheck disable=SC2086
   ansible ${hosts} \
     -i ${inventory} \
@@ -269,14 +269,14 @@ function ansible_run_task() {
     ${debug_options} \
     ${var_option} \
     ${vault_option}
-    
+
   local exit_code=$?
   if [ ${exit_code} -eq 0 ]; then
     log info "Task execution completed successfully"
   else
     log error "Task execution failed with exit code ${exit_code}"
   fi
-  
+
   return ${exit_code}
 }
 
@@ -285,11 +285,11 @@ function ansible_dump_config() {
   ansible_check || return ${RETURN_FAILURE}
 
   log notice "Dumping Official Ansible Environment Variables"
-  
+
   # Print ansible version
   log info "Ansible version information:"
   ansible --version | sed 's/^/  /'
-  
+
   # List of official Ansible environment variables
   # These are the standard variables that Ansible recognizes
   local official_vars=(
@@ -308,10 +308,10 @@ function ansible_dump_config() {
     "ANSIBLE_SSH_CONTROL_PATH_DIR"
     "ANSIBLE_USER_VAULT_PASS"
   )
-  
+
   # Show official Ansible environment variables that are set
   log info "Official Ansible Environment Variables currently set:"
-  
+
   local found_vars=false
   for var in "${official_vars[@]}"; do
     if [ -n "${!var}" ]; then
@@ -319,21 +319,24 @@ function ansible_dump_config() {
       printf "  %s=%s\n" "${var}" "${!var}"
     fi
   done
-  
+
   if [ "${found_vars}" = false ]; then
     log warn "No official Ansible environment variables are currently set"
   fi
-  
+
   # Show active config file
   log info "Active Ansible configuration file:"
   ansible --version | grep "config file" | sed 's/^.*config file = /  /'
-  
+
   # Show any custom environment variables that might affect Ansible
   log info "Custom or non-standard Ansible environment variables:"
-  env | grep -i "ANSIBLE" | grep -v -E "$(IFS="|"; echo "${official_vars[*]}")" | sort | sed 's/^/  /'
-  
+  env | grep -i "ANSIBLE" | grep -v -E "$(
+    IFS="|"
+    echo "${official_vars[*]}"
+  )" | sort | sed 's/^/  /'
+
   log notice "Ansible environment variables dump completed"
-  
+
   return ${RETURN_SUCCESS}
 }
 
@@ -363,6 +366,6 @@ function ansible_check() {
     log error "ansible-vault command not found. Please install ansible first."
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   return ${RETURN_SUCCESS:-0}
 }

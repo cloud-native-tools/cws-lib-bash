@@ -88,7 +88,7 @@ function vscode_bin() {
   local code_bin="code"
 
   # Check for VS Code Server (remote SSH scenario)
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  if [[ $OSTYPE == "linux-gnu"* ]]; then
     # First check for VS Code Server remote-cli in user home directory
     local vscode_server_dir="${HOME}/.vscode-server"
     if [ -d "${vscode_server_dir}" ]; then
@@ -106,7 +106,7 @@ function vscode_bin() {
         return
       fi
     fi
-    
+
     # Check for system-wide VS Code Server
     if [ -d "/root/.vscode-server" ]; then
       local remote_cli_bin=$(find "/root/.vscode-server" -path "*/remote-cli/code" -type f -executable 2>/dev/null | head -1)
@@ -130,15 +130,15 @@ function vscode_bin() {
   elif [ -f "${CODE_SERVER_HOME}/bin/code-server" ]; then
     code_bin="${CODE_SERVER_HOME}/bin/code-server"
   else
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+    if [[ $OSTYPE == "linux-gnu"* ]]; then
       code_bin="code"
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
+    elif [[ $OSTYPE == "darwin"* ]]; then
       code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-    elif [[ "$OSTYPE" == "cygwin" ]]; then
+    elif [[ $OSTYPE == "cygwin" ]]; then
       code_bin="/cygdrive/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
-    elif [[ "$OSTYPE" == "msys" ]]; then
+    elif [[ $OSTYPE == "msys" ]]; then
       code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
-    elif [[ "$OSTYPE" == "win32" ]]; then
+    elif [[ $OSTYPE == "win32" ]]; then
       code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code/bin/code"
     fi
   fi
@@ -149,7 +149,7 @@ function vscode_insiders_get_bin() {
   local code_bin="code-insiders"
 
   # Check for VS Code Insiders Server (remote SSH scenario)
-  if [[ "$OSTYPE" == "linux-gnu"* ]]; then
+  if [[ $OSTYPE == "linux-gnu"* ]]; then
     # First check for VS Code Insiders Server remote-cli in user home directory
     local vscode_server_dir="${HOME}/.vscode-server-insiders"
     if [ -d "${vscode_server_dir}" ]; then
@@ -167,7 +167,7 @@ function vscode_insiders_get_bin() {
         return
       fi
     fi
-    
+
     # Check for system-wide VS Code Insiders Server
     if [ -d "/root/.vscode-server-insiders" ]; then
       local remote_cli_bin=$(find "/root/.vscode-server-insiders" -path "*/remote-cli/code-insiders" -type f -executable 2>/dev/null | head -1)
@@ -184,16 +184,16 @@ function vscode_insiders_get_bin() {
         return
       fi
     fi
-    
+
     # Fallback to regular code-insiders command
     code_bin="code-insiders"
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
+  elif [[ $OSTYPE == "darwin"* ]]; then
     code_bin="/Applications/Visual Studio Code - Insiders.app/Contents/Resources/app/bin/code"
-  elif [[ "$OSTYPE" == "cygwin" ]]; then
+  elif [[ $OSTYPE == "cygwin" ]]; then
     code_bin="/cygdrive/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
-  elif [[ "$OSTYPE" == "msys" ]]; then
+  elif [[ $OSTYPE == "msys" ]]; then
     code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
-  elif [[ "$OSTYPE" == "win32" ]]; then
+  elif [[ $OSTYPE == "win32" ]]; then
     code_bin="/c/Users/$(whoami)/AppData/Local/Programs/Microsoft VS Code Insiders/bin/code-insiders"
   fi
   echo ${code_bin}

@@ -1174,7 +1174,7 @@ function git_to_folder() {
   # Parse args
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -f|--force)
+      -f | --force)
         force=true
         shift
         ;;
@@ -1318,7 +1318,7 @@ function git_from_folder() {
   log info "Initializing git repository in ${target_dir}"
   if ! git -C "${target_dir}" init >/dev/null 2>&1; then
     # Fallback if -C fails (older git), change directory temporarily
-    ( cd "${target_dir}" && git init ) || {
+    (cd "${target_dir}" && git init) || {
       log error "Failed to initialize git repository in ${target_dir}"
       return ${RETURN_FAILURE:-1}
     }

@@ -16,10 +16,10 @@ function systemd_available() {
   else
     # Even if systemd is not fully running, we're still in a systemd environment
     # Check if systemd boot environment variables are set
-    if [[ -n "$XDG_RUNTIME_DIR" ]] && [[ -d "$XDG_RUNTIME_DIR" ]]; then
+    if [[ -n $XDG_RUNTIME_DIR ]] && [[ -d $XDG_RUNTIME_DIR ]]; then
       return ${RETURN_SUCCESS:-0}
     fi
-    
+
     # Fallback: check if systemd process exists
     if pgrep -f "/lib/systemd/systemd" >/dev/null 2>&1; then
       return ${RETURN_SUCCESS:-0}

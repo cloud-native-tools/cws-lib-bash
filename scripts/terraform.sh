@@ -92,10 +92,10 @@ function tf_clean_unused_tf_files() {
         pushd ${p_dir} >/dev/null 2>&1
         for t in *.tf; do
           case $t in
-          variable.tf | provider.tf | data.tf | resource.tf | output.tf) ;;
-          *)
-            rm -fv $t
-            ;;
+            variable.tf | provider.tf | data.tf | resource.tf | output.tf) ;;
+            *)
+              rm -fv $t
+              ;;
           esac
         done
         popd >/dev/null 2>&1

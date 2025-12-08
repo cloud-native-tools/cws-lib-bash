@@ -242,12 +242,12 @@ function k8s_pods() {
     shift
   fi
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   printf "%-20s %-16s %-60s %-10s %-24s %-20s %-12s %-40s\n" Timestamp Namespace Name Status Node Runtime OwnerType OwnerName
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF' | sort -k2,2 -k1,1
@@ -366,12 +366,12 @@ function k8s_svc() {
 function k8s_svc_ports() {
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   local service_domain="svc.cluster.local"
@@ -417,12 +417,12 @@ EOF
 function k8s_ep() {
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   printf "%-24s %-40s %-24s %-48s %-24s\n" Namespace Name Node Pod Target
@@ -453,12 +453,12 @@ function k8s_pod_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -575,12 +575,12 @@ function k8s_event() {
   printf "%-24s %-10s %-24s %-24s %-10s %-24s %-60s\n" Namespace Kind Time Object Type Reason Message
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get event ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -631,12 +631,12 @@ function k8s_apis() {
 function k8s_configmap() {
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   local cm_name=${1}
@@ -750,12 +750,12 @@ function k8s_generate_pod() {
 function k8s_secret() {
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get secret ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -776,12 +776,12 @@ function k8s_pvc() {
   printf "%-40s %-60s %-8s %-8s %-12s %-12s %-20s %-20s\n" Namespace Name Status Capacity StorageClass VolumeMode CreationTime AccessModes
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get pvc ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -803,12 +803,12 @@ function k8s_pv() {
   printf "%-40s %-40s %-8s %-8s %-12s %-12s %-12s %-20s %-20s\n" Name PVC Status Capacity StorageClass Reclaim VolumeMode CreationTime AccessModes
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get pv ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -846,12 +846,12 @@ function k8s_pod_pvc() {
     shift
   fi
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   printf "%-64s %-64s\n" Pod PVC
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF' | sort -k2,2 -k1,1
@@ -872,12 +872,12 @@ function k8s_sc() {
   printf "%-40s %-40s %-20s %-20s\n" Name Provisioner ReclaimPolicy VolumeBindingMode
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get storageclass ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -923,12 +923,12 @@ function k8s_deployment() {
 function k8s_daemonset() {
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get daemonset ${ns_opt} $@
@@ -990,12 +990,12 @@ EOF
     shift
   fi
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   local pod_name=${1}
   if [ -z "${pod_name}" ]; then
@@ -1015,12 +1015,12 @@ function k8s_pod_hostpath() {
   printf "%-24s %-60s %-20s %-80s \n" Namespace Name Volume Hostpath
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -1045,12 +1045,12 @@ function k8s_deployment_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get deployment ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
@@ -1094,12 +1094,12 @@ function k8s_daemonset_images() {
   printf "%-24s %-60s %-80s \n" Namespace Name Image
   local namepsace=${1:-all}
   case ${namepsace} in
-  all)
-    ns_opt=-A
-    ;;
-  *)
-    ns_opt="-n ${namepsace}"
-    ;;
+    all)
+      ns_opt=-A
+      ;;
+    *)
+      ns_opt="-n ${namepsace}"
+      ;;
   esac
   shift
   kubectl get daemonset ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'

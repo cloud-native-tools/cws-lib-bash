@@ -56,15 +56,15 @@ export TMOUT=0
 ARCH=$(uname -m)
 BASH_OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 case ${ARCH} in
-x86_64)
-  BASH_ARCH=amd64
-  ;;
-aarch64)
-  BASH_ARCH=arm64
-  ;;
-*)
-  BASH_ARCH=${ARCH}
-  ;;
+  x86_64)
+    BASH_ARCH=amd64
+    ;;
+  aarch64)
+    BASH_ARCH=arm64
+    ;;
+  *)
+    BASH_ARCH=${ARCH}
+    ;;
 esac
 
 function cws_debug_enabled() {

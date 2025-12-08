@@ -52,7 +52,7 @@ function perf_profiling_cgroup() {
   local cgroup=${1}
   local pid=${2}
   local duration=${3:-60}
-  top -d 1 -n ${duration} -b 2>&1 > top.log &
+  top -d 1 -n ${duration} -b 2>&1 >top.log &
   perf record -o perf-cgroup.data -a -g -e cpu-clock -G ${cgroup} -F 99999 -- sleep ${duration}
   perf script -i perf-cgroup.data --symfs=/proc/${pid}/root >perf-cgroup.txt
 }
@@ -84,8 +84,7 @@ function perf_profiling_pid() {
 
 function perf_profiling() {
   local duration=${1:-120}
-  top -d 1 -n ${duration} -b 2>&1 > top.log &
+  top -d 1 -n ${duration} -b 2>&1 >top.log &
   perf record -o perf.data -a -F 999 -g -- sleep ${time}
   perf script -i perf.data >perf.txt
 }
-

@@ -71,10 +71,10 @@ function net_is_ip() {
 function net_my_ip() {
   local specified_url=${1}
   local timeout=${2:-3}
-  
+
   # Common curl options
   local curl_opts="-sL --connect-timeout ${timeout} --max-time ${timeout}"
-  
+
   # Quick fallback for when speed is critical (ordered by reliability based on testing)
   local -a quick_services=(
     "cip.cc"
@@ -89,14 +89,14 @@ function net_my_ip() {
     "ipx.sh"
     "httpbin.org/ip"
   )
-  
+
   # If a specific URL is provided, test only that URL
   if [ -n "${specified_url}" ]; then
     local urls_to_test=("${specified_url}")
   else
     local urls_to_test=("${quick_services[@]}")
   fi
-  
+
   for url in "${urls_to_test[@]}"; do
     case "${url}" in
       *cip.cc*)
@@ -109,13 +109,13 @@ function net_my_ip() {
         local my_ip=$(curl ${curl_opts} "${url}" 2>/dev/null)
         ;;
     esac
-    
+
     if net_valid_ipv4 "${my_ip}"; then
       echo "${my_ip}"
       return ${RETURN_SUCCESS}
     fi
   done
-  
+
   return ${RETURN_FAILURE}
 }
 
@@ -126,19 +126,19 @@ function net_trace_route() {
 
 function net_valid_ipv4() {
   local ip="$1"
-  
+
   # Check if IP parameter is provided
   if [ -z "${ip}" ]; then
     log debug "IP address parameter is required"
     return ${RETURN_FAILURE}
   fi
-  
+
   # IPv4 validation with proper range checking and no leading zeros
-  if ! [[ "${ip}" =~ ^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$ ]]; then
+  if ! [[ ${ip} =~ ^(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\.(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$ ]]; then
     log debug "[${ip}] address format is invalid"
     return ${RETURN_FAILURE}
   fi
-  
+
   return ${RETURN_SUCCESS}
 }
 
@@ -152,17 +152,16 @@ function net_default_ip() {
   return ${RETURN_FAILURE}
 }
 
-
 function net_wait_tcp_port {
-    local host=${1}
-    local port=${2}
-    local max_tries=${3:-60} 
-    local tries=1
+  local host=${1}
+  local port=${2}
+  local max_tries=${3:-60}
+  local tries=1
 
-    while ! exec 6<>/dev/tcp/${host}/${port} && [[ ${tries} -lt ${max_tries} ]]; do
-        sleep 1s
-        tries=$(( tries + 1 ))
-        echo "$(date) retrying to connect to ${host}:${port} (${tries}/${max_tries})"
-    done
-    exec 6>&-
+  while ! exec 6<>/dev/tcp/${host}/${port} && [[ ${tries} -lt ${max_tries} ]]; do
+    sleep 1s
+    tries=$((tries + 1))
+    echo "$(date) retrying to connect to ${host}:${port} (${tries}/${max_tries})"
+  done
+  exec 6>&-
 }

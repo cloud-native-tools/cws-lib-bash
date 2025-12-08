@@ -16,7 +16,7 @@ function socat_tcp_to_tcp() {
   socat -d "TCP4-LISTEN:${listen_port},reuseaddr,fork" "TCP4:${target}"
 }
 
-function socat_stdin_to_unix(){
+function socat_stdin_to_unix() {
   local target=$1
   socat "stdin,raw,echo=0,escape=0x11" "unix-connect:${target}/console.sock"
 }

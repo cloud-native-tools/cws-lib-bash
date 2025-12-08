@@ -19,7 +19,7 @@ function ctr_load_k8s_image_from_file() {
 function ctr_load_k8s_image_from_docker() {
   local img=$1
   local new_name=${2:-${img}}
-  if [[ "${img}" != "${new_name}" ]]; then
+  if [[ ${img} != "${new_name}" ]]; then
     docker tag ${img} ${new_name}
   fi
   docker save ${new_name} | ${CTR} ${K8S_NS} images import --digests --all-platforms -

@@ -13,7 +13,7 @@ function specify_ensure() {
 }
 
 # Install Specify kit from GitHub repository
-function specify_install(){
+function specify_install() {
   log info "Installing Specify kit from multiple sources..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."
@@ -38,11 +38,11 @@ function specify_install(){
 
     # Extract hostname from the source URL for network testing
     local hostname=""
-    if [[ "${source}" == *"gitlab.alibaba-inc.com"* ]]; then
+    if [[ ${source} == *"gitlab.alibaba-inc.com"* ]]; then
       hostname="gitlab.alibaba-inc.com"
-    elif [[ "${source}" == *"gitee.com"* ]]; then
+    elif [[ ${source} == *"gitee.com"* ]]; then
       hostname="gitee.com"
-    elif [[ "${source}" == *"github.com"* ]]; then
+    elif [[ ${source} == *"github.com"* ]]; then
       hostname="github.com"
     fi
 
@@ -70,7 +70,7 @@ function specify_install(){
 }
 
 # Uninstall Specify kit
-function specify_uninstall(){
+function specify_uninstall() {
   log info "Uninstalling Specify kit..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."
@@ -87,7 +87,7 @@ function specify_uninstall(){
 }
 
 # Check Specify dependencies and ensure installation
-function specify_check(){
+function specify_check() {
   # Ensure Specify is installed
   if ! specify_ensure; then
     return "${RETURN_FAILURE:-1}"
@@ -107,7 +107,7 @@ function specify_check(){
 # Initialize a new Specify project
 # Usage: specify_init <ai_tool> [project_name]
 # Available AI tools: claude, gemini, copilot, cursor, qwen, opencode, codex, windsurf, kilocode, auggie, roo
-function specify_init(){
+function specify_init() {
   local ai_tool=${1}
   local project_name=${2:-.}
 
@@ -133,37 +133,37 @@ function specify_init(){
   fi
 }
 
-function specify_deinit(){
+function specify_deinit() {
   rm -rfv .github/prompts/speckit.*.prompt.md
   rm -rfv .specify/
 }
 
 # Initialize a Specify project with Claude AI
-function specify_init_claude_project(){
+function specify_init_claude_project() {
   local project_name=${1:-.}
   specify_init claude "${project_name}"
 }
 
 # Initialize a Specify project with Gemini AI
-function specify_init_gemini_project(){
+function specify_init_gemini_project() {
   local project_name=${1:-.}
   specify_init gemini "${project_name}"
 }
 
 # Initialize a Specify project with Copilot AI
-function specify_init_copilot_project(){
+function specify_init_copilot_project() {
   local project_name=${1:-.}
   specify_init copilot "${project_name}"
 }
 
 # Initialize a Specify project with Cursor AI
-function specify_init_cursor_project(){
+function specify_init_cursor_project() {
   local project_name=${1:-.}
   specify_init cursor "${project_name}"
 }
 
 # Initialize a Specify project with Qwen Code
-function specify_init_qwen_project(){
+function specify_init_qwen_project() {
   local project_name=${1:-.}
   specify_init qwen "${project_name}"
 }

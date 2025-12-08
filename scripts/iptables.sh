@@ -1,3 +1,3 @@
 function iptables_all() {
-    iptables --line-numbers -vnL $@
+  iptables --line-numbers -vnL $@
 }

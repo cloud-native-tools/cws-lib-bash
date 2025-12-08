@@ -116,94 +116,94 @@ function ecs_detect_endpoints() {
 function aliyun_split_api_docs() {
   local target_dir=${1}
   local api_docs_file=${2:-"api-docs.json"}
-  
+
   if [ -z "${target_dir}" ]; then
     log error "Usage: aliyun_split_api_docs <target_dir> [api_docs_file]"
     log info "  target_dir: Directory containing the API docs JSON file"
     log info "  api_docs_file: Name of the API docs file (default: api-docs.json)"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   if [ ! -d "${target_dir}" ]; then
     log error "Directory not found: ${target_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   local full_path="${target_dir}/${api_docs_file}"
   if [ ! -f "${full_path}" ]; then
     log error "API docs file not found: ${full_path}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Check if jq command is available
   if ! have jq; then
     log error "jq command not found. Please install jq to use this function."
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   log info "Splitting API docs in: ${target_dir}"
-  
+
   # Change to target directory
   local original_dir=$(pwd)
   cd "${target_dir}" || {
     log error "Failed to change to directory: ${target_dir}"
     return ${RETURN_FAILURE:-1}
   }
-  
+
   # Check if the JSON file has the required fields
   local has_directories=$(jq -r 'has("directories")' "${api_docs_file}" 2>/dev/null)
   local has_components=$(jq -r 'has("components")' "${api_docs_file}" 2>/dev/null)
   local has_apis=$(jq -r 'has("apis")' "${api_docs_file}" 2>/dev/null)
   local has_endpoints=$(jq -r 'has("endpoints")' "${api_docs_file}" 2>/dev/null)
-  
+
   if [ "${has_directories}" != "true" ] && [ "${has_components}" != "true" ] && [ "${has_apis}" != "true" ] && [ "${has_endpoints}" != "true" ]; then
     log warn "No expected fields (directories, components, apis, endpoints) found in ${api_docs_file}"
     cd "${original_dir}"
     return ${RETURN_FAILURE:-1}
   fi
-  
+
   # Split the JSON file into smaller files
   local success_count=0
-  
+
   if [ "${has_directories}" = "true" ]; then
-    if jq '.directories' "${api_docs_file}" > directories.json 2>/dev/null; then
+    if jq '.directories' "${api_docs_file}" >directories.json 2>/dev/null; then
       log info "Created: directories.json"
       success_count=$((success_count + 1))
     else
       log warn "Failed to extract directories field"
     fi
   fi
-  
+
   if [ "${has_components}" = "true" ]; then
-    if jq '.components' "${api_docs_file}" > components.json 2>/dev/null; then
+    if jq '.components' "${api_docs_file}" >components.json 2>/dev/null; then
       log info "Created: components.json"
       success_count=$((success_count + 1))
     else
       log warn "Failed to extract components field"
     fi
   fi
-  
+
   if [ "${has_apis}" = "true" ]; then
-    if jq '.apis' "${api_docs_file}" > apis.json 2>/dev/null; then
+    if jq '.apis' "${api_docs_file}" >apis.json 2>/dev/null; then
       log info "Created: apis.json"
       success_count=$((success_count + 1))
     else
       log warn "Failed to extract apis field"
     fi
   fi
-  
+
   if [ "${has_endpoints}" = "true" ]; then
-    if jq '.endpoints' "${api_docs_file}" > endpoints.json 2>/dev/null; then
+    if jq '.endpoints' "${api_docs_file}" >endpoints.json 2>/dev/null; then
       log info "Created: endpoints.json"
       success_count=$((success_count + 1))
     else
       log warn "Failed to extract endpoints field"
     fi
   fi
-  
+
   # Return to original directory
   cd "${original_dir}"
-  
+
   if [ ${success_count} -gt 0 ]; then
     log info "Successfully split ${success_count} sections from ${api_docs_file}"
     return ${RETURN_SUCCESS:-0}

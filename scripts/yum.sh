@@ -14,18 +14,18 @@ function yum_mk_rootfs() {
   . /etc/os-release
   local osname="${ID:-alios}"
   case ${osname} in
-  alinux*)
-    ${yum_install} ${default_packages} alinux-release
-    ;;
-  alios*)
-    ${yum_install} ${default_packages} alios-release-server
-    ;;
-  fedora*)
-    ${yum_install} ${default_packages} fedora-release
-    ;;
-  centos*)
-    ${yum_install} ${default_packages} centos-release
-    ;;
+    alinux*)
+      ${yum_install} ${default_packages} alinux-release
+      ;;
+    alios*)
+      ${yum_install} ${default_packages} alios-release-server
+      ;;
+    fedora*)
+      ${yum_install} ${default_packages} fedora-release
+      ;;
+    centos*)
+      ${yum_install} ${default_packages} centos-release
+      ;;
   esac
   # umount
 }
@@ -52,7 +52,7 @@ function yum_install_with_retry() {
       return ${RETURN_SUCCESS}
     else
       echo "install failed at $count attempt, need retry: $@"
-      count=$(($count + 1))
+      count=$((count + 1))
       sleep 1
     fi
   done

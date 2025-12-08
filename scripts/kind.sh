@@ -21,9 +21,9 @@ kubeadmConfigPatches:
 nodes:
 - role: control-plane
 EOF
-for i in $(seq ${worker_count}); do
-  echo "- role: worker" >> ${kind_config}
-done
+  for i in $(seq ${worker_count}); do
+    echo "- role: worker" >>${kind_config}
+  done
 
   kind create -v 5 cluster \
     --name ${name} \

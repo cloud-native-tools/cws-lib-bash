@@ -127,8 +127,20 @@ function log_with_context() {
 }
 
 function die() {
-  log plain "${RED}${@}${CLEAR}"
-  exit ${EXIT_FAIL}
+  local msg="$*"
+  log error "FATAL: ${msg}"
+  log error "Context: User=${USER}, PWD=${PWD}, SHLVL=${SHLVL}"
+
+  log error "Stack trace:"
+  local i
+  for ((i = 0; i < ${#FUNCNAME[@]} - 1; i++)); do
+    local func="${FUNCNAME[i + 1]}"
+    local source="${BASH_SOURCE[i + 1]}"
+    local lineno="${BASH_LINENO[i]}"
+    log error "  at ${func} (${source}:${lineno})"
+  done
+
+  exit ${EXIT_FAIL:-1}
 }
 
 function matches() {
@@ -391,7 +403,7 @@ function env_append() {
   local temp_string="${separator}${current_value}${separator}"
   local search_string="${separator}${new_value}${separator}"
 
-  if [[ "${temp_string}" == *"${search_string}"* ]]; then
+  if [[ ${temp_string} == *"${search_string}"* ]]; then
     # Value already exists, no need to add
     log debug "Value '${new_value}' already exists in ${env_name}"
     return ${RETURN_SUCCESS:-0}
@@ -429,7 +441,7 @@ function env_prune() {
   # Split the value into array using the separator
   local IFS="${separator}"
   local -a items
-  read -ra items <<< "${current_value}"
+  read -ra items <<<"${current_value}"
 
   # Remove duplicates while preserving order (first occurrence wins)
   local -a unique_items
@@ -440,7 +452,7 @@ function env_prune() {
     # Skip empty items
     if [ -n "${item}" ]; then
       # Check if item already seen using string matching (bash 3.x compatible)
-      if [[ "${seen_items}" != *":${item}:"* ]]; then
+      if [[ ${seen_items} != *":${item}:"* ]]; then
         unique_items+=("${item}")
         seen_items="${seen_items}:${item}:"
       fi
