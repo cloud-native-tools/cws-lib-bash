@@ -5,7 +5,7 @@ if [ "${DIR}" == "." ]; then
   DIR=${PWD}
 fi
 ROOT=$(readlink -f $(dirname ${DIR}))
-ENV=${ROOT}/bin/cws_env
+ENV=${ROOT}/bin/cws_bash_env
 
 . ${ENV}
 

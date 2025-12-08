@@ -24,7 +24,7 @@ All informational and error output MUST use the `log` function with appropriate 
 Scripts MUST support both Linux and macOS. Platform-specific logic MUST be handled using `is_linux()` or `is_macos()` helpers.
 
 ### VI. Standardized Execution
-All commands MUST be executable via `./bin/cws_run <function> [args]`. The environment MUST be loadable via `source ./bin/cws_env`.
+All commands MUST be executable via `./bin/cws_bash_run <function> [args]`. The environment MUST be loadable via `source ./bin/cws_bash_env`.
 
 ## Governance
 

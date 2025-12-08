@@ -35,7 +35,7 @@ git clone https://github.com/yourusername/cws-lib-bash.git
 cd cws-lib-bash
 
 # Run tests
-./bin/cws_test
+./bin/cws_bash_test
 ```
 
 ## Coding Standards

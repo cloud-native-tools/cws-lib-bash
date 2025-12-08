@@ -37,7 +37,7 @@ cd cws-lib-bash
 2. Run the installation script:
 
 ```bash
-./bin/cws_setup
+./bin/cws_bash_setup
 ```
 
 ### Usage
@@ -45,13 +45,13 @@ cd cws-lib-bash
 1. Load the library in the current shell session:
 
 ```bash
-source ./bin/cws_env
+source ./bin/cws_bash_env
 ```
 
-2. Or use `cws_run` to execute commands:
+2. Or use `cws_bash_run` to execute commands:
 
 ```bash
-./bin/cws_run <function_name> [arguments...]
+./bin/cws_bash_run <function_name> [arguments...]
 ```
 
 ## Development Guidelines

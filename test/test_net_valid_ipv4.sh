@@ -8,7 +8,7 @@
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "${script_dir}/.." && pwd)"
 
-source "${project_root}/bin/cws_env"
+source "${project_root}/bin/cws_bash_env"
 
 # Test counters
 total_tests=0

@@ -38,7 +38,7 @@
 - **Robust Error Handling**: Standard return codes, dependency checks, parameter validation
 - **Unified Logging**: Use `log` function for all output
 - **Cross-Platform Compatibility**: Support Linux and macOS
-- **Standardized Execution**: Executable via `cws_run`, loadable via `cws_env`
+- **Standardized Execution**: Executable via `cws_bash_run`, loadable via `cws_bash_env`
 
 **Gates Status**: [✅ All gates pass / ❌ Specific gate failures with justification]
 
