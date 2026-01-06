@@ -1,7 +1,9 @@
 if is_macos; then
   BASE64_BIN=gbase64
+  TAR_BIN="env COPYFILE_DISABLE=1 tar"
 else
   BASE64_BIN=base64
+  TAR_BIN="tar"
 fi
 
 function encode_tar_stream() {
@@ -14,7 +16,7 @@ function encode_stdin() {
 
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(tar zc --exclude-vcs $(ls -d ${target}) | ${BASE64_BIN} -w0)\"|base64 -d|tar zx"
+  echo "echo \"$(${TAR_BIN} zc --exclude-vcs $(ls -d ${target}) | ${BASE64_BIN} -w0)\"|base64 -d|tar zx"
 }
 
 function encode_script() {
@@ -48,7 +50,7 @@ function encode_packed() {
   rm -f ${encode_tar} ${encode_script} ${merge_script}
 
   # add all file in ${INPUT} into tar file ${encode_tar}
-  tar zcf ${encode_tar} --exclude-vcs ${INPUT}
+  ${TAR_BIN} zcf ${encode_tar} --exclude-vcs ${INPUT}
 
   # split the tar file by size ${part_size}
   split -b ${part_size} -d ${encode_tar} ${encode_tar}.
@@ -89,7 +91,7 @@ function encode_packed() {
 function file_pack_binary() {
   ldconfig
   local file_list="$@"
-  tar cfJ binary.tar.xz \
+  ${TAR_BIN} cfJ binary.tar.xz \
     --absolute-names \
     --dereference \
     --hard-dereference \
@@ -103,7 +105,7 @@ function file_pack_system() {
   local output_file=${1:-chroot.tar.gz}
   local output_dir=$(dirname ${output_file})
   mkdir -p ${output_dir}
-  tar -cvpzf ${output_file} --exclude=${output_dir} --exclude=/proc --exclude=/sys --exclude=/dev /
+  ${TAR_BIN} -cvpzf ${output_file} --exclude=${output_dir} --exclude=/proc --exclude=/sys --exclude=/dev /
 }
 
 function extract_source() {
@@ -404,7 +406,7 @@ function highlight_difference_files() {
 
 function archive_current() {
   local filename=${1:-$(basename ${PWD}).tar.gz}
-  tar zcf "${filename}" --exclude-vcs --exclude='*.tar.gz' ./*
+  ${TAR_BIN} zcf "${filename}" --exclude-vcs --exclude='*.tar.gz' ./*
   mv -fv ${filename} $(sha256sum ${filename} | awk '{print $1}')-$(date_id).tar.gz
 }
 
