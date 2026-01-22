@@ -68,6 +68,19 @@ Ensure you include the following:
 ## Validation
 
 Use the newly created instructions file to implement a sample feature. Use the learnings from any failures or errors in building the new feature to further refine the instructions file.
+
+# MCP Tools Usage Guide
+
+## Tool: {{tool_name}}
+**Description Supplement**:
+{{tool_description}}
+- **When to use**: {{usage_scenario}}
+- **Precautions**: {{precautions}}
+- **Example**: {{usage_example}}
+
+## Tool Selection Strategy
+- Prioritize using the `mcp_...` series of tools to query internal documents and code, rather than trying to guess.
+- Before getting Issue details, you must confirm the format of the Issue ID.
 EOF
   fi
 

@@ -475,3 +475,45 @@ function env_prune() {
   log debug "Pruned '${env_name}' from ${#items[@]} to ${#unique_items[@]} items"
   return ${RETURN_SUCCESS:-0}
 }
+
+function load_map() {
+  local map_name=$1
+  local file_path=$2
+
+  if [ -z "${file_path}" ]; then
+    log error "Usage: load_map <file_path> [map_name]"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if [ ! -f "${file_path}" ]; then
+    log error "File not found: ${file_path}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  # If map name is not provided, derive it from the filename
+  if [ -z "${map_name}" ]; then
+    local filename=$(basename -- "${file_path}")
+    map_name="${filename%%.*}"
+    # Replace valid variable name chars (only alphanumeric and underscore allowed)
+    map_name=${map_name//[^a-zA-Z0-9_]/_}
+  fi
+
+  # Create associative array if it doesn't exist
+  if ! declare -p "${map_name}" >/dev/null 2>&1; then
+    # Try global declaration (Bash 4.2+)
+    if ! eval "declare -gA ${map_name}" 2>/dev/null; then
+       eval "declare -A ${map_name}"
+    fi
+  fi
+
+  while read -r key value; do
+    # Skip comments and empty lines
+    [[ "${key}" =~ ^#.*$ ]] && continue
+    [[ -z "${key}" ]] && continue
+
+    # Store in the associative array
+    eval "${map_name}[\"${key}\"]=\"${value}\""
+  done < "${file_path}"
+
+  return ${RETURN_SUCCESS:-0}
+}
