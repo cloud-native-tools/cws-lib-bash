@@ -133,11 +133,6 @@ function specify_init() {
   fi
 }
 
-function specify_deinit() {
-  rm -rfv .github/prompts/speckit.*.prompt.md
-  rm -rfv .specify/
-}
-
 # Initialize a Specify project with Claude AI
 function specify_init_claude_project() {
   local project_name=${1:-.}
@@ -166,4 +161,10 @@ function specify_init_cursor_project() {
 function specify_init_qwen_project() {
   local project_name=${1:-.}
   specify_init qwen "${project_name}"
+}
+
+function specify_deinit_copilot_project() {
+  rm -rfv .github/prompts/speckit.*.prompt.md
+  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/scripts .specify/templates
 }
