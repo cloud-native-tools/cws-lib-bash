@@ -8,10 +8,22 @@ CWS-Lib-Bash provides a comprehensive set of utility functions for common operat
 
 ## Features
 
-- Modular design with function libraries organized by technology domain
-- Cross-platform support for Linux and macOS systems
-- Unified logging and error handling mechanisms
-- Consistent naming conventions and coding style
+### Functional Features
+
+- **Core Framework**: Core environment initialization, logging, and utility functions.
+- **Docker Support**: Utilities for Docker container and image management.
+- **Kubernetes Operations**: Helpers for kubectl, Helm, and cluster management.
+- **Package Management**: Unified interface for system package managers (apt, yum, rpm).
+- **Network Utilities**: Tools for network connectivity testing and diagnostics.
+- **Git Operations**: Enhancements for Git workflow and repository management.
+- **Language Runtimes**: Setup and management for Python, Java, Go, and GCC.
+- **System Administration**: System-level maintenance and configuration tools.
+- **Text & Data Processing**: Utilities for JSON/YAML parsing and string manipulation.
+
+### Non-functional Features
+
+- **Cross-Platform Compatibility**: Support for both Linux and macOS environments.
+- **Test Automation**: Automated testing framework for Bash scripts.
 
 ## Project Structure
 
