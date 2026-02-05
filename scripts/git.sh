@@ -1357,3 +1357,120 @@ function git_from_folder() {
   log notice "Restored git repository at commit ${commit_id} with remote ${remote_url}"
   return ${RETURN_SUCCESS:-0}
 }
+
+# Get repository root, with fallback for non-git repositories
+function git_repo_root() {
+    if git rev-parse --show-toplevel >/dev/null 2>&1; then
+        git rev-parse --show-toplevel
+    else
+        # Fall back to script location for non-git repos
+        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        (cd "$script_dir/../../.." && pwd)
+    fi
+}
+
+# Get current branch, with fallback for non-git repositories
+function git_current_branch() {
+    # First check if SPECIFY_FEATURE environment variable is set
+    if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
+        echo "$SPECIFY_FEATURE"
+        return
+    fi
+
+    # Then check git if available
+    if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
+        git rev-parse --abbrev-ref HEAD
+        return
+    fi
+
+    # For non-git repos, try to find the latest feature directory
+    local repo_root=$(git_repo_root)
+    local specs_dir="$repo_root/.specify/specs"
+
+    if [[ -d "$specs_dir" ]]; then
+        local latest_feature=""
+        local highest=0
+
+        for dir in "$specs_dir"/*; do
+            if [[ -d "$dir" ]]; then
+                local dirname=$(basename "$dir")
+                if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
+                    local number=${BASH_REMATCH[1]}
+                    number=$((10#$number))
+                    if [[ "$number" -gt "$highest" ]]; then
+                        highest=$number
+                        latest_feature=$dirname
+                    fi
+                fi
+            fi
+        done
+
+        if [[ -n "$latest_feature" ]]; then
+            echo "$latest_feature"
+            return
+        fi
+    fi
+
+    echo "main"  # Final fallback
+}
+
+# Check if we have git available
+function has_git() {
+    git rev-parse --show-toplevel >/dev/null 2>&1
+}
+
+
+# --- Gitignore Helpers ---
+
+# Check if a pattern exists in .gitignore (exact match)
+# Usage: gitignore_has_pattern "pattern" "/path/to/.gitignore"
+function gitignore_has_pattern() {
+    local pattern="$1"
+    local gitignore_file="$2"
+
+    if [ -z "$pattern" ] || [ -z "$gitignore_file" ]; then
+        return 1
+    fi
+
+    if [ ! -f "$gitignore_file" ]; then
+        return 1
+    fi
+
+    grep -Fxq "$pattern" "$gitignore_file"
+}
+
+# Ensure .gitignore exists
+# Usage: gitignore_ensure_exists "/path/to/.gitignore"
+function gitignore_ensure_exists() {
+    local gitignore_file="$1"
+
+    if [ -z "$gitignore_file" ]; then
+        return 1
+    fi
+
+    if [ ! -f "$gitignore_file" ]; then
+        mkdir -p "$(dirname "$gitignore_file")"
+        touch "$gitignore_file"
+    fi
+}
+
+# Add a pattern to .gitignore if it doesn't already exist
+# Usage: gitignore_add_pattern "pattern" ["/path/to/.gitignore"]
+function gitignore_add_pattern() {
+    local pattern="$1"
+    local gitignore_file="${2:-$(git_repo_root)/.gitignore}"
+
+    if [ -z "$pattern" ]; then
+        return 1
+    fi
+
+    gitignore_ensure_exists "$gitignore_file"
+
+    if ! gitignore_has_pattern "$pattern" "$gitignore_file"; then
+        # Ensure a blank line before appending when file is not empty and doesn't end with newline
+        if [ -s "$gitignore_file" ] && [ -n "$(tail -c 1 "$gitignore_file")" ]; then
+            printf '\n' >>"$gitignore_file"
+        fi
+        printf '%s\n' "$pattern" >>"$gitignore_file"
+    fi
+}

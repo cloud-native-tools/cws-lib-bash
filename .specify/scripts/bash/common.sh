@@ -85,7 +85,7 @@ slugify_unicode() {
 }
 
 # Get repository root, with fallback for non-git repositories
-get_repo_root() {
+git_repo_root() {
     if git rev-parse --show-toplevel >/dev/null 2>&1; then
         git rev-parse --show-toplevel
     else
@@ -96,7 +96,7 @@ get_repo_root() {
 }
 
 # Get current branch, with fallback for non-git repositories
-get_current_branch() {
+git_current_branch() {
     # First check if SPECIFY_FEATURE environment variable is set
     if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
         echo "$SPECIFY_FEATURE"
@@ -110,7 +110,7 @@ get_current_branch() {
     fi
 
     # For non-git repos, try to find the latest feature directory
-    local repo_root=$(get_repo_root)
+    local repo_root=$(git_repo_root)
     local specs_dir="$repo_root/.specify/specs"
 
     if [[ -d "$specs_dir" ]]; then
@@ -208,8 +208,8 @@ find_feature_dir_by_prefix() {
 }
 
 get_feature_paths() {
-    local repo_root=$(get_repo_root)
-    local current_branch=$(get_current_branch)
+    local repo_root=$(git_repo_root)
+    local current_branch=$(git_current_branch)
     local has_git_repo="false"
 
     if has_git; then

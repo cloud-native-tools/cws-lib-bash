@@ -20,6 +20,15 @@ function specify_install() {
     return "${RETURN_FAILURE:-1}"
   fi
 
+  # Ensure cws-lib-python is installed as it might be a dependency
+  if ! cws_py_is_installed; then
+    log warn "cws-lib-python is not installed, attempting to install..."
+    if ! cws_py_install; then
+      log error "Failed to install cws-lib-python dependency"
+      return "${RETURN_FAILURE:-1}"
+    fi
+  fi
+
   # Uninstall any existing Specify kit first
   log info "Uninstalling existing Specify kit (if any)..."
   specify_uninstall
@@ -29,7 +38,6 @@ function specify_install() {
     "git+https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git@master"
     "git+https://gitee.com/cloud-native-ai/spec-kit.git@master"
     "git+https://github.com/cloud-native-ai/spec-kit.git@master"
-    "git+https://github.com/github/spec-kit.git@main"
   )
 
   # Test and try each source in order

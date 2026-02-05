@@ -434,3 +434,85 @@ function find_files() {
 
   find . \( "${find_parameters[@]}" \)
 }
+
+function dir_diff() {
+  local left_dir=${1}
+  local right_dir=${2}
+
+  if [ -z "${left_dir}" ] || [ -z "${right_dir}" ]; then
+    log error "Usage: dir_diff <left_dir> <right_dir>"
+    return ${RETURN_FAILURE}
+  fi
+
+  if [ ! -d "${left_dir}" ]; then
+    log error "left_dir not found: ${left_dir}"
+    return ${RETURN_FAILURE}
+  fi
+
+  if [ ! -d "${right_dir}" ]; then
+    log error "right_dir not found: ${right_dir}"
+    return ${RETURN_FAILURE}
+  fi
+
+  left_dir=${left_dir%/}
+  right_dir=${right_dir%/}
+
+  local tmp_dir
+  tmp_dir=$(mktemp -d) || return ${RETURN_FAILURE}
+  trap 'rm -rf "${tmp_dir}"' RETURN
+
+  local left_list="${tmp_dir}/left.tsv"
+  local right_list="${tmp_dir}/right.tsv"
+  local left_files="${tmp_dir}/left.files"
+  local right_files="${tmp_dir}/right.files"
+  local only_left="${tmp_dir}/only_left.files"
+  local only_right="${tmp_dir}/only_right.files"
+  local changed_files="${tmp_dir}/changed.files"
+
+  find "${left_dir}" -type f -print0 | while IFS= read -r -d '' file; do
+    local rel="${file#${left_dir}/}"
+    local sum
+    sum=$(sha256sum "${file}" | awk '{print $1}')
+    log color "%s\t%s" "${rel}" "${sum}"
+  done | sort >"${left_list}"
+
+  find "${right_dir}" -type f -print0 | while IFS= read -r -d '' file; do
+    local rel="${file#${right_dir}/}"
+    local sum
+    sum=$(sha256sum "${file}" | awk '{print $1}')
+    log color "%s\t%s" "${rel}" "${sum}"
+  done | sort >"${right_list}"
+
+  cut -f1 "${left_list}" | sort -u >"${left_files}"
+  cut -f1 "${right_list}" | sort -u >"${right_files}"
+
+  comm -23 "${left_files}" "${right_files}" >"${only_left}"
+  comm -13 "${left_files}" "${right_files}" >"${only_right}"
+
+  join -t $'\t' -1 1 -2 1 "${left_list}" "${right_list}" \
+    | awk -F'\t' '$2 != $3 {print $1}' >"${changed_files}"
+
+  local only_left_count only_right_count changed_count
+  only_left_count=$(wc -l <"${only_left}" | tr -d ' ')
+  only_right_count=$(wc -l <"${only_right}" | tr -d ' ')
+  changed_count=$(wc -l <"${changed_files}" | tr -d ' ')
+
+  log notice "Only in left: ${only_left_count}"
+  log notice "Only in right: ${only_right_count}"
+  log notice "Modified: ${changed_count}"
+
+  if [ -s "${only_left}" ]; then
+    log color "${GREEN}Only in ${left_dir}${CLEAR}"
+    sed 's/^/  + /' "${only_left}"
+  fi
+
+  if [ -s "${only_right}" ]; then
+    log color "${YELLOW}Only in ${right_dir}${CLEAR}"
+    sed 's/^/  - /' "${only_right}"
+  fi
+
+  if [ -s "${changed_files}" ]; then
+    log color "${RED}Modified (checksum mismatch)${CLEAR}"
+    sed 's/^/  * /' "${changed_files}"
+  fi
+}
