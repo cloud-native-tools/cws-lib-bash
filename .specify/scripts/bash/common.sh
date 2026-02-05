@@ -1,167 +1,62 @@
 #!/usr/bin/env bash
 # Common functions and variables for all scripts
 
-# Ensure the script runs in a UTF-8 locale to better support Unicode processing
-ensure_utf8_locale() {
-    # Always set to C.UTF-8 for consistent behavior across systems
-    # C.UTF-8 is available on most modern Linux distributions and provides
-    # a minimal, consistent UTF-8 environment without language-specific rules
-    if locale -a 2>/dev/null | grep -qi '^C\.utf8\|^C\.UTF-8$'; then
-        export LC_ALL=C.UTF-8
-        export LANG=C.UTF-8
-    elif locale -a 2>/dev/null | grep -qi '^en_US\.utf8\|^en_US\.UTF-8$'; then
-        # Fallback to en_US.UTF-8 if C.UTF-8 is not available
-        export LC_ALL=en_US.UTF-8
-        export LANG=en_US.UTF-8
-    else
-        # If no UTF-8 locale is available, set minimal UTF-8 support
-        export LC_ALL=C
-        export LANG=C
-        # Note: This may cause issues with non-ASCII characters, but it's the best we can do
-    fi
-    
-    # Verify that the locale is actually UTF-8 capable
-    if ! locale 2>/dev/null | grep -qi 'utf-8'; then
-        echo "Warning: Unable to set UTF-8 locale. Unicode handling may be limited." >&2
-    fi
+# Source shared environment configurations
+[ -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ] && source "${CWS_LIB_BASH_HOME}/bin/cws_bash_env"
+[ -f "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" ] && source "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env"
+
+check_dependency() {
+  if ! command -v git &> /dev/null; then
+    echo "Error: git is not installed." >&2
+    return 1
+  fi
+
+  if [ -z "${CWS_LIB_BASH_HOME}" ]; then
+    echo "Error: CWS_LIB_BASH_HOME environment variable is not set." >&2
+    return 1
+  fi
+
+  if [ ! -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ]; then
+    echo "Error: cws-lib-bash is not correctly installed. File not found: ${CWS_LIB_BASH_HOME}/bin/cws_bash_env" >&2
+    return 1
+  fi
+
+  if [ -z "${CWS_LIB_PYTHON_HOME}" ]; then
+    echo "Error: CWS_LIB_PYTHON_HOME environment variable is not set." >&2
+    return 1
+  fi
+
+  if [ ! -f "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" ]; then
+    echo "Error: cws-lib-python is not correctly installed. File not found: ${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" >&2
+    return 1
+  fi
+  
+  return 0
 }
 
-# Unicode-aware slugify: keep letters and digits from all languages, replace others with '-'
-# Usage: slugify_unicode "Some 标题 示例"  -> some-标题-示例
-# Pure bash implementation - no external dependencies
-slugify_unicode() {
-    # Fallback (ASCII only) - pure bash implementation
-    local input="$*"
-    local result=""
-    local prev_was_separator=0
-    
-    # Handle empty input
-    if [ -z "$input" ]; then
-        echo "feature"
-        return 0
-    fi
-    
-    # Convert to lowercase and process character by character
-    # Note: This is ASCII-only but safe for all UTF-8 since we only modify ASCII ranges
-    local i=0
-    local len=${#input}
-    
-    while [ $i -lt $len ]; do
-        local char="${input:$i:1}"
-        
-        # Check if character is alphanumeric (ASCII only check)
-        # For non-ASCII UTF-8 characters, they will pass through unchanged
-        case "$char" in
-            [a-zA-Z0-9])
-                # Alphanumeric character - add as lowercase
-                if [ "$char" != "${char%[A-Z]*}" ]; then
-                    # It's uppercase, convert to lowercase
-                    char=$(printf "%s" "$char" | tr '[:upper:]' '[:lower:]')
-                fi
-                result="${result}${char}"
-                prev_was_separator=0
-                ;;
-            *)
-                # Non-alphanumeric character - treat as separator
-                if [ $prev_was_separator -eq 0 ]; then
-                    result="${result}-"
-                    prev_was_separator=1
-                fi
-                ;;
-        esac
-        i=$((i + 1))
-    done
-    
-    # Remove leading and trailing hyphens
-    result="${result#-}"
-    result="${result%-}"
-    
-    # Handle case where result is empty
-    if [ -z "$result" ]; then
-        result="feature"
-    fi
-    
-    echo "$result"
-}
+if ! check_dependency; then
+    echo "Dependency check failed. Initializing dependencies are required." >&2
+    exit 1
+fi
 
-# Get repository root, with fallback for non-git repositories
-git_repo_root() {
-    if git rev-parse --show-toplevel >/dev/null 2>&1; then
-        git rev-parse --show-toplevel
-    else
-        # Fall back to script location for non-git repos
-        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        (cd "$script_dir/../../.." && pwd)
-    fi
-}
-
-# Get current branch, with fallback for non-git repositories
-git_current_branch() {
-    # First check if SPECIFY_FEATURE environment variable is set
-    if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
-        echo "$SPECIFY_FEATURE"
-        return
-    fi
-
-    # Then check git if available
-    if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
-        git rev-parse --abbrev-ref HEAD
-        return
-    fi
-
-    # For non-git repos, try to find the latest feature directory
-    local repo_root=$(git_repo_root)
-    local specs_dir="$repo_root/.specify/specs"
-
-    if [[ -d "$specs_dir" ]]; then
-        local latest_feature=""
-        local highest=0
-
-        for dir in "$specs_dir"/*; do
-            if [[ -d "$dir" ]]; then
-                local dirname=$(basename "$dir")
-                if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
-                    local number=${BASH_REMATCH[1]}
-                    number=$((10#$number))
-                    if [[ "$number" -gt "$highest" ]]; then
-                        highest=$number
-                        latest_feature=$dirname
-                    fi
-                fi
-            fi
-        done
-
-        if [[ -n "$latest_feature" ]]; then
-            echo "$latest_feature"
-            return
-        fi
-    fi
-
-    echo "main"  # Final fallback
-}
-
-# Check if we have git available
-has_git() {
-    git rev-parse --show-toplevel >/dev/null 2>&1
-}
 
 check_feature_branch() {
-    local branch="$1"
-    local has_git_repo="$2"
+  local branch="$1"
+  local has_git_repo="$2"
 
-    # For non-git repos, we can't enforce branch naming but still provide output
-    if [[ "$has_git_repo" != "true" ]]; then
-        echo "[specify] Warning: Git repository not detected; skipped branch validation" >&2
-        return 0
-    fi
-
-    if [[ ! "$branch" =~ ^[0-9]{3}- ]]; then
-        echo "ERROR: Not on a feature branch. Current branch: $branch" >&2
-        echo "Feature branches should be named like: 001-feature-name" >&2
-        return 1
-    fi
-
+  # For non-git repos, we can't enforce branch naming but still provide output
+  if [[ $has_git_repo != "true" ]]; then
+    echo "[specify] Warning: Git repository not detected; skipped branch validation" >&2
     return 0
+  fi
+
+  if [[ ! $branch =~ ^[0-9]+- ]]; then
+    echo "ERROR: Not on a feature branch. Current branch: $branch" >&2
+    echo "Feature branches should be named like: 001-feature-name" >&2
+    return 1
+  fi
+
+  return 0
 }
 
 get_feature_dir() { echo "$1/.specify/specs/$2"; }
@@ -169,62 +64,62 @@ get_feature_dir() { echo "$1/.specify/specs/$2"; }
 # Find feature directory by numeric prefix instead of exact branch match
 # This allows multiple branches to work on the same spec (e.g., 004-fix-bug, 004-add-feature)
 find_feature_dir_by_prefix() {
-    local repo_root="$1"
-    local branch_name="$2"
-    local specs_dir="$repo_root/.specify/specs"
+  local repo_root="$1"
+  local branch_name="$2"
+  local specs_dir="$repo_root/.specify/specs"
 
-    # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
-    if [[ ! "$branch_name" =~ ^([0-9]{3})- ]]; then
-        # If branch doesn't have numeric prefix, fall back to exact match
-        echo "$specs_dir/$branch_name"
-        return
-    fi
+  # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
+  if [[ ! $branch_name =~ ^([0-9]+)- ]]; then
+    # If branch doesn't have numeric prefix, fall back to exact match
+    echo "$specs_dir/$branch_name"
+    return
+  fi
 
-    local prefix="${BASH_REMATCH[1]}"
+  local prefix="${BASH_REMATCH[1]}"
 
-    # Search for directories in .specify/specs/ that start with this prefix
-    local matches=()
-    if [[ -d "$specs_dir" ]]; then
-        for dir in "$specs_dir"/"$prefix"-*; do
-            if [[ -d "$dir" ]]; then
-                matches+=("$(basename "$dir")")
-            fi
-        done
-    fi
+  # Search for directories in .specify/specs/ that start with this prefix
+  local matches=()
+  if [[ -d $specs_dir ]]; then
+    for dir in "$specs_dir"/"$prefix"-*; do
+      if [[ -d $dir ]]; then
+        matches+=("$(basename "$dir")")
+      fi
+    done
+  fi
 
-    # Handle results
-    if [[ ${#matches[@]} -eq 0 ]]; then
-        # No match found - return the branch name path (will fail later with clear error)
-        echo "$specs_dir/$branch_name"
-    elif [[ ${#matches[@]} -eq 1 ]]; then
-        # Exactly one match - perfect!
-        echo "$specs_dir/${matches[0]}"
-    else
-        # Multiple matches - this shouldn't happen with proper naming convention
-        echo "ERROR: Multiple spec directories found with prefix '$prefix': ${matches[*]}" >&2
-        echo "Please ensure only one spec directory exists per numeric prefix." >&2
-        echo "$specs_dir/$branch_name"  # Return something to avoid breaking the script
-    fi
+  # Handle results
+  if [[ ${#matches[@]} -eq 0 ]]; then
+    # No match found - return the branch name path (will fail later with clear error)
+    echo "$specs_dir/$branch_name"
+  elif [[ ${#matches[@]} -eq 1 ]]; then
+    # Exactly one match - perfect!
+    echo "$specs_dir/${matches[0]}"
+  else
+    # Multiple matches - this shouldn't happen with proper naming convention
+    echo "ERROR: Multiple spec directories found with prefix '$prefix': ${matches[*]}" >&2
+    echo "Please ensure only one spec directory exists per numeric prefix." >&2
+    echo "$specs_dir/$branch_name" # Return something to avoid breaking the script
+  fi
 }
 
 get_feature_paths() {
-    local repo_root=$(git_repo_root)
-    local current_branch=$(git_current_branch)
-    local has_git_repo="false"
+  local repo_root=$(git_repo_root)
+  local current_branch=$(git_current_branch)
+  local has_git_repo="false"
 
-    if has_git; then
-        has_git_repo="true"
-    fi
+  if has_git; then
+    has_git_repo="true"
+  fi
 
-    # Use prefix-based lookup to support multiple branches per spec
-    local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
+  # Use prefix-based lookup to support multiple branches per spec
+  local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
 
-    cat <<EOF
+  cat <<EOF
 REPO_ROOT='$repo_root'
 CURRENT_BRANCH='$current_branch'
 HAS_GIT='$has_git_repo'
-FEATURE_DIR='$feature_dir'
-FEATURE_SPEC='$feature_dir/spec.md'
+REQUIREMENTS_DIR='$feature_dir'
+FEATURE_SPEC='$feature_dir/requirements.md'
 IMPL_PLAN='$feature_dir/plan.md'
 TASKS='$feature_dir/tasks.md'
 RESEARCH='$feature_dir/research.md'
@@ -234,52 +129,8 @@ CONTRACTS_DIR='$feature_dir/contracts'
 EOF
 }
 
-check_file() { [[ -f "$1" ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
-check_dir() { [[ -d "$1" && -n $(ls -A "$1" 2>/dev/null) ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
-
-
-# Function: json_escape
-# Description: Escapes a string for safe inclusion in JSON
-# Usage: escaped=$(json_escape "$input")
-# Parameters:
-#   $1 - The input string to escape
-# Returns:
-#   The JSON-escaped string via stdout
-json_escape() {
-    local input="$1"
-    local escaped=""
-    local i=0
-    local char
-    
-    # Process each character
-    while [ $i -lt ${#input} ]; do
-        char="${input:$i:1}"
-        case "$char" in
-            '"')  escaped="${escaped}\\\"";;
-            '\\') escaped="${escaped}\\\\\\\\";;
-            '/')  escaped="${escaped}\/";;
-            $'\b') escaped="${escaped}\\b";;
-            $'\f') escaped="${escaped}\\f";;
-            $'\n') escaped="${escaped}\\n";;
-            $'\r') escaped="${escaped}\\r";;
-            $'\t') escaped="${escaped}\\t";;
-            *) 
-                # Check if character is a control character (ASCII 0-31)
-                if [ "$(printf '%d' "'$char")" -lt 32 ]; then
-                    # Convert to \uXXXX format
-                    printf -v hex '%04x' "$(printf '%d' "'$char")"
-                    escaped="${escaped}\\u${hex}"
-                else
-                    escaped="${escaped}${char}"
-                fi
-                ;;
-        esac
-        i=$((i + 1))
-    done
-    
-    echo "$escaped"
-}
-
+check_file() { [[ -f $1 ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
+check_dir() { [[ -d $1 && -n $(ls -A "$1" 2>/dev/null) ]] && echo "  ✓ $2" || echo "  ✗ $2"; }
 
 # Function: safe_quote
 # Description: Safely quotes a string so it can be used as a shell argument without interpretation
@@ -290,19 +141,18 @@ json_escape() {
 #   The safely quoted string via stdout
 #   Exit code 1 if no input is provided
 safe_quote() {
-    local input="$1"
-    
-    # Check if input is provided
-    if [ -z "$input" ]; then
-        echo "Error: No input provided to safe_quote" >&2
-        return 1
-    fi
-    
-    # Use printf '%q' to safely quote the input
-    # This handles all special characters including $, ", ', \, |, ;, &, *, ?, [, ], {, }, (, ), <, >, !, #, `, ~, ^, =, %, +, -, ., /, :, @
-    printf '%q' "$input"
-}
+  local input="$1"
 
+  # Check if input is provided
+  if [ -z "$input" ]; then
+    echo "Error: No input provided to safe_quote" >&2
+    return 1
+  fi
+
+  # Use printf '%q' to safely quote the input
+  # This handles all special characters including $, ", ', \, |, ;, &, *, ?, [, ], {, }, (, ), <, >, !, #, `, ~, ^, =, %, +, -, ., /, :, @
+  printf '%q' "$input"
+}
 
 # Function: validate_input
 # Description: Validates input length and basic structure
@@ -314,24 +164,24 @@ safe_quote() {
 #   0 if input is valid, 1 if invalid
 #   Error message via stderr if invalid
 validate_input() {
-    local input="$1"
-    local max_length="${2:-10000}"
-    
-    # Check if input is provided
-    if [ -z "$input" ]; then
-        echo "Error: No input provided to validate_input" >&2
-        return 1
-    fi
-    
-    # Check input length
-    local input_length="${#input}"
-    if [ "$input_length" -gt "$max_length" ]; then
-        echo "Error: Input exceeds maximum length of $max_length characters (actual length: $input_length)" >&2
-        return 1
-    fi
-    
-    # Basic validation passed
-    return 0
+  local input="$1"
+  local max_length="${2:-10000}"
+
+  # Check if input is provided
+  if [ -z "$input" ]; then
+    echo "Error: No input provided to validate_input" >&2
+    return 1
+  fi
+
+  # Check input length
+  local input_length="${#input}"
+  if [ "$input_length" -gt "$max_length" ]; then
+    echo "Error: Input exceeds maximum length of $max_length characters (actual length: $input_length)" >&2
+    return 1
+  fi
+
+  # Basic validation passed
+  return 0
 }
 
 # Function: is_valid_utf8
@@ -343,18 +193,84 @@ validate_input() {
 #   0 if input is valid UTF-8, 1 if invalid
 # Note: This relies on the system's iconv command which should be available on most systems
 is_valid_utf8() {
-    local input="$1"
-    
-    # Check if input is provided
-    if [ -z "$input" ]; then
-        return 0  # Empty string is valid
-    fi
-    
-    # Use iconv to validate UTF-8. If it fails, the input is not valid UTF-8
-    if printf '%s' "$input" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
-        return 0
-    else
-        echo "Error: Input contains invalid UTF-8 sequences" >&2
-        return 1
-    fi
+  local input="$1"
+
+  # Check if input is provided
+  if [ -z "$input" ]; then
+    return 0 # Empty string is valid
+  fi
+
+  # Use iconv to validate UTF-8. If it fails, the input is not valid UTF-8
+  if printf '%s' "$input" | iconv -f UTF-8 -t UTF-8 >/dev/null 2>&1; then
+    return 0
+  else
+    echo "Error: Input contains invalid UTF-8 sequences" >&2
+    return 1
+  fi
 }
+
+# --- Skill Management Functions ---
+
+# Validate skill name
+# Returns 0 if valid, 1 if invalid
+validate_skill_name() {
+  local name="$1"
+  if [[ ! $name =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    return 1
+  fi
+  return 0
+}
+
+# Create standard skill directory structure
+# Usage: create_skill_structure "skill_path"
+create_skill_structure() {
+  local skill_path="$1"
+
+  mkdir -p "$skill_path"
+  mkdir -p "$skill_path/scripts"
+  mkdir -p "$skill_path/references"
+  mkdir -p "$skill_path/assets"
+}
+
+# Report error
+# Usage: report_error "message" [json_mode]
+report_error() {
+  local message="$1"
+  local json_mode="${2:-false}"
+
+  if [ "$json_mode" = true ]; then
+    # Escape quotes in message
+    local safe_msg="${message//\"/\\\"}"
+    echo "{\"status\": \"error\", \"message\": \"$safe_msg\"}"
+  else
+    echo "Error: $message" >&2
+  fi
+}
+
+# Report success
+# Usage: report_success "message" [data_fragment] [json_mode]
+# data_fragment should be valid JSON key-value pairs, e.g. '"path": "/foo"'
+report_success() {
+  local message="$1"
+  local data="$2"
+  local json_mode="${3:-false}"
+
+  if [ "$json_mode" = true ]; then
+    local safe_msg="${message//\"/\\\"}"
+    if [ -n "$data" ]; then
+      echo "{\"status\": \"success\", \"message\": \"$safe_msg\", $data}"
+    else
+      echo "{\"status\": \"success\", \"message\": \"$safe_msg\"}"
+    fi
+  else
+    echo "$message"
+  fi
+}
+
+
+ensure_utf8_locale() {
+  export LANG=en_US.UTF-8
+  export LC_ALL=en_US.UTF-8
+}
+
+

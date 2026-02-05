@@ -29,7 +29,7 @@ CLIs MUST:
 
 Rationale: standardizes integration, observability, and automation.
 
-### III. Test-First Development (NON-NEGOTIABLE)
+### III. Test-First Development
 Implementation MUST follow a Test-Driven Development style for core logic:
 - Write or update tests BEFORE implementing new behavior.
 - Ensure tests FAIL first (Red), then implement to make them PASS (Green).
@@ -68,6 +68,14 @@ Changes MUST be safe to merge:
 - New behavior MUST be reflected in specs/plan/tasks/docs where applicable.
 
 Rationale: ensures consistent quality and predictable releases.
+
+### VII. Feature-Centric Development
+Feature 是项目的长期核心框架：
+- Feature 列表必须保持为项目的“单一事实来源”。
+- 在 spec → plan → tasks → implement 的每个阶段都必须复核 Feature 的新增/合并/拆分/删除。
+- Feature 变更必须可追溯到相应的 spec/plan 依据，并记录在 Feature 详情中。
+
+Rationale: 让项目演进以 Feature 为中心，确保长期一致性与可维护性。
 
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->

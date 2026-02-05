@@ -1,6 +1,4 @@
 <!--
-  SOURCE TEMPLATE (development path): templates/feature-template.md
-  INSTALLED TEMPLATE (runtime path): .specify/templates/feature-template.md
   Do NOT remove placeholder tokens. Each [TOKEN] must be replaced during feature instantiation.
   This template is derived from an actual feature detail file and generalized.
 -->
@@ -11,7 +9,6 @@
 **Name**: [FEATURE_NAME]  
 **Description**: [FEATURE_DESCRIPTION]  
 **Status**: [FEATURE_STATUS]  
-**Spec Path**: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/spec.md  
 **Created**: [FEATURE_CREATED_DATE]  
 **Last Updated**: [FEATURE_LAST_UPDATED_DATE]
 
@@ -51,8 +48,8 @@
 
 ## Related Files
 
-- Specification: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/spec.md
-- Feature Index: memory/feature-index.md
+- Specification: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/requirements.md
+- Feature Index: memory/features.md
 - Feature Detail: memory/features/[FEATURE_ID].md
 - Quality Checklist: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/checklists/requirements.md
 
@@ -93,7 +90,6 @@
 ## Validation Checklist (To be removed after instantiation)
 
 - [ ] All tokens replaced
-- [ ] Spec path exists or will be created
 - [ ] Status is valid and criteria defined
 - [ ] Overview gives clear value proposition
 - [ ] Key Changes list distinct, actionable items

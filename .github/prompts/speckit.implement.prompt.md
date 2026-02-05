@@ -10,9 +10,9 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
 ## Outline
 
-1. Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse FEATURE_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+1. Run `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks` from repo root and parse REQUIREMENTS_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
-2. **Check checklists status** (if FEATURE_DIR/checklists/ exists):
+2. **Check checklists status** (if REQUIREMENTS_DIR/checklists/ exists):
    - Scan all checklist files in the checklists/ directory
    - For each checklist, count:
      - Total items: All lines matching `- [ ]` or `- [X]` or `- [x]`
@@ -37,7 +37,13 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
      - **STOP** and ask: "Some checklists are incomplete. Do you want to proceed with implementation anyway? (yes/no)"
      - Wait for user response before continuing
      - If user says "no" or "wait" or "stop", halt execution
-     - If user says "yes" or "proceed" or "continue", proceed to step 3
+     - If user says "yes" or "proceed" or "continue":
+       1. **Require a waiver comment** (short risk-acceptance note) before proceeding
+       2. Record the waiver in `REQUIREMENTS_DIR/waivers.md` (create if missing) with:
+          - Date (ISO)
+          - Checklist summary table
+          - Waiver comment
+       3. Proceed to step 3
 
    - **If all checklists are complete**:
      - Display the table showing all checklists passed
@@ -101,14 +107,14 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - **Task details**: ID, description, file paths, parallel markers [P]
    - **Execution flow**: Order and dependency requirements
 
-6. Execute implementation following the task plan:
-   - **Phase-by-phase execution**: Complete each phase before moving to the next
+6. Implement feature following the task plan:
+   - **Phase-by-phase implementation**: Complete each phase before moving to the next
    - **Respect dependencies**: Run sequential tasks in order, parallel tasks [P] can run together  
-   - **Follow TDD approach**: Execute test tasks before their corresponding implementation tasks
+   - **Follow TDD approach**: Implement test tasks before their corresponding implementation tasks
    - **File-based coordination**: Tasks affecting the same files must run sequentially
    - **Validation checkpoints**: Verify each phase completion before proceeding
 
-7. Implementation execution rules:
+7. Implementation rules:
    - **Setup first**: Initialize project structure, dependencies, configuration
    - **Tests before code**: If you need to write tests for contracts, entities, and integration scenarios
    - **Core development**: Implement models, services, CLI commands, endpoints
@@ -134,15 +140,36 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
 The `/speckit.implement` command automatically integrates with the feature tracking system:
 
-- If a `.specify/memory/feature-index.md` file exists, the command will:
+- If a `.specify/memory/features.md` file exists, the command will:
   - Detect the current feature directory (format: `.specify/specs/###-feature-name/`)
   - Extract the feature ID from the directory name
-  - Update the corresponding feature entry in `.specify/memory/feature-index.md`:
+  - Update the corresponding feature entry in `.specify/memory/features.md`:
     - Ensure status remains "Implemented" (maintains status from planning phase)
     - Keep the specification path unchanged
     - Update the "Last Updated" date
-  - Automatically stage the changes to `.specify/memory/feature-index.md` for git commit
+  - Automatically stage the changes to `.specify/memory/features.md` for git commit
+
+In addition, **implement 阶段必须复核 Feature 列表**：
+
+- 实现结果可能引入新的 Feature、削弱/替代已有 Feature 或需要删除 Feature。
+- 确保功能性/非功能性 Feature 分类保持一致。
+- 若有变更，必须同步更新：
+  - `.specify/memory/features/<ID>.md`
+  - `.specify/memory/features.md`
+- 在 Feature 详情中记录实现带来的“关键变化/备注”。
 
 This integration ensures that all feature implementation activities are properly tracked and linked to their corresponding entries in the project's feature index.
 
 Note: This command assumes a complete task breakdown exists in tasks.md. If tasks are incomplete or missing, suggest running `/speckit.tasks` first to regenerate the task list.
+
+## Handoffs
+
+**Before running this command**:
+
+- Run `/speckit.tasks` to ensure a complete, ordered `tasks.md` exists.
+- If checklists exist under `checklists/`, complete them or explicitly decide to proceed with known risks.
+
+**After running this command**:
+
+- Run `/speckit.review` to evaluate SDD process quality and propose workflow improvements.
+- Optionally run `/speckit.analyze` to catch any spec/plan/tasks drift introduced during implementation.

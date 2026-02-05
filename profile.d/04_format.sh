@@ -5,6 +5,9 @@
 #   $1 - The input string to escape
 # Returns:
 #   The JSON-escaped string via stdout
+# Function: json_escape
+# Description: Escapes a string for safe inclusion in JSON
+# Usage: escaped=$(json_escape "$input")
 function json_escape() {
     local input="$1"
     local escaped=""
@@ -15,8 +18,10 @@ function json_escape() {
     while [ $i -lt ${#input} ]; do
         char="${input:$i:1}"
         case "$char" in
-            '"')  escaped="${escaped}\\\"";;
-            '\\') escaped="${escaped}\\\\\\\\";;
+            '"')  escaped="${escaped}\\\""
+                ;;
+            \\) escaped="${escaped}\\\\"
+                ;;
             '/')  escaped="${escaped}\/";;
             $'\b') escaped="${escaped}\\b";;
             $'\f') escaped="${escaped}\\f";;
@@ -37,5 +42,5 @@ function json_escape() {
         i=$((i + 1))
     done
     
-    echo "$escaped"
+    printf '%s' "$escaped"
 }

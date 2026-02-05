@@ -6,9 +6,9 @@ description: "Task list template for feature implementation"
 # Tasks: [FEATURE NAME]
 
 **Input**: Design documents from `.specify/specs/[###-feature-name]/`
-**Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
+**Prerequisites**: plan.md (required), requirements.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: The examples below include test tasks. Tests are MANDATORY per Constitution Principle IV (Test-First & Contract-Driven Implementation).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -17,6 +17,7 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - Include exact file paths in descriptions
+- **Verification tasks**: Add explicit manual QA/verification tasks when they are separate from automated tests
 
 ## Path Conventions
 
@@ -30,7 +31,7 @@ description: "Task list template for feature implementation"
   IMPORTANT: The tasks below are SAMPLE TASKS for illustration purposes only.
   
   The /speckit.tasks command MUST replace these with actual tasks based on:
-  - User stories from spec.md (with their priorities P1, P2, P3...)
+  - User stories from requirements.md (with their priorities P1, P2, P3...)
   - Feature requirements from plan.md
   - Entities from data-model.md
   - Endpoints from contracts/
@@ -79,12 +80,16 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 (MANDATORY) ⚠️
 
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
 - [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
+
+### Manual Verification for User Story 1 (if required)
+
+- [ ] T011A [US1] Manual QA: validate [user journey] using quickstart.md steps
 
 ### Implementation for User Story 1
 
@@ -110,6 +115,10 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
 
+### Manual Verification for User Story 2 (if required)
+
+- [ ] T019A [US2] Manual QA: validate [user journey] using quickstart.md steps
+
 ### Implementation for User Story 2
 
 - [ ] T020 [P] [US2] Create [Entity] model in src/models/[entity].py
@@ -131,6 +140,10 @@ Examples of foundational tasks (adjust based on your project):
 
 - [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
+
+### Manual Verification for User Story 3 (if required)
+
+- [ ] T025A [US3] Manual QA: validate [user journey] using quickstart.md steps
 
 ### Implementation for User Story 3
 
@@ -156,6 +169,7 @@ Examples of foundational tasks (adjust based on your project):
 - [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX Manual QA sweep for critical paths
 
 ---
 

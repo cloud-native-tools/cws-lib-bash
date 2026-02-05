@@ -5,6 +5,15 @@
 
 set -e
 
+# Load common helpers for Unicode support and shared functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/common.sh"
+    # Ensure UTF-8 locale for better Unicode handling
+    ensure_utf8_locale || true
+fi
+
 # Function to extract feature ID from current branch name
 extract_feature_id_from_branch() {
     if command -v git >/dev/null 2>&1; then

@@ -73,12 +73,19 @@ done
 
 FEATURE_DESCRIPTION="${ARGS[*]}"
 
-# If no command line arguments provided, read from stdin
-if [ -z "$FEATURE_DESCRIPTION" ]; then
-    if [ ! -t 0 ]; then
-        # stdin is not a terminal, read from it
-        FEATURE_DESCRIPTION=$(cat)
-    fi
+# Read from stdin if available, regardless of arguments
+STDIN_INPUT=""
+if [ ! -t 0 ]; then
+    STDIN_INPUT=$(cat)
+fi
+
+# Combine arguments and stdin
+if [ -n "$FEATURE_DESCRIPTION" ] && [ -n "$STDIN_INPUT" ]; then
+    # Both provided: use newline separator
+    FEATURE_DESCRIPTION="$FEATURE_DESCRIPTION"$'\n\n'"$STDIN_INPUT"
+elif [ -z "$FEATURE_DESCRIPTION" ] && [ -n "$STDIN_INPUT" ]; then
+    # Only stdin provided
+    FEATURE_DESCRIPTION="$STDIN_INPUT"
 fi
 
 if [ -z "$FEATURE_DESCRIPTION" ]; then
@@ -188,7 +195,9 @@ if [ -n "$SHORT_NAME" ]; then
     BRANCH_SUFFIX=$(echo "$SHORT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/-\+/-/g' | sed 's/^-//' | sed 's/-$//')
 else
     # Generate from description with smart filtering
-    BRANCH_SUFFIX=$(generate_branch_name "$FEATURE_DESCRIPTION")
+    # Truncate to first 500 chars to avoid performance issues with very long descriptions
+    BRANCH_DESC_SHORT="${FEATURE_DESCRIPTION:0:500}"
+    BRANCH_SUFFIX=$(generate_branch_name "$BRANCH_DESC_SHORT")
 fi
 
 BRANCH_NAME="${FEATURE_NUM}-${BRANCH_SUFFIX}"
@@ -228,12 +237,26 @@ else
     >&2 echo "[specify] Warning: Git repository not detected; skipped branch creation for $BRANCH_NAME"
 fi
 
-FEATURE_DIR="$SPECS_DIR/$BRANCH_NAME"
-mkdir -p "$FEATURE_DIR"
+REQUIREMENTS_DIR="$SPECS_DIR/$BRANCH_NAME"
+mkdir -p "$REQUIREMENTS_DIR"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
-SPEC_FILE="$FEATURE_DIR/spec.md"
-if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"; fi
+SPEC_FILE="$REQUIREMENTS_DIR/requirements.md"
+if [ -f "$TEMPLATE" ]; then 
+    cp "$TEMPLATE" "$SPEC_FILE"
+    
+    # Replace placeholder with actual description
+    # Use python for robust multi-line string replacement if available
+    if command -v python3 >/dev/null 2>&1; then
+        export SPEC_CONTENT="$FEATURE_DESCRIPTION"
+        # We use python to avoid sed/awk escaping hell with multiline complex text
+        # The template contains literal "$ARGUMENTS" which we replace with the content
+        python3 -c "import sys, os; content=os.environ.get('SPEC_CONTENT', ''); path='$SPEC_FILE'; template=open(path, encoding='utf-8').read(); open(path, 'w', encoding='utf-8').write(template.replace('\$ARGUMENTS', content))"
+    fi
+else 
+    touch "$SPEC_FILE"
+    echo "$FEATURE_DESCRIPTION" > "$SPEC_FILE"
+fi
 
 # Set the SPECIFY_FEATURE environment variable for the current session
 export SPECIFY_FEATURE="$BRANCH_NAME"

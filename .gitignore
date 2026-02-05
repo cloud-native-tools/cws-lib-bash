@@ -31,3 +31,10 @@ logs/
 
 # Test artifacts
 test-results/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.ai/tools/*.md

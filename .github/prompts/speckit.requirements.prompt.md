@@ -10,7 +10,7 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
 ## Outline
 
-The text the user typed after `/speckit.specify` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `{ARGS}` appears literally below. Do not ask the user to repeat it unless they provided an empty command.
+The text the user typed after `/speckit.requirements` in the triggering message **is** the feature description. Assume you always have it available in this conversation even if `{ARGS}` appears literally below. Do not ask the user to repeat it unless they provided an empty command.
 
 Given that feature description, do this:
 
@@ -43,40 +43,34 @@ Given that feature description, do this:
       - Find the highest number N
       - Use N+1 for the new branch number
    
-   d. Run the script `
+   d. Prepare to run the script `
 ```bash
-cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json
+cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json --number <NUMBER> --short-name "<SHORT_NAME>"
 $ARGUMENTS
 EOF
 ```
-` with the calculated number and short-name:
-      - Pass `--number N+1` and `--short-name "your-short-name"` along with the feature description
-      - Bash example: `
-```bash
-cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json
-$ARGUMENTS
-EOF
-```
- --json --number 5 --short-name "user-auth" "Add user authentication"`
+` with the calculated number and short-name.
    
 2. Run the script `
 ```bash
-cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json
+cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json --number <NUMBER> --short-name "<SHORT_NAME>"
 $ARGUMENTS
 EOF
 ```
-` from repo root and include the short-name argument. Parse its JSON output for BRANCH_NAME and SPEC_FILE. All file paths must be absolute.
+` from repo root. Parse its JSON output for BRANCH_NAME and SPEC_FILE. All file paths must be absolute.
 
    **IMPORTANT**:
 
    - For Bash, this expands to a heredoc-based, safe JSON handoff that writes the raw user input to stdin and passes its contents to `
 ```bash
-cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json
+cat << 'EOF' | .specify/scripts/bash/create-new-spec.sh --json --number <NUMBER> --short-name "<SHORT_NAME>"
 $ARGUMENTS
 EOF
 ```
 `. This avoids shell parsing issues with quotes, backslashes, and newlines.
-   - Append the short-name argument you created in step 1, and keep the feature description as the final argument.
+   - Replace `<NUMBER>` in the script template with the calculated number (N+1).
+   - Replace `<SHORT_NAME>` in the script template with the short-name you created.
+   - `$ARGUMENTS` contains the feature description and is passed via stdin.
    - You must only ever run this script once.
    - The JSON is provided in the terminal as output - always refer to it to get the actual content you're looking for.
    - Check all three sources (remote branches, local branches, specs directories) to find the highest number
@@ -215,7 +209,7 @@ EOF
 
 ## Feature Integration
 
-The `/speckit.specify` command must maintain a **many-specs to one-feature** relationship:
+The `/speckit.requirements` command must maintain a **many-specs to one-feature** relationship:
 
 - A **Feature** is a relatively large, long‑lived concept, described by `.specify/memory/features/<ID>.md` and indexed in `.specify/memory/feature-index.md`.
 - A **Spec** is a smaller, focused slice under a Feature; one Feature can (and typically will) own multiple Specs over time.
@@ -228,21 +222,35 @@ When creating a new spec you MUST:
     - `.specify/memory/features/*.md` detail files
 3. Use the feature branch information (e.g. `SPECIFY_FEATURE` env, current git branch name, or the numeric prefix in `BRANCH_NAME`) as hints, but **do not** assume a strict `branch == feature` 1:1 mapping.
 
+### Feature 持续演进要求（spec 阶段）
+
+- 在生成或更新 spec 之前，必须回顾 **Feature 列表与 Feature 详情**：
+   - 新的 SPEC 可能引入新的 Feature，或让现有 Feature 失效/被替代。
+   - 需要保持 **功能性 Feature** 与 **非功能性 Feature** 的分类一致性。
+- 任何 Feature 的新增/合并/拆分/删除都必须同步更新：
+   - `.specify/memory/features/<ID>.md`
+   - `.specify/memory/feature-index.md`
+- Feature 变更需要记录来源（对应 spec 的证据），写入 Feature 详情的“关键变化/备注”。
+
 ### Feature lookup rules
 
-When `/speckit.specify` is invoked for a new spec:
+When `/speckit.requirements` is invoked for a new spec:
 
-1. Try to infer the Feature ID from existing context (in order of preference):
-    - If `SPECIFY_FEATURE` is set and matches pattern `NNN-<slug>`, take `NNN` as the feature candidate.
-    - Else, if current git branch matches `NNN-<slug>`, take `NNN` as the feature candidate.
-    - Else, if `BRANCH_NAME` returned by `create-new-spec.sh` starts with `NNN-`, take `NNN` as the feature candidate.
-2. Cross‑check the candidate Feature ID against:
-    - `.specify/memory/features/NNN.md` (detail file exists)
-    - and/or a row with `ID == NNN` in `.specify/memory/feature-index.md`.
-    - If found, **bind this new spec** to that Feature (do not create a new Feature).
-3. If no matching Feature can be found, you MUST create a new Feature:
-    - Instantiate `.specify/templates/feature-template.md` into `.specify/memory/features/<NEW_ID>.md` following `/speckit.feature` rules.
-    - Add / update the corresponding row in `.specify/memory/feature-index.md` with `Spec Path` pointing to the new spec file.
+1. **Scan for existing Feature**:
+   - **Search by Context**: Scan `.specify/memory/features/*.md` and `.specify/memory/feature-index.md` to see if an existing Feature matches the intent/scope of the new spec.
+   - **Search by ID**: Check for explicit Feature ID indicators in:
+     - `SPECIFY_FEATURE` env var (e.g. `NNN-<slug>`).
+     - Current git branch name (e.g. `NNN-<slug>`).
+     - The numeric prefix in `BRANCH_NAME` generated by the script.
+
+2. **Bind or Create**:
+   - **If a matching Feature is found** (by content or ID):
+     - Bind this new spec to that Feature ID.
+     - Do NOT create a new Feature.
+   - **If NO matching Feature is found**:
+     - Create a new Feature:
+       - Instantiate `.specify/templates/feature-template.md` into `.specify/memory/features/<NEW_ID>.md` following `/speckit.feature` rules.
+       - Add a new row to `.specify/memory/feature-index.md`.
 
 > Important: The same Feature (same `FEATURE_ID`) can appear in `Spec Path` multiple times over its lifetime as different specs are added; each spec path should reflect the concrete spec file path created for this run.
 
@@ -320,3 +328,14 @@ Success criteria must be:
 - "Database can handle 1000 TPS" (implementation detail, use user-facing metric)
 - "React components render efficiently" (framework-specific)
 - "Redis cache hit rate above 80%" (technology-specific)
+
+## Handoffs
+
+**Before running this command**:
+
+- (Optional) Run `/speckit.feature` to ensure the feature registry is up to date.
+
+**After running this command**:
+
+- If the spec contains any `[NEEDS CLARIFICATION]`, run `/speckit.clarify`.
+- Otherwise proceed to `/speckit.plan`.

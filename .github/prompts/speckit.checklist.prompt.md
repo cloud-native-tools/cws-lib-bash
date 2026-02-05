@@ -1,4 +1,12 @@
-> Note: `$ARGUMENTS` 为**可选补充输入**。当本次调用未提供任何 `$ARGUMENTS` 时，仍须按下文流程基于当前 feature 的 spec/plan/tasks 自动推导合适的检查清单主题并生成 checklist；仅在 `$ARGUMENTS` 非空时，将其作为清单类型或关注点偏好一并考虑。
+> Note: `$ARGUMENTS` 为**可选补充输入**。当本次调用未提供任何 `$ARGUMENTS` 时，仍须按下文流程基于当前 feature 的 **requirements（What）** 自动推导合适的检查清单主题并生成 checklist；若存在 plan/tasks，则将其作为 **specifications（How）** 的上下文用于追溯与发现需求缺口。仅在 `$ARGUMENTS` 非空时，将其作为清单类型或关注点偏好一并考虑。
+
+## Terminology: Requirement vs Specification vs Feature
+
+- **Requirement（需求 / What）**：从利益相关者视角描述系统必须满足的目标、能力与验收条件（价值与约束）。
+- **Specification（规格 / How）**：从设计/实现视角描述“如何实现需求”的方案与约束（如 plan.md、tasks.md、contracts/）。
+- **Feature（特性）**：一个以价值与范围为中心的**需求分组单位**（概念/计划阶段常用），包含一组 Requirements（What），并驱动后续 Specifications（How）的产出。
+
+> 记忆法：Requirement = 目标（What），Specification = 方案（How）。本命令产出的 checklist 是“需求写作的单元测试”，不是实现验证。
 
 ## Checklist Purpose: "Unit Tests for English"
 
@@ -9,7 +17,7 @@
 - ❌ NOT "Verify the button clicks correctly"
 - ❌ NOT "Test error handling works"
 - ❌ NOT "Confirm the API returns 200"
-- ❌ NOT checking if code/implementation matches the spec
+- ❌ NOT checking if code/implementation matches the plan/specifications
 
 **FOR requirements quality validation**:
 
@@ -17,9 +25,9 @@
 - ✅ "Is 'prominent display' quantified with specific sizing/positioning?" (clarity)
 - ✅ "Are hover state requirements consistent across all interactive elements?" (consistency)
 - ✅ "Are accessibility requirements defined for keyboard navigation?" (coverage)
-- ✅ "Does the spec define what happens when logo image fails to load?" (edge cases)
+- ✅ "Do the requirements define what happens when logo image fails to load?" (edge cases)
 
-**Metaphor**: If your spec is code written in English, the checklist is its unit test suite. You're testing whether the requirements are well-written, complete, unambiguous, and ready for implementation - NOT whether the implementation works.
+**Metaphor**: If your requirements are code written in English, the checklist is its unit test suite. You're testing whether the requirements are well-written, complete, unambiguous, and ready for design/implementation - NOT whether the implementation works.
 
 ## User Input
 
@@ -31,12 +39,12 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
 ## Execution Steps
 
-1. **Setup**: Run `.specify/scripts/bash/check-prerequisites.sh --json` from repo root and parse JSON for FEATURE_DIR and AVAILABLE_DOCS list.
+1. **Setup**: Run `.specify/scripts/bash/check-prerequisites.sh --json` from repo root and parse JSON for REQUIREMENTS_DIR and AVAILABLE_DOCS list.
    - All file paths must be absolute.
    - For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
 
 2. **Clarify intent (dynamic)**: Derive up to THREE initial contextual clarifying questions (no pre-baked catalog). They MUST:
-   - Be generated from the user's phrasing + extracted signals from spec/plan/tasks
+   - Be generated from the user's phrasing + extracted signals primarily from requirements.md (What). If plan/tasks exist, use them as specification context (How) only for traceability and gap-finding.
    - Only ask about information that materially changes checklist content
    - Be skipped individually if already unambiguous in `$ARGUMENTS`
    - Prefer precision over breadth
@@ -71,12 +79,12 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - Derive checklist theme (e.g., security, review, deploy, ux)
    - Consolidate explicit must-have items mentioned by user
    - Map focus selections to category scaffolding
-   - Infer any missing context from spec/plan/tasks (do NOT hallucinate)
+   - Infer missing requirement-level context from requirements.md first; treat plan/tasks as specification signals that may reveal missing/implicit requirements (do NOT hallucinate)
 
-4. **Load feature context**: Read from FEATURE_DIR:
-   - spec.md: Feature requirements and scope
-   - plan.md (if exists): Technical details, dependencies
-   - tasks.md (if exists): Implementation tasks
+4. **Load feature context**: Read from REQUIREMENTS_DIR:
+   - requirements.md: Feature scope + Requirements (What) + acceptance criteria
+   - plan.md (if exists): Specifications (How) context ONLY to detect requirement gaps/conflicts and to improve traceability
+   - tasks.md (if exists): Specifications (How) decomposition ONLY to detect missing requirements, hidden assumptions, and non-functional omissions
 
    **Context Loading Strategy**:
    - Load only necessary portions relevant to active focus areas (avoid full-file dumping)
@@ -85,7 +93,7 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - If source docs are large, generate interim summary items instead of embedding raw text
 
 5. **Generate checklist** - Create "Unit Tests for Requirements":
-   - Create `FEATURE_DIR/checklists/` directory if it doesn't exist
+   - Create `REQUIREMENTS_DIR/checklists/` directory if it doesn't exist
    - Generate unique checklist filename:
      - Use short, descriptive name based on domain (e.g., `ux.md`, `api.md`, `security.md`)
      - Format: `[domain].md`
@@ -114,6 +122,10 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
    **HOW TO WRITE CHECKLIST ITEMS - "Unit Tests for English"**:
 
+   **Common confusion to avoid** (spec masquerading as requirement):
+   - ❌ "系统必须使用 Redis 缓存" → 这是 Specification（How），除非 requirements 明确约束技术选型
+   - ✅ "系统需在 1000 并发下保持亚秒级响应" → 这是 Requirement（What），可由不同实现方案满足
+
    ❌ **WRONG** (Testing implementation):
    - "Verify landing page displays 3 episode cards"
    - "Test hover states work on desktop"
@@ -126,14 +138,15 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - "Are keyboard navigation requirements defined for all interactive UI?" [Coverage]
    - "Is the fallback behavior specified when logo image fails to load?" [Edge Cases]
    - "Are loading states defined for asynchronous episode data?" [Completeness]
-   - "Does the spec define visual hierarchy for competing UI elements?" [Clarity]
+   - "Do the requirements define visual hierarchy for competing UI elements?" [Clarity]
 
    **ITEM STRUCTURE**:
    Each item should follow this pattern:
    - Question format asking about requirement quality
-   - Focus on what's WRITTEN (or not written) in the spec/plan
+   - Focus on what's WRITTEN (or not written) in the requirements (What)
    - Include quality dimension in brackets [Completeness/Clarity/Consistency/etc.]
-   - Reference spec section `[Spec §X.Y]` when checking existing requirements
+   - Reference requirement section using `[Req §...]` when checking existing requirements (e.g., `[Req §FR-001]`, `[Req §SC-002]`)
+   - If referencing specification artifacts for traceability/gap detection, label explicitly as `[Spec plan.md §<heading>]` / `[Spec tasks.md §<heading>]`
    - Use `[Gap]` marker when checking for missing requirements
 
    **EXAMPLES BY QUALITY DIMENSION**:
@@ -144,12 +157,12 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - "Are mobile breakpoint requirements defined for responsive layouts? [Gap]"
 
    Clarity:
-   - "Is 'fast loading' quantified with specific timing thresholds? [Clarity, Spec §NFR-2]"
-   - "Are 'related episodes' selection criteria explicitly defined? [Clarity, Spec §FR-5]"
-   - "Is 'prominent' defined with measurable visual properties? [Ambiguity, Spec §FR-4]"
+   - "Is 'fast loading' quantified with specific timing thresholds? [Clarity, Req §NFR-2]"
+   - "Are 'related episodes' selection criteria explicitly defined? [Clarity, Req §FR-5]"
+   - "Is 'prominent' defined with measurable visual properties? [Ambiguity, Req §FR-4]"
 
    Consistency:
-   - "Do navigation requirements align across all pages? [Consistency, Spec §FR-10]"
+   - "Do navigation requirements align across all pages? [Consistency, Req §FR-10]"
    - "Are card component requirements consistent between landing and detail pages? [Consistency]"
 
    Coverage:
@@ -158,8 +171,8 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - "Are requirements specified for partial data loading failures? [Coverage, Exception Flow]"
 
    Measurability:
-   - "Are visual hierarchy requirements measurable/testable? [Acceptance Criteria, Spec §FR-1]"
-   - "Can 'balanced visual weight' be objectively verified? [Measurability, Spec §FR-2]"
+   - "Are visual hierarchy requirements measurable/testable? [Acceptance Criteria, Req §FR-1]"
+   - "Can 'balanced visual weight' be objectively verified? [Measurability, Req §FR-2]"
 
    **Scenario Classification & Coverage** (Requirements Quality Focus):
    - Check if requirements exist for: Primary, Alternate, Exception/Error, Recovery, Non-Functional scenarios
@@ -169,12 +182,13 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
    **Traceability Requirements**:
    - MINIMUM: ≥80% of items MUST include at least one traceability reference
-   - Each item should reference: spec section `[Spec §X.Y]`, or use markers: `[Gap]`, `[Ambiguity]`, `[Conflict]`, `[Assumption]`
+   - Each item should reference: requirement section `[Req §X]`, or use markers: `[Gap]`, `[Ambiguity]`, `[Conflict]`, `[Assumption]`
+   - When a checklist item cites a specification artifact (`plan.md`, `tasks.md`), it MUST also ask whether the spec decision is traceable to a requirement (or explicitly documented as a constraint).
    - If no ID system exists: "Is a requirement & acceptance criteria ID scheme established? [Traceability]"
 
    **Surface & Resolve Issues** (Requirements Quality Problems):
    Ask questions about the requirements themselves:
-   - Ambiguities: "Is the term 'fast' quantified with specific metrics? [Ambiguity, Spec §NFR-1]"
+   - Ambiguities: "Is the term 'fast' quantified with specific metrics? [Ambiguity, Req §NFR-1]"
    - Conflicts: "Do navigation requirements conflict between §FR-10 and §FR-10a? [Conflict]"
    - Assumptions: "Is the assumption of 'always available podcast API' validated? [Assumption]"
    - Dependencies: "Are external podcast API requirements documented? [Dependency, Gap]"
@@ -192,6 +206,7 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - ❌ "Click", "navigate", "render", "load", "execute"
    - ❌ Test cases, test plans, QA procedures
    - ❌ Implementation details (frameworks, APIs, algorithms)
+   - ❌ Converting design decisions into requirements without justification (e.g., "must use Redis" / "must use gRPC")
 
    **✅ REQUIRED PATTERNS** - These test requirements quality:
    - ✅ "Are [requirement type] defined/specified/documented for [scenario]?"
@@ -199,7 +214,7 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
    - ✅ "Are requirements consistent between [section A] and [section B]?"
    - ✅ "Can [requirement] be objectively measured/verified?"
    - ✅ "Are [edge cases/scenarios] addressed in requirements?"
-   - ✅ "Does the spec define [missing aspect]?"
+   - ✅ "Do the requirements define [missing aspect]?"
 
 6. **Structure Reference**: Generate the checklist following the canonical template in `.specify/templates/checklist-template.md` for title, meta section, category headings, and ID formatting. If template is unavailable, use: H1 title, purpose/created meta lines, `##` category sections containing `- [ ] CHK### <requirement item>` lines with globally incrementing IDs starting at CHK001.
 
@@ -213,14 +228,14 @@ You **MUST** treat the user input ($ARGUMENTS) as parameters for the current com
 
 The `/speckit.checklist` command automatically integrates with the feature tracking system:
 
-- If a `.specify/memory/feature-index.md` file exists, the command will:
+- If a `.specify/memory/features.md` file exists, the command will:
   - Detect the current feature directory (format: `.specify/specs/###-feature-name/`)
   - Extract the feature ID from the directory name
-  - Update the corresponding feature entry in `.specify/memory/feature-index.md`:
+  - Update the corresponding feature entry in `.specify/memory/features.md`:
     - Change status from "Implemented" to "Ready for Review"
     - Keep the specification path unchanged
     - Update the "Last Updated" date
-  - Automatically stage the changes to `.specify/memory/feature-index.md` for git commit
+  - Automatically stage the changes to `.specify/memory/features.md` for git commit
 
 This integration ensures that all feature checklist activities are properly tracked and linked to their corresponding entries in the project's feature index.
 
@@ -238,12 +253,12 @@ To avoid clutter, use descriptive types and clean up obsolete checklists when do
 
 Sample items (testing the requirements, NOT the implementation):
 
-- "Are visual hierarchy requirements defined with measurable criteria? [Clarity, Spec §FR-1]"
-- "Is the number and positioning of UI elements explicitly specified? [Completeness, Spec §FR-1]"
+- "Are visual hierarchy requirements defined with measurable criteria? [Clarity, Req §FR-1]"
+- "Is the number and positioning of UI elements explicitly specified? [Completeness, Req §FR-1]"
 - "Are interaction state requirements (hover, focus, active) consistently defined? [Consistency]"
 - "Are accessibility requirements specified for all interactive elements? [Coverage, Gap]"
 - "Is fallback behavior defined when images fail to load? [Edge Case, Gap]"
-- "Can 'prominent display' be objectively measured? [Measurability, Spec §FR-4]"
+- "Can 'prominent display' be objectively measured? [Measurability, Req §FR-4]"
 
 **API Requirements Quality:** `api.md`
 
@@ -280,21 +295,21 @@ Sample items:
 **❌ WRONG - These test implementation, not requirements:**
 
 ```markdown
-- [ ] CHK001 - Verify landing page displays 3 episode cards [Spec §FR-001]
-- [ ] CHK002 - Test hover states work correctly on desktop [Spec §FR-003]
-- [ ] CHK003 - Confirm logo click navigates to home page [Spec §FR-010]
-- [ ] CHK004 - Check that related episodes section shows 3-5 items [Spec §FR-005]
+- [ ] CHK001 - Verify landing page displays 3 episode cards [Req §FR-001]
+- [ ] CHK002 - Test hover states work correctly on desktop [Req §FR-003]
+- [ ] CHK003 - Confirm logo click navigates to home page [Req §FR-010]
+- [ ] CHK004 - Check that related episodes section shows 3-5 items [Req §FR-005]
 ```
 
 **✅ CORRECT - These test requirements quality:**
 
 ```markdown
-- [ ] CHK001 - Are the number and layout of featured episodes explicitly specified? [Completeness, Spec §FR-001]
-- [ ] CHK002 - Are hover state requirements consistently defined for all interactive elements? [Consistency, Spec §FR-003]
-- [ ] CHK003 - Are navigation requirements clear for all clickable brand elements? [Clarity, Spec §FR-010]
-- [ ] CHK004 - Is the selection criteria for related episodes documented? [Gap, Spec §FR-005]
+- [ ] CHK001 - Are the number and layout of featured episodes explicitly specified? [Completeness, Req §FR-001]
+- [ ] CHK002 - Are hover state requirements consistently defined for all interactive elements? [Consistency, Req §FR-003]
+- [ ] CHK003 - Are navigation requirements clear for all clickable brand elements? [Clarity, Req §FR-010]
+- [ ] CHK004 - Is the selection criteria for related episodes documented? [Gap, Req §FR-005]
 - [ ] CHK005 - Are loading state requirements defined for asynchronous episode data? [Gap]
-- [ ] CHK006 - Can "visual hierarchy" requirements be objectively measured? [Measurability, Spec §FR-001]
+- [ ] CHK006 - Can "visual hierarchy" requirements be objectively measured? [Measurability, Req §FR-001]
 ```
 
 **Key Differences:**
@@ -305,3 +320,14 @@ Sample items:
 - Correct: Validation of requirement quality
 - Wrong: "Does it do X?"
 - Correct: "Is X clearly specified?"
+
+## Handoffs
+
+**Before running this command**:
+
+- Run after you have a requirements specification (and ideally a plan/tasks) so the checklist can be grounded.
+
+**After running this command**:
+
+- If checklist items fail, iterate on `/speckit.plan` and/or `/speckit.tasks` until they pass.
+- Once checklist items are satisfied (or explicitly accepted as deferred), proceed to `/speckit.implement`.

@@ -2,6 +2,15 @@
 
 set -e
 
+# Load common helpers for Unicode support and shared functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/common.sh"
+    # Ensure UTF-8 locale for better Unicode handling
+    ensure_utf8_locale || true
+fi
+
 # Plan implementation for Spec Kit - pure bash, no external dependencies
 # This script implements the /speckit.plan command workflow
 
@@ -79,7 +88,7 @@ eval $(get_feature_paths)
 check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
 # Ensure the feature directory exists
-mkdir -p "$FEATURE_DIR"
+mkdir -p "$REQUIREMENTS_DIR"
 
 # Copy plan template if it exists
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
@@ -191,15 +200,15 @@ EOF
 ## Core Validation Scenarios
 
 ### Test 1: Special Characters
-Run: ./scripts/bash/execute-plan.sh "echo \"Price is \\$100 & it's 50% off!\" | grep '50%'"
+Run: ./scripts/bash/implement-plan.sh "echo \"Price is \\$100 & it's 50% off!\" | grep '50%'"
 Expected: Command executes safely without shell interpretation
 
 ### Test 2: Unicode Characters  
-Run: ./scripts/bash/execute-plan.sh "echo \"Hello 世界! 👋\""
+Run: ./scripts/bash/implement-plan.sh "echo \"Hello 世界! 👋\""
 Expected: Command outputs exact Unicode string
 
 ### Test 3: Combined Input
-Run: ./scripts/bash/execute-plan.sh "echo \"The price in 中国 is \\$100 & it's 50% off! 🎉\""
+Run: ./scripts/bash/implement-plan.sh "echo \"The price in 中国 is \\$100 & it's 50% off! 🎉\""
 Expected: Command handles both special chars and Unicode correctly
 
 ## Implementation Notes
@@ -241,26 +250,19 @@ main() {
     # Execute Phase 1: Design & Contracts  
     handle_design_phase "$FEATURE_SPEC" "$DATA_MODEL" "$CONTRACTS_DIR" "$QUICKSTART"
     
-    # Update agent context (for bash agent)
-    AGENT_CONTEXT_SCRIPT="$SCRIPT_DIR/update-agent-context.sh"
-    if [[ -f "$AGENT_CONTEXT_SCRIPT" ]]; then
-        echo "Updating agent context..."
-        "$AGENT_CONTEXT_SCRIPT" "bash" || echo "Agent context update failed (non-fatal)"
-    fi
-    
     # Output results
     if $JSON_MODE; then
         printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s","USER_INPUT":"%s"}\n' \
             "$(json_escape "$FEATURE_SPEC")" \
             "$(json_escape "$IMPL_PLAN")" \
-            "$(json_escape "$FEATURE_DIR")" \
+            "$(json_escape "$REQUIREMENTS_DIR")" \
             "$(json_escape "$CURRENT_BRANCH")" \
             "$HAS_GIT" \
             "$(json_escape "$USER_INPUT")"
     else
         echo "FEATURE_SPEC: $FEATURE_SPEC"
         echo "IMPL_PLAN: $IMPL_PLAN" 
-        echo "SPECS_DIR: $FEATURE_DIR"
+        echo "SPECS_DIR: $REQUIREMENTS_DIR"
         echo "BRANCH: $CURRENT_BRANCH"
         echo "HAS_GIT: $HAS_GIT"
         if [ -n "$USER_INPUT" ]; then

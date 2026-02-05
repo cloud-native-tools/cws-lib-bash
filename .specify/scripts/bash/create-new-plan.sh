@@ -2,6 +2,15 @@
 
 set -e
 
+# Load common helpers for Unicode support and shared functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/common.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/common.sh"
+    # Ensure UTF-8 locale for better Unicode handling
+    ensure_utf8_locale || true
+fi
+
 # Parse command line arguments
 JSON_MODE=false
 ARGS=()
@@ -37,7 +46,7 @@ eval $(get_feature_paths)
 check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
 # Ensure the feature directory exists
-mkdir -p "$FEATURE_DIR"
+mkdir -p "$REQUIREMENTS_DIR"
 
 # Copy plan template if it exists
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
@@ -53,11 +62,11 @@ fi
 # Output results
 if $JSON_MODE; then
     printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s"}\n' \
-        "$FEATURE_SPEC" "$IMPL_PLAN" "$FEATURE_DIR" "$CURRENT_BRANCH" "$HAS_GIT"
+        "$FEATURE_SPEC" "$IMPL_PLAN" "$REQUIREMENTS_DIR" "$CURRENT_BRANCH" "$HAS_GIT"
 else
     echo "FEATURE_SPEC: $FEATURE_SPEC"
     echo "IMPL_PLAN: $IMPL_PLAN" 
-    echo "SPECS_DIR: $FEATURE_DIR"
+    echo "SPECS_DIR: $REQUIREMENTS_DIR"
     echo "BRANCH: $CURRENT_BRANCH"
     echo "HAS_GIT: $HAS_GIT"
 fi
