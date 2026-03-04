@@ -362,7 +362,8 @@ function mv_file() {
 function highlight_difference_files() {
   local target_file=${1}
   local target_dir=${2}
-  local find_root=${3:-.}
+  shift 2
+  local find_root=${@}
 
   if [ -z "${target_file}" ]; then
     log error "Usage: highlight_difference_files <target_file> [target_dir] [find_root]"

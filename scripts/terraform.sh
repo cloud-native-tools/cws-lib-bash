@@ -130,7 +130,7 @@ function tf_plan() {
     log error "Failed to create $(tf_bin) plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
-  if ! $(tf_bin) show ${TF_PLAN_OUT} >${TF_PLAN_ANSI}; then
+  if ! $(tf_bin) show ${TF_PLAN_OUT} >>${TF_PLAN_ANSI}; then
     log error "Failed to show $(tf_bin) plan in ${PWD}"
     return ${RETURN_FAILURE:-1}
   fi
