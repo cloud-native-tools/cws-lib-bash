@@ -347,11 +347,6 @@ function random_string() {
   head /dev/urandom | sha256sum | head -c "${length}"
 }
 
-function highlight() {
-  local pattern="${@}"
-  grep --color=always -Ew "${pattern}|\$"
-}
-
 # Define core count function for cross-platform compatibility
 function get_core_count() {
   if command -v nproc >/dev/null 2>&1; then
@@ -502,108 +497,106 @@ function load_map() {
   if ! declare -p "${map_name}" >/dev/null 2>&1; then
     # Try global declaration (Bash 4.2+)
     if ! eval "declare -gA ${map_name}" 2>/dev/null; then
-       eval "declare -A ${map_name}"
+      eval "declare -A ${map_name}"
     fi
   fi
 
   while read -r key value; do
     # Skip comments and empty lines
-    [[ "${key}" =~ ^#.*$ ]] && continue
-    [[ -z "${key}" ]] && continue
+    [[ ${key} =~ ^#.*$ ]] && continue
+    [[ -z ${key} ]] && continue
 
     # Store in the associative array
     eval "${map_name}[\"${key}\"]=\"${value}\""
-  done < "${file_path}"
+  done <"${file_path}"
 
   return ${RETURN_SUCCESS:-0}
 }
 
-
 # Ensure the script runs in a UTF-8 locale to better support Unicode processing
 function ensure_utf8_locale() {
-    # Always set to C.UTF-8 for consistent behavior across systems
-    # C.UTF-8 is available on most modern Linux distributions and provides
-    # a minimal, consistent UTF-8 environment without language-specific rules
-    if locale -a 2>/dev/null | grep -qi '^C\.utf8\|^C\.UTF-8$'; then
-        export LC_ALL=C.UTF-8
-        export LANG=C.UTF-8
-    elif locale -a 2>/dev/null | grep -qi '^en_US\.utf8\|^en_US\.UTF-8$'; then
-        # Fallback to en_US.UTF-8 if C.UTF-8 is not available
-        export LC_ALL=en_US.UTF-8
-        export LANG=en_US.UTF-8
-    else
-        # If no UTF-8 locale is available, set minimal UTF-8 support
-        export LC_ALL=C
-        export LANG=C
-        # Note: This may cause issues with non-ASCII characters, but it's the best we can do
-    fi
-    
-    # Verify that the locale is actually UTF-8 capable
-    if ! locale 2>/dev/null | grep -qi 'utf-8'; then
-        echo "Warning: Unable to set UTF-8 locale. Unicode handling may be limited." >&2
-    fi
-}
+  # Always set to C.UTF-8 for consistent behavior across systems
+  # C.UTF-8 is available on most modern Linux distributions and provides
+  # a minimal, consistent UTF-8 environment without language-specific rules
+  if locale -a 2>/dev/null | grep -qi '^C\.utf8\|^C\.UTF-8$'; then
+    export LC_ALL=C.UTF-8
+    export LANG=C.UTF-8
+  elif locale -a 2>/dev/null | grep -qi '^en_US\.utf8\|^en_US\.UTF-8$'; then
+    # Fallback to en_US.UTF-8 if C.UTF-8 is not available
+    export LC_ALL=en_US.UTF-8
+    export LANG=en_US.UTF-8
+  else
+    # If no UTF-8 locale is available, set minimal UTF-8 support
+    export LC_ALL=C
+    export LANG=C
+    # Note: This may cause issues with non-ASCII characters, but it's the best we can do
+  fi
 
+  # Verify that the locale is actually UTF-8 capable
+  if ! locale 2>/dev/null | grep -qi 'utf-8'; then
+    echo "Warning: Unable to set UTF-8 locale. Unicode handling may be limited." >&2
+  fi
+}
 
 # Unicode-aware slugify: keep letters and digits from all languages, replace others with '-'
 # Usage: slugify_unicode "Some 标题 示例"  -> some-标题-示例
 # Pure bash implementation - no external dependencies
 function slugify_unicode() {
-    # Fallback (ASCII only) - pure bash implementation
-    local input="$*"
-    local result=""
-    local prev_was_separator=0
-    
-    # Handle empty input
-    if [ -z "$input" ]; then
-        echo "feature"
-        return 0
-    fi
-    
-    # Convert to lowercase and process character by character
-    # Note: This is ASCII-only but safe for all UTF-8 since we only modify ASCII ranges
-    local i=0
-    local len=${#input}
-    
-    while [ $i -lt $len ]; do
-        local char="${input:$i:1}"
-        
-        # Check if character is alphanumeric (ASCII only check)
-        # For non-ASCII UTF-8 characters, they will pass through unchanged
-        case "$char" in
-            [a-zA-Z0-9])
-                # Alphanumeric character - add as lowercase
-                if [ "$char" != "${char%[A-Z]*}" ]; then
-                    # It's uppercase, convert to lowercase
-                    char=$(printf "%s" "$char" | tr '[:upper:]' '[:lower:]')
-                fi
-                result="${result}${char}"
-                prev_was_separator=0
-                ;;
-            *)
-                # Non-alphanumeric character - treat as separator
-                if [ $prev_was_separator -eq 0 ]; then
-                    result="${result}-"
-                    prev_was_separator=1
-                fi
-                ;;
-        esac
-        i=$((i + 1))
-    done
-    
-    # Remove leading and trailing hyphens
-    result="${result#-}"
-    result="${result%-}"
-    
-    # Handle case where result is empty
-    if [ -z "$result" ]; then
-        result="feature"
-    fi
-    
-    echo "$result"
+  # Fallback (ASCII only) - pure bash implementation
+  local input="$*"
+  local result=""
+  local prev_was_separator=0
+
+  # Handle empty input
+  if [ -z "$input" ]; then
+    echo "feature"
+    return 0
+  fi
+
+  # Convert to lowercase and process character by character
+  # Note: This is ASCII-only but safe for all UTF-8 since we only modify ASCII ranges
+  local i=0
+  local len=${#input}
+
+  while [ $i -lt $len ]; do
+    local char="${input:i:1}"
+
+    # Check if character is alphanumeric (ASCII only check)
+    # For non-ASCII UTF-8 characters, they will pass through unchanged
+    case "$char" in
+      [a-zA-Z0-9])
+        # Alphanumeric character - add as lowercase
+        if [ "$char" != "${char%[A-Z]*}" ]; then
+          # It's uppercase, convert to lowercase
+          char=$(printf "%s" "$char" | tr '[:upper:]' '[:lower:]')
+        fi
+        result="${result}${char}"
+        prev_was_separator=0
+        ;;
+      *)
+        # Non-alphanumeric character - treat as separator
+        if [ $prev_was_separator -eq 0 ]; then
+          result="${result}-"
+          prev_was_separator=1
+        fi
+        ;;
+    esac
+    i=$((i + 1))
+  done
+
+  # Remove leading and trailing hyphens
+  result="${result#-}"
+  result="${result%-}"
+
+  # Handle case where result is empty
+  if [ -z "$result" ]; then
+    result="feature"
+  fi
+
+  echo "$result"
 }
 
 # helper to escape for sed
 function escape_sed() {
-    echo "$1" | sed 's/[\/&]/\\&/g'
+  echo "$1" | sed 's/[\/&]/\\&/g'
 }

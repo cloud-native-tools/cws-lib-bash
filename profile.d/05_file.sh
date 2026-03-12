@@ -359,6 +359,30 @@ function mv_file() {
   fi
 }
 
+function highlight_in_file() {
+  local pattern=${1}
+  shift
+  local search_paths=("$@")
+
+  if [ -z "${pattern}" ]; then
+    log error "Usage: highlight_in_file <pattern> [file_or_dir ...]"
+    return ${RETURN_FAILURE}
+  fi
+
+  if [ ${#search_paths[@]} -eq 0 ]; then
+    search_paths=("${PWD}")
+  fi
+
+  for path in "${search_paths[@]}"; do
+    if [ ! -e "${path}" ]; then
+      log error "path not found: ${path}"
+      return ${RETURN_FAILURE}
+    fi
+  done
+
+  grep --color=always -RIn -E "${pattern}" "${search_paths[@]}"
+}
+
 function highlight_difference_files() {
   local target_file=${1}
   local target_dir=${2}
@@ -393,16 +417,18 @@ function highlight_difference_files() {
     fi
   done
 
-  # Print files with different colors based on checksum
-  for checksum in "${!checksum_map[@]}"; do
-    local files=(${checksum_map[$checksum]//$'
-'/$'\n'}) # Split the newline-separated file list into an array
-    local color="${colors[${color_index}]}"
-    for file in "${files[@]}"; do
-      printf "${checksum}  ${color}%s${CLEAR}\n" "${file}" # Print with color and reset
+  {
+    # Print files with different colors based on checksum
+    for checksum in "${!checksum_map[@]}"; do
+      local files=(${checksum_map[$checksum]//$'
+  '/$'\n'}) # Split the newline-separated file list into an array
+      local color="${colors[${color_index}]}"
+      for file in "${files[@]}"; do
+        printf "${checksum}  ${color}%s${CLEAR}\n" "${file}" # Print with color and reset
+      done
+      ((color_index = (color_index + 1) % color_count)) # Cycle through colors
     done
-    ((color_index = (color_index + 1) % color_count)) # Cycle through colors
-  done
+  } | sort
 }
 
 function archive_current() {
@@ -490,8 +516,8 @@ function dir_diff() {
   comm -23 "${left_files}" "${right_files}" >"${only_left}"
   comm -13 "${left_files}" "${right_files}" >"${only_right}"
 
-  join -t $'\t' -1 1 -2 1 "${left_list}" "${right_list}" \
-    | awk -F'\t' '$2 != $3 {print $1}' >"${changed_files}"
+  join -t $'\t' -1 1 -2 1 "${left_list}" "${right_list}" |
+    awk -F'\t' '$2 != $3 {print $1}' >"${changed_files}"
 
   local only_left_count only_right_count changed_count
   only_left_count=$(wc -l <"${only_left}" | tr -d ' ')
