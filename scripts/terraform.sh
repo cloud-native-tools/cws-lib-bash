@@ -165,6 +165,7 @@ function tf_destroy() {
 
 function tf_plan_and_apply() {
   local target_dir="${1}"
+  local return_code=${RETURN_SUCCESS:-0}
   if [ -n "${target_dir}" ]; then
     shift
     if ! pushd ${target_dir} >/dev/null 2>&1; then
@@ -176,8 +177,9 @@ function tf_plan_and_apply() {
     log notice "found a [${TF_RC_FILE}] file in ${PWD}"
     . "${TF_RC_FILE}"
   fi
-  if ! tf_plan $@ || ! tf_apply $@; then
+  if ! tf_plan "$@" || ! tf_apply "$@"; then
     log error "Failed to plan and apply $(tf_bin) in ${PWD}"
+    return_code=${RETURN_FAILURE:-1}
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -185,11 +187,12 @@ function tf_plan_and_apply() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
-  return ${RETURN_SUCCESS:-0}
+  return ${return_code}
 }
 
 function tf_plan_and_destroy() {
   local target_dir="${1}"
+  local return_code=${RETURN_SUCCESS:-0}
   if [ -n "${target_dir}" ]; then
     shift
     if ! pushd ${target_dir} >/dev/null 2>&1; then
@@ -201,8 +204,9 @@ function tf_plan_and_destroy() {
     log notice "found a [${TF_RC_FILE}] file in ${PWD}"
     . "${TF_RC_FILE}"
   fi
-  if ! tf_plan $@ || ! tf_destroy $@; then
+  if ! tf_plan "$@" || ! tf_destroy "$@"; then
     log error "Failed to plan and destroy $(tf_bin) in ${PWD}"
+    return_code=${RETURN_FAILURE:-1}
   fi
   if [ -n "${target_dir}" ]; then
     if ! popd >/dev/null 2>&1; then
@@ -210,7 +214,7 @@ function tf_plan_and_destroy() {
       return ${RETURN_FAILURE:-1}
     fi
   fi
-  return ${RETURN_SUCCESS:-0}
+  return ${return_code}
 }
 
 function tf_extract_example() {
