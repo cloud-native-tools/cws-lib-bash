@@ -4,7 +4,7 @@ function add_line_if_not_exit() {
   local file=$1
   local line=$2
   if ! test -f ${file} || ! grep -Fxq "${line}" ${file}; then
-    echo ${line} >>${file}
+    printf "\n${line}\n" >>${file}
     chmod a+rx ${file}
   fi
 }
