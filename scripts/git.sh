@@ -262,6 +262,55 @@ function git_search() {
   git log -p -S "${pattern}"
 }
 
+function git_who_delete_file() {
+  local file_pattern="${1}"
+  local count=${2:-50}
+
+  if [ -z "${file_pattern}" ]; then
+    log error "Usage: git_who_delete_file <file_pattern> [count]"
+    log info "  file_pattern: filename or path fragment to search for"
+    log info "  count: maximum number of commits to show (default: 50)"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  log info "Searching for commits that deleted files matching: ${file_pattern}"
+  echo ""
+
+  # Print table header
+  printf "%-15s | %s\n" "Commit ID" "Commit Message"
+  printf "%-15s-|-%s\n" "$(printf '%0.s-' {1..15})" "$(printf '%0.s-' {1..50})"
+
+  # Use git log with --diff-filter=D to find deletions
+  # --name-only shows the file names, --diff-filter=D filters for deletions only
+  git log --pretty=format:"%h %s" --name-only --diff-filter=D --max-count=${count} | \
+  awk -v pattern="${file_pattern}" '
+    BEGIN { commit=""; message="" }
+    /^[0-9a-f]+ / {
+      if (commit != "" && found) {
+        printf "%-15s | %s\n", commit, message
+      }
+      commit=$1
+      message=substr($0, index($0, $2))
+      found=0
+      next
+    }
+    /^$/ { next }
+    {
+      if (index($0, pattern) > 0) {
+        found=1
+      }
+    }
+    END {
+      if (commit != "" && found) {
+        printf "%-15s | %s\n", commit, message
+      }
+    }
+  '
+
+  echo ""
+  log info "Search completed"
+}
+
 function git_mirror() {
   local url=${1}
   git_clone ${url} --mirror
