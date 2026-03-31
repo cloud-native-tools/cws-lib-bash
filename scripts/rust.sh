@@ -48,10 +48,10 @@ RUST_MIRROR_TARGETS=(
 
 function rust_mirror() {
   local repo_root="${1:-/storage/mirror/rust}"
-  local channels="${2:-stable}"
-  local targets
-  targets="$(printf '%s,' "${RUST_MIRROR_TARGETS[@]}")"
-  targets="${targets%,}"
+  local serve_url="${2:-https://workspace.code-workspace.cloud}"
+  local channels="${3:-stable}"
+  default_targets="$(printf '%s,' "${RUST_MIRROR_TARGETS[@]}")"
+  local targets="${4:-${default_targets%,}}"
   local upstream=${RUST_UPSTREAM}
 
   log info "Repo root: ${repo_root}"
@@ -59,8 +59,10 @@ function rust_mirror() {
   log info "Target(s): ${targets}"
   log info "Upstream url: ${upstream}"
 
+  mkdir -pv "${repo_root}"
   if rustup-mirror \
     --mirror "${repo_root}" \
+    --url "${serve_url}" \
     --upstream-url "${upstream}" \
     --channels "${channels}" \
     --targets "${targets}"; then
