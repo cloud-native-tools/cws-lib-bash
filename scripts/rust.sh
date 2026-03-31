@@ -59,9 +59,9 @@ function rust_mirror() {
   log info "Target(s): ${targets}"
   log info "Upstream url: ${upstream}"
 
-  mkdir -pv "${repo_root}"
+  mkdir -pv "${repo_root}/${channels}"
   if rustup-mirror \
-    --mirror "${repo_root}" \
+    --mirror "${repo_root}/${channels}" \
     --url "${serve_url}" \
     --upstream-url "${upstream}" \
     --channels "${channels}" \
