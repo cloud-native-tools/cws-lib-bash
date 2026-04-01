@@ -304,22 +304,6 @@ function spin() {
   done
 }
 
-function is_macos() {
-  if [ "${BASH_OS}" = "darwin" ]; then
-    return ${RETURN_SUCCESS}
-  else
-    return ${RETURN_FAILURE}
-  fi
-}
-
-function is_linux() {
-  if [ "${BASH_OS}" = "linux" ]; then
-    return ${RETURN_SUCCESS}
-  else
-    return ${RETURN_FAILURE}
-  fi
-}
-
 function set_default() {
   if [ -z "${!1}" ]; then
     export $1=$2

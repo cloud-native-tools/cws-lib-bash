@@ -28,7 +28,7 @@ function bash_prompt() {
 }
 
 is_bash && enable -n echo
-is_bash && PROMPT_COMMAND='PS1=$(bash_prompt)'
+is_bash && is_linux && PROMPT_COMMAND='PS1=$(bash_prompt)'
 
 function precmd() {
   if [[ $? != "0" ]]; then
