@@ -86,11 +86,11 @@ for f in README.md CONTRIBUTING.md BUILDING.md; do
     add_doc_path "$f"
 done
 
-# 2. docs/ folder (recursive find for .md files)
+# 2. docs/ folder (max depth 2, cap to 10 .md files)
 if [ -d "docs" ]; then
     while IFS= read -r f; do
         add_doc_path "$f"
-    done < <(find docs -name "*.md" | sort)
+    done < <(find docs -maxdepth 2 -name "*.md" | sort -h | head -n 10)
 fi
 
 # 3. Memory (Constitution and Feature Index)

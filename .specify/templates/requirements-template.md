@@ -5,6 +5,16 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
+## Related Feature *(mandatory)*
+
+<!--
+  ACTION REQUIRED: Keep the default values as "Need clarification" in the initial draft.
+  /speckit.clarify must resolve this section to the final Feature binding before planning.
+-->
+
+**Feature ID**: Need clarification  
+**Feature Name**: Need clarification
+
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -113,6 +123,21 @@
 - **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
 - **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
 - **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+
+### Measurement Sources & Collection Methods
+
+<!--
+  ACTION REQUIRED: For each measurable outcome above, specify:
+  - Where the metric data will be collected from (logs, monitoring, user surveys, etc.)
+  - How the data will be collected and aggregated
+  - What the baseline measurement is (if applicable)
+  - How often the metric will be measured
+-->
+
+- **SC-001 Source**: [Data source and collection method for SC-001]
+- **SC-002 Source**: [Data source and collection method for SC-002]  
+- **SC-003 Source**: [Data source and collection method for SC-003]
+- **SC-004 Source**: [Data source and collection method for SC-004]
 
 ## Clarifications
 

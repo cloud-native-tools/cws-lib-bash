@@ -111,12 +111,22 @@ get_feature_paths() {
     has_git_repo="true"
   fi
 
+  # Extract REQUIREMENT_ID from branch name (NOT feature name)
+  # Branch name format: NNN-requirement-name (e.g., 003-speckit-agents-command)
+  # This is the requirement/spec key identifier, NOT the feature name
+  # Feature metadata (ID, name) must be retrieved from .specify/memory/features.md
+  local requirement_id=""
+  if [[ $current_branch =~ ^([0-9]+)- ]]; then
+      requirement_id="${BASH_REMATCH[1]}"
+  fi
+
   # Use prefix-based lookup to support multiple branches per spec
   local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
 
   cat <<EOF
 REPO_ROOT='$repo_root'
 CURRENT_BRANCH='$current_branch'
+REQUIREMENT_ID='$requirement_id'
 HAS_GIT='$has_git_repo'
 REQUIREMENTS_DIR='$feature_dir'
 FEATURE_SPEC='$feature_dir/requirements.md'
@@ -269,8 +279,37 @@ report_success() {
 
 
 ensure_utf8_locale() {
-  export LANG=en_US.UTF-8
-  export LC_ALL=en_US.UTF-8
+  # Check if current locale is already UTF-8
+  if [ "$(locale charmap 2>/dev/null)" = "UTF-8" ]; then
+    return 0
+  fi
+
+  local utf8_locale=""
+  if type locale >/dev/null 2>&1; then
+    local locales
+    locales=$(locale -a 2>/dev/null)
+    
+    # Try en_US.UTF-8 or en_US.utf8
+    utf8_locale=$(echo "$locales" | grep -i -e '^en_US\.utf8$' -e '^en_US\.utf-8$' | head -n 1)
+    
+    # Fallback to C.UTF-8 or C.utf8
+    if [ -z "$utf8_locale" ]; then
+      utf8_locale=$(echo "$locales" | grep -i -e '^C\.utf8$' -e '^C\.utf-8$' | head -n 1)
+    fi
+    
+    # Fallback to any UTF-8 locale
+    if [ -z "$utf8_locale" ]; then
+      utf8_locale=$(echo "$locales" | grep -i -e 'utf8' -e 'utf-8' | head -n 1)
+    fi
+  fi
+
+  if [ -n "$utf8_locale" ]; then
+    export LANG="$utf8_locale"
+    export LC_ALL="$utf8_locale"
+  else
+    export LANG=C
+    export LC_ALL=C
+  fi
 }
 
 

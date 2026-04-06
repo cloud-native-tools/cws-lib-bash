@@ -19,6 +19,20 @@ This project documentation is distributed across several key files. You MUST ref
 
 > **Directive**: When answering questions or generating code, ALWAYS check the relevant document from the map above first.
 
+## Fact, Correctness & Logic Checks (Input Sanity)
+User-provided context can be wrong (misconceptions), incomplete, or contain typos. Before acting on user input, perform a basic sanity check to avoid propagating errors.
+
+Minimum checks:
+- **Names & identifiers**: Verify file paths, module/package names, commands, and symbols exist in the repo. If uncertain, search the workspace rather than guessing.
+- **Factual claims**: Treat user statements as hypotheses; confirm against the repo (code/config), the Documentation Map, or authoritative references.
+- **Logical consistency**: Detect contradictions between requirements, constraints, and desired outcomes (e.g., incompatible versions, mutually exclusive goals).
+- **Typos & near-misses**: Correct obvious typos (paths, flags, option names) and explicitly state the corrected interpretation.
+- **Assumptions**: If you must assume, keep assumptions minimal, label them clearly, and prefer reversible changes.
+
+Escalation rules:
+- If the suspected error impacts correctness, security, data loss, or large refactors: **pause and ask a clarifying question**.
+- If the issue is low-risk and the fix is obvious: proceed with the correction and mention it briefly.
+
 ## Tech Stack & Resources
 - **Project Name**: {{PROJECT_NAME}}
 - **Root Path**: {{PROJECT_ROOT}}
@@ -33,25 +47,41 @@ This project documentation is distributed across several key files. You MUST ref
   - [Other detected dirs]
 
 # Tool And Skills Usage Guide
-
 > **Note**: Tool and Skills details are injected into prompts by the agent when needed. This section is guidance only.
 
 ## Suggested Tooling Scope (High-Level)
-- System/Linux CLI and shell context (env vars, functions, aliases)
-- Project scripts (Shell/Python) when available
-- MCP tools and skills (auto-injected; avoid duplicating details here)
+- Prefer scripts under `.specify/scripts/` and `scripts/` for repeatable operations.
+- `/speckit.*` commands are chat instructions, not terminal commands.
+- Treat Constitution as the authority for architecture and workflow constraints.
 
-## Guidance
-- Prefer project scripts for repeatable tasks.
-- Use MCP tools for internal docs or code queries when available.
-- Verify architectural rules via the **Constitution** rather than assumptions.
+## AI Tool Compatibility
+- **Supported Agents**: GitHub Copilot, Qwen Code, opencode, Qoder
+- **Instructions Refresh**: Run `/speckit.instructions` to regenerate this file and compatibility symlinks.
 
-## Tools
-Project specific tools documentation can be found in `.ai/tools/`.
-- [MCP Tools](.ai/tools/mcp.md)
-- [System Tools](.ai/tools/system.md)
-- [Shell Tools](.ai/tools/shell.md)
-- [Project Scripts](.ai/tools/project.md)
+## Resource Registry
+Use this machine-maintained section to track reusable resource identifiers created by SpecKit commands. Keep entries deduplicated and sorted when updating this file. Record each resource as a single row in the corresponding horizontal Markdown table, and keep column names aligned with the corresponding agent/skill/tool templates. When no records exist, keep a single row with `None yet.` in the first column and `-` in the remaining columns.
 
-## Skills
-Project specific skills documentation can be found in `.github/skills/`.
+### Agents
+<!-- AGENTS_REGISTRY_START -->
+<!-- Record each agent as one table row with the columns below. -->
+| Agent Name | Agent ID | Description | Argument Hint | Target | User Invocable | Disable Model Invocation | Tools | Agents | Model | Handoffs | Canonical Path |
+|------------|----------|-------------|---------------|--------|----------------|--------------------------|-------|--------|-------|----------|----------------|
+| None yet. | - | - | - | - | - | - | - | - | - | - | - |
+<!-- AGENTS_REGISTRY_END -->
+
+### Skills
+<!-- SKILLS_REGISTRY_START -->
+<!-- Record each skill as one table row with the columns below. -->
+| Skill Name | Skill ID | Description | Argument Hint | User Invocable | Disable Model Invocation | Canonical Path |
+|------------|----------|-------------|---------------|----------------|--------------------------|----------------|
+| None yet. | - | - | - | - | - | - |
+<!-- SKILLS_REGISTRY_END -->
+
+### Tools
+<!-- TOOLS_REGISTRY_START -->
+<!-- Record each tool as one table row with the columns below. -->
+| Tool Name | Tool ID | Tool Type | Source Identifier | Aliases | Status | Last Updated | Description | Resource ID | Canonical Path |
+|-----------|---------|-----------|-------------------|---------|--------|--------------|-------------|-------------|----------------|
+| None yet. | - | - | - | - | - | - | - | - | - |
+<!-- TOOLS_REGISTRY_END -->
+

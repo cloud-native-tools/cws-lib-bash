@@ -1,7 +1,7 @@
 # Implementation Plan: [SPEC]
 
 **Branch**: `[###-spec-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Specification from `.specify/specs/[###-spec-name]/requirements.md`
+**Input**: Specification from `.specify/specs/[REQUIREMENTS_KEY]/requirements.md`
 
 **Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
 
@@ -33,11 +33,11 @@
 
 **Core Principles Compliance**:
 
+- **Feature-Centric Development**: Feature Index is single source of truth; all phases re-evaluate Feature changes.
 - **Specification-Driven Development**: Code serves specifications; specifications are executable and generate working systems
-- **Feature-Centric Development**: Feature Index is single source of truth; all phases re-evaluate Feature changes
 - **Intent-Driven Development**: Focus on "what" and "why" before "how"; use rich specifications with guardrails
 - **Test-First & Contract-Driven**: TDD flow followed; pure functions have unit tests; critical flows have regression coverage
-- **AI Agent Integration**: Only approved agents (GitHub Copilot, Qwen Code, opencode); configuration rejects unsupported providers
+- **AI Agent Integration**: Only approved agents (GitHub Copilot, Qwen Code, opencode, Qoder); configuration rejects unsupported providers
 - **Continuous Quality & Observability**: Structured logging; semantic versioning; CI quality gates; simple designs (YAGNI)
 - **SDD Workflow Compliance**: Follow spec → plan → tasks → implement workflow with proper validation at each phase
 
@@ -48,7 +48,7 @@
 ### Documentation (this spec)
 
 ```text
-.specify/specs/[###-spec]/
+.specify/specs/[REQUIREMENTS_KEY]/
 ├── plan.md              # This file (/speckit.plan command output)
 ├── research.md          # Phase 0 output (/speckit.plan command)
 ├── data-model.md        # Phase 1 output (/speckit.plan command)

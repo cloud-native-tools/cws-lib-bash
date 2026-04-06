@@ -109,15 +109,26 @@ ensure_utf8_locale || true
 eval $(get_feature_paths)
 check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
+# Extract REQUIREMENT_ID from branch name (NOT feature name)
+# Branch name format: NNN-requirement-name (e.g., 003-speckit-agents-command)
+# This is the requirement/spec key, NOT the feature name
+REQUIREMENT_ID=""
+if [[ $CURRENT_BRANCH =~ ^([0-9]+)- ]]; then
+    REQUIREMENT_ID="${BASH_REMATCH[1]}"
+fi
+
 # If paths-only mode, output paths and exit (support JSON + paths-only combined)
 if $PATHS_ONLY; then
     if $JSON_MODE; then
         # Minimal JSON paths payload (no validation performed)
-        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENTS_DIR":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
-            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENTS_DIR" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
+        # Note: REQUIREMENT_ID is extracted from branch name, not FEATURE_ID
+        # Feature metadata must be retrieved from .specify/memory/features.md
+        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENT_ID":"%s","REQUIREMENTS_DIR":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
+            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENT_ID" "$REQUIREMENTS_DIR" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
     else
         echo "REPO_ROOT: $REPO_ROOT"
         echo "BRANCH: $CURRENT_BRANCH"
+        echo "REQUIREMENT_ID: $REQUIREMENT_ID"
         echo "REQUIREMENTS_DIR: $REQUIREMENTS_DIR"
         echo "FEATURE_SPEC: $FEATURE_SPEC"
         echo "IMPL_PLAN: $IMPL_PLAN"

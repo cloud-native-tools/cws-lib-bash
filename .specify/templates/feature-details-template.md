@@ -48,10 +48,8 @@
 
 ## Related Files
 
-- Specification: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/requirements.md
-- Feature Index: memory/features.md
-- Feature Detail: memory/features/[FEATURE_ID].md
-- Quality Checklist: .specify/specs/[FEATURE_ID]-[FEATURE_SLUG]/checklists/requirements.md
+- Feature Index: .specify/memory/features.md
+- Feature Detail: .specify/memory/features/[FEATURE_ID].md
 
 ## Status Tracking
 
@@ -95,5 +93,12 @@
 - [ ] Key Changes list distinct, actionable items
 - [ ] Implementation Notes capture constraints/assumptions
 - [ ] Dates in YYYY-MM-DD format
+
+## Related Specifications/Requirements
+
+- Specification: .specify/specs/[REQUIREMENTS_KEY]/requirements.md
+  Quality Checklist: .specify/specs/[REQUIREMENTS_KEY]/checklists/requirements.md
+- Specification: .specify/specs/[REQUIREMENTS_KEY]/requirements.md
+  Quality Checklist: .specify/specs/[REQUIREMENTS_KEY]/checklists/requirements.md
 
 <!-- End of template -->

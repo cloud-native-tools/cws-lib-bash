@@ -4,8 +4,9 @@
 
 # Specification-Driven Development (SDD) Process Review Report: [REQUIREMENT NAME]
 
-**Feature ID**: [FEATURE_ID]  
-**Branch / Spec Key**: [REQUIREMENTS_KEY]  
+**Requirement ID**: [REQUIREMENT_ID] (from branch name, e.g., 003)
+**Requirement Key**: [REQUIREMENTS_KEY] (e.g., 003-speckit-agents-command)
+**Related Feature**: [FEATURE_ID] [FEATURE_NAME] (from .specify/memory/features.md)
 **Spec Path**: .specify/specs/[REQUIREMENTS_KEY]/requirements.md  
 **Plan Path**: .specify/specs/[REQUIREMENTS_KEY]/plan.md  
 **Tasks Path**: .specify/specs/[REQUIREMENTS_KEY]/tasks.md  
@@ -131,9 +132,11 @@ Please share the contents of this document with the spec-kit framework developer
 
 | Token | Meaning / Source |
 |-------|------------------|
-| [FEATURE_ID] | Sequential three-digit feature identifier (e.g., 001) |
-| [FEATURE_NAME] | Short human-readable name of the feature |
-| [REQUIREMENTS_KEY] | Combined ID + slug used as spec directory name (e.g., 001-create-taskify) |
+| [REQUIREMENT_ID] | Sequential three-digit requirement identifier from branch name (e.g., 003) |
+| [REQUIREMENT_NAME] | Short human-readable name of the requirement/specification |
+| [REQUIREMENTS_KEY] | Combined ID + slug used as spec directory name (e.g., 003-speckit-agents-command) |
+| [FEATURE_ID] | Sequential three-digit feature identifier from .specify/memory/features.md (e.g., 019) |
+| [FEATURE_NAME] | Short human-readable name of the parent feature (e.g., Agents Command) |
 | [REVIEW_DATE] | ISO date when this review was generated (YYYY-MM-DD) |
 | [REVIEWER_NAME] | Name/label of the reviewing agent or persona |
 | [PROCESS_*] | Process-level observations and summaries |

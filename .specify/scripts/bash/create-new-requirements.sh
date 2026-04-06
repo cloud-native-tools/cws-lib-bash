@@ -240,7 +240,7 @@ fi
 REQUIREMENTS_DIR="$SPECS_DIR/$BRANCH_NAME"
 mkdir -p "$REQUIREMENTS_DIR"
 
-TEMPLATE="$REPO_ROOT/.specify/templates/spec-template.md"
+TEMPLATE="$REPO_ROOT/.specify/templates/requirements-template.md"
 SPEC_FILE="$REQUIREMENTS_DIR/requirements.md"
 if [ -f "$TEMPLATE" ]; then 
     cp "$TEMPLATE" "$SPEC_FILE"

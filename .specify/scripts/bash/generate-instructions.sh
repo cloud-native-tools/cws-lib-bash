@@ -31,18 +31,18 @@ TARGET_DIR=".ai"
 
 mkdir -p "$TARGET_DIR"
 
-# Generate tools documentation
+# Generate JSON tool manifests
 TOOLS_DIR="$TARGET_DIR/tools"
 mkdir -p "$TOOLS_DIR"
 if [ -f "$SCRIPT_DIR/refresh-tools.sh" ]; then
-  log info "Generating tools documentation..."
-  "$SCRIPT_DIR/refresh-tools.sh" --mcp --format markdown > "$TOOLS_DIR/mcp.md"
-  "$SCRIPT_DIR/refresh-tools.sh" --system --format markdown > "$TOOLS_DIR/system.md"
-  "$SCRIPT_DIR/refresh-tools.sh" --shell --format markdown > "$TOOLS_DIR/shell.md"
-  "$SCRIPT_DIR/refresh-tools.sh" --project --format markdown > "$TOOLS_DIR/project.md"
-  gitignore_add_pattern ".ai/tools/*.md" "$REPO_ROOT/.gitignore"
+  log info "Generating tool JSON manifests..."
+  "$SCRIPT_DIR/refresh-tools.sh" --mcp --json > "$TOOLS_DIR/mcp.json"
+  "$SCRIPT_DIR/refresh-tools.sh" --system --json > "$TOOLS_DIR/system.json"
+  "$SCRIPT_DIR/refresh-tools.sh" --shell --json > "$TOOLS_DIR/shell.json"
+  "$SCRIPT_DIR/refresh-tools.sh" --project --json > "$TOOLS_DIR/project.json"
+  gitignore_add_pattern ".ai/tools/*.json" "$REPO_ROOT/.gitignore"
 else
-  log warning "refresh-tools.sh not found, skipping tools documentation generation."
+  log warning "refresh-tools.sh not found, skipping tool JSON manifest generation."
 fi
 
 SAFE_PROJECT_NAME=$(escape_sed "$PROJECT_NAME")
@@ -168,5 +168,6 @@ popd >/dev/null
 ln -sf .ai/instructions.md QWEN.md
 ln -sf .ai/instructions.md CLAUDE.md
 ln -sf .ai/instructions.md IFLOW.md
+ln -sf .ai/instructions.md QODER.md
 
 log success "Instructions generated/updated at $TARGET_FILE"

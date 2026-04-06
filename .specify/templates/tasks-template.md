@@ -3,14 +3,31 @@
 description: "Task list template for feature implementation"
 ---
 
-# Tasks: [FEATURE NAME]
+# Tasks: [REQUIREMENT NAME]
 
-**Input**: Design documents from `.specify/specs/[###-feature-name]/`
+**Requirement ID**: [REQUIREMENT_ID] (from branch name, e.g., 003)
+**Requirement Key**: [REQUIREMENTS_KEY] (e.g., 003-speckit-agents-command)
+**Related Feature**: [FEATURE_ID] [FEATURE_NAME] (from .specify/memory/features.md)
+**Input**: Design documents from `.specify/specs/[REQUIREMENTS_KEY]/`
 **Prerequisites**: plan.md (required), requirements.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are MANDATORY per Constitution Principle IV (Test-First & Contract-Driven Implementation).
+**Tests**: The examples below include test tasks. Tests are MANDATORY per Constitution Principle V (Test-Driven Development (TDD) for Interactivity).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
+
+## Definition of Done (DoD)
+
+<!--
+  ACTION REQUIRED: Define the completion criteria that apply to all tasks in this document.
+  These criteria ensure consistent understanding of what "done" means across the team.
+-->
+
+- [ ] Code implemented according to specification
+- [ ] All automated tests pass (unit, integration, contract)
+- [ ] Manual verification completed where applicable
+- [ ] Documentation updated (inline comments, README, etc.)
+- [ ] Code reviewed and approved
+- [ ] Changes validated against success criteria from requirements.md
 
 ## Format: `[ID] [P?] [Story] Description`
 

@@ -5,10 +5,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 if [ -f "$SCRIPT_DIR/common.sh" ]; then
   # shellcheck source=/dev/null
   source "$SCRIPT_DIR/common.sh"
-  # Ensure UTF-8 locale for better Unicode handling
   ensure_utf8_locale || true
 else
-  echo "Faied to load common.sh, spec-kit framework not installed correctly"
+  echo "Failed to load common.sh, spec-kit framework not installed correctly" >&2
+  exit 1
 fi
 
 set -e
@@ -17,7 +17,6 @@ set -e
 if git rev-parse --show-toplevel >/dev/null 2>&1; then
   ROOT_DIR=$(git rev-parse --show-toplevel)
 else
-  # Fallback: check if we are in .specify/scripts/bash (depth 3) or scripts/bash (depth 2)
   case "$SCRIPT_DIR" in
     */.specify/scripts/bash)
       ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
@@ -28,15 +27,250 @@ else
   esac
 fi
 
-SKILLS_DIR="$ROOT_DIR/.github/skills"
-JSON_MODE=false
+SPECIFY_PY_DIR="$ROOT_DIR/.specify/scripts/python"
 
-# Query mode flags
+if [ -f "$SPECIFY_PY_DIR/tools-utils.py" ]; then
+  PY_SCRIPTS_DIR="$SPECIFY_PY_DIR"
+else
+  PY_SCRIPTS_DIR="$ROOT_DIR/scripts/python"
+fi
+
+TOOLS_UTILS_SCRIPT="$PY_SCRIPTS_DIR/tools-utils.py"
+
+for required in "$TOOLS_UTILS_SCRIPT"; do
+  if [ ! -f "$required" ]; then
+    echo "Required script not found: $required" >&2
+    exit 1
+  fi
+done
+
 QUERY_MCP=false
 QUERY_SYSTEM=false
 QUERY_SHELL=false
 QUERY_PROJECT=false
-OUTPUT_FORMAT="json"
+JSON_MODE=false
+DEBUG_MODE=false
+
+usage() {
+  cat >&2 <<EOF
+Usage: $0 [--mcp] [--system] [--shell] [--project] [--json] [--debug]
+
+Options:
+  --mcp      Query MCP tools
+  --system   Query system binaries
+  --shell    Query shell functions
+  --project  Query project scripts
+  --json     Emit a unified JSON payload for the selected sources
+  --debug    Emit diagnostics to stderr while keeping stdout JSON-only
+EOF
+  exit 1
+}
+
+debug_log() {
+  if [ "$DEBUG_MODE" = true ] || [ -n "${REFRESH_TOOLS_DEBUG:-}" ]; then
+    echo "[refresh-tools][debug] $*" >&2
+  fi
+}
+
+json_diagnostic() {
+  local json_file="$1"
+  python3 - "$json_file" <<'PYEOF'
+import json
+import sys
+from pathlib import Path
+
+text = Path(sys.argv[1]).read_text(encoding="utf-8")
+try:
+    json.loads(text)
+except json.JSONDecodeError as exc:
+    start = max(exc.pos - 120, 0)
+    end = min(exc.pos + 120, len(text))
+    excerpt = text[start:end].replace("\n", "\\n")
+    print(
+        json.dumps(
+            {
+                "message": exc.msg,
+                "line": exc.lineno,
+                "column": exc.colno,
+                "position": exc.pos,
+                "excerpt": excerpt,
+            },
+            ensure_ascii=False,
+        )
+    )
+    sys.exit(1)
+PYEOF
+}
+
+print_prefixed_file() {
+  local prefix="$1"
+  local file_path="$2"
+
+  if [ -s "$file_path" ]; then
+    sed "s/^/${prefix}/" "$file_path" >&2
+  fi
+}
+
+run_json_command() {
+  local source_name="$1"
+  local default_json="$2"
+  shift 2
+
+  local stdout_file stderr_file status validation
+  stdout_file=$(mktemp)
+  stderr_file=$(mktemp)
+  status=0
+
+  if "$@" >"$stdout_file" 2>"$stderr_file"; then
+    status=0
+  else
+    status=$?
+  fi
+
+  if [ "$status" -ne 0 ]; then
+    echo "[refresh-tools] Warning: source '$source_name' exited with code $status; using empty fallback payload" >&2
+    debug_log "failed command ($source_name): $*"
+    print_prefixed_file "[refresh-tools][stderr][$source_name] " "$stderr_file"
+    printf '%s\n' "$default_json" >"$stdout_file"
+  elif ! validation=$(json_diagnostic "$stdout_file"); then
+    echo "[refresh-tools] Warning: source '$source_name' emitted invalid JSON; using empty fallback payload" >&2
+    debug_log "invalid JSON diagnostics ($source_name): $validation"
+    print_prefixed_file "[refresh-tools][stderr][$source_name] " "$stderr_file"
+    if [ "$DEBUG_MODE" = true ] || [ -n "${REFRESH_TOOLS_DEBUG:-}" ]; then
+      print_prefixed_file "[refresh-tools][stdout][$source_name] " "$stdout_file"
+    fi
+    printf '%s\n' "$default_json" >"$stdout_file"
+  elif [ "$DEBUG_MODE" = true ] || [ -n "${REFRESH_TOOLS_DEBUG:-}" ]; then
+    print_prefixed_file "[refresh-tools][stderr][$source_name] " "$stderr_file"
+  fi
+
+  cat "$stdout_file"
+  rm -f "$stdout_file" "$stderr_file"
+}
+
+get_mcp_tools_json() {
+  run_json_command "mcp" '{"timestamp": null, "count": 0, "servers": [], "note": "MCP discovery unavailable"}' \
+    python3 "$TOOLS_UTILS_SCRIPT" --action list --type mcp
+}
+
+get_system_binaries_json() {
+  run_json_command "system" '{"os_release": "", "kernel": "", "binaries": []}' \
+    python3 "$TOOLS_UTILS_SCRIPT" --action list --type system
+}
+
+get_shell_function_json() {
+  run_json_command "shell" '[]' \
+    python3 "$TOOLS_UTILS_SCRIPT" --action list --type shell --functions-only
+}
+
+get_project_scripts_json() {
+  run_json_command "project" '[]' \
+    python3 "$TOOLS_UTILS_SCRIPT" --action list --type project --root-dir "$ROOT_DIR"
+}
+
+emit_unified_json() {
+  local tmp_dir="$1"
+  python3 - "$tmp_dir" "$QUERY_MCP" "$QUERY_SYSTEM" "$QUERY_SHELL" "$QUERY_PROJECT" <<'PYEOF'
+from __future__ import annotations
+
+import json
+import sys
+from datetime import datetime
+from pathlib import Path
+
+
+def load(name: str):
+    path = Path(sys.argv[1]) / f"{name}.json"
+    if not path.exists():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+query_mcp = sys.argv[2] == "true"
+query_system = sys.argv[3] == "true"
+query_shell = sys.argv[4] == "true"
+query_project = sys.argv[5] == "true"
+
+mcp_payload = load("mcp") if query_mcp else None
+system_payload = load("system") if query_system else None
+shell_payload = load("shell") if query_shell else None
+project_payload = load("project") if query_project else None
+
+tools = []
+sources = []
+
+if query_mcp:
+    sources.append("mcp")
+    for server in (mcp_payload or {}).get("servers", []):
+        server_name = server.get("name", "unknown")
+        for tool in server.get("tools", []):
+            normalized = dict(tool)
+            normalized.update(
+                {
+                    "sourceType": "mcp",
+                    "sourceName": server_name,
+                    "canonicalName": f"mcp:{server_name}:{tool.get('name', 'unknown')}",
+                    "serverName": server_name,
+                }
+            )
+            tools.append(normalized)
+
+if query_system:
+    sources.append("system")
+    for binary in (system_payload or {}).get("binaries", []):
+        name = binary.get("name", "unknown")
+        path = binary.get("path", "")
+        tools.append(
+            {
+                **binary,
+                "description": f"System binary at {path}" if path else "System binary",
+                "sourceType": "system",
+                "sourceName": name,
+                "canonicalName": f"system:{name}",
+            }
+        )
+
+if query_shell:
+    sources.append("shell")
+    for func in shell_payload or []:
+        name = func.get("name", "unknown")
+        tools.append(
+            {
+                **func,
+                "description": func.get("description", "Shell function"),
+                "sourceType": "shell",
+                "sourceName": name,
+                "canonicalName": f"shell:{name}",
+            }
+        )
+
+if query_project:
+    sources.append("project")
+    for script in project_payload or []:
+        name = script.get("name", "unknown")
+        path = script.get("path", name)
+        tools.append(
+            {
+                **script,
+                "sourceType": "project",
+                "sourceName": path,
+                "canonicalName": f"project:{path}",
+            }
+        )
+
+payload = {
+    "timestamp": datetime.now().isoformat(),
+    "sources": sources,
+    "tools": tools,
+    "mcp_servers": (mcp_payload or {}).get("servers", []) if query_mcp else [],
+    "system_binaries": (system_payload or {}).get("binaries", []) if query_system else [],
+    "shell_functions": shell_payload or [] if query_shell else [],
+    "project_scripts": project_payload or [] if query_project else [],
+}
+
+print(json.dumps(payload, ensure_ascii=False, indent=2))
+PYEOF
+}
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -57,269 +291,54 @@ while [[ $# -gt 0 ]]; do
       QUERY_PROJECT=true
       shift
       ;;
-    --format)
-      OUTPUT_FORMAT="$2"
-      shift 2
-      ;;
     --json)
       JSON_MODE=true
-      OUTPUT_FORMAT="json"
+      shift
+      ;;
+    --debug)
+      DEBUG_MODE=true
       shift
       ;;
     *)
-      shift
+      usage
       ;;
   esac
 done
 
-# Generate tools list script path
-MCP_SCRIPT="$ROOT_DIR/.specify/scripts/python/list_mcp_tools.py"
-# Fallback to local script if not found in .specify
-if [ ! -f "$MCP_SCRIPT" ]; then
-  MCP_SCRIPT="$ROOT_DIR/scripts/python/list_mcp_tools.py"
+if [ "$QUERY_MCP" = false ] && [ "$QUERY_SYSTEM" = false ] && [ "$QUERY_SHELL" = false ] && [ "$QUERY_PROJECT" = false ]; then
+  usage
 fi
 
-get_mcp_tools_json() {
-  if [ -f "$MCP_SCRIPT" ]; then
-    python3 "$MCP_SCRIPT" 2>/dev/null || echo "[]"
-    return
-  fi
-  printf '[]'
-}
+if [ "$JSON_MODE" = true ]; then
+  tmp_dir=$(mktemp -d)
+  trap 'rm -rf "$tmp_dir"' EXIT
 
-get_system_binaries_json() {
-  local os_release=""
-  if [ -f /etc/os-release ]; then
-    os_release=$(cat /etc/os-release)
-  fi
-  local kernel
-  kernel=$(uname -a)
-
-  local binaries=(git docker kubectl python3 python pip node npm hatch gh jq curl wget make)
-
-  printf '{"os_release":"%s","kernel":"%s","binaries":[' "$(json_escape "$os_release")" "$(json_escape "$kernel")"
-
-  local first=true
-  for b in "${binaries[@]}"; do
-    local path
-    path=$(command -v "$b" 2>/dev/null || true)
-    if [ -n "$path" ]; then
-      if [ "$first" = true ]; then
-        first=false
-      else
-        printf ','
-      fi
-      printf '{"name":"%s","path":"%s"}' "$(json_escape "$b")" "$(json_escape "$path")"
-    fi
-  done
-  printf ']}'
-}
-
-get_shell_function_json() {
-  local first=true
-  printf '['
-
-  while IFS= read -r func; do
-    # Filter out functions starting with "_"
-    if [[ $func == _* ]]; then
-      continue
-    fi
-
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '{"name":"%s"}' "$(json_escape "$func")"
-  done < <(compgen -A function | sort)
-  printf ']'
-}
-
-get_project_scripts_json() {
-  local scripts_dir=""
-  if [ -d "$ROOT_DIR/.specify/scripts" ]; then
-    scripts_dir="$ROOT_DIR/.specify/scripts"
-  elif [ -d "$ROOT_DIR/scripts" ]; then
-    scripts_dir="$ROOT_DIR/scripts"
-  else
-    printf '[]'
-    return
-  fi
-
-  local first=true
-  printf '['
-  while IFS= read -r file; do
-    local rel_path="${file#$ROOT_DIR/}"
-    local name
-    name=$(basename "$file")
-    local type="bash"
-    local description=""
-
-    if [[ $file == *.py ]]; then
-      type="python"
-      if command -v python3 >/dev/null 2>&1; then
-        description=$(python3 -c "import ast; print((ast.get_docstring(ast.parse(open('$file').read())) or '').split('\n')[0])" 2>/dev/null || true)
-      fi
-    else
-      # Get first non-shebang comment
-      description=$(grep '^#' "$file" | grep -v '^#!' | head -n 1 | sed 's/^#[[:space:]]*//')
-    fi
-
-    # Default description if empty
-    if [ -z "$description" ]; then
-      description="No description available"
-    fi
-
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '{"name":"%s","path":"%s","type":"%s","description":"%s"}' \
-      "$(json_escape "$name")" "$(json_escape "$rel_path")" "$(json_escape "$type")" "$(json_escape "$description")"
-  done < <(find "$scripts_dir" -type f \( -name "*.sh" -o -name "*.py" \) | sort)
-  printf ']'
-}
-
-print_mcp_tools_markdown() {
-  echo "## MCP Tools"
-  if command -v jq >/dev/null 2>&1; then
-    get_mcp_tools_json | jq -r '
-            def format_args:
-                if (.inputSchema and .inputSchema.properties and (.inputSchema.properties | length > 0)) then
-                    "\n  - Arguments:\n" +
-                    (.inputSchema.properties | to_entries | map("    - `" + .key + "` (" + (.value.type // "any") + ")" + (if .value.description then ": " + .value.description else "" end)) | join("\n"))
-                else
-                    ""
-                end;
-
-            if type=="object" and .servers then
-                .servers[] | (
-                    "### " + (.name // "Unknown Server") + "\n",
-                    (.tools[]? | 
-                        "- **" + (.name // "Unknown") + "**: " + (.description // "No description") + format_args
-                    )
-                )
-            else
-                .[] | 
-                "- **" + (.name // "Unknown") + "**: " + (.description // "No description") + format_args
-            end'
-  else
-    echo '```json'
-    get_mcp_tools_json
-    echo '```'
-  fi
-  echo ""
-}
-
-print_system_binaries_markdown() {
-  echo "## System Information"
-  if command -v jq >/dev/null 2>&1; then
-    get_system_binaries_json | jq -r '
-            if .os_release != "" then
-                "### OS Release\n```\n" + .os_release + "\n```\n"
-            else "" end,
-            "### Kernel\n`" + .kernel + "`\n",
-            "### System Binaries\n| Binary | Path |\n|---|---|",
-            (.binaries[] | "| " + .name + " | " + .path + " |")
-        '
-  else
-    # Fallback to json dump
-    echo '```json'
-    get_system_binaries_json
-    echo '```'
-  fi
-  echo ""
-}
-
-print_shell_function_markdown() {
-  echo "## Shell Functions"
-  if command -v jq >/dev/null 2>&1; then
-    get_shell_function_json | jq -r '
-            if length > 0 then
-                .[] | ("### " + .name + "\n```bash\n" + .definition + "\n```\n")
-            else
-                "No custom shell functions found."
-            end'
-  else
-    echo '```json'
-    get_shell_function_json
-    echo '```'
-  fi
-  echo ""
-}
-
-print_project_scripts_markdown() {
-  local json
-  json=$(get_project_scripts_json)
-  if [ "$json" = "[]" ]; then
-    return
-  fi
-
-  echo "## Project Scripts"
-  if command -v jq >/dev/null 2>&1; then
-    echo "$json" | jq -r '
-            if length > 0 then
-                "| Script | Description | Path | Type |\n|---|---|---|---|",
-                (.[] | "| " + .name + " | " + .description + " | " + .path + " | " + .type + " |")
-            else
-                "No project scripts found."
-            end'
-  else
-    echo '```json'
-    echo "$json"
-    echo '```'
-  fi
-  echo ""
-}
-
-if [ "$OUTPUT_FORMAT" = "markdown" ]; then
   if [ "$QUERY_MCP" = true ]; then
-    print_mcp_tools_markdown
+    get_mcp_tools_json >"$tmp_dir/mcp.json"
   fi
   if [ "$QUERY_SYSTEM" = true ]; then
-    print_system_binaries_markdown
+    get_system_binaries_json >"$tmp_dir/system.json"
   fi
   if [ "$QUERY_SHELL" = true ]; then
-    print_shell_function_markdown
+    get_shell_function_json >"$tmp_dir/shell.json"
   fi
   if [ "$QUERY_PROJECT" = true ]; then
-    print_project_scripts_markdown
+    get_project_scripts_json >"$tmp_dir/project.json"
   fi
-else
-  first=true
-  printf '{'
-  if [ "$QUERY_MCP" = true ]; then
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '"mcp_tools":%s' "$(get_mcp_tools_json)"
-  fi
-  if [ "$QUERY_SYSTEM" = true ]; then
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '"system_binaries":%s' "$(get_system_binaries_json)"
-  fi
-  if [ "$QUERY_SHELL" = true ]; then
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '"shell_functions":%s' "$(get_shell_function_json)"
-  fi
-  if [ "$QUERY_PROJECT" = true ]; then
-    if [ "$first" = true ]; then
-      first=false
-    else
-      printf ','
-    fi
-    printf '"project_scripts":%s' "$(get_project_scripts_json)"
-  fi
-  printf '}'
+
+  emit_unified_json "$tmp_dir"
+  exit 0
+fi
+
+if [ "$QUERY_MCP" = true ]; then
+  get_mcp_tools_json
+fi
+if [ "$QUERY_SYSTEM" = true ]; then
+  get_system_binaries_json
+fi
+if [ "$QUERY_SHELL" = true ]; then
+  get_shell_function_json
+fi
+if [ "$QUERY_PROJECT" = true ]; then
+  get_project_scripts_json
 fi

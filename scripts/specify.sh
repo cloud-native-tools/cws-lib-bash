@@ -114,17 +114,28 @@ function specify_check() {
 
 # Initialize a new Specify project
 # Usage: specify_init <ai_tool> [project_name]
-# Available AI tools: claude, gemini, copilot, cursor, qwen, opencode, codex, windsurf, kilocode, auggie, roo
+# Available AI tools: copilot, qwen, qoder, opencode
 function specify_init() {
   local ai_tool=${1}
   local project_name=${2:-.}
+  local ignore_agent_tools=${3:-false}
 
   # Validate AI tool parameter
   if [ -z "${ai_tool}" ]; then
     log error "Usage: specify_init <ai_tool> [project_name]"
-    log error "Available AI tools: claude, gemini, copilot, cursor, qwen, opencode, codex, windsurf, kilocode, auggie, roo"
+    log error "Available AI tools: copilot, qwen, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
   fi
+
+  case "${ai_tool}" in
+  copilot | qwen | qoder | opencode)
+    ;;
+  *)
+    log error "Unsupported AI tool: ${ai_tool}"
+    log error "Available AI tools: copilot, qwen, qoder, opencode"
+    return "${RETURN_FAILURE:-1}"
+    ;;
+  esac
 
   # Ensure Specify is available
   if ! specify_ensure; then
@@ -132,25 +143,18 @@ function specify_init() {
   fi
 
   log info "Initializing Specify project with AI tool: ${ai_tool}, project name: ${project_name}"
-  if specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
+  if [ "${ignore_agent_tools}" = "true" ]; then
+    if specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+      log notice "Specify project initialized successfully"
+      return "${RETURN_SUCCESS:-0}"
+    fi
+  elif specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
     log notice "Specify project initialized successfully"
     return "${RETURN_SUCCESS:-0}"
-  else
-    log error "Failed to initialize Specify project"
-    return "${RETURN_FAILURE:-1}"
   fi
-}
 
-# Initialize a Specify project with Claude AI
-function specify_init_claude_project() {
-  local project_name=${1:-.}
-  specify_init claude "${project_name}"
-}
-
-# Initialize a Specify project with Gemini AI
-function specify_init_gemini_project() {
-  local project_name=${1:-.}
-  specify_init gemini "${project_name}"
+  log error "Failed to initialize Specify project"
+  return "${RETURN_FAILURE:-1}"
 }
 
 # Initialize a Specify project with Copilot AI
@@ -159,20 +163,44 @@ function specify_init_copilot_project() {
   specify_init copilot "${project_name}"
 }
 
-# Initialize a Specify project with Cursor AI
-function specify_init_cursor_project() {
+# Initialize a Specify project with Qwen Code
+function specify_init_qwen_code_project() {
   local project_name=${1:-.}
-  specify_init cursor "${project_name}"
+  specify_init qwen "${project_name}" true
 }
 
-# Initialize a Specify project with Qwen Code
-function specify_init_qwen_project() {
+# Initialize a Specify project with Qoder
+function specify_init_qoder_project() {
   local project_name=${1:-.}
-  specify_init qwen "${project_name}"
+  specify_init qoder "${project_name}" true
+}
+
+# Initialize a Specify project with OpenCode
+function specify_init_opencode_project() {
+  local project_name=${1:-.}
+  specify_init opencode "${project_name}" true
 }
 
 function specify_deinit_copilot_project() {
   rm -rfv .github/prompts/speckit.*.prompt.md
+  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/scripts .specify/templates
+}
+
+function specify_deinit_qwen_project() {
+  rm -rfv .qwen/commands/speckit.*.toml
+  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/scripts .specify/templates
+}
+
+function specify_deinit_qoder_project() {
+  rm -rfv .qoder/commands/speckit.*.md
+  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/scripts .specify/templates
+}
+
+function specify_deinit_opencode_project() {
+  rm -rfv .opencode/command/speckit.*.md
   rm -rfv .specify/memory/features .specify/memory/feature-index.md
   rm -rfv .specify/scripts .specify/templates
 }

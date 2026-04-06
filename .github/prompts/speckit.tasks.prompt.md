@@ -88,7 +88,7 @@ The tasks.md should be immediately executable - each task must be specific enoug
 The `/speckit.tasks` command automatically integrates with the feature tracking system:
 
 - If a `.specify/memory/features.md` file exists, the command will:
-  - Detect the current feature directory (format: `.specify/specs/###-feature-name/`)
+  - Detect the current feature directory (format: `.specify/specs/[REQUIREMENTS_KEY]/`)
   - Extract the feature ID from the directory name
   - Update the corresponding feature entry in `.specify/memory/features.md`:
     - Ensure status is "Implemented" (maintains status from planning phase)
