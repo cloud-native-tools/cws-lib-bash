@@ -241,6 +241,7 @@ function git_describe() {
 
 function git_switch() {
   local version=${1}
+  local remote=${2:-origin}
   if [ -f .gitmodules ]; then
     grep 'path =' .gitmodules | awk '{print $NF}' | xargs rm -rf
     git clean -dfx
@@ -250,7 +251,13 @@ function git_switch() {
 
   if [ -n "${version}" ]; then
     git status
-    git checkout ${version}
+    if git show-ref --verify --quiet "refs/heads/${version}"; then
+      git checkout ${version}
+    elif git show-ref --verify --quiet "refs/remotes/${remote}/${version}"; then
+      git checkout --track "${remote}/${version}"
+    else
+      git checkout ${version}
+    fi
   fi
   if [ -f .gitmodules ]; then
     git submodule sync
