@@ -246,6 +246,8 @@ function git_switch() {
     git clean -dfx
   fi
 
+  git fetch --all --prune
+
   if [ -n "${version}" ]; then
     git status
     git checkout ${version}
