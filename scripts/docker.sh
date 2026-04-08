@@ -285,5 +285,9 @@ function docker_get_java_opts() {
     conc_gc_threads=1
   fi
 
-  echo "-Xms${heap_xms_mb}m -Xmx${heap_xmx_mb}m -XX:ActiveProcessorCount=${cpu_limit_cores} -XX:ParallelGCThreads=${gc_threads} -XX:ConcGCThreads=${conc_gc_threads}"
+  echo "-Xms${heap_xms_mb}m \
+        -Xmx${heap_xmx_mb}m \
+        -XX:ActiveProcessorCount=${cpu_limit_cores} \
+        -XX:ParallelGCThreads=${gc_threads} \
+        -XX:ConcGCThreads=${conc_gc_threads}"
 }
