@@ -196,3 +196,94 @@ function docker_reload() {
     return ${RETURN_FAILURE:-1}
   fi
 }
+
+function docker_get_mem_limit_bytes() {
+  local mem_limit=""
+
+  if [ -r /sys/fs/cgroup/memory.max ]; then
+    mem_limit=$(cat /sys/fs/cgroup/memory.max 2>/dev/null)
+    if [ "${mem_limit}" != "max" ] && [ -n "${mem_limit}" ] 2>/dev/null; then
+      echo "${mem_limit}"
+      return
+    fi
+  fi
+
+  if [ -r /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
+    mem_limit=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null)
+    if [ -n "${mem_limit}" ] 2>/dev/null; then
+      echo "${mem_limit}"
+      return
+    fi
+  fi
+
+  awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo
+}
+
+function docker_get_cpu_limit_cores() {
+  local cpu_quota=""
+  local cpu_period=""
+  local cpu_cores=""
+
+  if [ -r /sys/fs/cgroup/cpu.max ]; then
+    read -r cpu_quota cpu_period </sys/fs/cgroup/cpu.max
+    if [ "${cpu_quota}" != "max" ] && [ -n "${cpu_quota}" ] && [ -n "${cpu_period}" ]; then
+      cpu_cores=$(((cpu_quota + cpu_period - 1) / cpu_period))
+      if [ "${cpu_cores}" -lt 1 ]; then
+        cpu_cores=1
+      fi
+      echo "${cpu_cores}"
+      return
+    fi
+  fi
+
+  if [ -r /sys/fs/cgroup/cpu/cpu.cfs_quota_us ] && [ -r /sys/fs/cgroup/cpu/cpu.cfs_period_us ]; then
+    cpu_quota=$(cat /sys/fs/cgroup/cpu/cpu.cfs_quota_us 2>/dev/null)
+    cpu_period=$(cat /sys/fs/cgroup/cpu/cpu.cfs_period_us 2>/dev/null)
+    if [ -n "${cpu_quota}" ] && [ -n "${cpu_period}" ] && [ "${cpu_quota}" -gt 0 ] && [ "${cpu_period}" -gt 0 ]; then
+      cpu_cores=$(((cpu_quota + cpu_period - 1) / cpu_period))
+      if [ "${cpu_cores}" -lt 1 ]; then
+        cpu_cores=1
+      fi
+      echo "${cpu_cores}"
+      return
+    fi
+  fi
+
+  nproc 2>/dev/null || echo 1
+}
+
+function docker_get_java_opts() {
+  local mem_limit_bytes=$(docker_get_mem_limit_bytes)
+  local cpu_limit_cores=$(docker_get_cpu_limit_cores)
+
+  if [ -z "${mem_limit_bytes}" ] || [ "${mem_limit_bytes}" -le 0 ]; then
+    mem_limit_bytes=$((1024 * 1024 * 1024))
+  fi
+
+  mem_limit_mb=$((mem_limit_bytes / 1024 / 1024))
+  if [ "${mem_limit_mb}" -lt 512 ]; then
+    mem_limit_mb=512
+  fi
+
+  heap_xmx_mb=$((mem_limit_mb * 70 / 100))
+  if [ "${heap_xmx_mb}" -lt 256 ]; then
+    heap_xmx_mb=256
+  fi
+
+  heap_xms_mb=$((heap_xmx_mb / 2))
+  if [ "${heap_xms_mb}" -lt 128 ]; then
+    heap_xms_mb=128
+  fi
+
+  gc_threads=${cpu_limit_cores}
+  if [ "${gc_threads}" -gt 8 ]; then
+    gc_threads=8
+  fi
+
+  conc_gc_threads=$((cpu_limit_cores / 4))
+  if [ "${conc_gc_threads}" -lt 1 ]; then
+    conc_gc_threads=1
+  fi
+
+  echo "-Xms${heap_xms_mb}m -Xmx${heap_xmx_mb}m -XX:ActiveProcessorCount=${cpu_limit_cores} -XX:ParallelGCThreads=${gc_threads} -XX:ConcGCThreads=${conc_gc_threads}"
+}
