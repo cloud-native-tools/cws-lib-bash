@@ -239,31 +239,86 @@ function git_describe() {
   git describe --tags --abbrev=0 ${commit_id}
 }
 
+function git_submodule_paths() {
+  if [ ! -f .gitmodules ]; then
+    return ${RETURN_SUCCESS:-0}
+  fi
+
+  git config -f .gitmodules --get-regexp path 2>/dev/null | awk '{print $2}'
+}
+
+function git_cleanup_submodules_for_switch() {
+  local submodule_path=""
+
+  if [ ! -f .gitmodules ]; then
+    return ${RETURN_SUCCESS:-0}
+  fi
+
+  git submodule deinit -f --all >/dev/null 2>&1 || true
+
+  while IFS= read -r submodule_path; do
+    if [ -z "${submodule_path}" ]; then
+      continue
+    fi
+
+    rm -rf -- "${submodule_path}" ".git/modules/${submodule_path}"
+  done < <(git_submodule_paths)
+
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_switch_checkout_ref() {
+  local version=${1}
+  local remote=${2:-origin}
+
+  if [ -z "${version}" ]; then
+    return ${RETURN_SUCCESS:-0}
+  fi
+
+  if git show-ref --verify --quiet "refs/heads/${version}"; then
+    git checkout -f "${version}"
+  elif git show-ref --verify --quiet "refs/remotes/${remote}/${version}"; then
+    if ! git checkout -B "${version}" "${remote}/${version}"; then
+      return ${RETURN_FAILURE:-1}
+    fi
+    git branch --set-upstream-to="${remote}/${version}" "${version}" >/dev/null 2>&1 || true
+  else
+    git checkout -f "${version}"
+  fi
+}
+
 function git_switch() {
   local version=${1}
   local remote=${2:-origin}
-  if [ -f .gitmodules ]; then
-    grep 'path =' .gitmodules | awk '{print $NF}' | xargs rm -rf
-    git clean -dfx
+  local has_submodules=false
+
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log error "Not in a git repository"
+    return ${RETURN_FAILURE:-1}
   fi
 
-  git fetch --all --prune
+  if [ -f .gitmodules ]; then
+    has_submodules=true
+    git_cleanup_submodules_for_switch
+  fi
+
+  git fetch --all --prune || return ${RETURN_FAILURE:-1}
 
   if [ -n "${version}" ]; then
     git status
-    if git show-ref --verify --quiet "refs/heads/${version}"; then
-      git checkout ${version}
-    elif git show-ref --verify --quiet "refs/remotes/${remote}/${version}"; then
-      git checkout --track "${remote}/${version}"
-    else
-      git checkout ${version}
-    fi
+    git_switch_checkout_ref "${version}" "${remote}" || return ${RETURN_FAILURE:-1}
   fi
-  if [ -f .gitmodules ]; then
-    git submodule sync
-    git submodule update --init --recursive
+
+  git reset --hard HEAD || return ${RETURN_FAILURE:-1}
+  git clean -dfx || return ${RETURN_FAILURE:-1}
+
+  if [ "${has_submodules}" = "true" ] && [ -f .gitmodules ]; then
+    git submodule sync --recursive || return ${RETURN_FAILURE:-1}
+    git submodule update --init --recursive --force || return ${RETURN_FAILURE:-1}
+    git submodule foreach --recursive 'git reset --hard >/dev/null 2>&1 || true; git clean -dfx >/dev/null 2>&1 || true' >/dev/null 2>&1 || true
   fi
-  git reset --hard
+
+  return ${RETURN_SUCCESS:-0}
 }
 
 function git_search() {

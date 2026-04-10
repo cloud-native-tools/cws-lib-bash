@@ -21,5 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- Hardened `git_switch` so repositories with submodules can switch branch/tag cleanly after stale submodule metadata is removed, and added regression coverage for this flow
 
 ### Security
