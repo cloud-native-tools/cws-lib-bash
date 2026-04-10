@@ -9,11 +9,7 @@ function add_line_if_not_exit() {
   fi
 }
 
-DIR=$(dirname "${BASH_SOURCE[0]}")
-if [ "${DIR}" == "." ]; then
-  DIR=${PWD}
-fi
-ROOT=$(readlink -f $(dirname ${DIR}))
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 ENV=${ROOT}/bin/cws_bash_env
 
 # this library is used for interactive shell only, only sourced in a interactive shell environment

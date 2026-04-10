@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
-DIR=$(dirname "${BASH_SOURCE[0]}")
-if [ "${DIR}" == "." ]; then
-  DIR=${PWD}
-fi
-ROOT=$(readlink -f $(dirname ${DIR}))
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 PROFILED=${ROOT}/profile.d
 SCRIPTS=${ROOT}/scripts
