@@ -1,5 +1,11 @@
 # shellcheck shell=bash
 
+# NOTE:
+# Functions consumed via command substitution (e.g. var=$(func ...)) MUST keep
+# stdout clean and stable. Do not add verbose/debug output (such as mv -v, echo
+# debug logs, etc.) in these functions, otherwise callers may capture corrupted
+# values. If diagnostics are needed, write to stderr.
+
 function _vscode_workspace_ensure_file() {
   local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
   local tmp_file
@@ -16,7 +22,7 @@ function _vscode_workspace_ensure_file() {
   tmp_file="${workspace_file}.tmp"
   cat "${workspace_file}" |
     jq ".folders |= (. // []) | .settings |= (. // {})" >"${tmp_file}"
-  mv -fv "${tmp_file}" "${workspace_file}"
+  mv -f "${tmp_file}" "${workspace_file}"
 
   echo "${workspace_file}"
 }
@@ -27,7 +33,7 @@ function _vscode_workspace_apply_jq() {
   local tmp_file="${workspace_file}.tmp"
 
   cat "${workspace_file}" | jq "${jq_expr}" >"${tmp_file}"
-  mv -fv "${tmp_file}" "${workspace_file}"
+  mv -f "${tmp_file}" "${workspace_file}"
 }
 
 function _vscode_workspace_dirs_to_json() {
