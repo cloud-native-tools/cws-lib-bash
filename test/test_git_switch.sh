@@ -152,6 +152,25 @@ function run_git_switch_submodule_recovery_test() {
     echo "  ✓ 不再出现损坏子模块 gitdir 的 fatal 错误"
     TEST_PASSED=$((TEST_PASSED + 1))
   fi
+
+  rm -rf .git/modules/api api
+
+  echo "Test 3: git_switch without args refreshes and initializes submodule"
+  git_switch >/tmp/git_switch_noarg.out 2>/tmp/git_switch_noarg.err
+  exit_code=$?
+  test_assert_success "${exit_code}" "无参数调用 git_switch 应成功刷新子模块"
+  test_assert_eq "submodule-v1" "$(cat api/version.txt)" "无参数调用后子模块内容应与当前提交一致"
+
+  stderr_output="$(cat /tmp/git_switch_noarg.err)"
+  TEST_TOTAL=$((TEST_TOTAL + 1))
+  if [[ "${stderr_output}" == *"Could not access submodule"* ]]; then
+    echo "  ✗ 无参数调用不应出现 Could not access submodule 错误"
+    echo "    stderr: ${stderr_output}"
+    TEST_FAILED=$((TEST_FAILED + 1))
+  else
+    echo "  ✓ 无参数调用不再出现 Could not access submodule 错误"
+    TEST_PASSED=$((TEST_PASSED + 1))
+  fi
 }
 
 run_git_switch_submodule_recovery_test

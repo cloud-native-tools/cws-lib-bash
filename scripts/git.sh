@@ -288,7 +288,7 @@ function git_switch_checkout_ref() {
 }
 
 function git_switch() {
-  local version=${1}
+  local version=${1:-}
   local remote=${2:-origin}
   local has_submodules=false
 
@@ -299,6 +299,9 @@ function git_switch() {
 
   if [ -f .gitmodules ]; then
     has_submodules=true
+  fi
+
+  if [ "${has_submodules}" = "true" ] && [ -n "${version}" ]; then
     git_cleanup_submodules_for_switch
   fi
 
