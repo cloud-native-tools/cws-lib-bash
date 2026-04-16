@@ -6,6 +6,13 @@
 # debug logs, etc.) in these functions, otherwise callers may capture corrupted
 # values. If diagnostics are needed, write to stderr.
 
+function _vscode_workspace_replace_file() {
+  local src_file=${1}
+  local dest_file=${2}
+
+  command mv -f -- "${src_file}" "${dest_file}" >/dev/null
+}
+
 function _vscode_workspace_ensure_file() {
   local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
   local tmp_file
@@ -20,9 +27,8 @@ function _vscode_workspace_ensure_file() {
   fi
 
   tmp_file="${workspace_file}.tmp"
-  cat "${workspace_file}" |
-    jq ".folders |= (. // []) | .settings |= (. // {})" >"${tmp_file}"
-  mv -f "${tmp_file}" "${workspace_file}"
+  jq ".folders |= (. // []) | .settings |= (. // {})" "${workspace_file}" >"${tmp_file}"
+  _vscode_workspace_replace_file "${tmp_file}" "${workspace_file}"
 
   echo "${workspace_file}"
 }
@@ -32,8 +38,8 @@ function _vscode_workspace_apply_jq() {
   local jq_expr=${2}
   local tmp_file="${workspace_file}.tmp"
 
-  cat "${workspace_file}" | jq "${jq_expr}" >"${tmp_file}"
-  mv -f "${tmp_file}" "${workspace_file}"
+  jq "${jq_expr}" "${workspace_file}" >"${tmp_file}"
+  _vscode_workspace_replace_file "${tmp_file}" "${workspace_file}"
 }
 
 function _vscode_workspace_dirs_to_json() {
