@@ -308,7 +308,7 @@ function git_switch() {
   git fetch --all --prune || return ${RETURN_FAILURE:-1}
 
   if [ -n "${version}" ]; then
-    git status
+    git status --ignore-submodules=all || true
     git_switch_checkout_ref "${version}" "${remote}" || return ${RETURN_FAILURE:-1}
   fi
 
@@ -319,6 +319,52 @@ function git_switch() {
     git submodule sync --recursive || return ${RETURN_FAILURE:-1}
     git submodule update --init --recursive --force || return ${RETURN_FAILURE:-1}
     git submodule foreach --recursive 'git reset --hard >/dev/null 2>&1 || true; git clean -dfx >/dev/null 2>&1 || true' >/dev/null 2>&1 || true
+  fi
+
+  return ${RETURN_SUCCESS:-0}
+}
+
+function git_recover() {
+  local target_branch=${1:-main}
+  local remote=${2:-origin}
+  local is_shallow=""
+
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log error "Not in a git repository"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if ! git remote get-url "${remote}" >/dev/null 2>&1; then
+    log error "Remote not found: ${remote}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  git config "remote.${remote}.fetch" "+refs/heads/*:refs/remotes/${remote}/*" || return ${RETURN_FAILURE:-1}
+
+  is_shallow=$(git rev-parse --is-shallow-repository 2>/dev/null || echo "false")
+  if [ "${is_shallow}" = "true" ]; then
+    log info "Detected shallow repository, fetching full history from ${remote}"
+    git fetch "${remote}" --unshallow || return ${RETURN_FAILURE:-1}
+  fi
+
+  git fetch "${remote}" --prune --tags || return ${RETURN_FAILURE:-1}
+  git fetch "${remote}" "+refs/heads/${target_branch}:refs/remotes/${remote}/${target_branch}" || return ${RETURN_FAILURE:-1}
+
+  if ! git show-ref --verify --quiet "refs/remotes/${remote}/${target_branch}"; then
+    log error "Remote branch not found: ${remote}/${target_branch}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if git show-ref --verify --quiet "refs/heads/${target_branch}"; then
+    git checkout -f "${target_branch}" || return ${RETURN_FAILURE:-1}
+    git reset --hard "${remote}/${target_branch}" || return ${RETURN_FAILURE:-1}
+  else
+    git checkout -B "${target_branch}" "${remote}/${target_branch}" || return ${RETURN_FAILURE:-1}
+  fi
+
+  if ! git branch --set-upstream-to="${remote}/${target_branch}" "${target_branch}" >/dev/null 2>&1; then
+    git config "branch.${target_branch}.remote" "${remote}" || return ${RETURN_FAILURE:-1}
+    git config "branch.${target_branch}.merge" "refs/heads/${target_branch}" || return ${RETURN_FAILURE:-1}
   fi
 
   return ${RETURN_SUCCESS:-0}

@@ -125,10 +125,12 @@ function run_git_switch_submodule_recovery_test() {
   git clone --recurse-submodules "${main_remote}" "${clone_dir}" >/dev/null
   cd "${clone_dir}" || return 1
 
-  echo "Test 1: git_switch can switch to branch with submodule"
+  rm -rf api
+
+  echo "Test 1: git_switch can switch to branch with missing submodule worktree"
   git_switch feature >/tmp/git_switch_branch.out 2>/tmp/git_switch_branch.err
   local exit_code=$?
-  test_assert_success "${exit_code}" "switch 到 feature 分支应成功"
+  test_assert_success "${exit_code}" "子模块目录缺失时 switch 到 feature 分支应成功"
   test_assert_eq "feature" "$(git branch --show-current)" "应切换到 feature 分支"
   test_assert_eq "submodule-v2" "$(cat api/version.txt)" "子模块内容应更新到 feature 版本"
 
