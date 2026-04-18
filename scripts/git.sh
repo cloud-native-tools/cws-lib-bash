@@ -276,14 +276,14 @@ function git_switch_checkout_ref() {
   fi
 
   if git show-ref --verify --quiet "refs/heads/${version}"; then
-    git checkout -f "${version}"
+    git -c submodule.recurse=false checkout -f "${version}"
   elif git show-ref --verify --quiet "refs/remotes/${remote}/${version}"; then
-    if ! git checkout -B "${version}" "${remote}/${version}"; then
+    if ! git -c submodule.recurse=false checkout -B "${version}" "${remote}/${version}"; then
       return ${RETURN_FAILURE:-1}
     fi
     git branch --set-upstream-to="${remote}/${version}" "${version}" >/dev/null 2>&1 || true
   else
-    git checkout -f "${version}"
+    git -c submodule.recurse=false checkout -f "${version}"
   fi
 }
 
@@ -305,14 +305,14 @@ function git_switch() {
     git_cleanup_submodules_for_switch
   fi
 
-  git fetch --all --prune || return ${RETURN_FAILURE:-1}
+  git -c fetch.recurseSubmodules=false -c submodule.recurse=false fetch --all --prune || return ${RETURN_FAILURE:-1}
 
   if [ -n "${version}" ]; then
     git status --ignore-submodules=all || true
     git_switch_checkout_ref "${version}" "${remote}" || return ${RETURN_FAILURE:-1}
   fi
 
-  git reset --hard HEAD || return ${RETURN_FAILURE:-1}
+  git -c submodule.recurse=false reset --hard HEAD || return ${RETURN_FAILURE:-1}
   git clean -dfx || return ${RETURN_FAILURE:-1}
 
   if [ "${has_submodules}" = "true" ] && [ -f .gitmodules ]; then

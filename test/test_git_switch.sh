@@ -125,6 +125,9 @@ function run_git_switch_submodule_recovery_test() {
   git clone --recurse-submodules "${main_remote}" "${clone_dir}" >/dev/null
   cd "${clone_dir}" || return 1
 
+  git config fetch.recurseSubmodules true
+  git config submodule.recurse true
+
   rm -rf api
 
   echo "Test 1: git_switch can switch to branch with missing submodule worktree"
@@ -133,6 +136,18 @@ function run_git_switch_submodule_recovery_test() {
   test_assert_success "${exit_code}" "子模块目录缺失时 switch 到 feature 分支应成功"
   test_assert_eq "feature" "$(git branch --show-current)" "应切换到 feature 分支"
   test_assert_eq "submodule-v2" "$(cat api/version.txt)" "子模块内容应更新到 feature 版本"
+
+  local stderr_output
+  stderr_output="$(cat /tmp/git_switch_branch.err)"
+  TEST_TOTAL=$((TEST_TOTAL + 1))
+  if [[ "${stderr_output}" == *"Could not access submodule"* ]]; then
+    echo "  ✗ 递归子模块配置开启时不应出现 Could not access submodule 错误"
+    echo "    stderr: ${stderr_output}"
+    TEST_FAILED=$((TEST_FAILED + 1))
+  else
+    echo "  ✓ 递归子模块配置开启时不再出现 Could not access submodule 错误"
+    TEST_PASSED=$((TEST_PASSED + 1))
+  fi
 
   rm -rf .git/modules/api
 
@@ -143,7 +158,6 @@ function run_git_switch_submodule_recovery_test() {
   test_assert_eq "" "$(git branch --show-current)" "切换到 tag 后应处于 detached HEAD"
   test_assert_eq "submodule-v1" "$(cat api/version.txt)" "子模块内容应回退到 tag 版本"
 
-  local stderr_output
   stderr_output="$(cat /tmp/git_switch_tag.err)"
   TEST_TOTAL=$((TEST_TOTAL + 1))
   if [[ "${stderr_output}" == *"fatal: not a git repository"* ]]; then
