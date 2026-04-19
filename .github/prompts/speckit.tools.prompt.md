@@ -1,18 +1,26 @@
-> Note: `$ARGUMENTS` is **optional**. If empty, continue with discovery + interactive disambiguation. If provided, treat it as hint(s) for target tool, source type, alias preference, or execution priority.
->
-> Intent interpretation rule:
->
-> - Natural-language `$ARGUMENTS` describes the **tool capability to define/create or locate**, not an instruction to immediately execute that real-world action.
-> - Example: `/speckit.tools 下载钉钉文档到本地markdown文件` means “create/find a tool whose purpose is 下载钉钉文档到本地markdown文件”, **not** “immediately download the document now”.
-> - Actual tool invocation is allowed only after target tool resolution + parameter confirmation + explicit `Proceed with execution? (yes/no)` consent.
-
 ## User Input
 
 ```text
 $ARGUMENTS
 ```
 
-You **MUST** treat `$ARGUMENTS` as command parameters, not as a replacement of this workflow.
+You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to resolve or create the correct tool record before any invocation.
+
+The user input may include:
+
+1. Tool capability intent (what tool to define/find), source type hints, or alias preferences.
+2. `tool_id` for ID-first resolution.
+3. Execution priority or parameter hints for later invocation.
+
+When processing the user input:
+
+1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
+2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
+3. Natural-language `$ARGUMENTS` describes the tool capability to define/create/locate, not immediate execution of real-world actions.
+4. If `$ARGUMENTS` is empty, continue with discovery and interactive disambiguation.
+5. If `tool_id` and natural-language hint conflict, stop and request user correction before proceeding.
+6. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase with clearer wording.
+7. Actual tool invocation is allowed only after tool resolution, parameter confirmation, and explicit `Proceed with execution? (yes/no)` consent.
 
 ## Outline
 

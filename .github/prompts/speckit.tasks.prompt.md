@@ -1,15 +1,24 @@
-> Note: `$ARGUMENTS` 为**可选补充输入**，可能包含以下类型的内容：
-> - **背景信息**：提供上下文、约束条件或业务背景
-> - **任务大纲**：用户提供的高层次任务分解或结构
-> - **额外任务条目**：具体的任务项，需要整合到生成的任务列表中
-> 
-> 当本次调用未提供任何 `$ARGUMENTS` 时，仍须按下文流程基于当前 feature 的 `requirements.md`、`plan.md` 等设计文档自动生成完整、可执行的 `tasks.md`。
-
-## User Input Analysis & Processing
+## User Input
 
 ```text
 $ARGUMENTS
 ```
+
+You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to supplement task generation while preserving the default workflow.
+
+The user input may include:
+
+1. 背景信息：上下文、约束条件或业务背景。
+2. 任务大纲：阶段划分或高层任务结构。
+3. 额外任务条目：可执行任务项，需要合并进最终任务清单。
+
+When processing the user input:
+
+1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
+2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
+3. If `$ARGUMENTS` is empty, still generate a complete executable `tasks.md` from available design artifacts.
+4. You **MUST** first detect input type and then apply the corresponding handling strategy.
+5. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase with clearer wording.
 
 ### Input Type Detection and Handling Strategy
 
@@ -28,7 +37,7 @@ $ARGUMENTS
    - 将其整合到相应的用户故事阶段或基础任务中
    - 维护任务ID的连续性和依赖关系的正确性
 
-You **MUST** first analyze the content and structure of `$ARGUMENTS` to determine its type, then apply the appropriate handling strategy. Do NOT treat the input as a standalone instruction that replaces the command logic.
+You **MUST** first analyze the content and structure of `$ARGUMENTS` to determine its type, then apply the appropriate handling strategy.
 
 ## Outline
 

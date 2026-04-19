@@ -38,3 +38,4 @@ __pycache__/
 *.pyo
 *.pyd
 .ai/tools/*.md
+.ai/tools/*.json

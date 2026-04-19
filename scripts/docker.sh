@@ -197,26 +197,62 @@ function docker_reload() {
   fi
 }
 
+function docker_get_host_mem_bytes() {
+  local proc_meminfo_file=${1:-${CWS_DOCKER_PROC_MEMINFO_FILE:-/proc/meminfo}}
+  local mem_kb=""
+
+  mem_kb=$(awk '/MemAvailable/ {print $2; exit}' "${proc_meminfo_file}" 2>/dev/null)
+  if [ -z "${mem_kb}" ] || [ "${mem_kb}" -le 0 ] 2>/dev/null; then
+    mem_kb=$(awk '/MemTotal/ {print $2; exit}' "${proc_meminfo_file}" 2>/dev/null)
+  fi
+
+  if [ -n "${mem_kb}" ] && [ "${mem_kb}" -gt 0 ] 2>/dev/null; then
+    echo $((mem_kb * 1024))
+    return 0
+  fi
+
+  return 1
+}
+
+function docker_is_valid_mem_limit() {
+  local value="${1:-}"
+  local unlimited_threshold=${2:-9223372036850000000}
+
+  if ! [[ "${value}" =~ ^[0-9]+$ ]]; then
+    return 1
+  fi
+
+  if [ "${value}" -le 0 ] || [ "${value}" -ge "${unlimited_threshold}" ]; then
+    return 1
+  fi
+
+  return 0
+}
+
 function docker_get_mem_limit_bytes() {
   local mem_limit=""
+  local unlimited_threshold=9223372036850000000
+  local cgroup_v2_mem_max_file=${CWS_DOCKER_CGROUP_V2_MEM_MAX_FILE:-/sys/fs/cgroup/memory.max}
+  local cgroup_v1_mem_limit_file=${CWS_DOCKER_CGROUP_V1_MEM_LIMIT_FILE:-/sys/fs/cgroup/memory/memory.limit_in_bytes}
+  local proc_meminfo_file=${CWS_DOCKER_PROC_MEMINFO_FILE:-/proc/meminfo}
 
-  if [ -r /sys/fs/cgroup/memory.max ]; then
-    mem_limit=$(cat /sys/fs/cgroup/memory.max 2>/dev/null)
-    if [ "${mem_limit}" != "max" ] && [ -n "${mem_limit}" ] 2>/dev/null; then
+  if [ -r "${cgroup_v2_mem_max_file}" ]; then
+    mem_limit=$(cat "${cgroup_v2_mem_max_file}" 2>/dev/null)
+    if [ "${mem_limit}" != "max" ] && docker_is_valid_mem_limit "${mem_limit}" "${unlimited_threshold}"; then
       echo "${mem_limit}"
       return
     fi
   fi
 
-  if [ -r /sys/fs/cgroup/memory/memory.limit_in_bytes ]; then
-    mem_limit=$(cat /sys/fs/cgroup/memory/memory.limit_in_bytes 2>/dev/null)
-    if [ -n "${mem_limit}" ] 2>/dev/null; then
+  if [ -r "${cgroup_v1_mem_limit_file}" ]; then
+    mem_limit=$(cat "${cgroup_v1_mem_limit_file}" 2>/dev/null)
+    if docker_is_valid_mem_limit "${mem_limit}" "${unlimited_threshold}"; then
       echo "${mem_limit}"
       return
     fi
   fi
 
-  awk '/MemTotal/ {print $2 * 1024}' /proc/meminfo
+  docker_get_host_mem_bytes "${proc_meminfo_file}" || awk '/MemTotal/ {print $2 * 1024}' "${proc_meminfo_file}"
 }
 
 function docker_get_cpu_limit_cores() {

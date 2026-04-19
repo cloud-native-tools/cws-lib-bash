@@ -33,13 +33,13 @@
 
 **Core Principles Compliance**:
 
-- **Feature-Centric Development**: Feature Index is single source of truth; all phases re-evaluate Feature changes.
-- **Specification-Driven Development**: Code serves specifications; specifications are executable and generate working systems
-- **Intent-Driven Development**: Focus on "what" and "why" before "how"; use rich specifications with guardrails
-- **Test-First & Contract-Driven**: TDD flow followed; pure functions have unit tests; critical flows have regression coverage
-- **AI Agent Integration**: Only approved agents (GitHub Copilot, Qwen Code, opencode, Qoder); configuration rejects unsupported providers
-- **Continuous Quality & Observability**: Structured logging; semantic versioning; CI quality gates; simple designs (YAGNI)
-- **SDD Workflow Compliance**: Follow spec → plan → tasks → implement workflow with proper validation at each phase
+- **I. Library-First Design**: Work is implemented as reusable domain libraries under `scripts/<domain>.sh` with clear responsibility.
+- **II. CLI & Text I/O Interface**: Interfaces are scriptable, consume args/stdin, and emit results to stdout/errors to stderr.
+- **III. Test-First Development**: Tests are added/updated first; core utilities and critical flows have regression coverage.
+- **IV. Integration & Contract Testing**: Cross-boundary behavior and end-to-end journeys are validated where applicable.
+- **V. Observability, Versioning & Simplicity**: Logging, semantic versioning, and YAGNI-oriented design are enforced.
+- **VI. Continuous Integration & Quality Gates**: `shellcheck`, automated tests, and spec/plan/tasks/doc alignment gates pass.
+- **VII. Feature-Centric Development**: Feature Index remains the source of truth; each phase re-evaluates feature changes.
 
 **Gates Status**: [✅ All gates pass / ❌ Specific gate failures with justification]
 

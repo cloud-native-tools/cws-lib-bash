@@ -11,7 +11,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `.specify/specs/[REQUIREMENTS_KEY]/`
 **Prerequisites**: plan.md (required), requirements.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are MANDATORY per Constitution Principle V (Test-Driven Development (TDD) for Interactivity).
+**Tests**: The examples below include test tasks. Tests are MANDATORY per Constitution Principle III (Test-First Development).
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 

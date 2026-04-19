@@ -9,6 +9,11 @@
 $ARGUMENTS
 ```
 
+需要根据用户的输入提取SKILL核心的两个元素：name 和 description
+
+1. *name*: 一个简单命令的英文单词组合，不应该包含特殊字符，只包含字母、数字和'-'、'_'等编程中常用的变量名格式
+2. *description*: 一段关于SKILL的功能描述和一个触发SKILL的关键词列表，例如：This skill can xxx. Use this when the user mentions [ "key word 1", "key word 3", ... ].
+
 ## Outline
 
 目标：在当前对话上下文中，帮助用户创建或整理高质量 SpecKit Skill，确保结构规范、触发清晰、资源可复用，并为每个技能生成可复用的确定性 `skill_id`。
@@ -20,22 +25,22 @@ $ARGUMENTS
 
 ## Skill Specification
 
-### 1) Skill 基础结构
+### 1) SKILL_ROOT 与基础结构
 
-每个 Skill 至少包含 `SKILL.md`，可选携带资源目录：
+**SKILL_ROOT** 是 Skill 所在的根目录。一个 Skill 的主体为 `${SKILL_ROOT}/SKILL.md`，其余资源目录均相对于 `SKILL_ROOT` 解析。
+
+典型结构：
 
 ```
-<skill-name>/
-├── SKILL.md            # 必需
-├── tools/              # 工具说明（可选）
-├── .specify/scripts/            # 可执行脚本（可选）
-├── references/         # 按需加载的参考资料（可选）
-└── assets/             # 输出使用的静态资源（可选）
+${SKILL_ROOT}/
+├── SKILL.md            # 必需，Skill 主体
+├── tools/              # 工具说明（相对 SKILL_ROOT，可选）
+├── .specify/scripts/            # 可执行脚本（相对 SKILL_ROOT，可选）
+├── references/         # 按需加载的参考资料（相对 SKILL_ROOT，可选）
+└── assets/             # 输出使用的静态资源（相对 SKILL_ROOT，可选）
 ```
 
-### 2) Skill 存放位置（官方兼容）
-
-支持以下目录（项目级或个人级）：
+**存放位置**：`SKILL_ROOT` 可位于以下任一路径（项目级或个人级）：
 
 - `.github/skills/<name>/`
 - `.agents/skills/<name>/`
@@ -44,7 +49,9 @@ $ARGUMENTS
 - `~/.agents/skills/<name>/`
 - `~/.claude/skills/<name>/`
 
-### 3) `SKILL.md` 规范
+后续所有资源引用统一使用相对于 `SKILL_ROOT` 的路径（推荐 `./.specify/scripts/x.py` 形式）。
+
+### 2) `SKILL.md` 规范
 
 #### Frontmatter
 
@@ -69,11 +76,11 @@ Body 只写执行说明，不写冗余背景。应包含：
 - 关键步骤（可执行、可检查）
 - 资源引用（使用相对路径，如 `./.specify/scripts/x.py`）
 
-### 4) 资源目录使用准则
+### 3) 资源目录使用准则
 
 #### `tools/`
 
-项目工具清单来自 `tools/`（由 `refresh-tools.sh` 生成 JSON）：
+Skill 根目录下的 `tools/` 用于说明本 Skill 可用的工具。项目级工具清单来自 `.specify/scripts/bash/refresh-tools.sh` 生成的 JSON：
 
 - [MCP Tools JSON](tools/mcp.json)
 - [System Tools JSON](tools/system.json)
@@ -99,7 +106,7 @@ Body 只写执行说明，不写冗余背景。应包含：
 
 用于输出物依赖但不必进入上下文的资源（模板、图片、字体、样板工程等）。
 
-### 5) 上下文加载与体量控制
+### 4) 上下文加载与体量控制
 
 采用渐进加载：
 
@@ -113,7 +120,7 @@ Body 只写执行说明，不写冗余背景。应包含：
 - 引用链尽量一层（从 `SKILL.md` 直达资源）
 - 资源路径统一使用相对路径（建议 `./`）
 
-### 6) 不要放入 Skill 的内容
+### 5) 不要放入 Skill 的内容
 
 Skill 仅保留执行任务所需内容，不增加无关文档：
 
@@ -171,48 +178,79 @@ Skill 仅保留执行任务所需内容，不增加无关文档：
 
 ## Execution Steps
 
-1. **Initialize / Refresh**
-   - 执行 `.specify/scripts/bash/create-new-skill.sh --json $ARGUMENTS` 创建或刷新结构，并解析 JSON 输出。
-   - 若输出含 `"status": "refreshed"`：展示脚本消息并停止。
-   - 若输出含 `"SKILL_DIR"`：解析 `SKILL_DIR`、`SKILL_NAME`、`SKILL_DESCRIPTION`、`SKILL_ID`，确认创建成功。
-   - `SKILL_ID` 必须是 `.github/skills/<skill-name>/SKILL.md` 的工作区相对路径。
+创建一个 Skill 的核心流程如下：
 
-2. **ID-first reuse**
-   - 如果输入中提供 `skill_id`，先按 ID 精确定位 skill。
-   - 仅在 `skill_id` 缺失或失效时回退到自然语言发现。
-   - 当 `skill_id` 与文本提示冲突时，必须显式报错并停止自动继续。
+### Step 1: 确定 SKILL_ROOT 与元数据
 
-3. **Extract from Conversation (Default)**
-   - 先复用当前对话，提炼流程、分支与验收标准。
+从用户输入（User Input）解析 `skill name` 与 `description`：
 
-4. **Clarify if Needed (Fallback)**
-   - 仅在提炼不足时触发。
-   - 约束：每轮只问 1 个问题，等待用户答复后继续。
+- **skill name** 用于确定 `SKILL_ROOT` 路径。例如 `name = "testing"` 且选用项目级存放位置时，`SKILL_ROOT = .github/skills/testing/`。
+- **description** 用于描述"做什么 + 何时触发"，必须包含关键词与触发场景，避免模糊描述（参见 Design Principles 第 2 点）。
 
-5. **Draft & Refine**
-   - 持续更新 `SKILL.md`，围绕薄弱点小步修订，直到可执行。
+若输入信息不足，进入 Step 3 的提问环节补充。
 
-6. **Tailored Implementation**
-   - 更新 frontmatter `{{DESCRIPTION}}` 与正文关键章节（如 `## Overview`、`## Workflow / Instructions`、`## Constraints`）。
-   - 若模板中 `## Applicable Scenarios` / `## 适用场景` 与 frontmatter 重复且无增量价值，可删除。
-   - 按需脚手架资源：
-     - 自动化逻辑/API 调用 → `.specify/scripts/`
-     - 文档/Schema/策略 → `references/`
-     - 模板/样板工程 → `assets/`
-     - 工具说明 → `tools/`
-   - 更新 `SKILL.md` 的资源链接，并询问用户是否导入已有文件。
+### Step 2: 获取可用 Tools 信息
 
-7. **Register `skill_id` in instructions template**
-   - 创建或更新 skill 后，必须在 `.ai/instructions.md` 的 `## Resource Registry` → `### Skills` 小节中追加一个结构化列表条目，字段名称参考 `.specify/templates/skills-template.md`。
-   - 条目中必须包含 `Skill Name`、`Skill ID`、`Description`、`Canonical Path`；若模板中存在对应 frontmatter，也应按相同字段名补充。
-   - 条目使用 `skill_id` 的规范值；若同一 ID 已存在则不得重复写入。
-   - 保持 Skills 列表排序、去重；一旦存在真实条目，移除 `- None yet.`。
+执行脚本获取当前项目/工作区可用的工具清单，为后续 Skill 的资源编排提供依据：
 
-8. **Completion**
-   - 总结 Skill 能力与目录结构。
-   - 给出示例提示词。
-   - 给出下一步可选定制项。
-   - 输出 `SKILL.md` 路径与 `skill_id`。
+- 运行 `refresh-tools.sh`（或等价方式）刷新并输出 JSON。
+- 参考工具清单分类：
+  - **MCP Tools** → [mcp.json](tools/mcp.json)
+  - **System Tools** → [system.json](tools/system.json)
+  - **Shell Tools** → [shell.json](tools/shell.json)
+  - **Project Scripts** → [project.json](tools/project.json)
+
+可根据需要调用以下命令获取工具清单：
+
+```bash
+.specify/scripts/bash/refresh-tools.sh --json
+```
+
+获取到工具列表后，结合 Skill 目标筛选可用工具，作为 `SKILL.md` 中工具引用的参考。
+
+### Step 3: 逐步明确 Skill 细节
+
+通过提问方式补充 `SKILL.md` 所需信息。**每轮只问一个问题**，等待用户答复后继续。
+
+优先问：
+
+- **目标产出**：Skill 最终要产出什么？
+- **适用场景**：在什么触发条件下应该加载此 Skill？
+- **资源需求**：是否需要脚本、参考资料、模板或固定工具链？
+
+迭代修订 `SKILL.md` 直至：
+
+1. Frontmatter 完整（`name`、`description`）
+2. Body 包含清晰可执行步骤
+3. 资源目录（`tools/`、`.specify/scripts/`、`references/`、`assets/`）按需就位
+4. 所有资源链接使用相对 `SKILL_ROOT` 的路径
+
+### Step 4: 注册 Resource ID 与写入 Instructions
+
+生成 `SKILL.md` 的 Resource ID 并持久化：
+
+- **Canonical ID（`skill_id`）**：`.github/skills/<name>/SKILL.md` 的工作区相对路径。
+- **Canonical Path**：`${SKILL_ROOT}/SKILL.md` 的工作区相对路径。
+
+将以下信息写入 `.ai/instructions.md` 的 `## Resource Registry` → `### Skills` 小节：
+
+- `Skill Name`
+- `Skill ID`
+- `Description`
+- `Canonical Path`
+
+约束：
+
+- 条目字段名称参考 `.specify/templates/skills-template.md`。
+- 同一 `skill_id` 已存在时不得重复写入。
+- 列表保持排序与去重；存在真实条目后，移除 `- None yet.`。
+
+### Completion
+
+- 总结 Skill 能力与目录结构。
+- 给出示例提示词。
+- 给出下一步可选定制项。
+- 输出 `SKILL.md` 路径（即 `SKILL_ROOT/SKILL.md`）与 `skill_id`。
 
 ## Slash Behavior Notes
 

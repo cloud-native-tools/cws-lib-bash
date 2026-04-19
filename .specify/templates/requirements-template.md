@@ -7,6 +7,8 @@
 
 ## Related Feature *(mandatory)*
 
+Feature binding in this section is mandatory per Constitution Principle VII (Feature-Centric Development).
+
 <!--
   ACTION REQUIRED: Keep the default values as "Need clarification" in the initial draft.
   /speckit.clarify must resolve this section to the final Feature binding before planning.
