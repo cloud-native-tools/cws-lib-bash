@@ -400,10 +400,7 @@ function highlight_difference_files() {
     local file_list=$(find ${find_root} -type d -name "${target_dir}" -exec find {} -type f -name "${target_file}" \;)
   fi
 
-  # ANSI color codes
-  local colors=(
-    ${RED} ${GREEN} ${YELLOW} ${BLUE} ${PURPLE} ${CYAN} ${WHITE}
-  )
+  local colors=("${ANSI_TERMINAL_FOREGROUND_COLORS[@]}")
   local color_count=${#colors[@]}
   local color_index=0
 
@@ -424,7 +421,7 @@ function highlight_difference_files() {
   '/$'\n'}) # Split the newline-separated file list into an array
       local color="${colors[${color_index}]}"
       for file in "${files[@]}"; do
-        printf "${checksum}  ${color}%s${CLEAR}\n" "${file}" # Print with color and reset
+        printf "%s  %b%s%b\n" "${checksum}" "${color}" "${file}" "${CLEAR}" # Print with color and reset
       done
       ((color_index = (color_index + 1) % color_count)) # Cycle through colors
     done
