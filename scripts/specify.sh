@@ -128,7 +128,7 @@ function specify_init() {
   fi
 
   case "${ai_tool}" in
-  copilot | qwen | qoder | opencode)
+  claude | copilot | opencode | qwen | qoder )
     ;;
   *)
     log error "Unsupported AI tool: ${ai_tool}"
@@ -179,6 +179,12 @@ function specify_init_qoder_project() {
 function specify_init_opencode_project() {
   local project_name=${1:-.}
   specify_init opencode "${project_name}" true
+}
+
+# Initialize a Specify project with claude code
+function specify_init_claude_project() {
+  local project_name=${1:-.}
+  specify_init claude "${project_name}" true
 }
 
 function specify_deinit_copilot_project() {
