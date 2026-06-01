@@ -1236,3 +1236,451 @@ function k8s_foreach_container_exec() {
     kubectl exec -n ${namepsace} -it ${pod_name} -c ${container} -- $@
   done
 }
+
+
+# ============================================================
+# Dev workflow helpers: code-server, debug pods, ssh, supervisor
+# (merged from xuanji-iac/src/bash/12_kubernetes.sh)
+# ============================================================
+
+function k8s_code_server_service() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  printf "%-40s %-40s %-16s %-24s\n" Namespace Service Name URL
+  kubectl get service ${ns_opt} -l app.kubernetes.io/type=development $@ -o go-template-file=/dev/stdin <<'EOF' | sed -e "$(net_hosts_resolve_sed_script)"
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $service_name := .metadata.name -}}
+  {{- $external_ips := .spec.externalIPs -}}
+  {{- $ports := .spec.ports -}}
+  {{- range $external_ips -}}
+    {{- $external_ip := . -}}
+    {{- range $ports -}}
+      {{- if or (eq (printf "%s" .targetPort) "codeserver") -}}
+        {{- printf "%-40s " $namespace_name -}}
+        {{- printf "%-40s " $service_name -}}
+        {{- printf "%-16s " .name -}}
+        {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
+        {{- printf "http://%-24s " $combine -}}      
+        {{"\n"}}
+      {{- end -}}
+      {{- if or (eq (printf "%s" .targetPort) "codeservers") -}}
+        {{- printf "%-40s " $namespace_name -}}
+        {{- printf "%-40s " $service_name -}}
+        {{- printf "%-16s " .name -}}
+        {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
+        {{- printf "https://%-24s " $combine -}}      
+        {{"\n"}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_code_server_config() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  kubectl get configmap ${ns_opt} -l app.kubernetes.io/type=development $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items -}}
+  {{- if and .data (index .data "config.yaml") -}}
+    {{- printf "Namespace: %-24s\n" .metadata.namespace -}}
+    {{- printf "Name: %-60s\n" .metadata.name -}}
+    {{- printf "data: config.yaml\n%-80s\n" (index .data "config.yaml") -}}
+    {{"-----------------------------------------------------------------------------------\n"}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_code_server_open() {
+  local namepsace=${1}
+  local service=${2}
+  local k8sctl="kubectl -n ${namepsace} get service ${service} "
+  local list_ip_tpl=$(
+    cat <<'EOF'
+{{ range .spec.externalIPs }}
+  {{- . }}
+{{ end }}
+EOF
+  )
+  available_ip=""
+  for ip in $(eval "${k8sctl} -o go-template --template=\"${list_ip_tpl}\""); do
+    if net_ping ${ip}; then
+      available_ip=${ip}
+      break
+    else
+      echo "${ip} is not available"
+    fi
+  done
+
+  if [ -n "${available_ip}" ]; then
+    local url_tpl=$(
+      cat <<'EOF' | sed "s/@AVAILABLE_IP@/${available_ip}/g"
+{{- $external_ips := .spec.externalIPs -}}
+{{- $ports := .spec.ports -}}
+{{- range $external_ips -}}
+  {{- $external_ip := . -}}
+  {{- range $ports -}}
+    {{- if and (eq (printf "%s" .targetPort) "codeserver") (eq (printf "%s" $external_ip) "@AVAILABLE_IP@") -}}
+      {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
+      {{- printf "http://%-24s " $combine }}      
+    {{- end -}}
+    {{- if and (eq (printf "%s" .targetPort) "codeservers") (eq (printf "%s" $external_ip) "@AVAILABLE_IP@") -}}
+      {{- $combine := (printf "%v:%v" $external_ip .nodePort) -}}
+      {{- printf "https://%-24s " $combine }}      
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+    )
+    url=${k8sctl} -o go-template --template='${url_tpl}' | sed -e "$(net_hosts_resolve_sed_script)"
+    chrome_open ${url}
+  fi
+}
+
+function k8s_vscode_remote() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  printf "Config\n"
+  kubectl get service ${ns_opt} -l app.kubernetes.io/type=development $@ -o go-template-file=/dev/stdin <<'EOF' | sed -e "$(net_hosts_resolve_sed_script)"
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $service_name := .metadata.name -}}
+  {{- $external_ips := .spec.externalIPs -}}
+  {{- $ports := .spec.ports -}}
+  {{- range $external_ips -}}
+    {{- $external_ip := . -}}
+    {{- range $ports -}}
+      {{- if or (eq (printf "%s" .targetPort) "ssh") -}}
+        {{- printf "ssh_host_config %s %d '%s' >> ~/.vscode/ssh_config " $external_ip .nodePort $service_name -}}      
+        {{"\n"}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_ssh_login() {
+  local namepsace=${1}
+  local service=${2}
+
+  ssh_opts=$(k8s_svc_avail_external_ip_port ${namepsace} ${service} ssh | awk '{print "-p "$2" root@"$1 }')
+  log "ssh ${ssh_opts}"
+  ssh ${ssh_opts}
+}
+
+function k8s_ssh_code_server() {
+  local namepsace=${1}
+  local service=${2}
+  ip_port=$(k8s_svc_avail_external_ip_port ${namepsace} ${service} ssh)
+  ip=$(echo ${ip_port} | awk '{print $1}')
+  port=$(echo ${ip_port} | awk '{print $2}')
+  vscode_port=9870
+
+  ssh_opts=$(k8s_svc_avail_external_ip_port ${namepsace} ${service} ssh | awk '{print "-p "$2" root@"$1 }')
+  if ssh_local_to_remote ${port} ${vscode_port} ${ip} ${port}; then
+    log "open browser at http://localhost:${port}"
+    chrome_open "http://localhost:${port}"
+  else
+    log "can not forward local port [${port}] to [${vscode_port}] through ssh://${ip}:${port}"
+  fi
+}
+
+function k8s_cws_devel_pods() {
+  LABEL="code-workspace.cloud/cws-devel"
+  local namepsace=${1:-default}
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  shift
+  printf "%-30s %-50s %-10s %-20s %-20s %-20s\n" Namespace Name Status Node Runtime Project
+  kubectl get pods ${ns_opt} -l ${LABEL} -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items -}}
+  {{- printf "%-30s " .metadata.namespace -}}
+  {{- printf "%-50s " .metadata.name -}}
+  {{- printf "%-10s " .status.phase -}}
+  {{- with .spec.nodeName -}}
+    {{- printf "%-20s " . -}}
+  {{- else -}}
+    {{- printf "%-20s " "None" -}}
+  {{- end -}}
+  {{- with .spec.runtimeClassName -}}
+    {{- printf "%-20s " . -}}
+  {{- else -}}
+    {{- printf "%-20s " "runc" -}}
+  {{- end -}}
+  {{- $project := (index .metadata.labels "code-workspace.cloud/cws-devel") -}}
+  {{- if $project -}}
+    {{- printf "%-20s " $project -}}
+  {{- else -}}
+    {{- printf "%-20s " "None" -}}
+  {{- end -}}
+  {{"\n"}}
+{{- end -}}
+EOF
+}
+
+function k8s_create_image_secret() {
+  local context=${1}
+  local name=${2:-code-workspace}
+  read -s -p "Enter password: " password
+  if [ -z "${context}" ] || [ -z "${password}" ]; then
+    log warn "Usage: k8s_create_image_secret <context> <password>"
+    return ${RETURN_FAILURE}
+  fi
+  case ${context} in
+  workspace)
+    username=liuqiming.lqm
+    registry=reg.docker.alibaba-inc.com
+    ;;
+  internal)
+    username=liuqiming.lqm@1094633731167611
+    # registry=code-workspace-registry-vpc.cn-hangzhou.cr.aliyuncs.com
+    registry=code-workspace-registry-vpc.cn-shanghai.cr.aliyuncs.com
+    ;;
+  external)
+    username=liuqiming.lqm@1094633731167611
+    registry=code-workspace-registry-vpc.ap-southeast-1.cr.aliyuncs.com
+    ;;
+  docker)
+    username=cwsimages
+    registry=registry-1.docker.io
+    ;;
+  *)
+    log warn "Usage: k8s_create_image_secret <context> <password>"
+    return ${RETURN_FAILURE}
+    ;;
+  esac
+  kubectl create secret docker-registry ${name}-${context} \
+    --docker-server="${registry}" \
+    --docker-username="${username}" \
+    --docker-password="${password}"
+  log notice "image secret [${name}-${context}] created!"
+}
+
+function k8s_update_config() {
+  local k8s_config_root=${1:-${PWD}}
+  local old_context=$(kubectl config current-context 2>/dev/null)
+  if [ -n "${old_context}" ]; then
+    local old_namespace=$(kubectl config get-contexts ${old_context} --no-headers | awk '{print $NF}')
+  fi
+  local k8s_config_out=$(realpath ~/.kube/config || echo ~/.kube/config)
+  cws_py_cmd kubernetes-update-kubeconfig -o ${k8s_config_out} ${k8s_config_root} $@
+  if [ -n "${old_context}" ]; then
+    log notice "restore old context [${old_context}] and namespace [${old_namespace}]"
+    kubectl config use-context ${old_context}
+  fi
+  if [ -n "${old_namespace}" ]; then
+    kubectl config set-context --current --namespace=${old_namespace}
+  fi
+}
+
+function k8s_merge_config() {
+  local k8s_config_root=${PROFILES}/config/kube
+  local k8s_config_out=${k8s_config_root}/kubeconfig.yaml
+  log warn "deprecated, use k8s_update_config instead!"
+  export KUBECONFIG="$(ls ${k8s_config_root}/*/*/kube/config.yaml | tr '\n' ':')${extra_kubeconfig}"
+  echo "update local kubeconfig using KUBECONFIG:"
+  echo ${KUBECONFIG} | tr ':' '\n'
+  kubectl config view --flatten >${k8s_config_out}
+}
+
+function k8s_sshd() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  printf "%-40s %-40s %-16s %-24s\n" Namespace Service Name URL
+  kubectl get service ${ns_opt} -l app.kubernetes.io/name=development $@ -o go-template-file=/dev/stdin <<'EOF' | sed -e "$(net_hosts_resolve_sed_script)"
+{{- range .items -}}
+  {{- $namespace_name := .metadata.namespace -}}
+  {{- $service_name := .metadata.name -}}
+  {{- $external_ips := .spec.externalIPs -}}
+  {{- $ports := .spec.ports -}}
+  {{- range $external_ips -}}
+    {{- $external_ip := . -}}
+    {{- range $ports -}}
+      {{- if or (eq (printf "%s" .targetPort) "ssh") -}}
+        {{- printf "%-40s " $namespace_name -}}
+        {{- printf "%-40s " $service_name -}}
+        {{- printf "%-16s " .name -}}
+        {{- printf "ssh -p %d root@%s " .nodePort $external_ip }}
+        ssh_host_config {{$external_ip}} {{.nodePort}} '{{$namespace_name}}-{{$service_name}}' >> ~/.vscode/ssh_config
+        {{"\n"}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_rebuild_pod() {
+  cws_py_cmd kubernetes-rebuild-pod ${@}
+}
+
+function k8s_secret_from_aksk() {
+  local name=${1}
+  kubectl create secret -n kube-system generic ${name} \
+    --from-literal=id='LTA******************GWN' \
+    --from-literal=secret='***********'
+}
+
+function k8s_debug_pod_ssh() {
+  local context=${1}
+  local namespace=${2}
+  local pod_name=${3}
+  local id_rsa=${4:-${PROFILES}/config/ssh/${context}/id_rsa}
+  if [ -z "${context}" ] || [ -z "${namespace}" ] || [ -z "${pod_name}" ]; then
+    log warn "Usage: k8s_debug_pod_ssh <context> <namespace> <pod_name> [id_rsa]"
+    return ${RETURN_FAILURE}
+  fi
+  local target_port=10022
+  local local_port=$(cws_py_cmd network-free-port)
+  k8s_pod_forwarding ${namespace} ${pod_name} ${target_port} ${local_port} &
+  echo "ssh -p ${local_port} -i ${id_rsa} root@${context}.code-workspace.cloud"
+}
+
+function k8s_debug_pod_code_server() {
+  local context=${1}
+  local namespace=${2}
+  local pod_name=${3}
+  if [ -z "${context}" ] || [ -z "${namespace}" ] || [ -z "${pod_name}" ]; then
+    log warn "Usage: k8s_debug_pod_code_server <context> <namespace> <pod_name>"
+    return ${RETURN_FAILURE}
+  fi
+  local target_port=9871
+  local local_port=$(cws_py_cmd network-free-port)
+  k8s_pod_forwarding ${namespace} ${pod_name} ${target_port} ${local_port} &
+  echo "chrome_open https://${context}.code-workspace.cloud:${local_port}"
+}
+
+function k8s_supervisord() {
+  local namespace=${1}
+  local pod=${2}
+  kubectl -n ${namespace} exec ${pod} -- supervisord -c /etc/supervisor/supervisord.ini
+}
+
+function k8s_supervisorctl() {
+  local namespace=${1}
+  local pod=${2}
+  local cmd=${3:-status}
+  kubectl -n ${namespace} exec ${pod} -- supervisorctl ${cmd}
+}
+
+function k8s_rund_pods() {
+  local namepsace=${1}
+  if [ -z "${namepsace}" ]; then
+    namepsace=all
+  else
+    shift
+  fi
+  case ${namepsace} in
+  all)
+    ns_opt=-A
+    ;;
+  *)
+    ns_opt="-n ${namepsace}"
+    ;;
+  esac
+  printf "%-30s %-50s %-10s %-12s %-40s %-20s\n" Namespace Name Status OwnerType OwnerName Node
+  kubectl get pods ${ns_opt} $@ -o go-template-file=/dev/stdin <<'EOF'
+{{- range .items -}}
+  {{- if eq (printf "%s" .spec.runtimeClassName) ("rund") -}}
+    {{- printf "%-30s " .metadata.namespace -}}
+    {{- printf "%-50s " .metadata.name -}}
+    {{- printf "%-10s " .status.phase -}}
+    {{- with .metadata.ownerReferences -}}
+      {{- $owner := index . 0 -}}
+      {{- printf "%-12s " $owner.kind -}}
+      {{- printf "%-40s " $owner.name -}}
+    {{- else -}}
+      {{- printf "%-12s " "None" -}}
+      {{- printf "%-40s " "None" -}}
+    {{- end -}}
+    {{- with .spec.nodeName -}}
+      {{- printf "%-20s " . -}}
+    {{- else -}}
+      {{- printf "%-20s " "None" -}}
+    {{- end -}}
+    {{"\n"}}
+  {{- end -}}
+{{- end -}}
+EOF
+}
+
+function k8s_dump_rund_pods() {
+  local namespace=$1
+  local pod=$2
+  if [ -z "${namespace}" ]; then
+    log warn "Usage: k8s_dump_pod <namespace> [pod name]"
+    return ${RETURN_FAILURE}
+  fi
+  if [ -z "${pod}" ]; then
+    k8s_rund_pods ${namespace} | grep -v 'Namespace' | awk '{print "mkdir -pv "$6";kubectl get pod -n "$1" -o yaml "$2" >"$6"/"$2".yaml"}' | tee /dev/stderr | bash
+  else
+    kubectl get pod -n ${namespace} -o yaml ${pod} >${pod}.yaml
+  fi
+}
+
+function k8s_node_pods() {
+  k8s_pods $@ | awk '$7=="Node"{print}'
+}
+
+function k8s_break_yaml() {
+  for m in *.yaml; do
+    cws_py_cmd kubernetes-break-manifest -k -o manifest/ $m
+  done
+}

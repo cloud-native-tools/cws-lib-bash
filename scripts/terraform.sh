@@ -270,3 +270,8 @@ function tf_find_module() {
       fi
     done
 }
+
+
+function tf_list() {
+  cws_py_cmd terraform-list-state $@
+}

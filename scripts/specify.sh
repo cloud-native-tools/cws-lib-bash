@@ -189,24 +189,24 @@ function specify_init_claude_project() {
 
 function specify_deinit_copilot_project() {
   rm -rfv .github/prompts/speckit.*.prompt.md
-  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/memory/features .specify/memory/features.md
   rm -rfv .specify/scripts .specify/templates
 }
 
 function specify_deinit_qwen_project() {
   rm -rfv .qwen/commands/speckit.*.toml
-  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/memory/features .specify/memory/features.md
   rm -rfv .specify/scripts .specify/templates
 }
 
 function specify_deinit_qoder_project() {
   rm -rfv .qoder/commands/speckit.*.md
-  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/memory/features .specify/memory/features.md
   rm -rfv .specify/scripts .specify/templates
 }
 
 function specify_deinit_opencode_project() {
   rm -rfv .opencode/command/speckit.*.md
-  rm -rfv .specify/memory/features .specify/memory/feature-index.md
+  rm -rfv .specify/memory/features .specify/memory/features.md
   rm -rfv .specify/scripts .specify/templates
 }
