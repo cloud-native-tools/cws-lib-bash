@@ -395,8 +395,8 @@ function git_who_delete_file() {
 
   # Use git log with --diff-filter=D to find deletions
   # --name-only shows the file names, --diff-filter=D filters for deletions only
-  git log --pretty=format:"%h %s" --name-only --diff-filter=D --max-count=${count} | \
-  awk -v pattern="${file_pattern}" '
+  git log --pretty=format:"%h %s" --name-only --diff-filter=D --max-count=${count} |
+    awk -v pattern="${file_pattern}" '
     BEGIN { commit=""; message="" }
     /^[0-9a-f]+ / {
       if (commit != "" && found) {
@@ -1336,14 +1336,14 @@ function git_to_folder() {
   # Parse args
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      -f | --force)
-        force=true
-        shift
-        ;;
-      *)
-        target_dir="$1"
-        shift
-        ;;
+    -f | --force)
+      force=true
+      shift
+      ;;
+    *)
+      target_dir="$1"
+      shift
+      ;;
     esac
   done
 
@@ -1522,117 +1522,276 @@ function git_from_folder() {
 
 # Get repository root, with fallback for non-git repositories
 function git_repo_root() {
-    if git rev-parse --show-toplevel >/dev/null 2>&1; then
-        git rev-parse --show-toplevel
-    else
-        # Fall back to script location for non-git repos
-        local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-        (cd "$script_dir/../../.." && pwd)
-    fi
+  if git rev-parse --show-toplevel >/dev/null 2>&1; then
+    git rev-parse --show-toplevel
+  else
+    # Fall back to script location for non-git repos
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    (cd "$script_dir/../../.." && pwd)
+  fi
 }
 
 # Get current branch, with fallback for non-git repositories
 function git_current_branch() {
-    # First check if SPECIFY_FEATURE environment variable is set
-    if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
-        echo "$SPECIFY_FEATURE"
-        return
-    fi
+  # First check if SPECIFY_FEATURE environment variable is set
+  if [[ -n "${SPECIFY_FEATURE:-}" ]]; then
+    echo "$SPECIFY_FEATURE"
+    return
+  fi
 
-    # Then check git if available
-    if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
-        git rev-parse --abbrev-ref HEAD
-        return
-    fi
+  # Then check git if available
+  if git rev-parse --abbrev-ref HEAD >/dev/null 2>&1; then
+    git rev-parse --abbrev-ref HEAD
+    return
+  fi
 
-    # For non-git repos, try to find the latest feature directory
-    local repo_root=$(git_repo_root)
-    local specs_dir="$repo_root/.specify/specs"
+  # For non-git repos, try to find the latest feature directory
+  local repo_root=$(git_repo_root)
+  local specs_dir="$repo_root/.specify/specs"
 
-    if [[ -d "$specs_dir" ]]; then
-        local latest_feature=""
-        local highest=0
+  if [[ -d "$specs_dir" ]]; then
+    local latest_feature=""
+    local highest=0
 
-        for dir in "$specs_dir"/*; do
-            if [[ -d "$dir" ]]; then
-                local dirname=$(basename "$dir")
-                if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
-                    local number=${BASH_REMATCH[1]}
-                    number=$((10#$number))
-                    if [[ "$number" -gt "$highest" ]]; then
-                        highest=$number
-                        latest_feature=$dirname
-                    fi
-                fi
-            fi
-        done
-
-        if [[ -n "$latest_feature" ]]; then
-            echo "$latest_feature"
-            return
+    for dir in "$specs_dir"/*; do
+      if [[ -d "$dir" ]]; then
+        local dirname=$(basename "$dir")
+        if [[ "$dirname" =~ ^([0-9]{3})- ]]; then
+          local number=${BASH_REMATCH[1]}
+          number=$((10#$number))
+          if [[ "$number" -gt "$highest" ]]; then
+            highest=$number
+            latest_feature=$dirname
+          fi
         fi
-    fi
+      fi
+    done
 
-    echo "main"  # Final fallback
+    if [[ -n "$latest_feature" ]]; then
+      echo "$latest_feature"
+      return
+    fi
+  fi
+
+  echo "main" # Final fallback
 }
 
 # Check if we have git available
 function has_git() {
-    git rev-parse --show-toplevel >/dev/null 2>&1
+  git rev-parse --show-toplevel >/dev/null 2>&1
 }
-
 
 # --- Gitignore Helpers ---
 
 # Check if a pattern exists in .gitignore (exact match)
 # Usage: gitignore_has_pattern "pattern" "/path/to/.gitignore"
 function gitignore_has_pattern() {
-    local pattern="$1"
-    local gitignore_file="$2"
+  local pattern="$1"
+  local gitignore_file="$2"
 
-    if [ -z "$pattern" ] || [ -z "$gitignore_file" ]; then
-        return 1
-    fi
+  if [ -z "$pattern" ] || [ -z "$gitignore_file" ]; then
+    return 1
+  fi
 
-    if [ ! -f "$gitignore_file" ]; then
-        return 1
-    fi
+  if [ ! -f "$gitignore_file" ]; then
+    return 1
+  fi
 
-    grep -Fxq "$pattern" "$gitignore_file"
+  grep -Fxq "$pattern" "$gitignore_file"
 }
 
 # Ensure .gitignore exists
 # Usage: gitignore_ensure_exists "/path/to/.gitignore"
 function gitignore_ensure_exists() {
-    local gitignore_file="$1"
+  local gitignore_file="$1"
 
-    if [ -z "$gitignore_file" ]; then
-        return 1
-    fi
+  if [ -z "$gitignore_file" ]; then
+    return 1
+  fi
 
-    if [ ! -f "$gitignore_file" ]; then
-        mkdir -p "$(dirname "$gitignore_file")"
-        touch "$gitignore_file"
-    fi
+  if [ ! -f "$gitignore_file" ]; then
+    mkdir -p "$(dirname "$gitignore_file")"
+    touch "$gitignore_file"
+  fi
 }
 
 # Add a pattern to .gitignore if it doesn't already exist
 # Usage: gitignore_add_pattern "pattern" ["/path/to/.gitignore"]
 function gitignore_add_pattern() {
-    local pattern="$1"
-    local gitignore_file="${2:-$(git_repo_root)/.gitignore}"
+  local pattern="$1"
+  local gitignore_file="${2:-$(git_repo_root)/.gitignore}"
 
-    if [ -z "$pattern" ]; then
-        return 1
+  if [ -z "$pattern" ]; then
+    return 1
+  fi
+
+  gitignore_ensure_exists "$gitignore_file"
+
+  if ! gitignore_has_pattern "$pattern" "$gitignore_file"; then
+    # Ensure a blank line before appending when file is not empty and doesn't end with newline
+    if [ -s "$gitignore_file" ] && [ -n "$(tail -c 1 "$gitignore_file")" ]; then
+      printf '\n' >>"$gitignore_file"
     fi
+    printf '%s\n' "$pattern" >>"$gitignore_file"
+  fi
+}
 
-    gitignore_ensure_exists "$gitignore_file"
+function git_config_setup() {
+  local scope=${1:---global}
+  local git_version=""
+  local git_major=0
+  local git_minor=0
+  local git_patch=0
 
-    if ! gitignore_has_pattern "$pattern" "$gitignore_file"; then
-        # Ensure a blank line before appending when file is not empty and doesn't end with newline
-        if [ -s "$gitignore_file" ] && [ -n "$(tail -c 1 "$gitignore_file")" ]; then
-            printf '\n' >>"$gitignore_file"
-        fi
-        printf '%s\n' "$pattern" >>"$gitignore_file"
-    fi
+  # Parse git version (e.g., "git version 2.46.0" -> major=2 minor=46 patch=0)
+  git_version=$(git --version 2>/dev/null | sed 's/git version //')
+  if [ -z "${git_version}" ]; then
+    log error "git command not found or failed to get version"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  git_major=$(echo "${git_version}" | cut -d. -f1)
+  git_minor=$(echo "${git_version}" | cut -d. -f2)
+  git_patch=$(echo "${git_version}" | cut -d. -f3 | sed 's/[^0-9].*//')
+
+  log info "Detected git version: ${git_version} (major=${git_major}, minor=${git_minor}, patch=${git_patch})"
+
+  # Helper: compare git version >= target
+  # Usage: _git_version_ge <major> <minor> [patch]
+  _git_version_ge() {
+    local req_major=${1} req_minor=${2} req_patch=${3:-0}
+    if [ "${git_major}" -gt "${req_major}" ]; then return 0; fi
+    if [ "${git_major}" -eq "${req_major}" ] && [ "${git_minor}" -gt "${req_minor}" ]; then return 0; fi
+    if [ "${git_major}" -eq "${req_major}" ] && [ "${git_minor}" -eq "${req_minor}" ] && [ "${git_patch}" -ge "${req_patch}" ]; then return 0; fi
+    return 1
+  }
+
+  # ─── Encoding & Display ─────────────────────────────────────────────
+  # core.quotepath=false - 直接显示 UTF-8 路径，不使用八进制转义
+  git config ${scope} core.quotepath false
+  # i18n.commitencoding - 提交时的字符编码
+  git config ${scope} i18n.commitencoding utf-8
+  # i18n.logoutputencoding - 日志输出的字符编码
+  git config ${scope} i18n.logoutputencoding utf-8
+
+  # ─── Default Branch ─────────────────────────────────────────────────
+  # init.defaultBranch - 新仓库默认分支名 (git >= 2.28)
+  if _git_version_ge 2 28; then
+    git config ${scope} init.defaultBranch main
+    log info "Set init.defaultBranch=main (git >= 2.28)"
+  fi
+
+  # ─── Core Performance ──────────────────────────────────────────────
+  # core.longpaths - Windows 长路径支持，macOS/Linux 无害
+  git config ${scope} core.longpaths true
+
+  # core.fsmonitor - 文件系统监控加速大仓库状态检查 (git >= 2.37 内置 fsmonitor)
+  if _git_version_ge 2 37; then
+    git config ${scope} core.fsmonitor true
+    log info "Set core.fsmonitor=true (git >= 2.37 built-in fsmonitor)"
+  elif _git_version_ge 2 26; then
+    # 2.26+ 支持 hook-based fsmonitor，但不自动启用
+    log info "Skipping core.fsmonitor (git < 2.37, hook-based only)"
+  fi
+
+  # core.untrackedCache - 缓存未跟踪文件以提升 git status 速度 (git >= 2.17)
+  if _git_version_ge 2 17; then
+    git config ${scope} core.untrackedCache true
+    log info "Set core.untrackedCache=true (git >= 2.17)"
+  fi
+
+  # ─── Pull & Merge Strategy ─────────────────────────────────────────
+  # pull.rebase=true - 避免不必要的 merge commit
+  git config ${scope} pull.rebase true
+
+  # rebase.autoStash - rebase 前自动 stash 未提交更改 (git >= 2.9)
+  if _git_version_ge 2 9; then
+    git config ${scope} rebase.autoStash true
+    log info "Set rebase.autoStash=true (git >= 2.9)"
+  fi
+
+  # merge.conflictstyle - 使用 zdiff3 冲突样式，显示共同祖先 (git >= 2.35)
+  if _git_version_ge 2 35; then
+    git config ${scope} merge.conflictstyle zdiff3
+    log info "Set merge.conflictstyle=zdiff3 (git >= 2.35)"
+  else
+    git config ${scope} merge.conflictstyle diff3
+    log info "Set merge.conflictstyle=diff3 (git < 2.35)"
+  fi
+
+  # ─── Diff & Color ──────────────────────────────────────────────────
+  # diff.colorMoved - 高亮移动的代码块 (git >= 2.17)
+  if _git_version_ge 2 17; then
+    git config ${scope} diff.colorMoved default
+    log info "Set diff.colorMoved=default (git >= 2.17)"
+  fi
+
+  # diff.algorithm - 使用 histogram 算法，diff 结果更清晰
+  git config ${scope} diff.algorithm histogram
+
+  # color.ui=auto - 终端自动着色
+  git config ${scope} color.ui auto
+
+  # ─── Push Behavior ─────────────────────────────────────────────────
+  # push.default=current - 推送当前分支到同名远程分支
+  git config ${scope} push.default current
+
+  # push.autoSetupRemote - 首次推送自动设置上游 (git >= 2.37)
+  if _git_version_ge 2 37; then
+    git config ${scope} push.autoSetupRemote true
+    log info "Set push.autoSetupRemote=true (git >= 2.37)"
+  fi
+
+  # push.followTags - push 时自动推送相关 annotated tags (git >= 2.4)
+  if _git_version_ge 2 4; then
+    git config ${scope} push.followTags true
+    log info "Set push.followTags=true (git >= 2.4)"
+  fi
+
+  # ─── Fetch & Transfer ──────────────────────────────────────────────
+  # fetch.prune - fetch 时自动清理已删除的远程分支引用
+  git config ${scope} fetch.prune true
+
+  # fetch.prunetags - fetch 时自动清理已删除的远程 tags (git >= 2.17)
+  if _git_version_ge 2 17; then
+    git config ${scope} fetch.pruneTags true
+    log info "Set fetch.pruneTags=true (git >= 2.17)"
+  fi
+
+  # transfer.fsckObjects - 传输时校验对象完整性
+  git config ${scope} transfer.fsckObjects true
+
+  # ─── Rerere (Reuse Recorded Resolution) ────────────────────────────
+  # rerere.enabled - 自动记录并复用冲突解决方案
+  git config ${scope} rerere.enabled true
+
+  # ─── Submodule ──────────────────────────────────────────────────────
+  # submodule.recurse - 自动递归更新子模块 (git >= 2.14)
+  if _git_version_ge 2 14; then
+    git config ${scope} submodule.recurse true
+    log info "Set submodule.recurse=true (git >= 2.14)"
+  fi
+
+  # ─── Column Display ────────────────────────────────────────────────
+  # column.ui=auto - branch/tag 列表使用多列显示 (git >= 2.20)
+  if _git_version_ge 2 20; then
+    git config ${scope} column.ui auto
+    log info "Set column.ui=auto (git >= 2.20)"
+  fi
+
+  # branch.sort - 按最近提交排序分支列表 (git >= 2.20)
+  if _git_version_ge 2 20; then
+    git config ${scope} branch.sort -committerdate
+    log info "Set branch.sort=-committerdate (git >= 2.20)"
+  fi
+
+  # ─── macOS Specific ────────────────────────────────────────────────
+  if is_macos 2>/dev/null; then
+    # core.precomposeunicode - macOS 文件名 Unicode 规范化
+    git config ${scope} core.precomposeunicode true
+    log info "Set core.precomposeunicode=true (macOS)"
+  fi
+
+  log notice "git config setup completed (version: ${git_version}, scope: ${scope})"
+  return ${RETURN_SUCCESS:-0}
 }
