@@ -14,7 +14,7 @@ function cws_py_uninstall() {
   fi
 }
 
-function cws_py_is_installed() {
+function cws_python_is_installed() {
   # Check if python3 is available
   if ! have python3; then
     return "${RETURN_FAILURE:-1}"
@@ -33,7 +33,30 @@ function cws_py_is_installed() {
   return "${RETURN_FAILURE:-1}"
 }
 
-function cws_py_install() {
+function cws_python_install() {
+  # Prefer local source installation when inside the cws-lib-python project directory.
+  # Check CWS_LIB_PYTHON_HOME first, then fall back to detecting the project root from PWD.
+  local local_install=""
+  if [ -n "${CWS_LIB_PYTHON_HOME}" ] && [ -x "${CWS_LIB_PYTHON_HOME}/bin/cws_py_install" ]; then
+    local_install="${CWS_LIB_PYTHON_HOME}/bin/cws_py_install"
+  else
+    # Walk up from PWD to find the cws-lib-python project root
+    local check_dir="${PWD}"
+    while [ "${check_dir}" != "/" ]; do
+      if [ -x "${check_dir}/bin/cws_py_install" ] && [ -d "${check_dir}/src" ]; then
+        local_install="${check_dir}/bin/cws_py_install"
+        break
+      fi
+      check_dir=$(dirname "${check_dir}")
+    done
+  fi
+
+  if [ -n "${local_install}" ]; then
+    log info "Detected local cws-lib-python project, installing from source: ${local_install}"
+    "${local_install}" "$@"
+    return $?
+  fi
+
   log info "Installing cws-lib-python from multiple sources..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."

@@ -21,9 +21,9 @@ function specify_install() {
   fi
 
   # Ensure cws-lib-python is installed as it might be a dependency
-  if ! cws_py_is_installed; then
+  if ! cws_python_is_installed; then
     log warn "cws-lib-python is not installed, attempting to install..."
-    if ! cws_py_install; then
+    if ! cws_python_install; then
       log error "Failed to install cws-lib-python dependency"
       return "${RETURN_FAILURE:-1}"
     fi
