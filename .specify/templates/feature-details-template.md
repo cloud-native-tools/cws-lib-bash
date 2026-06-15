@@ -59,6 +59,20 @@
 - **Ready for Review**: [STATUS_READY_FOR_REVIEW_CRITERIA]
 - **Completed**: [STATUS_COMPLETED_CRITERIA]
 
+### Canonical Status State Machine (single source of truth)
+
+This is the authoritative transition table cited by `/speckit.feature`, `/speckit.plan`, `/speckit.tasks`, and `/speckit.implement`. Those commands MUST NOT paraphrase the rules — they MUST point at this section.
+
+| From | To | Owner Command | Trigger / Definition of Done |
+|------|------|----------------|------------------------------|
+| (n/a) | Draft | `/speckit.feature` | Feature row first added to `.specify/memory/features.md`. |
+| Draft | Planned | `/speckit.plan` | `plan.md`, `data-model.md`, `contracts/`, and `quickstart.md` exist for the requirement bound to this feature; Constitution Check has no unjustified Fail rows. |
+| Planned | Implemented | `/speckit.implement` | `tasks.md` has zero `[ ]` rows (all tasks are `[X]` closed or `[~]` deferred) AND `verification.log` records a `SC-NNN_status=pass|deferred` row for every Success Criterion in `requirements.md`. |
+| Implemented | Ready for Review | `/speckit.review` (or human) | All deferred (`[~]`) tasks are resolved or explicitly waived, and review evidence has been produced. |
+| Ready for Review | Completed | Human / governance | Final acceptance. |
+
+**Critical contract**: `/speckit.plan` MUST land status `Planned` (not `Implemented`). `/speckit.implement` MUST advance `Planned → Implemented` only when the DoD above is satisfied; if any task is `[~]` deferred, append a ` (deferred: T<comma-list>)` suffix to the `Last Updated` cell in `features.md` so the deferral is visible at the index level.
+
 ## Placeholder Glossary
 
 | Token | Meaning / Source |

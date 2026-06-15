@@ -85,7 +85,7 @@ while [ $i -le $# ]; do
             echo "  --json                  Output in JSON format"
             echo "  --debug                 Output diagnostics to stderr"
             echo "  --name, -n <name>       Tool name"
-            echo "  --type, -t <type>       Tool type (mcp-call|project-script|system-binary|shell-function)"
+            echo "  --type, -t <type>       Tool type (project-script|system-binary|shell-function)"
             echo "  --action, -a <action>   Action to perform (find|create|list)"
             echo "  --help, -h              Show this help message"
             echo ""
@@ -96,7 +96,7 @@ while [ $i -le $# ]; do
             echo ""
             echo "Examples:"
             echo "  $0 --name mytool --action find"
-            echo "  $0 --name mytool --type mcp-call --action create"
+            echo "  $0 --name mytool --type project-script --action create"
             echo "  $0 --action list"
             echo ""
             exit 0
@@ -174,11 +174,11 @@ ensure_tool_id_in_record() {
 validate_tool_type() {
     local type="$1"
     case "$type" in
-        mcp-call|project-script|system-binary|shell-function)
+        project-script|system-binary|shell-function)
             return 0
             ;;
         *)
-            report_error "Invalid tool type '$type'. Must be one of: mcp-call, project-script, system-binary, shell-function" "$JSON_MODE"
+            report_error "Invalid tool type '$type'. Must be one of: project-script, system-binary, shell-function" "$JSON_MODE"
             return 1
             ;;
     esac
@@ -243,9 +243,9 @@ refresh_all_tools_json() {
     status=0
 
     if [ "$DEBUG_MODE" = true ]; then
-        REFRESH_TOOLS_DEBUG=1 "$refresh_script" --mcp --system --shell --project --json --debug >"$stdout_file" 2>"$stderr_file" || status=$?
+        REFRESH_TOOLS_DEBUG=1 "$refresh_script" --system --shell --project --json --debug >"$stdout_file" 2>"$stderr_file" || status=$?
     else
-        "$refresh_script" --mcp --system --shell --project --json >"$stdout_file" 2>"$stderr_file" || status=$?
+        "$refresh_script" --system --shell --project --json >"$stdout_file" 2>"$stderr_file" || status=$?
     fi
 
     if [ "$DEBUG_MODE" = true ]; then
@@ -312,39 +312,29 @@ if isinstance(data, dict):
     if isinstance(data.get('tools'), list):
         all_tools.extend(tool for tool in data.get('tools', []) if isinstance(tool, dict))
 
-    # Check for MCP tools structure (with servers array)
-    if 'servers' in data:
-        for server in data.get('servers', []):
-            if isinstance(server, dict) and 'tools' in server:
-                for tool in server.get('tools', []):
-                    if isinstance(tool, dict):
-                        tool['source_type'] = 'mcp-call'
-                        tool['server_name'] = server.get('name', 'unknown')
-                        all_tools.append(tool)
-    
     # Check for system tools structure (with binaries array)
     if 'binaries' in data:
         for binary in data.get('binaries', []):
             if isinstance(binary, dict):
                 binary['source_type'] = 'system-binary'
                 all_tools.append(binary)
-    
+
     # Check for shell functions (list at top level)
     if 'functions' in data:
         for func in data.get('functions', []):
             if isinstance(func, dict):
                 func['source_type'] = 'shell-function'
                 all_tools.append(func)
-    
+
     # Check for project scripts (list at top level)
     if 'scripts' in data:
         for script in data.get('scripts', []):
             if isinstance(script, dict):
                 script['source_type'] = 'project-script'
                 all_tools.append(script)
-    
-    # Also check simple keys: mcp, system, shell, project
-    for source_type in ['mcp', 'system', 'shell', 'project']:
+
+    # Also check simple keys: system, shell, project
+    for source_type in ['system', 'shell', 'project']:
         tools = data.get(source_type, [])
         if isinstance(tools, list):
             for tool in tools:
@@ -398,9 +388,6 @@ get_template_file() {
     local template_name=""
     
     case "$tool_type" in
-        mcp-call)
-            template_name="tool-mcp-call-template.md"
-            ;;
         project-script)
             template_name="tool-project-script-template.md"
             ;;
@@ -491,16 +478,6 @@ all_tools = []
 if isinstance(data, dict) and isinstance(data.get('tools'), list):
     all_tools.extend(tool for tool in data.get('tools', []) if isinstance(tool, dict))
 elif isinstance(data, dict):
-    # Check for MCP tools structure (with servers array)
-    if 'servers' in data:
-        for server in data.get('servers', []):
-            if isinstance(server, dict) and 'tools' in server:
-                for tool in server.get('tools', []):
-                    if isinstance(tool, dict):
-                        tool['source_type'] = 'mcp-call'
-                        tool['server_name'] = server.get('name', 'unknown')
-                        all_tools.append(tool)
-    
     # Check for system tools structure (with binaries array)
     if 'binaries' in data:
         for binary in data.get('binaries', []):

@@ -10,9 +10,39 @@ is_dash && alias sh="dash"
 
 function debug_on() {
   local log=$1
-  if [ -n "${log}" ]; then
-    exec 2 >${log}
+
+  if [ "${__CWS_DEBUG_ACTIVE:-0}" != "1" ]; then
+    case $- in
+      *x*) __CWS_DEBUG_WAS_XTRACE=1 ;;
+      *) __CWS_DEBUG_WAS_XTRACE=0 ;;
+    esac
+
+    if [ "${PS4+x}" = "x" ]; then
+      __CWS_DEBUG_HAD_PS4=1
+      __CWS_DEBUG_OLD_PS4=${PS4}
+    else
+      __CWS_DEBUG_HAD_PS4=0
+      unset __CWS_DEBUG_OLD_PS4
+    fi
+
+    __CWS_DEBUG_ZSH_PROMPT_SUBST=0
+    if is_zsh && [[ -o promptsubst ]]; then
+      __CWS_DEBUG_ZSH_PROMPT_SUBST=1
+    fi
+
+    __CWS_DEBUG_FD2_SAVED=0
+    if [ -n "${log}" ]; then
+      exec 9>&2
+      if ! exec 2>"${log}"; then
+        exec 2>&9 9>&-
+        return "${RETURN_FAILURE:-1}"
+      fi
+      __CWS_DEBUG_FD2_SAVED=1
+    fi
+
+    __CWS_DEBUG_ACTIVE=1
   fi
+
   if is_bash; then
     export PS4='+$? ${BASH_SOURCE}:${LINENO}:${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
   fi
@@ -26,6 +56,34 @@ function debug_on() {
 
 function debug_off() {
   set +x
+
+  if [ "${__CWS_DEBUG_ACTIVE:-0}" = "1" ]; then
+    if [ "${__CWS_DEBUG_HAD_PS4:-0}" = "1" ]; then
+      export PS4="${__CWS_DEBUG_OLD_PS4}"
+    else
+      unset PS4
+    fi
+
+    if is_zsh && [ "${__CWS_DEBUG_ZSH_PROMPT_SUBST:-0}" != "1" ]; then
+      unsetopt prompt_subst
+    fi
+
+    if [ "${__CWS_DEBUG_FD2_SAVED:-0}" = "1" ]; then
+      exec 2>&9 9>&-
+    fi
+
+    local was_xtrace=${__CWS_DEBUG_WAS_XTRACE:-0}
+    unset __CWS_DEBUG_ACTIVE
+    unset __CWS_DEBUG_WAS_XTRACE
+    unset __CWS_DEBUG_HAD_PS4
+    unset __CWS_DEBUG_OLD_PS4
+    unset __CWS_DEBUG_ZSH_PROMPT_SUBST
+    unset __CWS_DEBUG_FD2_SAVED
+
+    if [ "${was_xtrace}" = "1" ]; then
+      set -x
+    fi
+  fi
 }
 
 function is_interactive() { test -t 0; }

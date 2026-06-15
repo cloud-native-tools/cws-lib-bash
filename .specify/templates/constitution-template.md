@@ -70,12 +70,12 @@ Changes MUST be safe to merge:
 Rationale: ensures consistent quality and predictable releases.
 
 ### VII. Feature-Centric Development
-Feature 是项目的长期核心框架：
-- Feature 列表必须保持为项目的“单一事实来源”。
-- 在 spec → plan → tasks → implement 的每个阶段都必须复核 Feature 的新增/合并/拆分/删除。
-- Feature 变更必须可追溯到相应的 spec/plan 依据，并记录在 Feature 详情中。
+Feature is the long-term core framework of the project:
+- The Feature list MUST remain the "single source of truth" for the project.
+- Every phase of spec → plan → tasks → implement MUST review Feature additions/merges/splits/deletions.
+- Feature changes MUST be traceable to corresponding spec/plan evidence and recorded in the Feature detail.
 
-Rationale: 让项目演进以 Feature 为中心，确保长期一致性与可维护性。
+Rationale: Keep project evolution Feature-centric to ensure long-term consistency and maintainability.
 
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->

@@ -1,128 +1,144 @@
 <!--
   Do NOT remove placeholder tokens. Each [TOKEN] must be replaced when generating a concrete review report.
+
+  This report is SELF-CONTAINED. It is intended to be sent to spec-kit framework maintainers who do not have access to the source repository on their own machine. Therefore:
+
+  - Every file path is absolute, OR written as `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...` so it is resolvable from outside the project.
+  - Every finding includes an inline quoted excerpt of the offending text — readers must be able to judge the issue without opening the source file.
+  - No bare ".specify/..." or other relative paths may appear without absolute or URL context.
+
+  This report is PROBLEM-FIRST. It is NOT a status summary of what the feature does or what each artifact contains. Sections that describe the feature instead of identifying a process gap MUST be deleted.
 -->
 
-# Specification-Driven Development (SDD) Process Review Report: [REQUIREMENT NAME]
+# Specification-Driven Development (SDD) Process Review Report: [REQUIREMENT_NAME]
 
-**Requirement ID**: [REQUIREMENT_ID] (from branch name, e.g., 003)
-**Requirement Key**: [REQUIREMENTS_KEY] (e.g., 003-speckit-agents-command)
-**Related Feature**: [FEATURE_ID] [FEATURE_NAME] (from .specify/memory/features.md)
-**Spec Path**: .specify/specs/[REQUIREMENTS_KEY]/requirements.md  
-**Plan Path**: .specify/specs/[REQUIREMENTS_KEY]/plan.md  
-**Tasks Path**: .specify/specs/[REQUIREMENTS_KEY]/tasks.md  
-**Review Date**: [REVIEW_DATE]  
-**Reviewer (Agent)**: [REVIEWER_NAME]
+> **Audience**: spec-kit framework maintainers.
+> **Purpose**: Identify concrete problems and improvement targets in spec-kit templates, command prompts, automation, and workflow as exposed by this feature's SDD lifecycle.
+> **Intentionally problem-first**: this report omits long narrative summaries of artifact contents. If a sentence describes the feature instead of identifying a process gap, it does not belong here.
 
----
+## 0. Portable Project Context (Self-Contained Snapshot)
 
-## 1. Scope & Overall Assessment
+| Field | Value |
+|-------|-------|
+| Requirement ID | [REQUIREMENT_ID] |
+| Requirement Key | [REQUIREMENTS_KEY] |
+| Requirement Name | [REQUIREMENT_NAME] |
+| Related Feature | [FEATURE_ID] [FEATURE_NAME] |
+| Repository | [REPO_NAME] |
+| Repository URL | [REPO_URL] |
+| Branch | [BRANCH] |
+| Commit SHA | [COMMIT_SHA_FULL] (short: [COMMIT_SHA_SHORT]) |
+| Repo Root (absolute) | [REPO_ROOT_ABS] |
+| Review Date | [REVIEW_DATE] |
+| Reviewer (Agent) | [REVIEWER_NAME] |
+| Environment | [ENVIRONMENT_SUMMARY] |
+| spec-kit Source Snapshot | [SPECKIT_REPO_URL] @ [SPECKIT_COMMIT_OR_VERSION] |
 
-- **Artifacts Reviewed**: [PROCESS_ARTIFACTS_REVIEWED]
-- **Overall Process Health**: [PROCESS_HEALTH_SUMMARY]
-- **Primary Strengths**:
-  - [PROCESS_STRENGTH_1]
-  - [PROCESS_STRENGTH_2]
-- **Primary Gaps**:
-  - [PROCESS_GAP_1]
-  - [PROCESS_GAP_2]
+### Artifact Inventory
 
-## 2. Spec Quality Review (`requirements.md`)
+| Artifact | Lines | Absolute Path | One-line Summary |
+|----------|------:|---------------|-------------------|
+| [ARTIFACT_NAME] | [LINES] | [ABS_PATH] | [ONE_LINE_SUMMARY] |
 
-### 2.1 Clarity & Testability
+(Add one row per artifact actually reviewed. Drop optional artifacts that are absent. Keep summaries to one line each — they exist for orientation, not as a substitute for findings.)
 
-- **User Scenarios Coverage**: [SPEC_USER_SCENARIOS_COVERAGE]
-- **Requirements Testability**: [SPEC_REQUIREMENTS_TESTABILITY]
-- **Success Criteria Measurability**: [SPEC_SUCCESS_CRITERIA_MEASURABILITY]
-- **Assumptions & Scope Boundaries**: [SPEC_ASSUMPTIONS_SCOPE]
+## 1. Process Execution Timeline
 
-### 2.2 Gaps & Observations
+Reconstruct what actually happened during this feature's SDD lifecycle. Capture deviations from the prescribed `/speckit.*` flow, ad-hoc artifacts, manual workarounds, and concrete friction moments. Order chronologically. This section is the raw material for Section 3 — keep it factual, not editorial.
 
-- **Strengths**:
-  - [SPEC_STRENGTH_1]
-  - [SPEC_STRENGTH_2]
-- **Process Gaps / Ambiguities**:
-  - [SPEC_GAP_1]
-  - [SPEC_GAP_2]
+| # | Step / Event | Evidence (commit SHA, file, or quoted excerpt) | Deviation from prescribed flow? |
+|---|--------------|------------------------------------------------|---------------------------------|
+| 1 | [STEP_OR_EVENT] | [EVIDENCE] | [DEVIATION_OR_NONE] |
 
-## 3. Plan Quality Review (`plan.md`)
+## 2. Findings Summary
 
-### 3.1 Traceability & Coherence
+| Severity | Count | Definition |
+|----------|------:|------------|
+| P0 | [P0_COUNT] | Blocks correct use of spec-kit, or creates silent corruption risk. Fix before next spec. |
+| P1 | [P1_COUNT] | Recurring friction across specs. Fix when convenient — currently every spec writer pays the toll. |
+| P2 | [P2_COUNT] | Quality-of-life. Compounding gains across many specs. |
 
-- **Plan aligns to spec requirements**: [PLAN_TRACEABILITY]
-- **Risk identification & mitigation**: [PLAN_RISK_MANAGEMENT]
-- **Sequencing & dependency clarity**: [PLAN_SEQUENCING_CLARITY]
+| Category | Count |
+|----------|------:|
+| Template | [CAT_TEMPLATE_COUNT] |
+| Command Prompt | [CAT_PROMPT_COUNT] |
+| Automation / Scripts | [CAT_AUTOMATION_COUNT] |
+| Workflow | [CAT_WORKFLOW_COUNT] |
+| Documentation | [CAT_DOCS_COUNT] |
 
-### 3.2 Gaps & Observations
+## 3. Findings (Problems & Improvement Targets)
 
-- **Strengths**:
-  - [PLAN_STRENGTH_1]
-  - [PLAN_STRENGTH_2]
-- **Process Gaps / Ambiguities**:
-  - [PLAN_GAP_1]
-  - [PLAN_GAP_2]
+> List **only** problems, friction, ambiguities, and concrete improvement targets. Each finding MUST include an inline quoted excerpt of the offending text and a concrete proposed fix. Order by severity (P0 → P1 → P2), then by category. Drop any finding that lacks evidence — vague complaints are not actionable.
 
-## 4. Tasks Quality Review (`tasks.md`)
+### F1 — [SHORT_FINDING_TITLE]
 
-### 4.1 Coverage & Granularity
+- **Severity**: [P0 | P1 | P2]
+- **Category**: [Template | Command Prompt | Automation | Workflow | Documentation]
+- **Location**: [ABS_PATH or [REPO_URL]/blob/[COMMIT_SHA_FULL]/relative/path#Lstart-Lend]
+- **Evidence** (verbatim quote):
 
-- **Coverage of spec/plan**: [TASKS_COVERAGE]
-- **Granularity & ownership clarity**: [TASKS_GRANULARITY]
-- **Validation / QA tasks included**: [TASKS_VALIDATION_COVERAGE]
+  ```
+  [QUOTED_EXCERPT — preserve original wording verbatim, including whitespace where significant]
+  ```
 
-### 4.2 Gaps & Observations
+- **Why it's a problem**: [ONE_OR_TWO_SENTENCE_EXPLANATION]
+- **Proposed fix**: [CONCRETE_CHANGE_TO_NAMED_FILE_OR_SECTION]
 
-- **Strengths**:
-  - [TASKS_STRENGTH_1]
-  - [TASKS_STRENGTH_2]
-- **Process Gaps / Ambiguities**:
-  - [TASKS_GAP_1]
-  - [TASKS_GAP_2]
+(Repeat the F[N] block for each finding. Do not invent findings to fill space; quality over quantity.)
 
-## 5. Cross-Artifact Traceability
+## 4. What Worked — Preserve (Brief)
 
-- **Spec → Plan traceability**: [TRACE_SPEC_TO_PLAN]
-- **Plan → Tasks traceability**: [TRACE_PLAN_TO_TASKS]
-- **Inconsistencies / missing links**: [TRACE_GAPS]
+> Keep this section **short**. Bullet-only, no narrative paragraphs. List only the spec-kit mechanics worth preserving so they aren't accidentally regressed in a later refactor.
 
-## 6. speckit / SDD Improvement Suggestions
+- [PRESERVE_ITEM_1]
+- [PRESERVE_ITEM_2]
 
-- **Template Improvements**:
-  - [IMPROVE_TEMPLATE_1]
-  - [IMPROVE_TEMPLATE_2]
-- **Prompt / Command Improvements**:
-  - [IMPROVE_PROMPT_1]
-  - [IMPROVE_PROMPT_2]
-- **Automation / Checks**:
-  - [IMPROVE_AUTOMATION_1]
-  - [IMPROVE_AUTOMATION_2]
-- **Workflow Practices**:
-  - [IMPROVE_PROCESS_1]
-  - [IMPROVE_PROCESS_2]
+## 5. spec-kit / SDD Improvement Recommendations
 
-## 7. Follow-ups
+> Group by target subsystem. Each recommendation MUST name the exact file or section in the spec-kit repo to change and cross-reference the source finding ID(s).
 
-- **Recommended process experiments**: [PROCESS_EXPERIMENTS]
-- **Next review trigger**: [PROCESS_NEXT_REVIEW_TRIGGER]
+### 5.1 Template Improvements
 
-## 8. Links & Artifacts
+- **[REC_T1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/templates/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
-- **Specification**: .specify/specs/[REQUIREMENTS_KEY]/requirements.md
-- **Plan**: .specify/specs/[REQUIREMENTS_KEY]/plan.md
-- **Tasks**: .specify/specs/[REQUIREMENTS_KEY]/tasks.md
-- **Data Model** (if any): .specify/specs/[REQUIREMENTS_KEY]/data-model.md
-- **Contracts** (if any): .specify/specs/[REQUIREMENTS_KEY]/contracts/
-- **Research** (if any): .specify/specs/[REQUIREMENTS_KEY]/research.md
-- **Quickstart** (if any): .specify/specs/[REQUIREMENTS_KEY]/quickstart.md
+### 5.2 Command Prompt Improvements
 
----
+- **[REC_C1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/templates/commands/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
-## 9. Conclusion & Next Steps
+### 5.3 Automation / Script Improvements
 
-- **Priority of recommendations (P0/P1/P2)**: [RECOMMENDATION_PRIORITY]
-- **Proposed owner(s)**: [RECOMMENDATION_OWNERS]
-- **Expected impact**: [RECOMMENDATION_IMPACT]
+- **[REC_A1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/scripts/bash/[FILE].sh (or `scripts/python/[FILE].py`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
-## 10. Feedback
+### 5.4 Workflow Improvements
+
+- **[REC_W1_TITLE]** — Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+
+### 5.5 Documentation Improvements
+
+- **[REC_D1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/docs/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+
+(Drop any sub-section that has no recommendations — do not leave empty headers.)
+
+## 6. Priority Roadmap
+
+| Priority | Recommendation | Target File / Subsystem | Source Finding(s) |
+|----------|----------------|--------------------------|-------------------|
+| P0 | [REC_TITLE] | [TARGET] | F[N] |
+| P1 | [REC_TITLE] | [TARGET] | F[N] |
+| P2 | [REC_TITLE] | [TARGET] | F[N] |
+
+## 7. Self-Containment Check
+
+The generator MUST tick every box below before submitting the report. If any box would remain unchecked, fix the report first.
+
+- [ ] Every file path in the report is absolute, or written as `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...`.
+- [ ] Every finding in Section 3 has a quoted excerpt that lets the reader judge the problem without opening the source file.
+- [ ] No bullet says "see attached", "as discussed earlier", or otherwise references context outside this document.
+- [ ] No placeholder tokens (`[...]`) remain anywhere in the report.
+- [ ] Section 4 is short and bullet-only — no multi-paragraph narrative summaries leaked back in.
+- [ ] Section 5 recommendations each cite an exact target file in the spec-kit repo and at least one source finding ID.
+
+## 8. Feedback
 
 Please share the contents of this document with the spec-kit framework developers.
 
@@ -132,27 +148,39 @@ Please share the contents of this document with the spec-kit framework developer
 
 | Token | Meaning / Source |
 |-------|------------------|
-| [REQUIREMENT_ID] | Sequential three-digit requirement identifier from branch name (e.g., 003) |
+| [REQUIREMENT_ID] | Sequential three-digit requirement identifier from branch name (e.g., 023) |
 | [REQUIREMENT_NAME] | Short human-readable name of the requirement/specification |
-| [REQUIREMENTS_KEY] | Combined ID + slug used as spec directory name (e.g., 003-speckit-agents-command) |
-| [FEATURE_ID] | Sequential three-digit feature identifier from .specify/memory/features.md (e.g., 019) |
-| [FEATURE_NAME] | Short human-readable name of the parent feature (e.g., Agents Command) |
+| [REQUIREMENTS_KEY] | Combined ID + slug used as spec directory name (e.g., 023-cross-platform-build) |
+| [FEATURE_ID] | Sequential three-digit feature identifier from `.specify/memory/features.md` (e.g., 021) |
+| [FEATURE_NAME] | Short human-readable name of the parent feature |
+| [REPO_NAME] | Repository basename (`basename "$(git rev-parse --show-toplevel)"`) |
+| [REPO_URL] | Repository origin URL (https form preferred), or `(no remote configured)` |
+| [BRANCH] | Current git branch (`git rev-parse --abbrev-ref HEAD`) |
+| [COMMIT_SHA_FULL] | Full SHA of HEAD at review time (`git rev-parse HEAD`) |
+| [COMMIT_SHA_SHORT] | Abbreviated SHA (`git rev-parse --short HEAD`) |
+| [REPO_ROOT_ABS] | Absolute path of repository root (`git rev-parse --show-toplevel`) |
 | [REVIEW_DATE] | ISO date when this review was generated (YYYY-MM-DD) |
 | [REVIEWER_NAME] | Name/label of the reviewing agent or persona |
-| [PROCESS_*] | Process-level observations and summaries |
-| [SPEC_*] | Spec quality observations derived from `.specify/specs/[REQUIREMENTS_KEY]/requirements.md` |
-| [PLAN_*] | Plan quality observations derived from `.specify/specs/[REQUIREMENTS_KEY]/plan.md` |
-| [TASKS_*] | Task quality observations derived from `.specify/specs/[REQUIREMENTS_KEY]/tasks.md` |
-| [TRACE_*] | Cross-artifact traceability observations |
-| [IMPROVE_*] | Suggestions for improving speckit/SDD templates, prompts, checks, and workflow |
-| [RECOMMENDATION_*] | Summary-level conclusion fields for priority, owners, and impact |
+| [ENVIRONMENT_SUMMARY] | OS, shell, and key toolchain versions relevant to this feature |
+| [SPECKIT_REPO_URL] | URL of the spec-kit repo whose templates/commands/scripts are being reviewed |
+| [SPECKIT_COMMIT_OR_VERSION] | spec-kit commit SHA or release version embedded in the project's `.specify/` snapshot, or `unknown` |
+| [ARTIFACT_NAME] / [LINES] / [ABS_PATH] / [ONE_LINE_SUMMARY] | Per-row entries in the Artifact Inventory |
+| [STEP_OR_EVENT] / [EVIDENCE] / [DEVIATION_OR_NONE] | Per-row entries in the Process Execution Timeline |
+| [P0_COUNT] / [P1_COUNT] / [P2_COUNT] | Counts in the severity summary |
+| [CAT_*_COUNT] | Counts per finding category |
+| F[N] | Stable finding ID (F1, F2, ...) used to cross-reference findings to recommendations |
+| [SHORT_FINDING_TITLE] / [QUOTED_EXCERPT] / [ONE_OR_TWO_SENTENCE_EXPLANATION] / [CONCRETE_CHANGE_TO_NAMED_FILE_OR_SECTION] | Per-finding fields |
+| [REC_*_TITLE] / [CONCRETE_CHANGE] / [IMPACT] | Per-recommendation fields |
 
 ## Replacement Rules
 
-1. No placeholder token may remain in a committed review report.  
-2. Dates must be valid ISO format.  
-3. Keep lists dense; remove unused trailing placeholder lines.  
-4. Preserve this heading structure for all review reports for consistency.  
-5. When regenerating a review, either overwrite the existing `review.md` or archive the previous version according to project conventions.
+1. No placeholder token may remain in a committed review report.
+2. Dates must be valid ISO format (YYYY-MM-DD).
+3. **Do not include bare relative paths** that only resolve inside the project repo. Every path is either absolute, or `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...`.
+4. Findings without a quoted excerpt MUST be dropped — vague complaints are not actionable.
+5. Section 4 stays short and bullet-only. The report is for maintainers who want to know what to change, not a status report for project stakeholders.
+6. Section 5 recommendations each cite an exact target file in the spec-kit repo and at least one source finding ID from Section 3.
+7. Run the Section 7 self-containment check before writing the report. Every box must be tickable.
+8. When regenerating a review, overwrite the existing `review.md` (unless project convention says otherwise).
 
 <!-- End of review template -->

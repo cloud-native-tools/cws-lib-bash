@@ -79,4 +79,4 @@
 - **Verification Status**: [unverified | verified]
 - **Notes**: [Any additional context]
 
-执行系统二进制命令 [TOOL NAME]
+Execute system binary [TOOL NAME]

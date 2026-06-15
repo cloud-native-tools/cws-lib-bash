@@ -7,8 +7,6 @@
 
 ## Related Feature *(mandatory)*
 
-Feature binding in this section is mandatory per Constitution Principle VII (Feature-Centric Development).
-
 <!--
   ACTION REQUIRED: Keep the default values as "Need clarification" in the initial draft.
   /speckit.clarify must resolve this section to the final Feature binding before planning.
@@ -140,6 +138,31 @@ Feature binding in this section is mandatory per Constitution Principle VII (Fea
 - **SC-002 Source**: [Data source and collection method for SC-002]  
 - **SC-003 Source**: [Data source and collection method for SC-003]
 - **SC-004 Source**: [Data source and collection method for SC-004]
+
+## Shared Strings *(optional, recommended when any string-literal is consumed verbatim by tests, contracts, snippets, or source)*
+
+<!--
+  ACTION REQUIRED:
+  Use this section as the SINGLE SOURCE OF TRUTH for string literals that must match
+  exactly across multiple artefacts (FRs, contracts, snippet bodies, test assertions,
+  task descriptions). Downstream artefacts MUST cite by `<string-id>` rather than
+  re-typing the text, so a rotation only edits this section.
+
+  Examples of strings that belong here:
+    - Error messages asserted by tests
+    - Sentinel substrings in stderr / logs
+    - Env var names, exit codes treated as contract
+    - URL paths or filenames that contracts pin to a specific string
+
+  Omit this section entirely if no such cross-artefact strings exist.
+-->
+
+| String ID | Value (verbatim) | Consumed by |
+|-----------|------------------|-------------|
+| `STR-001` | "[exact string, quoted]" | FR-XXX, contracts/xxx.md C-N, tasks T-NNN, snippet `<path>` |
+| `STR-002` | "[exact string, quoted]" | [list of citing artefacts] |
+
+**Citation convention**: When an FR, contract, task, or test references one of these strings, write `[[STR-NNN]]` instead of copy-pasting the literal. CI / `/speckit.analyze` can then verify that every `[[STR-NNN]]` reference resolves to a row in this section.
 
 ## Clarifications
 

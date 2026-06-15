@@ -3,23 +3,19 @@ from __future__ import annotations
 
 import argparse
 import ast
-import dataclasses
 import json
-import os
 import platform
 import shutil
 import subprocess
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 
 _ALLOWED_TOOL_TYPES = {
-    "mcp",
     "system",
     "shell",
     "project",
-    "mcp-call",
     "system-binary",
     "shell-function",
     "project-script",
@@ -55,8 +51,8 @@ class ToolRecord:
             errors.append("name is required")
         if self.tool_type not in _ALLOWED_TOOL_TYPES:
             errors.append(
-                "tool_type must be one of mcp/system/shell/project or "
-                "mcp-call/system-binary/shell-function/project-script"
+                "tool_type must be one of system/shell/project or "
+                "system-binary/shell-function/project-script"
             )
         if not self.source_identifier or not self.source_identifier.strip():
             errors.append("source_identifier is required")
@@ -120,7 +116,6 @@ def _record_path(tools_dir: Path, name: str) -> Path:
 
 def _normalize_tool_type(tool_type: str) -> str:
     mapping = {
-        "mcp": "mcp-call",
         "system": "system-binary",
         "shell": "shell-function",
         "project": "project-script",
@@ -269,38 +264,6 @@ def backfill_tool_id(record_file: Path, workspace_root: Path) -> Optional[str]:
 
     record_file.write_text("\n".join(updated) + "\n", encoding="utf-8")
     return tool_id
-
-
-def _group_tools_by_server() -> Dict[str, List[dict]]:
-    from cws_ai.mcp import get_all_tools
-
-    tools = get_all_tools()
-    tools_by_server: Dict[str, List[dict]] = {}
-    for tool in tools:
-        tools_by_server.setdefault(tool.server_name, []).append(dataclasses.asdict(tool))
-    return tools_by_server
-
-
-def get_mcp_payload() -> dict:
-    from cws_ai.mcp import get_all_mcp_servers
-
-    servers = get_all_mcp_servers()
-    tools_by_server = _group_tools_by_server()
-
-    servers_payload = []
-    for server in servers:
-        server_data = dataclasses.asdict(server)
-        server_tools = tools_by_server.get(server.name, [])
-        server_data["tools"] = server_tools
-        server_data["tools_count"] = len(server_tools)
-        servers_payload.append(server_data)
-
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "count": len(servers_payload),
-        "servers": servers_payload,
-        "note": "This list represents configured MCP servers. 'tools' field populated for HTTP servers if reachable.",
-    }
 
 
 def find_root_dir(start: Optional[Path] = None) -> Path:
@@ -480,7 +443,7 @@ def _build_parser() -> argparse.ArgumentParser:
         required=True,
         choices=["list", "model-validate-record", "record-backfill", "record-load"],
     )
-    parser.add_argument("--type", choices=["mcp", "system", "shell", "project"], default=None)
+    parser.add_argument("--type", choices=["system", "shell", "project"], default=None)
     parser.add_argument("--functions-only", action="store_true")
     parser.add_argument("--root-dir", default=".")
 
@@ -501,14 +464,6 @@ def main() -> int:
     args = parser.parse_args()
 
     if args.action == "list":
-        if args.type == "mcp":
-            if not os.environ.get("MCP_AUTH"):
-                print("[Error] MCP_AUTH environment variable is not set.", file=os.sys.stderr)
-                return 1
-            payload = get_mcp_payload()
-            print(json.dumps(payload, indent=2, ensure_ascii=False))
-            return 0
-
         if args.type == "system":
             print(json.dumps(get_system_info(), indent=2, ensure_ascii=False))
             return 0

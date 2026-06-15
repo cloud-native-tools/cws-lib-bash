@@ -55,8 +55,14 @@ Escalation rules:
 - Treat Constitution as the authority for architecture and workflow constraints.
 
 ## AI Tool Compatibility
-- **Supported Agents**: GitHub Copilot, Qwen Code, opencode, Qoder
+- **Supported Agents**: Claude Code, GitHub Copilot, Qwen Code, opencode, Qoder
 - **Instructions Refresh**: Run `/speckit.instructions` to regenerate this file and compatibility symlinks.
+
+## Spec Kit Runtime & Symlink Model
+- **Canonical instructions file**: `.specify/instructions.md` is the single source of truth for project-level AI instructions. Compatibility files such as `.github/copilot-instructions.md`, `.clinerules/project_rules.md`, `.lingma/rules/project_rule.md`, `.trae/rules/project_rules.md`, `.qoder/project_rules.md`, `.cursorrules`, `QWEN.md`, `CLAUDE.md`, `IFLOW.md`, and `QODER.md` are symlinks to this file.
+- **Canonical skills directory**: `.specify/skills/` is the primary location for installed Spec Kit skills. `.github/skills` is a compatibility symlink to `.specify/skills/` for tools that discover skills under `.github/skills`.
+- **Do not duplicate symlink targets**: Treat these compatibility paths as aliases, not independent source files or directories. When reading or editing instructions and skills, prefer the canonical `.specify/...` paths and avoid applying the same change separately through each symlink.
+- **Regeneration behavior**: `/speckit.instructions` refreshes the instructions content and recreates compatibility symlinks. If a compatibility path appears to contain the same content as `.specify/instructions.md` or `.specify/skills/`, verify whether it is a symlink before treating it as a separate file.
 
 ## Resource Registry
 Use this machine-maintained section to track reusable resource identifiers created by SpecKit commands. Keep entries deduplicated and sorted when updating this file. Record each resource as a single row in the corresponding horizontal Markdown table, and keep column names aligned with the corresponding agent/skill/tool templates. When no records exist, keep a single row with `None yet.` in the first column and `-` in the remaining columns.

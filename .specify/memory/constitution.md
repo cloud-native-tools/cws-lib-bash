@@ -1,15 +1,42 @@
 <!-- Sync Impact Report
-- Version change: 1.0.0 -> 1.1.0
-- Modified principles: Re-aligned with Specification-Driven Development template; Incorporated bash-specific rules into Standards sections.
-- Added principles: Test-First Development, Integration Testing, CI/Quality Gates, Feature-Centric Development.
-- Added sections: Bash Coding Standards, Contribution Guidelines.
-- Templates requiring updates: /.specify/templates/plan-template.md (⚠ pending: principle list alignment)
+- Version change: 1.1.0 -> 1.2.0.1
+- Bump type: MINOR (new principle added, existing principles renumbered)
+- Added principles: "I. Universal Generality" — maximum reusability, zero customization logic
+- Modified principles: All existing principles renumbered (I→II, II→III, III→IV, IV→V, V→VI, VI→VII, VII→VIII)
+- Added sections: None
+- Removed sections: None
+- Templates requiring updates:
+  - /.specify/templates/plan-template.md (✅ no action — reads principles dynamically)
+  - /.specify/templates/requirements-template.md (✅ no action — no hardcoded principle refs)
+  - /.specify/templates/tasks-template.md (✅ no action — reads principle from constitution dynamically)
+- Follow-up TODOs: None
 -->
 # CWS-Lib-Bash Constitution
 
 ## Core Principles
 
-### I. Library-First Design
+### I. Universal Generality
+This library exists to provide maximum universality. All scripts and functions
+MUST be general-purpose utilities with zero project-specific or
+environment-specific customization logic.
+
+Functions MUST:
+- Solve generic, reusable problems — not encode any single project's workflow.
+- Accept all environment-specific values via parameters or environment variables;
+  NEVER hardcode paths, hostnames, credentials, project names, or platform URLs.
+- Avoid assumptions about the caller's directory layout, deployment target,
+  or organizational conventions beyond POSIX/GNU norms.
+- Be immediately usable by any Bash user without modification or forking.
+
+When evaluating whether code belongs in this library, apply this test:
+"Would a developer on a completely unrelated project find this function useful
+as-is?" If not, the code does not belong here.
+
+Rationale: the library's value is proportional to its generality; every
+piece of baked-in customization narrows the audience and creates maintenance
+debt that benefits only one consumer.
+
+### II. Library-First Design
 Every significant feature MUST begin as a cohesive, reusable library (module/package).
 Libraries MUST:
 - Be organized by technology domain in `scripts/<domain>.sh` (e.g., `docker.sh`, `network.sh`).
@@ -19,7 +46,7 @@ Libraries MUST:
 
 Rationale: encourages reuse, clear boundaries, and easier testing.
 
-### II. CLI & Text I/O Interface
+### III. CLI & Text I/O Interface
 Each library SHOULD expose command-line accessible functions.
 CLIs MUST:
 - Be executable via `./bin/cws_bash_run` for core operations.
@@ -29,7 +56,7 @@ CLIs MUST:
 
 Rationale: standardizes integration, observability, and automation.
 
-### III. Test-First Development
+### IV. Test-First Development
 Implementation MUST follow a Test-Driven Development style for core logic:
 - Write or update tests in `test/` BEFORE implementing new behavior.
 - Ensure tests FAIL first (Red), then implement to make them PASS (Green).
@@ -41,7 +68,7 @@ At minimum:
 
 Rationale: reduces regressions and clarifies intent.
 
-### IV. Integration & Contract Testing
+### V. Integration & Contract Testing
 Integration/contract tests SHOULD cover:
 - Cross-service communication and external APIs.
 - System state changes (e.g., file creation, network config).
@@ -49,7 +76,7 @@ Integration/contract tests SHOULD cover:
 
 Rationale: validates real-world behavior beyond unit tests.
 
-### V. Observability, Versioning & Simplicity
+### VI. Observability, Versioning & Simplicity
 All components MUST be observable and versioned:
 - Use `log` function for structured logs (info, warn, error).
 - Prefer Semantic Versioning (MAJOR.MINOR.PATCH).
@@ -58,7 +85,7 @@ All components MUST be observable and versioned:
 
 Rationale: makes systems debuggable, upgradable, and maintainable.
 
-### VI. Continuous Integration & Quality Gates
+### VII. Continuous Integration & Quality Gates
 Changes MUST be safe to merge:
 - `shellcheck` MUST pass for all scripts.
 - Unit tests (`cws_bash_test`) MUST pass in CI.
@@ -66,13 +93,13 @@ Changes MUST be safe to merge:
 
 Rationale: ensures consistent quality and predictable releases.
 
-### VII. Feature-Centric Development
+### VIII. Feature-Centric Development
 Feature is the long-lived core framework of the project:
 - The Feature list MUST be the "Single Source of Truth".
 - Every step in spec → plan → tasks → implement MUST re-evaluate Feature additions/merges/splits/removals.
 - Feature changes MUST be traceable to specific spec/plan evidence and recorded in Feature details.
 
-Rationale: Centers project evolution on Features to ensure long-term consistency and maintainability.
+Rationale: centers project evolution on Features to ensure long-term consistency and maintainability.
 
 ## Bash Coding Standards
 
@@ -110,4 +137,4 @@ This project follows Semantic Versioning.
 ### Compliance
 All Pull Requests must be reviewed against these principles. Code that violates these principles MUST NOT be merged until corrected.
 
-**Version**: 1.1.0 | **Ratified**: 2025-12-04 | **Last Amended**: 2026-02-05
+**Version**: 1.2.0.1 | **Ratified**: 2025-12-04 | **Last Amended**: 2026-06-15

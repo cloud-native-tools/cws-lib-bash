@@ -79,4 +79,4 @@
 - **Verification Status**: [unverified | verified]
 - **Notes**: [Any additional context]
 
-使用所选参数执行项目脚本 [TOOL NAME]
+Execute project script [TOOL NAME] with selected parameters

@@ -8,6 +8,10 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 
+ENTRYPOINT_STATUS = {"created", "skipped", "failed", "conflict"}
+OUTCOME_STATUS = {"success", "partial-success", "failed"}
+
+
 class ResourceIdError(ValueError):
     def __init__(self, code: str, message: str):
         super().__init__(message)
@@ -36,6 +40,8 @@ def normalize_workspace_path(path: str | Path, workspace_root: str | Path) -> st
 def infer_resource_type_from_path(canonical_path: str) -> Optional[str]:
     if canonical_path.startswith(".specify/memory/tools/") and canonical_path.endswith(".md"):
         return "tool"
+    if canonical_path.startswith(".specify/skills/") and canonical_path.endswith("/SKILL.md"):
+        return "skill"
     if canonical_path.startswith(".github/skills/") and canonical_path.endswith("/SKILL.md"):
         return "skill"
     return None
@@ -253,12 +259,15 @@ def _discover_by_text(
                     matches.append(("tool", rel))
 
     if expected_type in (None, "skill"):
-        skills_dir = workspace_root / ".github" / "skills"
-        if skills_dir.exists():
-            for file in skills_dir.glob("*/SKILL.md"):
-                if text in file.parent.name.lower():
-                    rel = file.relative_to(workspace_root).as_posix()
-                    matches.append(("skill", rel))
+        for skills_dir in (
+            workspace_root / ".specify" / "skills",
+            workspace_root / ".github" / "skills",
+        ):
+            if skills_dir.exists():
+                for file in skills_dir.glob("*/SKILL.md"):
+                    if text in file.parent.name.lower():
+                        rel = file.relative_to(workspace_root).as_posix()
+                        matches.append(("skill", rel))
 
     if not matches:
         raise ResourceIdError("not-found", "No artifact matched the provided hint")

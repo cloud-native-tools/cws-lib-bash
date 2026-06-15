@@ -79,4 +79,4 @@
 - **Verification Status**: [unverified | verified]
 - **Notes**: [Any additional context]
 
-调用 shell 函数 [TOOL NAME]
+Invoke shell function [TOOL NAME]

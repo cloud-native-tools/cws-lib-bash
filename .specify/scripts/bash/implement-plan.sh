@@ -57,7 +57,7 @@ This script implements the /speckit.plan command for Spec Kit.
 It handles complex Unicode and special characters safely without external dependencies.
 
 Examples:
-  $0 --json "Handle special chars like \$, \", ', \\ and Unicode like 世界 👋"
+  $0 --json "Handle special chars like \$, \", ', \\ and Unicode like World 👋"
   $0 --input "Complex prompt with | & ; * ? [ ] { } ( ) < > ! #" 
 EOF
     exit 0
@@ -204,11 +204,11 @@ Run: ./scripts/bash/implement-plan.sh "echo \"Price is \\$100 & it's 50% off!\" 
 Expected: Command executes safely without shell interpretation
 
 ### Test 2: Unicode Characters  
-Run: ./scripts/bash/implement-plan.sh "echo \"Hello 世界! 👋\""
+Run: ./scripts/bash/implement-plan.sh "echo \"Hello World! 👋\""
 Expected: Command outputs exact Unicode string
 
 ### Test 3: Combined Input
-Run: ./scripts/bash/implement-plan.sh "echo \"The price in 中国 is \\$100 & it's 50% off! 🎉\""
+Run: ./scripts/bash/implement-plan.sh "echo \"The price in China is \\$100 & it's 50% off! 🎉\""
 Expected: Command handles both special chars and Unicode correctly
 
 ## Implementation Notes

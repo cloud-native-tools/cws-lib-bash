@@ -70,8 +70,29 @@ find_feature_dir_by_prefix() {
 
   # Extract numeric prefix from branch (e.g., "004" from "004-whatever")
   if [[ ! $branch_name =~ ^([0-9]+)- ]]; then
-    # If branch doesn't have numeric prefix, fall back to exact match
-    echo "$specs_dir/$branch_name"
+    # If branch doesn't have numeric prefix, fall back to latest spec directory.
+    local latest_feature=""
+    local highest=0
+    if [[ -d $specs_dir ]]; then
+      for dir in "$specs_dir"/*; do
+        if [[ -d $dir ]]; then
+          local dirname=$(basename "$dir")
+          if [[ $dirname =~ ^([0-9]+)- ]]; then
+            local number=${BASH_REMATCH[1]}
+            number=$((10#$number))
+            if [[ $number -gt $highest ]]; then
+              highest=$number
+              latest_feature=$dirname
+            fi
+          fi
+        fi
+      done
+    fi
+    if [[ -n $latest_feature ]]; then
+      echo "$specs_dir/$latest_feature"
+    else
+      echo "$specs_dir/$branch_name"
+    fi
     return
   fi
 
@@ -122,6 +143,9 @@ get_feature_paths() {
 
   # Use prefix-based lookup to support multiple branches per spec
   local feature_dir=$(find_feature_dir_by_prefix "$repo_root" "$current_branch")
+  if [[ -d $feature_dir ]]; then
+    current_branch=$(basename "$feature_dir")
+  fi
 
   cat <<EOF
 REPO_ROOT='$repo_root'

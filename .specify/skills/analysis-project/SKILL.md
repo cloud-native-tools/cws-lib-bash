@@ -1,6 +1,7 @@
 ---
 name: analysis-project
-description: Deep analysis of current project with professional architecture reports. Use when the user mentions "分析项目", "分析仓库", "源码分析", "架构分析", "代码分析", "学习这个项目", "研究这个框架"
+description: Deep analysis of current project with professional architecture reports. Use when the user mentions "analyze project", "analyze repository", "source code analysis", "architecture analysis", "code analysis", "study this project", "research this framework"
+skill_id: "<SKILL:.specify/skills/analysis-project/SKILL.md>"
 ---
 
 # Project Deep Analysis Skill
@@ -69,17 +70,30 @@ This order keeps the report moving from macro intent, to implementation means, t
 
 > **Flexibility principle**: The phases below are advisory guidelines. The agent should dynamically decide based on project characteristics — skip or simplify any phase that has no meaning for the current project. Final report quality is the standard.
 
+### Execution Contract
+
+Use this contract to avoid workflow drift during real executions:
+
+- **Local workspace mode**: If the user asks to analyze the current workspace or provides a local path, use that repository root as `$WORK_DIR`. Do **not** create `~/repo-analyses/...` unless analyzing a remote repository that must be cloned.
+- **Final deliverable location**: Always write the final report to `$WORK_DIR/docs/overview.md`. This is the user-facing deliverable. If `$WORK_DIR` is the current workspace, the file must be `docs/overview.md` in the workspace root.
+- **Analysis mode default**: If no interactive question tool is available, or asking would interrupt an otherwise clear request, choose **Standard** mode and state that choice briefly in the report. Ask the user only when the requested depth is materially ambiguous.
+- **Draft files are optional execution aids**: Create `drafts/` files when they help large or remote analyses. For smaller local repositories, it is acceptable to keep intermediate notes in the agent context and write only the final report, provided the final report still includes evidence-backed conclusions.
+- **Subagent output handling**: When subagents cannot write files directly, capture their returned summaries as module drafts in the main agent context and proceed with cross-validation. Do not fail the analysis solely because the subagent did not create `06-module-*.md` files.
+- **Completion discipline**: Before ending, verify that the final report exists, check for obvious editor/diagnostic errors when tools are available, and mark all planning todos completed.
+
 ### Phase 1: Project Acquisition & Initialization
 
 1. Parse user input (supports `owner/repo`, GitHub/GitLab/Gitee URL, local path)
-2. Create workspace: `~/repo-analyses/${REPO_NAME}-{YYYYMMDD}` as `$WORK_DIR`
+2. Set `$WORK_DIR` according to the Execution Contract: current/local repo root for local analysis; `~/repo-analyses/${REPO_NAME}-{YYYYMMDD}` only for remote clones
 3. Clone with `git clone --depth=1` if remote; skip if local path provided
 4. Gather basic metadata (Stars, Forks, contributors, code statistics)
 5. **Business context discovery**: before diving into code, answer the four business questions from the First Principle (Who? What situation? Why existing solutions fail? Why standalone?). Write initial hypotheses to `drafts/01-business-context.md` — these will be validated and refined through subsequent phases.
 
+### Phase 2: Project Scale, Hypothesis Validation, and Mode Selection
+
 1. **Count effective code lines** (exclude tests, build configs, auto-generated code, examples/docs)
 2. **Validate business hypotheses from Phase 1**: does the code scale and organization match your initial business understanding? A project solving a complex distributed systems problem should have substantial architectural code, not just utility functions. If the ratio doesn't match expectations, investigate — either your business hypothesis was wrong, or the project's architecture is misaligned with its stated goals.
-3. **Let user choose analysis mode** (via AskUserQuestion):
+3. **Choose analysis mode**: let the user choose when an interactive question tool is available and the depth is unclear; otherwise default to **Standard** and record that decision in the report.
 
 | Mode | Core Modules≥ | Secondary Modules≥ | Use Case |
 |------|--------------|--------------------|----------|
@@ -87,7 +101,7 @@ This order keeps the report moving from macro intent, to implementation means, t
 | Standard (recommended) | 60% | 30% | Regular architecture analysis |
 | Deep | 90% | 60% | Deep dive into every design decision |
 
-3. Write stats and chosen mode to `drafts/03-plan.md`; subsequent phases follow this for depth control
+4. Write stats and chosen mode to `drafts/03-plan.md` when using draft files; otherwise include the scale/mode summary in the final report.
 
 ### Phase 3: External Research + Project Documentation (Search First, Read Later)
 
@@ -115,6 +129,8 @@ From project features (entry files, directory structure, dependencies, docs), id
 
 Ask user questions (≤3 per round), one of which should confirm the **level of detail for the report introduction** (well-known projects may not need lengthy introductions). See questioning strategy in [module-analysis-guide.md](references/module-analysis-guide.md).
 
+If the request is clear and asking would only slow execution, do not pause for confirmation. Instead, state a minimal assumption in the report (for example, “Standard mode was used because no depth preference was provided”).
+
 **Business-problem-driven questions**: at least one question should validate your evolving understanding of the problem. Examples: "This project seems to solve [X problem] for [Y audience] — is that the right framing?", "I noticed [design choice Z] — does this suggest the primary use case is [A] or [B]?", "The README mentions [claim], but the code seems optimized for [different concern] — which direction should I prioritize in the analysis?"
 
 ### Phase 5: Dynamic Report Structure Design
@@ -128,6 +144,8 @@ Ask user questions (≤3 per round), one of which should confirm the **level of 
 3. **Identify modules**: categorize core vs secondary by business function
 4. **Design narrative line**: determine module presentation order and transition logic (data flow / layered / problem-driven)
 5. Output report outline for user confirmation, then write to `drafts/05-modules-plan.md`
+
+For local workspace analyses where the user asked for direct execution, outline confirmation is optional. Proceed directly when the structure follows the required chapters and no high-risk scope decision is pending.
 
 ### Phase 6: Parallel Deep Analysis (Subagent Team)
 
@@ -153,7 +171,8 @@ Detailed prompt templates at [module-analysis-guide.md](references/module-analys
 1. **Coverage gating**: read coverage tables from draft tails; auto-supplement or report reasons for non-compliant modules
 2. **Spot-check validation**: pick 2-3 key conclusions per core module, verify against source code
 3. **Cross-validation**: verify cross-module conclusions and global connection
-4. Write to `drafts/07-cross-validation.md`
+4. Check all high-priority defect claims with a deterministic search or file read before including them in the final report
+5. Write to `drafts/07-cross-validation.md` when using draft files; otherwise fold the validation evidence into the final report
 
 ### Phase 8: Multi-Source Fusion & Final Report (Main Agent)
 
@@ -166,7 +185,7 @@ Detailed prompt templates at [module-analysis-guide.md](references/module-analys
    - Preserve the recommended chapter order: architecture → tech stack → modules → git evolution → deployment, unless the project clearly demands a different narrative
 4. **Segmented writing**: final report typically exceeds 500 lines; Write first 2-3 chapters (200-300 lines), then Edit to append
 5. Coverage summary to `drafts/08-coverage.md` (not included in final report)
-6. Output single markdown file: `$WORK_DIR/ANALYSIS_REPORT.md`
+6. Output single markdown file: `$WORK_DIR/docs/overview.md`
 
 ### Intermediate File Manifest
 
@@ -202,8 +221,8 @@ Detailed prompt templates at [module-analysis-guide.md](references/module-analys
 
 ## Report Output Location
 
-After completing all analysis phases, the final analysis report must be written to `analysis-project.md` in the workspace root. This is the deliverable file that users will consume.
+After completing all analysis phases, the final analysis report must be written to `docs/overview.md` in `$WORK_DIR`. For current-workspace analysis, `$WORK_DIR` is the workspace root. This is the deliverable file that users will consume.
 
 ```
-$WORK_DIR/analysis-project.md
+$WORK_DIR/docs/overview.md
 ```

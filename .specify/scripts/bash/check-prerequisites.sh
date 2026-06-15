@@ -15,7 +15,7 @@
 #   --help, -h          Show help message
 #
 # OUTPUTS:
-#   JSON mode: {"REQUIREMENTS_DIR":"...", "AVAILABLE_DOCS":["..."]}
+#   JSON mode: {"REQUIREMENTS_DIR":"...", "FEATURE_ID":"...", "FEATURE_NAME":"...", "AVAILABLE_DOCS":["..."]}
 #   Text mode: REQUIREMENTS_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
 #   Paths only: REPO_ROOT: ... \n BRANCH: ... \n REQUIREMENTS_DIR: ... etc.
 
@@ -117,19 +117,29 @@ if [[ $CURRENT_BRANCH =~ ^([0-9]+)- ]]; then
     REQUIREMENT_ID="${BASH_REMATCH[1]}"
 fi
 
+# Extract Feature metadata from requirements.md when available.
+FEATURE_ID=""
+FEATURE_NAME=""
+if [[ -f "$FEATURE_SPEC" ]]; then
+    FEATURE_ID=$(sed -n 's/^\*\*Feature ID\*\*:[[:space:]]*\([0-9][0-9][0-9]\).*/\1/p' "$FEATURE_SPEC" | head -n 1)
+    FEATURE_NAME=$(sed -n 's/^\*\*Feature Name\*\*:[[:space:]]*//p' "$FEATURE_SPEC" | head -n 1)
+fi
+
 # If paths-only mode, output paths and exit (support JSON + paths-only combined)
 if $PATHS_ONLY; then
     if $JSON_MODE; then
         # Minimal JSON paths payload (no validation performed)
         # Note: REQUIREMENT_ID is extracted from branch name, not FEATURE_ID
         # Feature metadata must be retrieved from .specify/memory/features.md
-        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENT_ID":"%s","REQUIREMENTS_DIR":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
-            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENT_ID" "$REQUIREMENTS_DIR" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
+        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENT_ID":"%s","REQUIREMENTS_DIR":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
+            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENT_ID" "$REQUIREMENTS_DIR" "$FEATURE_ID" "$FEATURE_NAME" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
     else
         echo "REPO_ROOT: $REPO_ROOT"
         echo "BRANCH: $CURRENT_BRANCH"
         echo "REQUIREMENT_ID: $REQUIREMENT_ID"
         echo "REQUIREMENTS_DIR: $REQUIREMENTS_DIR"
+        echo "FEATURE_ID: $FEATURE_ID"
+        echo "FEATURE_NAME: $FEATURE_NAME"
         echo "FEATURE_SPEC: $FEATURE_SPEC"
         echo "IMPL_PLAN: $IMPL_PLAN"
         echo "TASKS: $TASKS"
@@ -203,10 +213,14 @@ if $JSON_MODE; then
         json_docs="[${json_docs%,}]"
     fi
     
-    printf '{"REQUIREMENTS_DIR":"%s","AVAILABLE_DOCS":%s}\n' "$REQUIREMENTS_DIR" "$json_docs"
+    printf '{"REQUIREMENTS_DIR":"%s","REQUIREMENT_ID":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","AVAILABLE_DOCS":%s}\n' \
+        "$REQUIREMENTS_DIR" "$REQUIREMENT_ID" "$FEATURE_ID" "$FEATURE_NAME" "$json_docs"
 else
     # Text output
     echo "REQUIREMENTS_DIR:$REQUIREMENTS_DIR"
+    echo "REQUIREMENT_ID:$REQUIREMENT_ID"
+    echo "FEATURE_ID:$FEATURE_ID"
+    echo "FEATURE_NAME:$FEATURE_NAME"
     echo "AVAILABLE_DOCS:"
     
     # Show status of each potential document
