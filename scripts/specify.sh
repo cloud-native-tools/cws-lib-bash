@@ -114,7 +114,7 @@ function specify_check() {
 
 # Initialize a new Specify project
 # Usage: specify_init <ai_tool> [project_name]
-# Available AI tools: copilot, qwen, qoder, opencode
+# Available AI tools: all, claude, copilot, qwen, qoder, opencode
 function specify_init() {
   local ai_tool=${1}
   local project_name=${2:-.}
@@ -123,16 +123,16 @@ function specify_init() {
   # Validate AI tool parameter
   if [ -z "${ai_tool}" ]; then
     log error "Usage: specify_init <ai_tool> [project_name]"
-    log error "Available AI tools: copilot, qwen, qoder, opencode"
+    log error "Available AI tools: all, claude, copilot, qwen, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
   fi
 
   case "${ai_tool}" in
-  claude | copilot | opencode | qwen | qoder )
+  all | claude | copilot | opencode | qwen | qoder )
     ;;
   *)
     log error "Unsupported AI tool: ${ai_tool}"
-    log error "Available AI tools: copilot, qwen, qoder, opencode"
+    log error "Available AI tools: all, claude, copilot, qwen, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
     ;;
   esac
@@ -143,6 +143,35 @@ function specify_init() {
   fi
 
   log info "Initializing Specify project with AI tool: ${ai_tool}, project name: ${project_name}"
+
+  if [ "${ai_tool}" = "all" ]; then
+    local tools=(claude copilot opencode qwen qoder)
+    local tool=""
+    local tool_ignore_agent_tools=false
+
+    for tool in "${tools[@]}"; do
+      tool_ignore_agent_tools=false
+      case "${tool}" in
+      claude | opencode | qwen | qoder)
+        tool_ignore_agent_tools=true
+        ;;
+      esac
+
+      if [ "${tool_ignore_agent_tools}" = "true" ]; then
+        if ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+          log error "Failed to initialize Specify project for AI tool: ${tool}"
+          return "${RETURN_FAILURE:-1}"
+        fi
+      elif ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls; then
+        log error "Failed to initialize Specify project for AI tool: ${tool}"
+        return "${RETURN_FAILURE:-1}"
+      fi
+    done
+
+    log notice "Specify project initialized successfully for all AI tools"
+    return "${RETURN_SUCCESS:-0}"
+  fi
+
   if [ "${ignore_agent_tools}" = "true" ]; then
     if specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
       log notice "Specify project initialized successfully"
@@ -158,55 +187,69 @@ function specify_init() {
 }
 
 # Initialize a Specify project with Copilot AI
-function specify_init_copilot_project() {
+function specify_init_copilot() {
   local project_name=${1:-.}
   specify_init copilot "${project_name}"
 }
 
 # Initialize a Specify project with Qwen Code
-function specify_init_qwen_code_project() {
+function specify_init_qwen_code() {
   local project_name=${1:-.}
   specify_init qwen "${project_name}" true
 }
 
 # Initialize a Specify project with Qoder
-function specify_init_qoder_project() {
+function specify_init_qoder() {
   local project_name=${1:-.}
   specify_init qoder "${project_name}" true
 }
 
 # Initialize a Specify project with OpenCode
-function specify_init_opencode_project() {
+function specify_init_opencode() {
   local project_name=${1:-.}
   specify_init opencode "${project_name}" true
 }
 
 # Initialize a Specify project with claude code
-function specify_init_claude_project() {
+function specify_init_claude() {
   local project_name=${1:-.}
   specify_init claude "${project_name}" true
 }
 
-function specify_deinit_copilot_project() {
-  rm -rfv .github/prompts/speckit.*.prompt.md
-  rm -rfv .specify/memory/features .specify/memory/features.md
-  rm -rfv .specify/scripts .specify/templates
+# Initialize a Specify project with all AI agent tools
+function specify_init_all() {
+  local project_name=${1:-.}
+  specify_init all "${project_name}" true
 }
 
-function specify_deinit_qwen_project() {
-  rm -rfv .qwen/commands/speckit.*.toml
-  rm -rfv .specify/memory/features .specify/memory/features.md
-  rm -rfv .specify/scripts .specify/templates
-}
+function specify_deinit() {
+  local ai_tool=${1:-all}
 
-function specify_deinit_qoder_project() {
-  rm -rfv .qoder/commands/speckit.*.md
-  rm -rfv .specify/memory/features .specify/memory/features.md
-  rm -rfv .specify/scripts .specify/templates
-}
+  case "${ai_tool}" in
+  all)
+    rm -rfv .github/prompts/speckit.*.prompt.md
+    rm -rfv .qwen/commands/speckit.*.toml
+    rm -rfv .qoder/commands/speckit.*.md
+    rm -rfv .opencode/command/speckit.*.md
+    ;;
+  copilot)
+    rm -rfv .github/prompts/speckit.*.prompt.md
+    ;;
+  qwen)
+    rm -rfv .qwen/commands/speckit.*.toml
+    ;;
+  qoder)
+    rm -rfv .qoder/commands/speckit.*.md
+    ;;
+  opencode)
+    rm -rfv .opencode/command/speckit.*.md
+    ;;
+  *)
+    log error "Usage: specify_deinit [copilot|qwen|qoder|opencode|all]"
+    return "${RETURN_FAILURE:-1}"
+    ;;
+  esac
 
-function specify_deinit_opencode_project() {
-  rm -rfv .opencode/command/speckit.*.md
   rm -rfv .specify/memory/features .specify/memory/features.md
   rm -rfv .specify/scripts .specify/templates
 }
