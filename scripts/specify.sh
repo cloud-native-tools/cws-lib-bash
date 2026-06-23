@@ -20,15 +20,6 @@ function specify_install() {
     return "${RETURN_FAILURE:-1}"
   fi
 
-  # Ensure cws-lib-python is installed as it might be a dependency
-  if ! cws_python_is_installed; then
-    log warn "cws-lib-python is not installed, attempting to install..."
-    if ! cws_python_install; then
-      log error "Failed to install cws-lib-python dependency"
-      return "${RETURN_FAILURE:-1}"
-    fi
-  fi
-
   # Uninstall any existing Specify kit first
   log info "Uninstalling existing Specify kit (if any)..."
   specify_uninstall
