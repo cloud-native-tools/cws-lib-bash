@@ -1,0 +1,48 @@
+{
+  "databases": [
+    {
+      "name": "mysql-prod",
+      "description": "Main MySQL database - users, orders",
+      "protocol": "mysql",
+      "host": "db.example.com",
+      "port": 3306,
+      "database": "app_prod",
+      "user": "readonly_user",
+      "password": "your-password",
+      "ssl_disabled": false
+    },
+    {
+      "name": "postgres-analytics",
+      "description": "Analytics PostgreSQL database - metrics, reports",
+      "protocol": "postgres",
+      "host": "analytics.example.com",
+      "port": 5432,
+      "database": "analytics",
+      "user": "readonly_user",
+      "password": "your-password",
+      "sslmode": "require"
+    },
+    {
+      "name": "clickhouse-warehouse",
+      "description": "ClickHouse data warehouse (PostgreSQL protocol)",
+      "protocol": "postgres",
+      "host": "ch.example.com",
+      "port": 9005,
+      "database": "warehouse",
+      "user": "readonly_user",
+      "password": "your-password",
+      "sslmode": "prefer"
+    },
+    {
+      "name": "doris-olap",
+      "description": "Apache Doris OLAP database (MySQL protocol)",
+      "protocol": "mysql",
+      "host": "doris.example.com",
+      "port": 9030,
+      "database": "olap_db",
+      "user": "readonly_user",
+      "password": "your-password",
+      "ssl_disabled": true
+    }
+  ]
+}

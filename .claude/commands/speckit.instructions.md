@@ -78,7 +78,7 @@ Fallback behavior:
 ## Actions
 
 1. **Setup**: Run `.specify/scripts/bash/generate-instructions.sh` to ensure the basic directory structure, `.copilotignore`, and template `.specify/instructions.md` exist.
-   - This script handles the "heavy lifting" of creating directories, ignoring files, and establishing symlinks for various AI tools (`.clinerules`, `.github`, `.lingma`, etc.).
+   - This script handles the "heavy lifting" of creating directories, ignoring files, establishing symlinks for supported AI tools (`.github`, `.qoder`, `.claude`), and cleaning up deprecated tool artifacts (`.clinerules`, `.lingma`, `.trae`, etc.).
    - It will only create a template `.specify/instructions.md` if one does not exist.
    - If the script returns non-zero, apply the **Error Handling** rules above instead of failing immediately.
 
@@ -105,7 +105,7 @@ Fallback behavior:
 
 5. **Report**:
    - Report the full path of the instructions file (`.specify/instructions.md`).
-   - Confirm that symlinks for Copilot, Cline, Lingma, Trae, and Qoder have been established (or explicitly report warning/fallback actions if setup script partially failed).
+   - Confirm that symlinks for Copilot, Qoder, and Claude have been established (or explicitly report warning/fallback actions if setup script partially failed).
 
 ## Handoffs
 

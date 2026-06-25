@@ -3,7 +3,6 @@
 
 # Source shared environment configurations
 [ -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ] && source "${CWS_LIB_BASH_HOME}/bin/cws_bash_env"
-[ -f "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" ] && source "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env"
 
 check_dependency() {
   if ! command -v git &> /dev/null; then
@@ -21,16 +20,6 @@ check_dependency() {
     return 1
   fi
 
-  if [ -z "${CWS_LIB_PYTHON_HOME}" ]; then
-    echo "Error: CWS_LIB_PYTHON_HOME environment variable is not set." >&2
-    return 1
-  fi
-
-  if [ ! -f "${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" ]; then
-    echo "Error: cws-lib-python is not correctly installed. File not found: ${CWS_LIB_PYTHON_HOME}/bin/cws_py_env" >&2
-    return 1
-  fi
-  
   return 0
 }
 

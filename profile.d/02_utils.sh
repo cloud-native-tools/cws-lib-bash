@@ -1,12 +1,8 @@
-function is_bash() { test "$(basename $SHELL)" = "bash" -a -n "$BASH_VERSION"; }
-function is_zsh() { test "$(basename $SHELL)" = "zsh"; }
-function is_ash() { test "$(basename $SHELL)" = "ash"; }
-function is_dash() { test "$(basename $SHELL)" = "dash"; }
+function is_bash() { test -n "$BASH_VERSION" -o "$(basename $SHELL)" = "bash"; }
+function is_zsh() { test -n "$ZSH_VERSION" -o "$(basename $SHELL)" = "zsh"; }
 
 is_bash && alias sh="bash"
 is_zsh && alias sh="zsh"
-is_ash && alias sh="ash"
-is_dash && alias sh="dash"
 
 function debug_on() {
   local log=$1

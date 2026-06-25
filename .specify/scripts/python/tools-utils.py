@@ -19,7 +19,49 @@ _ALLOWED_TOOL_TYPES = {
     "system-binary",
     "shell-function",
     "project-script",
+    "webhook",
 }
+
+_CANONICAL_TOOL_TYPES = {
+    "system-binary",
+    "shell-function",
+    "project-script",
+    "webhook",
+}
+
+_BEHAVIORAL_RULE_KEYWORDS = {"MUST", "MUST NOT", "SHOULD", "SHOULD NOT"}
+
+_DISCOVERY_ORIGINS = {"manual-entry", "discovery-assisted", "imported"}
+
+
+@dataclass
+class BehavioralRule:
+    keyword: str
+    constraint_text: str
+
+    def validate(self) -> List[str]:
+        errors: List[str] = []
+        if self.keyword not in _BEHAVIORAL_RULE_KEYWORDS:
+            errors.append(
+                f"keyword must be one of {', '.join(sorted(_BEHAVIORAL_RULE_KEYWORDS))}"
+            )
+        if not self.constraint_text or not self.constraint_text.strip():
+            errors.append("constraint_text is required")
+        return errors
+
+    def to_markdown(self) -> str:
+        return f"- {self.keyword} {self.constraint_text}"
+
+    @staticmethod
+    def from_markdown(line: str) -> Optional["BehavioralRule"]:
+        stripped = line.strip()
+        if not stripped.startswith("- "):
+            return None
+        text = stripped[2:]
+        for kw in sorted(_BEHAVIORAL_RULE_KEYWORDS, key=len, reverse=True):
+            if text.startswith(kw + " "):
+                return BehavioralRule(keyword=kw, constraint_text=text[len(kw) + 1:])
+        return None
 
 
 @dataclass
@@ -41,6 +83,8 @@ class ToolRecord:
     aliases: List[str] = field(default_factory=list)
     arguments: List[ToolArgument] = field(default_factory=list)
     returns: List[dict] = field(default_factory=list)
+    behavioral_rules: List[BehavioralRule] = field(default_factory=list)
+    discovery_origin: str = "manual-entry"
     tool_id: Optional[str] = None
     last_updated: str = field(default_factory=lambda: date.today().isoformat())
 
@@ -62,7 +106,58 @@ class ToolRecord:
         if self.status.lower() == "verified" and not self.arguments and not self.returns:
             errors.append("Verified record must include arguments or returns")
 
+        for rule in self.behavioral_rules:
+            errors.extend(rule.validate())
+
+        if self.discovery_origin and self.discovery_origin not in _DISCOVERY_ORIGINS:
+            errors.append(
+                f"discovery_origin must be one of {', '.join(sorted(_DISCOVERY_ORIGINS))}"
+            )
+
         return errors
+
+    def validate_strict(self) -> List[str]:
+        """Validate using only canonical tool types (definition-first model)."""
+        errors: List[str] = []
+
+        if not self.name or not self.name.strip():
+            errors.append("name is required")
+        if self.tool_type not in _CANONICAL_TOOL_TYPES:
+            errors.append(
+                "tool_type must be one of: "
+                "project-script, system-binary, shell-function"
+            )
+        if not self.source_identifier or not self.source_identifier.strip():
+            errors.append("source_identifier is required")
+        if not self.description or not self.description.strip():
+            errors.append("description is required")
+
+        if self.status.lower() == "verified" and not self.arguments and not self.returns:
+            errors.append("Verified record must include arguments or returns")
+
+        for rule in self.behavioral_rules:
+            errors.extend(rule.validate())
+
+        return errors
+
+
+@dataclass
+class DiscoveryDraft:
+    proposed_name: str
+    proposed_type: str
+    proposed_source: str
+    proposed_description: str
+    confidence: str = "medium"
+    draft_label: str = "Draft — pending user confirmation"
+
+    def to_record(self) -> ToolRecord:
+        return ToolRecord(
+            name=self.proposed_name,
+            tool_type=self.proposed_type,
+            source_identifier=self.proposed_source,
+            description=self.proposed_description,
+            discovery_origin="discovery-assisted",
+        )
 
 
 @dataclass
@@ -135,6 +230,7 @@ def save_record(tools_dir: Path, record: Any) -> Path:
         record.tool_id = _generate_tool_id(record_file, workspace_root)
 
     record_file = _record_path(tools_dir, record.name)
+    origin = getattr(record, "discovery_origin", "manual-entry") or "manual-entry"
     lines = [
         f"# Tool Record: {record.name}",
         "",
@@ -144,6 +240,7 @@ def save_record(tools_dir: Path, record: Any) -> Path:
         f"**Tool ID**: {record.tool_id}",
         f"**Aliases**: {', '.join(record.aliases) if record.aliases else ''}",
         f"**Status**: {record.status}",
+        f"**Discovery Origin**: {origin}",
         f"**Last Updated**: {record.last_updated}",
         "",
         "## Description",
@@ -175,6 +272,15 @@ def save_record(tools_dir: Path, record: Any) -> Path:
         lines.extend(["", "- None"])
 
     lines.extend(["", "## Returns", "", "- None"])
+
+    rules = getattr(record, "behavioral_rules", []) or []
+    lines.extend(["", "## Behavioral Rules", ""])
+    if rules:
+        for rule in rules:
+            lines.append(rule.to_markdown())
+    else:
+        lines.append("- None")
+
     record_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return record_file
 
@@ -200,6 +306,17 @@ def load_record(tools_dir: Path, name: str) -> Optional[ToolRecord]:
 
     aliases = [a.strip() for a in fields.get("aliases", "").split(",") if a.strip()]
 
+    behavioral_rules: List[BehavioralRule] = []
+    if "## Behavioral Rules" in content:
+        rules_block = content.split("## Behavioral Rules", 1)[1]
+        next_section = rules_block.find("\n## ")
+        if next_section != -1:
+            rules_block = rules_block[:next_section]
+        for line in rules_block.splitlines():
+            rule = BehavioralRule.from_markdown(line)
+            if rule:
+                behavioral_rules.append(rule)
+
     record = ToolRecord(
         name=fields.get("tool_name", name),
         tool_type=fields.get("tool_type", ""),
@@ -209,6 +326,8 @@ def load_record(tools_dir: Path, name: str) -> Optional[ToolRecord]:
         aliases=aliases,
         tool_id=fields.get("tool_id") or None,
         arguments=[],
+        behavioral_rules=behavioral_rules,
+        discovery_origin=fields.get("discovery_origin", "manual-entry"),
     )
     return record
 

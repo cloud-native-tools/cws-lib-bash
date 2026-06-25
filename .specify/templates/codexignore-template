@@ -1,0 +1,38 @@
+# Codex CLI ignore defaults for Spec Kit projects
+# Keep this file focused on high-noise, generated, local, or sensitive paths.
+
+# Dependencies and build output
+node_modules/
+build/
+dist/
+coverage/
+
+# Python cache and environments
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Local environment and secrets
+.env
+.env.*
+*.pem
+*.key
+secrets/
+
+# VCS and editor noise
+.git/
+.vscode/
+.idea/
+
+# Keep required Spec Kit workflow artifacts visible
+!.specify/instructions.md
+!.specify/memory/
+!.specify/specs/
+!.codex/commands/

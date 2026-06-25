@@ -130,31 +130,27 @@ else
   render_template "$TEMPLATE_FILE" >"$TARGET_FILE"
 fi
 
+# Cleanup deprecated AI tool artifacts
+for deprecated_dir in .clinerules .lingma .trae; do
+  if [ -d "$deprecated_dir" ]; then
+    rm -rf "$deprecated_dir"
+    log info "Removed deprecated $deprecated_dir directory"
+  fi
+done
+for deprecated_file in IFLOW.md .cursorrules; do
+  if [ -L "$deprecated_file" ] || [ -f "$deprecated_file" ]; then
+    rm -f "$deprecated_file"
+    log info "Removed deprecated $deprecated_file"
+  fi
+done
+
 # T010: Symlinks
 log info "Updating symlinks for AI tools..."
-
-# .clinerules
-mkdir -p .clinerules
-pushd .clinerules >/dev/null
-ln -sf ../.specify/instructions.md project_rules.md
-popd >/dev/null
 
 # .github
 mkdir -p .github
 pushd .github >/dev/null
 ln -sf ../.specify/instructions.md copilot-instructions.md
-popd >/dev/null
-
-# .lingma
-mkdir -p .lingma/rules
-pushd .lingma/rules >/dev/null
-ln -sf ../../.specify/instructions.md project_rule.md
-popd >/dev/null
-
-# .trae
-mkdir -p .trae/rules
-pushd .trae/rules >/dev/null
-ln -sf ../../.specify/instructions.md project_rules.md
 popd >/dev/null
 
 # .qoder
@@ -172,8 +168,6 @@ popd >/dev/null
 # Root level links
 ln -sf .specify/instructions.md QWEN.md
 ln -sf .specify/instructions.md CLAUDE.md
-ln -sf .specify/instructions.md IFLOW.md
 ln -sf .specify/instructions.md QODER.md
-ln -sf .specify/instructions.md .cursorrules
 
 log success "Instructions generated/updated at $TARGET_FILE"

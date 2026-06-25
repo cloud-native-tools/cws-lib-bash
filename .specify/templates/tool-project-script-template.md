@@ -6,7 +6,15 @@
 **Tool ID**: [TOOL ID]  
 **Aliases**: [comma-separated aliases, optional]  
 **Status**: [Draft | Verified | Deprecated]  
+**Discovery Origin**: [manual-entry | discovery-assisted | imported]  
 **Last Updated**: [YYYY-MM-DD]
+
+## Scope
+
+**Availability**: Project-level — available only within the current project workspace.  
+**Typical Sources**: Scripts bundled with the project (e.g., `scripts/bash/*.sh`, `scripts/python/*.py`, `.specify/scripts/`).  
+**Portability**: Tied to the project repository; not available outside the project root. Moving to a different machine requires cloning or copying the project.  
+**Source Identifier Convention**: Path relative to the project root (e.g., `scripts/bash/build-docs.sh`).
 
 ## Description
 
@@ -71,6 +79,21 @@
   "stdout": "[optional plain log lines when output_mode=plain-log-lines]"
 }
 ```
+
+## Behavioral Rules
+
+<!--
+  Each behavioral rule MUST be a markdown bullet prefixed with an RFC 2119 keyword:
+  - MUST: Absolute requirement — the agent must follow this rule in every invocation.
+  - MUST NOT: Absolute prohibition — the agent must never violate this constraint.
+  - SHOULD: Recommended practice — the agent follows this unless a justified exception applies.
+  - SHOULD NOT: Discouraged practice — the agent avoids this unless a justified exception applies.
+  
+  These rules are authoritative: the AI agent MUST use them instead of its built-in
+  knowledge about the tool. Add, remove, or modify rules via /speckit.tools.
+-->
+
+- [MUST | MUST NOT | SHOULD | SHOULD NOT] [constraint text describing the behavioral rule]
 
 ## Discovery Metadata
 
