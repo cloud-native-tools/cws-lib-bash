@@ -1,3 +1,22 @@
+description = "Define, modify, view, or invoke a tool via reusable local records with explicit behavioral rules. Definition is the primary action — discovery assists only when bootstrapping a new record.
+handoffs:
+  - label: Create Plan
+    agent: speckit.plan
+    prompt: Generate an implementation plan for /speckit.tools
+    send: false
+scripts:
+  sh: scripts/bash/create-new-tools.sh --json --name $ARGUMENTS --action find
+---
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** analyze the user input in `$ARGUMENTS`, infer the user"
+
+prompt = """
 ## User Input
 
 ```text
@@ -238,3 +257,4 @@ If you encounter an agent-specific obstacle during execution (e.g., discovery sc
 ```
 
 Use the standard feedback structure with `**Source**: tools` and all required fields (Agent, Timestamp, Outcome, Obstacle, Workaround Applied, Suggested Improvement). Only generate feedback when a genuine agent-specific obstacle was encountered.
+"""

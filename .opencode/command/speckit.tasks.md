@@ -1,0 +1,218 @@
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to supplement task generation while preserving the default workflow.
+
+The user input may include:
+
+1. Background info: Context, constraints, or business background.
+2. Task outline: Phase breakdown or high-level task structure.
+3. Additional task entries: Executable task items to merge into the final task list.
+
+When processing the user input:
+
+1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
+2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
+3. If `$ARGUMENTS` is empty, still generate a complete executable `tasks.md` from available design artifacts.
+4. You **MUST** first detect input type and then apply the corresponding handling strategy.
+5. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase with clearer wording.
+
+### Input Type Detection and Handling Strategy
+
+1. **Background Info Type**: If `$ARGUMENTS` primarily contains descriptive text, business context, constraints, or unstructured information
+   - Integrate this information as context into the task generation process
+   - Reference or reflect these constraints in relevant task descriptions
+   - Do not directly convert into specific task entries
+
+2. **Task Outline Type**: If `$ARGUMENTS` contains structured task breakdowns, phase divisions, or high-level task organization
+   - Use the outline structure as the primary framework for task organization
+   - Fill in concrete implementation details and file paths based on the outline
+   - Ensure generated tasks follow the specified structure and order
+
+3. **Additional Task Entries Type**: If `$ARGUMENTS` contains specific, executable task items (typically in list form)
+   - Parse and standardize these task entries to conform to task format specifications
+   - Integrate them into the corresponding user story phases or foundational tasks
+   - Maintain task ID continuity and correct dependency relationships
+
+You **MUST** first analyze the content and structure of `$ARGUMENTS` to determine its type, then apply the appropriate handling strategy.
+
+## Outline
+
+1. **Setup**: Run `.specify/scripts/bash/check-prerequisites.sh --json` from repo root and parse REQUIREMENTS_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' (or double-quote if possible: "I'm Groot").
+
+2. **Load design documents**: Read from REQUIREMENTS_DIR:
+   - **Required**: plan.md (tech stack, libraries, structure), requirements.md (user stories with priorities)
+   - **Optional**: data-model.md (entities), contracts/ (API endpoints), research.md (decisions), quickstart.md (test scenarios)
+   - Note: Not all projects have all documents. Generate tasks based on what's available.
+
+3. **Generate task list workflow**:
+   - **Analyze $ARGUMENTS input type**: Determine if input contains background context, task outline, or additional task items
+   - Load plan.md and extract tech stack, libraries, project structure
+   - Load requirements.md and extract user stories with their priorities (P1, P2, P3, etc.)
+   - If data-model.md exists: Extract entities and map to user stories
+   - If contracts/ exists: Map endpoints to user stories
+   - If research.md exists: Extract decisions for setup tasks
+   - **Integrate $ARGUMENTS content**: 
+     - For background info: Apply as contextual constraints in task generation
+     - For task outlines: Use as primary organizational structure
+     - For additional tasks: Parse, standardize, and merge into appropriate phases
+   - Generate tasks organized by user story (see Task Generation Rules below)
+   - Generate dependency graph showing user story completion order
+   - Create parallel execution examples per user story
+   - Validate task completeness (each user story has all needed tasks, independently testable)
+
+4. **Generate tasks.md**: Use `.specify/templates/tasks-template.md` as structure, fill with:
+   - Correct feature name from plan.md
+   - Phase 1: Setup tasks (project initialization)
+   - Phase 2: Foundational tasks (blocking prerequisites for all user stories)
+   - Phase 3+: One phase per user story (in priority order from requirements.md)
+   - Each phase includes: story goal, independent test criteria, tests (if requested), implementation tasks
+   - Final Phase: Polish & cross-cutting concerns
+   - All tasks must follow the strict checklist format (see Task Generation Rules below)
+   - Clear file paths for each task
+   - Dependencies section showing story completion order
+   - Parallel execution examples per story
+   - Implementation strategy section (MVP first, incremental delivery)
+
+5. **Validate DoD format**: Before writing the final file, verify that the `## Definition of Done` section uses ONLY the `- DoD-N:` prefix format. No line in this section may match `^\- \[[ xX~]\]` (checkbox syntax is reserved for task rows). If any DoD items were accidentally written with checkboxes, rewrite them using the `- DoD-N:` prefix.
+
+6. **Report**: Output path to generated tasks.md and summary:
+   - Total task count
+   - Task count per user story
+   - Parallel opportunities identified
+   - Independent test criteria for each story
+   - Suggested MVP scope (typically just User Story 1)
+   - Format validation: Confirm ALL tasks follow the checklist format (checkbox, ID, labels, file paths)
+
+Context for task generation: 
+- Design documents from REQUIREMENTS_DIR: {AVAILABLE_DOCS}
+- User input analysis result: {ARGUMENTS_ANALYSIS_RESULT}
+- Input type handling strategy: {INPUT_HANDLING_STRATEGY}
+
+The tasks.md should be immediately executable - each task must be specific enough that an LLM can complete it without additional context. When $ARGUMENTS contains additional task items, ensure they are properly integrated with correct formatting, sequential IDs, and appropriate story labels.
+
+## Feature Integration
+
+The `/speckit.tasks` command automatically integrates with the feature tracking system:
+
+- If a `.specify/memory/features.md` file exists, the command will:
+  - Detect the current feature directory (format: `.specify/specs/[REQUIREMENTS_KEY]/`)
+  - Extract the feature ID from the directory name
+  - Update the corresponding feature entry in `.specify/memory/features.md`:
+    - Ensure status is "Implemented" (maintains status from planning phase)
+    - Keep the specification path unchanged
+    - Update the "Last Updated" date
+  - Automatically stage the changes to `.specify/memory/features.md` for git commit
+
+In addition, **The tasks phase MUST review the Feature list**:
+
+- Task breakdown may expose new Features or indicate that old Features are no longer applicable.
+- Ensure functional/non-functional Feature classification remains consistent.
+- If changes are discovered, the following must be updated synchronously:
+   - `.specify/memory/features/<ID>.md`
+   - `.specify/memory/features.md`
+- Record the "key changes / notes" brought by the task breakdown in the Feature detail.
+
+This integration ensures that all feature task generation activities are properly tracked and linked to their corresponding entries in the project's feature index.
+
+## Task Generation Rules
+
+**CRITICAL**: Tasks MUST be organized by user story to enable independent implementation and testing.
+
+**Tests are Constitution-driven (NOT a fixed default)**: Before generating tasks, parse `.specify/memory/constitution.md` and detect any principle whose name or body contains `MUST`, `MANDATORY`, `NON-NEGOTIABLE`, `Test-First`, `TDD`, or `Contract-Driven`.
+
+- **Tests default ON** if any such principle exists, OR if the feature specification / `$ARGUMENTS` explicitly requests TDD. In ON mode you MUST emit test tasks (contract, unit, integration as applicable) per user story BEFORE the corresponding implementation tasks. If the constitution defines distinct testing layers (e.g. Layer-1 generator unit tests + Layer-2 build/smoke validation), emit tasks for EVERY layer it mandates.
+- **Tests default OFF** only when no test-mandating principle is found AND the spec is silent on TDD.
+
+At the top of the generated `tasks.md`, you MUST print a one-line banner declaring which mode was chosen and cite the constitution principle (or absence thereof) that drove the decision. Example:
+
+```text
+**Tests Mode**: ON (Constitution Principle IV "Test-First Development" is NON-NEGOTIABLE; Layer-1 unit + Layer-2 validation required)
+```
+
+or
+
+```text
+**Tests Mode**: OFF (constitution.md declares no test-mandating principle; spec did not request TDD)
+```
+
+### Checklist Format (REQUIRED)
+
+Every task MUST strictly follow this format:
+
+```text
+- [ ] [TaskID] [P?] [Story?] Description with file path
+```
+
+**Format Components**:
+
+1. **Checkbox**: ALWAYS start with `- [ ]` (markdown checkbox)
+2. **Task ID**: Sequential number (T001, T002, T003...) in execution order
+3. **[P] marker**: Include ONLY if task is parallelizable (different files, no dependencies on incomplete tasks)
+4. **[Story] label**: REQUIRED for user story phase tasks only
+   - Format: [US1], [US2], [US3], etc. (maps to user stories from requirements.md)
+   - Setup phase: NO story label
+   - Foundational phase: NO story label  
+   - User Story phases: MUST have story label
+   - Polish phase: NO story label
+5. **Description**: Clear action with exact file path
+
+**Examples**:
+
+- ✅ CORRECT: `- [ ] T001 Create project structure per implementation plan`
+- ✅ CORRECT: `- [ ] T005 [P] Implement authentication middleware in src/middleware/auth.py`
+- ✅ CORRECT: `- [ ] T012 [P] [US1] Create User model in src/models/user.py`
+- ✅ CORRECT: `- [ ] T014 [US1] Implement UserService in src/services/user_service.py`
+- ❌ WRONG: `- [ ] Create User model` (missing ID and Story label)
+- ❌ WRONG: `T001 [US1] Create model` (missing checkbox)
+- ❌ WRONG: `- [ ] [US1] Create User model` (missing Task ID)
+- ❌ WRONG: `- [ ] T001 [US1] Create model` (missing file path)
+
+### Task Organization
+
+1. **From User Stories (requirements.md)** - PRIMARY ORGANIZATION:
+   - Each user story (P1, P2, P3...) gets its own phase
+   - Map all related components to their story:
+     - Models needed for that story
+     - Services needed for that story
+     - Endpoints/UI needed for that story
+     - If tests requested: Tests specific to that story
+   - Mark story dependencies (most stories should be independent)
+
+2. **From Contracts**:
+   - Map each contract/endpoint → to the user story it serves
+   - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
+
+3. **From Data Model**:
+   - Map each entity to the user story(ies) that need it
+   - If entity serves multiple stories: Put in earliest story or Setup phase
+   - Relationships → service layer tasks in appropriate story phase
+
+4. **From Setup/Infrastructure**:
+   - Shared infrastructure → Setup phase (Phase 1)
+   - Foundational/blocking tasks → Foundational phase (Phase 2)
+   - Story-specific setup → within that story's phase
+
+### Phase Structure
+
+- **Phase 1**: Setup (project initialization)
+- **Phase 2**: Foundational (blocking prerequisites - MUST complete before user stories)
+- **Phase 3+**: User Stories in priority order (P1, P2, P3...)
+  - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
+  - Each phase should be a complete, independently testable increment
+- **Final Phase**: Polish & Cross-Cutting Concerns
+
+## Handoffs
+
+**Before running this command**:
+
+- Run `/speckit.plan` to produce a plan and design artifacts.
+
+**After running this command**:
+
+- Optionally run `/speckit.analyze` to check cross-artifact consistency before implementation.
+- Optionally run `/speckit.checklist` to create quality gates.
+- Then run `/speckit.implement` to execute the tasks phase-by-phase.

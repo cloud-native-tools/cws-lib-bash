@@ -687,3 +687,64 @@ This Skill follows the canonical path conventions:
 - **JavaScript path**: Node.js (>=14.0.0), Playwright npm package (`^1.57.0`), Chromium browser
 - **Python path**: Python (>=3.8), `playwright` Python package, Chromium browser
 - **Shared**: Chromium browser (installed via `playwright install chromium`)
+
+## Agent-Specific Configuration
+
+### Step 1: Identify Executing Agent
+
+Before executing this skill's workflow, identify which AI agent you are:
+
+| Agent | Detection Signals |
+|-------|-------------------|
+| **Claude Code** | System prompt contains "Claude Code"; tools include `Agent`, `Edit`, `Bash`, `Read`; `.claude/` directory exists |
+| **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded; tools include `workspace edit`, `@terminal` |
+| **Qoder CLI** | `.qoder/` directory exists; `QODER.md` instructions loaded |
+| **opencode** | `.opencode/` directory exists |
+| **Qwen Code** | `QWEN.md` instructions loaded; `.qwen/` directory exists |
+| **Codex CLI** | `.codex/` directory exists |
+| **Hermes Agent** | `.hermes/` directory exists |
+| **iFlow** | `.iflow/` directory exists |
+
+If you cannot identify your agent, skip Step 2 and proceed with the standard workflow.
+
+### Step 2: Load Agent-Specific Guidance
+
+If you identified your agent in Step 1, check if a guide exists at:
+
+```
+${SKILL_HOME}/references/<agent-slug>-guide.md
+```
+
+Where `<agent-slug>` is: `claude-code`, `copilot`, `qoder`, `opencode`, `qwen`, `codex`, `hermes`, or `iflow`.
+
+If the guide exists, read it and apply the agent-specific tool mappings, best practices, and pitfall avoidances during execution. If no guide exists for your agent, proceed with the standard workflow.
+
+### Step 3: Capture Execution Feedback
+
+If you encounter an agent-specific obstacle during execution (e.g., a tool call is unavailable, output format doesn't match expectations, a workaround was needed), generate a feedback document at:
+
+```
+.specify/memory/feedback/browser-utils-<agent-slug>-<YYYY-MM-DDTHH-MM-SS>.md
+```
+
+The feedback document MUST contain:
+
+```markdown
+# Agent Execution Feedback
+
+**Source**: browser-utils
+**Agent**: <agent-slug>
+**Timestamp**: <ISO-8601>
+**Outcome**: <success-with-workaround | partial-failure | full-failure>
+
+## Obstacle
+[Description of the agent-specific issue encountered]
+
+## Workaround Applied
+[What was done to work around the issue, if anything]
+
+## Suggested Improvement
+[Specific change to the skill or reference document that would prevent this issue]
+```
+
+Only generate feedback when a genuine agent-specific obstacle was encountered.

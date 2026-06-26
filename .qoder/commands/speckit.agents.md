@@ -281,6 +281,73 @@ Rules:
 - **Validation gates**: Invalid YAML, unsupported providers, or unresolved conflicts prevent saving
 - **Official compatibility**: `.agent.md` output must be compatible with VS Code Copilot custom agent schema
 
+## Agent-Specific Configuration
+
+### Step 1: Identify Executing Agent
+
+Before executing the agent creation/generation workflow, identify which AI agent is running this command:
+
+| Agent | Detection Signals |
+|-------|-------------------|
+| **Claude Code** | System prompt contains "Claude Code"; tools include `Agent`, `Edit`, `Bash`, `Read`; `.claude/` directory exists |
+| **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded; tools include `workspace edit`, `@terminal` |
+| **Qoder CLI** | `.qoder/` directory exists; `QODER.md` instructions loaded |
+| **opencode** | `.opencode/` directory exists |
+| **Qwen Code** | `QWEN.md` instructions loaded; `.qwen/` directory exists |
+| **Codex CLI** | `.codex/` directory exists |
+| **Hermes Agent** | `.hermes/` directory exists |
+| **iFlow** | `.iflow/` directory exists |
+
+If you cannot identify your agent, skip Step 2 and proceed with the standard workflow.
+
+### Step 2: Load Agent-Specific Guidance
+
+#### Claude Code
+
+- **File operations**: Use `Edit` tool for `.agent.md` modifications (preserves surrounding content). Reserve `Write` for new file creation only.
+- **Subagent delegation**: Use the `Agent` tool with `subagent_type` parameter to test newly created agents in isolation before reporting completion.
+- **Frontmatter validation**: Use `Bash` tool to run YAML validation on generated frontmatter: `python -c "import yaml; yaml.safe_load(open('file.agent.md').read().split('---')[1])"`
+- **Symlink verification**: Use `Bash` tool to verify directory-level symlinks exist: `ls -la .github/agents/ .qoder/agents/ 2>/dev/null`
+- **Registry updates**: When updating `## Resource Registry` in `.specify/instructions.md`, use `Edit` with precise `old_string` matching to avoid clobbering other registry entries.
+
+#### GitHub Copilot
+
+- **File operations**: Use workspace edit for `.agent.md` creation and updates. For multi-file changes (agent + instructions registry), make changes sequentially.
+- **Frontmatter validation**: Use `@terminal` to run YAML validation commands.
+- **Agent testing**: Test newly created agents via the VS Code agent picker — verify the agent appears and responds to trigger phrases.
+- **Symlink handling**: Copilot cannot create symlinks directly. If symlinks are missing, advise the user to run `specify init` from the terminal.
+- **Model field**: Default to `GPT-5 (copilot)` when the `model` frontmatter field is needed; Copilot resolves this to the best available model.
+
+### Step 3: Capture Execution Feedback
+
+If you encounter an agent-specific obstacle during execution (e.g., a tool call is unavailable, symlink creation fails, frontmatter validation requires a workaround), generate a feedback document at:
+
+```
+.specify/memory/feedback/agents-<agent-slug>-<YYYY-MM-DDTHH-MM-SS>.md
+```
+
+Use this structure:
+
+```markdown
+# Agent Execution Feedback
+
+**Source**: agents
+**Agent**: <agent-slug>
+**Timestamp**: <ISO-8601>
+**Outcome**: <success-with-workaround | partial-failure | full-failure>
+
+## Obstacle
+[Description of the agent-specific issue encountered]
+
+## Workaround Applied
+[What was done to work around the issue, if anything]
+
+## Suggested Improvement
+[Specific change to the agents command template that would prevent this issue]
+```
+
+Only generate feedback when a genuine agent-specific obstacle was encountered.
+
 ## Handoffs
 
 **Before running this command**:

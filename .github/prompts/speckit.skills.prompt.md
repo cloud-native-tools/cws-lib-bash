@@ -171,6 +171,53 @@ Existing Skills migrate opportunistically to the new convention — there is no 
 
 After applying the mapping, exercise the Skill once to confirm behaviour is unchanged (per SC-004); the rewrite is non-behavioural.
 
+## Agent-Specific Configuration
+
+### Step 1: Identify Executing Agent
+
+Before executing the skill orchestration workflow, identify which AI agent is running this command:
+
+| Agent | Detection Signals |
+|-------|-------------------|
+| **Claude Code** | System prompt contains "Claude Code"; tools include `Agent`, `Edit`, `Bash`, `Read`; `.claude/` directory exists |
+| **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded; tools include `workspace edit`, `@terminal` |
+| **Qoder CLI** | `.qoder/` directory exists; `QODER.md` instructions loaded |
+| **opencode** | `.opencode/` directory exists |
+| **Qwen Code** | `QWEN.md` instructions loaded; `.qwen/` directory exists |
+| **Codex CLI** | `.codex/` directory exists |
+| **Hermes Agent** | `.hermes/` directory exists |
+| **iFlow** | `.iflow/` directory exists |
+
+If you cannot identify your agent, skip Step 2 and proceed with the standard workflow.
+
+### Step 2: Load Agent-Specific Guidance
+
+#### Claude Code
+
+- **Skill creation**: When delegating to `create-skills`, use `Agent` tool with `subagent_type="Explore"` for codebase analysis before scaffolding. Use `Write` for new SKILL.md files, `Edit` for existing ones.
+- **Script execution**: Use `Bash` tool to run `.specify/scripts/bash/create-new-skill.sh`. Check exit code explicitly — the script may exit 0 even on partial failure.
+- **Path conventions**: Claude Code resolves `${SKILL_HOME}` via the `Read` tool. When validating path conventions in SKILL.md, use `Bash` with `grep -c '\${SKILL_HOME}'` to count references.
+- **Registry updates**: Use `Edit` with precise string matching when updating the Skills registry in `.specify/instructions.md`.
+- **Modernization pass**: For existing skills, use `Read` to load the full SKILL.md before applying the spec-compliance checklist. Use `Bash` for `wc -l` line count checks (must stay under 500).
+
+#### GitHub Copilot
+
+- **Skill creation**: Use workspace edit for SKILL.md creation. Use `@terminal` for running scaffold scripts.
+- **Script execution**: Run `create-new-skill.sh` via `@terminal`. Copy the JSON output manually if needed.
+- **Path conventions**: Verify `${SKILL_HOME}` references via search. Copilot's search is file-scoped; use `@terminal` with `grep` for cross-file checks.
+- **Registry updates**: Use workspace edit for `.specify/instructions.md` updates. Be cautious of partial content replacement in large files.
+- **Modernization pass**: Use Copilot Chat to analyze SKILL.md content; use workspace edit for targeted fixes.
+
+### Step 3: Capture Execution Feedback
+
+If you encounter an agent-specific obstacle during execution (e.g., script execution fails, path validation requires a workaround, registry update clobbers other entries), generate a feedback document at:
+
+```
+.specify/memory/feedback/skills-<agent-slug>-<YYYY-MM-DDTHH-MM-SS>.md
+```
+
+Use the standard feedback structure with `**Source**: skills` and all required fields (Agent, Timestamp, Outcome, Obstacle, Workaround Applied, Suggested Improvement). Only generate feedback when a genuine agent-specific obstacle was encountered.
+
 ## Handoffs
 
 - After creation or modernization+improvement, run `/speckit.instructions` to update project instructions so the Skill remains discoverable.

@@ -146,3 +146,70 @@ git rebase --abort
 | `git checkout` 报错，本地改动会被覆盖 | 工作区不干净 | 执行前置校验后再切换分支 |
 | rebase 后 `origin/...<branch>...<branch>` 变为 `M N`（双向分叉） | 共享分支 rebase 重写提交历史 | 使用 `--force-with-lease` 受控推送，走团队同步窗口 |
 | rebase 过程出现 `skipped previously applied commit` | 分支存在重复补丁（patch-id 重复）或历史漂移 | 记录 commit id，继续完成 rebase，执行 `git log --left-right --cherry-pick` 差异核对 |
+| 选择性合并后排除路径仍被修改 | `.gitexcludes` 未存在或同步子程序未正确执行 | 确认目标分支存在 `.gitexcludes`，重新执行同步 |
+
+---
+
+## 8. 分支排除规则（.gitexcludes）
+
+每个分支通过根目录的 `.gitexcludes` 文件定义本分支的专属文件。语法与 `.gitignore` 完全一致。
+
+### 8.1 设计原则
+
+- **每个分支有自己的 `.gitexcludes`**：内容可以不同，各自维护。
+- **目标分支说了算**：无论向哪个分支同步代码，目标分支的 `.gitexcludes` 匹配的文件都会被保护。
+- **方向无关**：无论 MAIN→DEV 还是 DEV→MAIN，目标分支的专属文件始终受保护。
+- **隐含保护**：`.gitexcludes` 文件本身也被保护，不会被其他分支的版本覆盖。
+
+### 8.2 各分支配置示例
+
+**`<MAIN>` 分支的 `.gitexcludes`**：
+
+```gitignore
+# 开发专属文件，不同步到主干
+.github/
+.claude/
+.vscode/
+.qoder/
+```
+
+**`<PRE>` 分支的 `.gitexcludes`**：
+
+```gitignore
+# 仅 IDE 配置不同步到预发
+.vscode/
+```
+
+**`<DEV>` 分支的 `.gitexcludes`**：
+
+```gitignore
+# DEV 接收所有代码，无排除
+```
+
+### 8.3 工作机制
+
+同步/合并操作自动执行以下流程：
+
+1. 切换到目标分支后，保存 `.gitexcludes` 匹配文件的当前状态
+2. 执行 rebase 或 merge
+3. 恢复被保护文件到同步前的状态
+4. 若有变更则自动提交恢复记录
+
+### 8.4 验证
+
+同步后执行：
+
+```bash
+# 确认排除路径未被修改
+git diff HEAD~1 HEAD -- $(cat .gitexcludes | grep -v '^#' | grep -v '^$' | tr '\n' ' ')
+# 期望输出为空
+```
+
+### 8.5 管理排除规则
+
+要添加或移除排除路径：
+
+1. 切换到目标分支。
+2. 编辑 `.gitexcludes` 文件。
+3. `git add .gitexcludes && git commit -m "chore: update .gitexcludes"`。
+4. 若新增路径已被本分支跟踪，执行 `git rm -r --cached <path>` 取消跟踪。

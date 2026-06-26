@@ -191,3 +191,50 @@ Execution steps:
 - Existing complete records should be reused to avoid repeated discovery.
 - Alias/rename changes must remain discoverable by future `/speckit.tools` calls.
 - The AI agent MUST use persisted tool definition records — including behavioral rules — as the authoritative source, not its own training knowledge about the tool.
+
+## Agent-Specific Configuration
+
+### Step 1: Identify Executing Agent
+
+Before executing the tool management workflow, identify which AI agent is running this command:
+
+| Agent | Detection Signals |
+|-------|-------------------|
+| **Claude Code** | System prompt contains "Claude Code"; tools include `Agent`, `Edit`, `Bash`, `Read`; `.claude/` directory exists |
+| **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded; tools include `workspace edit`, `@terminal` |
+| **Qoder CLI** | `.qoder/` directory exists; `QODER.md` instructions loaded |
+| **opencode** | `.opencode/` directory exists |
+| **Qwen Code** | `QWEN.md` instructions loaded; `.qwen/` directory exists |
+| **Codex CLI** | `.codex/` directory exists |
+| **Hermes Agent** | `.hermes/` directory exists |
+| **iFlow** | `.iflow/` directory exists |
+
+If you cannot identify your agent, skip Step 2 and proceed with the standard workflow.
+
+### Step 2: Load Agent-Specific Guidance
+
+#### Claude Code
+
+- **Tool discovery**: Use `Bash` tool to run discovery scripts (`create-new-tools.sh`). Parse JSON output directly — Claude Code handles JSON well.
+- **Tool definition files**: Use `Write` for new tool records at `.specify/memory/tools/<name>.md`. Use `Edit` for modifications to existing records.
+- **Tool invocation preview**: Display the structured preview block using markdown formatting. Wait for explicit user confirmation via the conversation before executing.
+- **Behavioral rules**: When collecting behavioral rules interactively, present them as a numbered list and ask the user to confirm or modify.
+- **Registry updates**: Use `Edit` with precise `old_string` matching when updating the Tools registry in `.specify/instructions.md`.
+
+#### GitHub Copilot
+
+- **Tool discovery**: Use `@terminal` to run discovery scripts. Copy JSON output from terminal to chat for processing.
+- **Tool definition files**: Use workspace edit for creating and modifying tool records at `.specify/memory/tools/`.
+- **Tool invocation preview**: Display the preview in chat. Copilot cannot execute arbitrary commands from chat — advise the user to run the previewed command in the terminal.
+- **Behavioral rules**: Collect rules via Copilot Chat conversation. Format as RFC 2119 bullets before persisting.
+- **Registry updates**: Use workspace edit for `.specify/instructions.md`. Take care with large files — Copilot may truncate content.
+
+### Step 3: Capture Execution Feedback
+
+If you encounter an agent-specific obstacle during execution (e.g., discovery script fails, tool invocation cannot be previewed, registry update conflicts), generate a feedback document at:
+
+```
+.specify/memory/feedback/tools-<agent-slug>-<YYYY-MM-DDTHH-MM-SS>.md
+```
+
+Use the standard feedback structure with `**Source**: tools` and all required fields (Agent, Timestamp, Outcome, Obstacle, Workaround Applied, Suggested Improvement). Only generate feedback when a genuine agent-specific obstacle was encountered.

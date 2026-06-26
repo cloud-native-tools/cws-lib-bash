@@ -1,3 +1,22 @@
+description = "Create or refine custom AI agents (.agent.md) for workspace-specific workflows.
+handoffs:
+  - label: Update Instructions
+    agent: speckit.instructions
+    prompt: Refresh project instructions so newly created agents are discoverable.
+    send: false
+---
+
+> Compatibility: Follow VS Code Copilot custom agent format for `.agent.md` files.
+
+## User Input
+
+```text
+$ARGUMENTS
+```
+
+You **MUST** analyze the user input in `$ARGUMENTS`, infer the user"
+
+prompt = """
 > Compatibility: Follow VS Code Copilot custom agent format for `.agent.md` files.
 
 ## User Input
@@ -358,3 +377,4 @@ Only generate feedback when a genuine agent-specific obstacle was encountered.
 **After running this command**:
 
 - Run `/speckit.instructions` to sync discoverability guidance across tools if needed.
+"""
