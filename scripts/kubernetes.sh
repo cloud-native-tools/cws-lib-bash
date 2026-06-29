@@ -1389,7 +1389,7 @@ function k8s_vscode_remote() {
     {{- $external_ip := . -}}
     {{- range $ports -}}
       {{- if or (eq (printf "%s" .targetPort) "ssh") -}}
-        {{- printf "ssh_host_config %s %d '%s' >> ~/.vscode/ssh_config " $external_ip .nodePort $service_name -}}      
+        {{- printf "ssh_host_config %s %d '%s' >> ${HOME}/.vscode/ssh_config " $external_ip .nodePort $service_name -}}      
         {{"\n"}}
       {{- end -}}
     {{- end -}}
@@ -1507,7 +1507,7 @@ function k8s_update_config() {
   if [ -n "${old_context}" ]; then
     local old_namespace=$(kubectl config get-contexts ${old_context} --no-headers | awk '{print $NF}')
   fi
-  local k8s_config_out=$(realpath ~/.kube/config || echo ~/.kube/config)
+  local k8s_config_out=$(realpath ${HOME}/.kube/config || echo ${HOME}/.kube/config)
   cws_py_cmd kubernetes-update-kubeconfig -o ${k8s_config_out} ${k8s_config_root} $@
   if [ -n "${old_context}" ]; then
     log notice "restore old context [${old_context}] and namespace [${old_namespace}]"
@@ -1558,7 +1558,7 @@ function k8s_sshd() {
         {{- printf "%-40s " $service_name -}}
         {{- printf "%-16s " .name -}}
         {{- printf "ssh -p %d root@%s " .nodePort $external_ip }}
-        ssh_host_config {{$external_ip}} {{.nodePort}} '{{$namespace_name}}-{{$service_name}}' >> ~/.vscode/ssh_config
+        ssh_host_config {{$external_ip}} {{.nodePort}} '{{$namespace_name}}-{{$service_name}}' >> ${HOME}/.vscode/ssh_config
         {{"\n"}}
       {{- end -}}
     {{- end -}}

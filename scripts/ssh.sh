@@ -36,7 +36,7 @@ function ssh_remote_to_local() {
   local jumper_ip=${3}
   local jumper_port=${4}
   local jumper_user=${5}
-  local key_file=${6:-~/.ssh/id_rsa}
+  local key_file=${6:-${HOME}/.ssh/id_rsa}
   if [ -z "${local_port}" -o -z "${remote_port}" -o -z "${jumper_ip}" ]; then
     log plain "Usage: ssh_remote_to_local {remote_port} {local_port} {jumper_ip} [jumper_port=22] [jumper_user=root]"
   else
@@ -89,7 +89,7 @@ function ssh_add_host_config() {
   local port=${2:-22}
   local name=${3:-${host}}
   local user=${4:-root}
-  local key=${5:-~/.ssh/id_rsa}
+  local key=${5:-${HOME}/.ssh/id_rsa}
   echo "Host ${name}"
   echo "  Hostname ${host}"
   echo "  Port ${port}"
@@ -159,7 +159,7 @@ function ssh_ping() {
     shift
   fi
   if [ -z "${config_file}" ]; then
-    config_file=~/.ssh/config
+    config_file=${HOME}/.ssh/config
   else
     shift
   fi
@@ -219,9 +219,9 @@ function ssh_expect_add_auth_key() {
   local host=${1}
   local port=${2:-22}
   local user=${3:-root}
-  local keyfile=${4:-~/.ssh/id_rsa.pub}
+  local keyfile=${4:-${HOME}/.ssh/id_rsa.pub}
   if [ -z "${host}" ]; then
-    log error "Usage: ssh_expect_add_auth_key {host} [port=22] [user=root] [keyfile=~/.ssh/id_rsa.pub]"
+    log error "Usage: ssh_expect_add_auth_key {host} [port=22] [user=root] [keyfile=${HOME}/.ssh/id_rsa.pub]"
     return ${RETURN_FAILURE}
   fi
   if ! have expect; then

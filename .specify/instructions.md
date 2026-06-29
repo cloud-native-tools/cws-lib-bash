@@ -92,7 +92,6 @@ Use this machine-maintained section to track reusable resource identifiers creat
 <!-- Record each skill as one table row with the columns below. -->
 | Skill Name | Skill ID | Description | Argument Hint | User Invocable | Disable Model Invocation | Canonical Path |
 |------------|----------|-------------|---------------|----------------|--------------------------|----------------|
-| None yet. | - | - | - | - | - | - |
 <!-- SKILLS_REGISTRY_END -->
 
 ### Tools

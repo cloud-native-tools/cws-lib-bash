@@ -39,8 +39,8 @@ function qemu_amd64_start() {
       --cpu host \
       -smp cpus=2,sockets=2 \
       -m 2048M \
-      -drive file=~/vm/k8s-node1/k8s-node1.vhd,if=virtio,format=vpc \
-      -drive file=~/vm/k8s-node1/seed.img,if=virtio,format=raw \
+      -drive file=${HOME}/vm/k8s-node1/k8s-node1.vhd,if=virtio,format=vpc \
+      -drive file=${HOME}/vm/k8s-node1/seed.img,if=virtio,format=raw \
       -device virtio-net,netdev=user.0 \
       -netdev user,id=user.0,hostfwd=tcp::50022-:22 \
       -vnc 0.0.0.0:80 \

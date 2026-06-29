@@ -52,8 +52,8 @@ function systemd_list_system_unit_file() {
 # Lists user unit files across specified paths
 function systemd_list_user_unit_file() {
   systemd_list_unit_file \
-    ~/.config/systemd/user.control/ \
-    ~/.config/systemd/user/ \
+    ${HOME}/.config/systemd/user.control/ \
+    ${HOME}/.config/systemd/user/ \
     /etc/systemd/user/ \
     /run/systemd/user/ \
     /usr/lib/systemd/user/ \

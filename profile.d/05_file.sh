@@ -98,7 +98,7 @@ function file_pack_binary() {
     --preserve-permissions \
     --overwrite \
     ${file_list} \
-    $(ldd ${file_list} | awk '$3~/^\//{print $3}' | sort | uniq | tr '\n' ' ')
+    $(ldd ${file_list} | awk '$3${HOME}/^\//{print $3}' | sort | uniq | tr '\n' ' ')
 }
 
 function file_pack_system() {

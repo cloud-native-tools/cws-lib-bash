@@ -1,6 +1,6 @@
 function plantuml_mindmap2dir() {
   awk -f- $@ <<'EOF'
-$1 ~/\*\*+/ {
+$1 ${HOME}/\*\*+/ {
     level=length($1);
     gsub(/ *\*+ +/,"",$0);
     l[level]=$0;
