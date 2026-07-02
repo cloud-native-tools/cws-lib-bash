@@ -61,9 +61,13 @@ function rust_mirror ()
     log info "Target(s): ${targets}";
     log info "Upstream url: ${upstream}";
     
-    mkdir -pv "${repo_root}/${channels}";
-    local mirror_dir="${repo_root}/${channels}";
+    # --mirror 必须指向 Nginx location / 的根目录（如 /oss_code/repo）
+    # 不能指向版本子目录（如 /oss_code/repo/1.96.1），否则 RUSTUP_DIST_SERVER
+    # 访问 /dist/... 时会因路径不匹配导致 404
+    # 参见: docs/mirror/setup-rust-mirror.md
+    local mirror_dir="${repo_root}";
     local mirror_dist="${mirror_dir}/dist";
+    mkdir -pv "${mirror_dist}";
     
     # 修复1: 正确的返回值 + 设置 RUST_BACKTRACE 以便诊断
     if RUST_BACKTRACE=1 rustup-mirror \
@@ -106,12 +110,14 @@ function rust_mirror ()
         # 修复5: 删除 .asc 文件（TOML被修改后GPG签名失效）
         find "${mirror_dist}" -name "*.asc" -delete 2>/dev/null;
         
-        # 修复6: 为日期子目录中的组件创建顶层符号链接
+        # 为日期子目录中的组件创建顶层符号链接
         # rustup 在 legacy 回退模式下会尝试从 dist/ 直接下载（不带日期）
         # 但 rustup-mirror 将文件存储在 dist/{date}/ 下
-        local date_dir
-        date_dir=$(find "${mirror_dist}" -maxdepth 1 -type d -regex ".*/[0-9]{4}-[0-9]{2}-[0-9]{2}" | head -1)
-        if [ -n "${date_dir}" ]; then
+        # 从 manifest 中提取日期，避免在共享 dist 目录中找到其他版本的日期目录
+        local manifest_date
+        manifest_date=$(awk -F'"' '/^date = / {print $2}' "${manifest}")
+        local date_dir="${mirror_dist}/${manifest_date}"
+        if [ -n "${manifest_date}" ] && [ -d "${date_dir}" ]; then
             log info "Found date directory: ${date_dir}";
             for f in "${date_dir}"/*.tar.gz*; do
                 [ -f "$f" ] || continue
