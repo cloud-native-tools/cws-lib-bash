@@ -56,7 +56,7 @@ function net_my_login_ip() {
 }
 
 function net_ping() {
-  ping -c 4 -i 0.1 -W 1 $@ >/dev/null 2>&1
+  ping -c 4 -i 0.5 -W 1 $@ >/dev/null 2>&1
 }
 
 function net_is_ip() {
