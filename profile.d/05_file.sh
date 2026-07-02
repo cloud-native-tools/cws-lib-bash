@@ -1,27 +1,139 @@
+# ─── Cross-platform Binary Detection ────────────────────────────────
+# Detect platform-specific binary paths with graceful fallback
 if is_macos; then
-  BASE64_BIN=gbase64
+  # macOS: prefer GNU coreutils gbase64 only if it is actually GNU (supports -w0)
+  # Some systems ship a non-GNU gbase64 (fourmilab) with different flags
+  if command -v gbase64 >/dev/null 2>&1 && gbase64 --version 2>/dev/null | grep -q 'GNU coreutils'; then
+    BASE64_BIN=gbase64
+    BASE64_WRAP_OPT="-w0"
+  else
+    BASE64_BIN=base64
+    BASE64_WRAP_OPT="" # macOS base64 wraps output; _b64_encode uses tr -d '\n'
+  fi
   TAR_BIN="env COPYFILE_DISABLE=1 tar"
 else
   BASE64_BIN=base64
+  BASE64_WRAP_OPT="-w0"
   TAR_BIN="tar"
 fi
 
+# ─── Cross-platform Compatibility Layer ─────────────────────────────
+
+# Cross-platform base64 encode from stdin (no line wrapping)
+# Usage: echo "data" | _b64_encode
+function _b64_encode() {
+  if [ -n "${BASE64_WRAP_OPT}" ]; then
+    ${BASE64_BIN} ${BASE64_WRAP_OPT}
+  else
+    ${BASE64_BIN} | tr -d '\n'
+  fi
+}
+
+# Cross-platform base64 encode from file (no line wrapping)
+# Usage: _b64_encode_file <file>
+function _b64_encode_file() {
+  local file=$1
+  if [ -n "${BASE64_WRAP_OPT}" ]; then
+    # GNU base64 with -w0: file as positional argument
+    ${BASE64_BIN} ${BASE64_WRAP_OPT} "${file}"
+  else
+    # macOS/other base64: pipe file content via stdin, strip newlines
+    ${BASE64_BIN} < "${file}" | tr -d '\n'
+  fi
+}
+
+# Cross-platform SHA-256 checksum (output format: "<hash>  <file>")
+# Usage: _sha256 <file>   |   _sha256 -c < checksum_file
+function _sha256() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum "$@"
+  elif command -v shasum >/dev/null 2>&1; then
+    shasum -a 256 "$@"
+  else
+    log error "no sha256sum or shasum found"
+    return ${RETURN_FAILURE}
+  fi
+}
+
+# Cross-platform SHA-256 hash only (output: just the hex digest)
+# Usage: _sha256_hash <file>
+function _sha256_hash() {
+  _sha256 "$1" | awk '{print $1}'
+}
+
+# Cross-platform SHA-256 verify (returns 0 if checksum matches)
+# Usage: _sha256_check "<hash>  <file>"
+function _sha256_check() {
+  local checksum_line="$1"
+  if command -v sha256sum >/dev/null 2>&1; then
+    echo "${checksum_line}" | sha256sum -c --status 2>/dev/null
+  elif command -v shasum >/dev/null 2>&1; then
+    echo "${checksum_line}" | shasum -a 256 -c >/dev/null 2>&1
+  else
+    return ${RETURN_FAILURE}
+  fi
+}
+
+# Cross-platform stat: file size in bytes
+# Usage: _stat_size <file>
+function _stat_size() {
+  if is_macos; then
+    stat -L -f "%z" "$1"
+  else
+    stat -L -c "%s" "$1"
+  fi
+}
+
+# Cross-platform stat: block count (512-byte blocks)
+# Usage: _stat_blocks <file>
+function _stat_blocks() {
+  if is_macos; then
+    stat -L -f "%b" "$1"
+  else
+    stat -L -c "%b" "$1"
+  fi
+}
+
+# Cross-platform stat: device + inode (for same-file detection)
+# Usage: _stat_dev_inode <file>
+function _stat_dev_inode() {
+  if is_macos; then
+    stat -L -f "%d %i" "$1"
+  else
+    stat -L -c "%d %i" "$1"
+  fi
+}
+
+# Cross-platform stat: file type + device + inode + uid + user
+# Usage: _stat_file_info <file>
+function _stat_file_info() {
+  if is_macos; then
+    # macOS: %HT=file type, %d=device, %i=inode, %u=uid, %Su=user name
+    stat -L -f "%HT %d %i %u %Su" "$1"
+  else
+    # Linux: %F=file type, %D=device, %i=inode, %u=uid, %U=user name
+    stat -L -c "%F %D %i %u %U" "$1"
+  fi
+}
+
+# ─── Encode Functions ────────────────────────────────────────────────
+
 function encode_tar_stream() {
-  echo "echo \"$(gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|tar xz"
+  echo "echo \"$(gzip -c - | _b64_encode)\"|base64 -d|tar xz"
 }
 
 function encode_stdin() {
-  echo "echo \"$(gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -"
+  echo "echo \"$(gzip -c - | _b64_encode)\"|base64 -d|gunzip -c -"
 }
 
 function encode_files() {
   local target=${@:-.}
-  echo "echo \"$(${TAR_BIN} zc --exclude-vcs $(ls -d ${target}) | ${BASE64_BIN} -w0)\"|base64 -d|tar zx"
+  echo "echo \"$(${TAR_BIN} zc --exclude-vcs $(ls -d ${target}) | _b64_encode)\"|base64 -d|tar zx"
 }
 
 function encode_script() {
   local script_file=${1}
-  echo "echo \"$(cat ${script_file} | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -|bash"
+  echo "echo \"$(cat ${script_file} | gzip -c - | _b64_encode)\"|base64 -d|gunzip -c -|bash"
 }
 
 function encode_function() {
@@ -34,7 +146,7 @@ function encode_function() {
     for funcname in ${func_list}; do
       printf "function $(declare -f ${funcname})\n"
     done
-  } | gzip -c - | ${BASE64_BIN} -w0)\"|base64 -d|gunzip -c -)"
+  } | gzip -c - | _b64_encode)\"|base64 -d|gunzip -c -)"
 }
 
 function encode_packed() {
@@ -53,24 +165,30 @@ function encode_packed() {
   ${TAR_BIN} zcf ${encode_tar} --exclude-vcs ${INPUT}
 
   # split the tar file by size ${part_size}
-  split -b ${part_size} -d ${encode_tar} ${encode_tar}.
+  # cross-platform: -d (numeric suffix) not supported on BSD split (macOS)
+  split -b ${part_size} -d ${encode_tar} ${encode_tar}. 2>/dev/null || split -b ${part_size} ${encode_tar} ${encode_tar}.
+
+  # cross-platform sha256 check commands for generated scripts (inlined, no helper deps)
+  # tries sha256sum (GNU) first, falls back to shasum (macOS/BSD)
+  local _sha256_check_cmd='(sha256sum -c --status 2>/dev/null || shasum -a 256 -c >/dev/null 2>&1)'
+  local _sha256_verify_cmd='(sha256sum -c 2>/dev/null || shasum -a 256 -c)'
 
   # if tar file exists but not match checksum, remove it
-  log plain "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${encode_script}
-  log plain "[ ! -f ${encode_tar} ] || echo '$(sha256sum ${encode_tar})'|sha256sum --status -c || rm -f ${encode_tar}" >>${merge_script}
+  log plain "[ ! -f ${encode_tar} ] || echo '$(_sha256 ${encode_tar})'|${_sha256_check_cmd} || rm -f ${encode_tar}" >>${encode_script}
+  log plain "[ ! -f ${encode_tar} ] || echo '$(_sha256 ${encode_tar})'|${_sha256_check_cmd} || rm -f ${encode_tar}" >>${merge_script}
 
   # handle each part of the splited file
   for part in $(ls ${encode_tar}.*); do
     # if the part not exist or not match checksum, generate it
-    log plain "[ ! -f ${part} ] || ! echo '$(sha256sum ${part})'|sha256sum --status -c && echo '$(${BASE64_BIN} -w0 ${part})'|base64 -d > ${part}" >>${encode_script}
+    log plain "[ ! -f ${part} ] || ! echo '$(_sha256 ${part})'|${_sha256_check_cmd} && echo '$(_b64_encode_file ${part})'|base64 -d > ${part}" >>${encode_script}
 
     # check sum of the part
-    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}
-    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${merge_script}
+    log plain "echo '$(_sha256 ${part})'|${_sha256_verify_cmd}" >>${encode_script}
+    log plain "echo '$(_sha256 ${part})'|${_sha256_verify_cmd}" >>${merge_script}
 
     # this script is for upload part file only
-    log plain "echo '$(${BASE64_BIN} -w0 ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
-    log plain "echo '$(sha256sum ${part})'|sha256sum -c" >>${encode_script}${part#${encode_tar}}
+    log plain "echo '$(_b64_encode_file ${part})'|base64 -d > ${part}" >${encode_script}${part#${encode_tar}}
+    log plain "echo '$(_sha256 ${part})'|${_sha256_verify_cmd}" >>${encode_script}${part#${encode_tar}}
 
     # merge part file to whole tar file
     log plain "cat ${part} >> ${encode_tar}" >>${encode_script}
@@ -81,24 +199,42 @@ function encode_packed() {
   done
 
   # extract tar file to original file and remove tar file
-  log plain "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${encode_script}
-  log plain "echo '$(sha256sum ${encode_tar})'|sha256sum -c && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${merge_script}
+  log plain "echo '$(_sha256 ${encode_tar})'|${_sha256_verify_cmd} && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${encode_script}
+  log plain "echo '$(_sha256 ${encode_tar})'|${_sha256_verify_cmd} && tar xf ${encode_tar} && rm -f ${encode_tar}" >>${merge_script}
 
   # remove tar file locally
   rm -f ${encode_tar}
 }
 
 function file_pack_binary() {
-  ldconfig
   local file_list="$@"
-  ${TAR_BIN} cfJ binary.tar.xz \
-    --absolute-names \
-    --dereference \
-    --hard-dereference \
-    --preserve-permissions \
-    --overwrite \
-    ${file_list} \
-    $(ldd ${file_list} | awk '$3${HOME}/^\//{print $3}' | sort | uniq | tr '\n' ' ')
+  if is_macos; then
+    # macOS: use otool -L to list dynamic library dependencies
+    local mac_deps=""
+    for bin in ${file_list}; do
+      if file "${bin}" | grep -q Mach-O; then
+        mac_deps+="$(otool -L "${bin}" 2>/dev/null | awk 'NF>1 && $1 ~ /^\//{print $1}' | sort -u | tr '\n' ' ')"
+      fi
+    done
+    ${TAR_BIN} cfJ binary.tar.xz \
+      --absolute-names \
+      --dereference \
+      --preserve-permissions \
+      --overwrite \
+      ${file_list} \
+      ${mac_deps}
+  else
+    # Linux: use ldd and ldconfig
+    ldconfig
+    ${TAR_BIN} cfJ binary.tar.xz \
+      --absolute-names \
+      --dereference \
+      --hard-dereference \
+      --preserve-permissions \
+      --overwrite \
+      ${file_list} \
+      $(ldd ${file_list} | awk '$3 ~ /^\//{print $3}' | sort | uniq | tr '\n' ' ')
+  fi
 }
 
 function file_pack_system() {
@@ -165,8 +301,8 @@ function file_size() {
 }
 
 function file_same() {
-  local src_info=$(stat -L -c "%D %F %i %t %T %u %U" $1)
-  local target_info=$(stat -L -c "%D %F %i %t %T %u %U" $2)
+  local src_info=$(_stat_file_info "$1")
+  local target_info=$(_stat_file_info "$2")
   if [ "${src_info}" = "${target_info}" ]; then
     return ${RETURN_SUCCESS}
   else
@@ -208,8 +344,8 @@ function file_real_size() {
     echo "File not exist: ${filepath}"
     return ${RETURN_FAILURE}
   fi
-  local logical_size=$(stat -c "%s" ${filepath})
-  local physical_size=$(stat -c "%b" ${filepath})
+  local logical_size=$(_stat_size "${filepath}")
+  local physical_size=$(_stat_blocks "${filepath}")
   log notice "Logical size: ${logical_size} bytes"
   log notice "Physical size: $((physical_size * 512)) bytes"
 }
@@ -406,7 +542,7 @@ function highlight_difference_files() {
 
   declare -A checksum_map
   for file in ${file_list}; do
-    local checksum=$(sha256sum "${file}" | awk '{print $1}' | cut -c 1-8)
+    local checksum=$(_sha256 "${file}" | awk '{print $1}' | cut -c 1-8)
     if [[ -z ${checksum_map["${checksum}"]} ]]; then
       checksum_map["${checksum}"]="${file}"
     else
@@ -431,7 +567,7 @@ function highlight_difference_files() {
 function archive_current() {
   local filename=${1:-$(basename ${PWD}).tar.gz}
   ${TAR_BIN} zcf "${filename}" --exclude-vcs --exclude='*.tar.gz' ./*
-  mv -fv ${filename} $(sha256sum ${filename} | awk '{print $1}')-$(date_id).tar.gz
+  mv -fv ${filename} $(_sha256 ${filename} | awk '{print $1}')-$(date_id).tar.gz
 }
 
 function find_files_by_size() {
@@ -496,14 +632,14 @@ function dir_diff() {
   find "${left_dir}" -type f -print0 | while IFS= read -r -d '' file; do
     local rel="${file#${left_dir}/}"
     local sum
-    sum=$(sha256sum "${file}" | awk '{print $1}')
+    sum=$(_sha256 "${file}" | awk '{print $1}')
     log color "%s\t%s" "${rel}" "${sum}"
   done | sort >"${left_list}"
 
   find "${right_dir}" -type f -print0 | while IFS= read -r -d '' file; do
     local rel="${file#${right_dir}/}"
     local sum
-    sum=$(sha256sum "${file}" | awk '{print $1}')
+    sum=$(_sha256 "${file}" | awk '{print $1}')
     log color "%s\t%s" "${rel}" "${sum}"
   done | sort >"${right_list}"
 
