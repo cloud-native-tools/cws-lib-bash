@@ -119,7 +119,7 @@ function rust_mirror ()
         local date_dir="${mirror_dist}/${manifest_date}"
         if [ -n "${manifest_date}" ] && [ -d "${date_dir}" ]; then
             log info "Found date directory: ${date_dir}";
-            for f in "${date_dir}"/*.tar.gz*; do
+            for f in "${date_dir}"/*.tar.*; do
                 [ -f "$f" ] || continue
                 local base
                 base=$(basename "$f")
