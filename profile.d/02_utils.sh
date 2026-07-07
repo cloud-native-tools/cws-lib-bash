@@ -638,3 +638,8 @@ function slugify_unicode() {
 function escape_sed() {
   echo "$1" | sed 's/[\/&]/\\&/g'
 }
+
+function bin_path() {
+  local pattern=${1:-*}
+  env | grep -E '^PATH=' | tr ':' '\n' | xargs -I{} find "{}" -name "${pattern}" 2>&1 | grep -v 'No such file or directory' | sort | uniq
+}
