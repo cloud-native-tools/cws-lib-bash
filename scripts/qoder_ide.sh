@@ -277,6 +277,9 @@ function qoder_ide_bin() {
 # ---------------------------------------------------------------------------
 # Open / launch
 # ---------------------------------------------------------------------------
+function qoder() {
+  qoder_ide_open "$@"
+}
 
 function qoder_ide_open() {
   local ide_bin=$(qoder_ide_bin)
