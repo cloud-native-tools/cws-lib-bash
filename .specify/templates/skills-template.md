@@ -25,7 +25,7 @@ This Skill follows the canonical path conventions defined in `templates/commands
 
 - Use `${SKILL_HOME}/<relative-path>` for every Skill-owned resource reference (scripts, references, assets, sub-directory files).
 - Use `${SKILL_WORKDIR}/<relative-path>` for every runtime/user-facing path this Skill reads from or writes to (inputs in the user's project, outputs delivered to the user).
-- Never conflate the two; never embed agent-specific install paths (e.g., `~/.copilot/skills/...`, hard-coded `.specify/skills/...`).
+- Never conflate the two; never embed agent-specific install paths (e.g., `${HOME}/.copilot/skills/...`, hard-coded `.specify/skills/...`).
 
 For shell scripts under `${SKILL_HOME}/scripts/`, copy this idiom verbatim at the top of each script:
 

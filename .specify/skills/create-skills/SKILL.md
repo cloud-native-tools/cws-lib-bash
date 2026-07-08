@@ -42,7 +42,7 @@ Distill a reusable Skill from the current conversation history:
 Storage location options (`SKILL_HOME`):
 - `.specify/skills/<name>/` — project-level primary (preferred)
 - `.github/skills/<name>/` — compatibility entry (symlink, not primary)
-- `~/.copilot/skills/<name>/` — personal-level
+- `${HOME}/.copilot/skills/<name>/` — personal-level
 
 When authoring the new Skill, follow the path conventions from `templates/commands/skills.md` (`## Path Conventions`):
 

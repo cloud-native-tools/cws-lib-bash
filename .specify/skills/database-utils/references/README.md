@@ -163,7 +163,7 @@ If neither `protocol` nor a recognized port is provided, defaults to `mysql`.
 
 | Error | Solution |
 |-------|----------|
-| Config not found | Create `connections.json` in skill directory or `~/.config/claude/db-connections.json` |
+| Config not found | Create `connections.json` in skill directory or `${HOME}/.config/claude/db-connections.json` |
 | Authentication failed | Check username/password in config |
 | Connection timeout | Verify host/port, check firewall/VPN |
 | MySQL SSL error | Try `"ssl_disabled": true` for local databases |

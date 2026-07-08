@@ -69,7 +69,7 @@ chmod 600 ${SKILL_HOME}/connections.json
 
 The dispatcher searches for the config in these locations (first match wins):
 1. `${SKILL_HOME}/connections.json`
-2. `~/.config/claude/db-connections.json`
+2. `${HOME}/.config/claude/db-connections.json`
 
 ## Config Fields
 
@@ -172,7 +172,7 @@ If the match is ambiguous, run `--list` and ask the user which database to query
 
 | Error | Solution |
 |-------|----------|
-| Config not found | Create `connections.json` in skill directory or `~/.config/claude/db-connections.json` |
+| Config not found | Create `connections.json` in skill directory or `${HOME}/.config/claude/db-connections.json` |
 | Authentication failed | Check username/password in config |
 | Connection timeout | Verify host/port, check firewall/VPN |
 | MySQL SSL error | Try `"ssl_disabled": true` for local databases |

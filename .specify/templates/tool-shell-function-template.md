@@ -12,7 +12,7 @@
 ## Scope
 
 **Availability**: Shell-session-level — available only after the function is loaded into the current shell context.  
-**Typical Sources**: Predefined shell functions sourced via `source` or `.` from files like `~/.bashrc`, `~/.bash_profile`, `~/.zshrc`, or project-local `.envrc` / `activate` scripts.  
+**Typical Sources**: Predefined shell functions sourced via `source` or `.` from files like `${HOME}/.bashrc`, `${HOME}/.bash_profile`, `${HOME}/.zshrc`, or project-local `.envrc` / `activate` scripts.  
 **Portability**: Tied to the shell session and its configuration; the function disappears when the session ends or when a new shell is started without sourcing the definition file. Availability depends on which dotfiles or activation scripts the user has sourced.  
 **Source Identifier Convention**: The function name as it appears in the shell (e.g., `my_deploy_func`), discoverable via `compgen -A function` or `declare -F`.
 

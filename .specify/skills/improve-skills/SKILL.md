@@ -46,7 +46,7 @@ The input is a description of the Skill to improve. It must be interpreted as fo
    - **Legacy path idioms**: when the Skill under review still uses any of the following, flag them as migration candidates and apply the Migration Mapping table from `templates/commands/skills.md` (`## Migration Mapping`):
      - Bare relative paths such as `./scripts/init.sh` or `./references/checklist.md` → rewrite as `${SKILL_HOME}/...`.
      - `${SKILL_ROOT}/X` references → rewrite as `${SKILL_HOME}/X`.
-     - Agent-specific install paths embedded in prose (e.g., `~/.copilot/skills/<name>/...`, hard-coded `.specify/skills/<name>/...`) → rewrite as `${SKILL_HOME}/...`.
+     - Agent-specific install paths embedded in prose (e.g., `${HOME}/.copilot/skills/<name>/...`, hard-coded `.specify/skills/<name>/...`) → rewrite as `${SKILL_HOME}/...`.
 
 4. **Correct the root causes with minimal changes**
    - For complete execution failures, fix the instruction that caused non-execution first, such as wrong command-line arguments, nonexistent paths, invalid expected file formats, incompatible metadata, or missing prerequisite checks.

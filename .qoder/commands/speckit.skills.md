@@ -82,7 +82,7 @@ Apply this checklist verbatim to every existing Skill before user-requested refi
    - Bare relative paths (`./.specify/scripts/init.sh`, `./references/spec.md`) → `${SKILL_HOME}/.specify/scripts/init.sh`, `${SKILL_HOME}/references/spec.md`.
      Exception: links **inside SKILL.md** to sibling files MAY remain as `./references/...` (they are markdown-relative, not path-conventions).
    - `${SKILL_ROOT}/X` → `${SKILL_HOME}/X`.
-   - Hard-coded install paths (`~/.copilot/skills/<name>/...`, `.specify/skills/<name>/X` in prose) → `${SKILL_HOME}/X`.
+   - Hard-coded install paths (`${HOME}/.copilot/skills/<name>/...`, `.specify/skills/<name>/X` in prose) → `${SKILL_HOME}/X`.
 
 5. **Registry consistency**
    - `.specify/instructions.md` `### Skills` table contains exactly one deduplicated row for the canonical `skill_id`. Add the row if missing; remove duplicates if present.
@@ -167,7 +167,7 @@ Existing Skills migrate opportunistically to the new convention — there is no 
 |--------------|----------|----------------|---------------|
 | Bare relative path (`./X`) | `${SKILL_HOME}/X` | `./.specify/scripts/init.sh` | `${SKILL_HOME}/.specify/scripts/init.sh` |
 | `${SKILL_ROOT}/X` reference | `${SKILL_HOME}/X` | `${SKILL_ROOT}/references/spec.md` | `${SKILL_HOME}/references/spec.md` |
-| Agent-specific install path (`~/.copilot/skills/<name>/X`, `.specify/skills/<name>/X`, etc.) | `${SKILL_HOME}/X` | `~/.copilot/skills/my-skill/assets/x.png` | `${SKILL_HOME}/assets/x.png` |
+| Agent-specific install path (`${HOME}/.copilot/skills/<name>/X`, `.specify/skills/<name>/X`, etc.) | `${SKILL_HOME}/X` | `${HOME}/.copilot/skills/my-skill/assets/x.png` | `${SKILL_HOME}/assets/x.png` |
 
 After applying the mapping, exercise the Skill once to confirm behaviour is unchanged (per SC-004); the rewrite is non-behavioural.
 

@@ -74,7 +74,7 @@ This order keeps the report moving from macro intent, to implementation means, t
 
 Use this contract to avoid workflow drift during real executions:
 
-- **Local workspace mode**: If the user asks to analyze the current workspace or provides a local path, use that repository root as `$WORK_DIR`. Do **not** create `~/repo-analyses/...` unless analyzing a remote repository that must be cloned.
+- **Local workspace mode**: If the user asks to analyze the current workspace or provides a local path, use that repository root as `$WORK_DIR`. Do **not** create `${HOME}/repo-analyses/...` unless analyzing a remote repository that must be cloned.
 - **Final deliverable location**: Always write the final report to `$WORK_DIR/docs/overview.md`. This is the user-facing deliverable. If `$WORK_DIR` is the current workspace, the file must be `docs/overview.md` in the workspace root.
 - **Analysis mode default**: If no interactive question tool is available, or asking would interrupt an otherwise clear request, choose **Standard** mode and state that choice briefly in the report. Ask the user only when the requested depth is materially ambiguous.
 - **Draft files are optional execution aids**: Create `drafts/` files when they help large or remote analyses. For smaller local repositories, it is acceptable to keep intermediate notes in the agent context and write only the final report, provided the final report still includes evidence-backed conclusions.
@@ -84,7 +84,7 @@ Use this contract to avoid workflow drift during real executions:
 ### Phase 1: Project Acquisition & Initialization
 
 1. Parse user input (supports `owner/repo`, GitHub/GitLab/Gitee URL, local path)
-2. Set `$WORK_DIR` according to the Execution Contract: current/local repo root for local analysis; `~/repo-analyses/${REPO_NAME}-{YYYYMMDD}` only for remote clones
+2. Set `$WORK_DIR` according to the Execution Contract: current/local repo root for local analysis; `${HOME}/repo-analyses/${REPO_NAME}-{YYYYMMDD}` only for remote clones
 3. Clone with `git clone --depth=1` if remote; skip if local path provided
 4. Gather basic metadata (Stars, Forks, contributors, code statistics)
 5. **Business context discovery**: before diving into code, answer the four business questions from the First Principle (Who? What situation? Why existing solutions fail? Why standalone?). Write initial hypotheses to `drafts/01-business-context.md` — these will be validated and refined through subsequent phases.
