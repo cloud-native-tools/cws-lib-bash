@@ -3,7 +3,7 @@
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
 # shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/qoder_cli.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/311_qoder_cli.sh"
 
 # --- Mock qodercli for standard mode tests ---
 function qodercli() {

@@ -7,7 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/../profile.d/00_vars.sh"
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../profile.d/02_utils.sh"
 # shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/qoder_ide.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/312_qoder_ide.sh"
 
 TEST_TMPDIR=$(mktemp -d)
 

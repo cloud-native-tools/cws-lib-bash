@@ -3,7 +3,7 @@
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
 source "$(dirname "${BASH_SOURCE[0]}")/../profile.d/00_vars.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/../profile.d/02_utils.sh"
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/vscode.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/312_vscode.sh"
 
 TEST_TMPDIR=$(mktemp -d)
 

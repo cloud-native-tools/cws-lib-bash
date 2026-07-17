@@ -3,7 +3,7 @@
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
 # shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/qwen.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/311_qwen.sh"
 
 # Primary: mock succeeds with --dangerously-skip-permissions
 function qwen() {

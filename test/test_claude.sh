@@ -3,7 +3,7 @@
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
 # shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/claude.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/311_claude.sh"
 
 function claude() {
   printf '%s\n' "$*"
@@ -17,6 +17,23 @@ assert_eq "--permission-mode plan review this change" "${output}" "claude_plan s
 
 output=$(claude_auto "implement feature")
 assert_eq "--permission-mode auto implement feature" "${output}" "claude_auto should enable auto mode and pass args"
+
+# --- Test claude_yolo root refusal (when running as root) ---
+if [[ "$(id -u)" -eq 0 ]]; then
+  output=$(claude_yolo "run tests" 2>/dev/null)
+  status=$?
+  assert_eq "1" "${status}" "claude_yolo should refuse to run as root"
+  assert_eq "" "${output}" "claude_yolo should produce no stdout when refused as root"
+fi
+
+# Override id to simulate non-root user for yolo command tests
+function id() {
+  if [[ "$1" == "-u" ]]; then
+    echo "1000"
+    return
+  fi
+  command id "$@"
+}
 
 output=$(claude_yolo "run tests")
 assert_eq "--dangerously-skip-permissions run tests" "${output}" "claude_yolo should skip permissions and pass args"

@@ -3,7 +3,7 @@
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
 # shellcheck disable=SC1091
-source "$(dirname "${BASH_SOURCE[0]}")/../scripts/codex.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../scripts/311_codex.sh"
 
 function codex() {
   printf '%s\n' "$*"
