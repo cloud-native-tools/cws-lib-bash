@@ -31,9 +31,22 @@ function qoder_cli_run() {
 function qoder_cli_install() {
   # 官方安装器（仅支持 macOS/Linux）
   # 文档：https://docs.qoder.com/en/cli/quick-start
+
   log info "Installing Qoder CLI..."
   have curl || return "${RETURN_FAILURE:-1}"
-  curl -fsSL https://qoder.com/install | bash
+
+  # 安装器会在 TMPDIR 下解压并执行二进制；若临时目录为 noexec 则回退到可执行的临时目录
+  if tmpdir_exec_ok; then
+    curl -fsSL https://qoder.com/install | bash
+  else
+    local install_tmpdir
+    if ! install_tmpdir=$(tmpdir_ensure); then
+      log error "no executable tmpdir available for installation"
+      return "${RETURN_FAILURE:-1}"
+    fi
+    log warn "${TMPDIR:-/tmp} is not executable; using TMPDIR=${install_tmpdir} for installation"
+    curl -fsSL https://qoder.com/install | TMPDIR="${install_tmpdir}" bash
+  fi
 }
 
 function qoder_cli_uninstall() {

@@ -56,6 +56,35 @@ function enter_chroot() {
   fi
 }
 
+function tmpdir_exec_ok() {
+  # 检测临时目录是否允许执行二进制（容器/沙箱中 /tmp 常被挂载为 noexec 或 ro）
+  # 用法：tmpdir_exec_ok [dir]，缺省检测 ${TMPDIR:-/tmp}
+  local dir=${1:-${TMPDIR:-/tmp}}
+  local probe
+  probe=$(mktemp "${dir}/exec-probe.XXXXXX" 2>/dev/null) || return ${RETURN_FAILURE:-1}
+  printf '#!/bin/sh\nexit 0\n' >"${probe}"
+  chmod +x "${probe}"
+  "${probe}" >/dev/null 2>&1
+  local rc=$?
+  rm -f "${probe}"
+  return ${rc}
+}
+
+function tmpdir_ensure() {
+  # 输出一个可写且可执行的临时目录：当前 TMPDIR 满足则直接复用，否则回退到 HOME 下的目录
+  # 用法：TMPDIR=$(tmpdir_ensure) some_command
+  # 注意：用于命令替换，失败时不打印日志，由调用方根据返回码处理
+  local dir
+  for dir in "${TMPDIR:-/tmp}" "${HOME}/tmp" "${HOME}/.cache/tmp"; do
+    mkdir -p "${dir}" 2>/dev/null || continue
+    if tmpdir_exec_ok "${dir}"; then
+      echo "${dir}"
+      return ${RETURN_SUCCESS:-0}
+    fi
+  done
+  return ${RETURN_FAILURE:-1}
+}
+
 function mount_bootable() {
   local target=${1}
   local mountpoint=${2:-/media}
