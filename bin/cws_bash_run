@@ -2,12 +2,6 @@
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if command -v git >/dev/null 2>&1 && [ -d "${ROOT}/.git" ]; then
-	if ! git -C "${ROOT}" pull; then
-		printf '%s\n' '[WARN] Failed to update cws-lib-bash via git pull, continuing execution.' >&2
-	fi
-fi
-
 source "${ROOT}/bin/cws_bash_env"
 
 script_entry "$@"
