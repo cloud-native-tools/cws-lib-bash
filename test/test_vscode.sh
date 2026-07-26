@@ -34,4 +34,16 @@ assert_eq "" "${add_folder_output}" "add_folder should not leak mv output to std
 added_folder=$(jq -r '.folders[0].path' "${workspace_file}")
 assert_eq "${TEST_TMPDIR}" "${added_folder}" "add_folder should persist the requested folder"
 
+vscode_workspace_add_folder "${workspace_file}" "${TEST_TMPDIR}" >/dev/null
+folder_count=$(jq -r '.folders | length' "${workspace_file}")
+assert_eq "1" "${folder_count}" "add_folder should not duplicate an existing folder path"
+
+mkdir -p "${TEST_TMPDIR}/proj-a" "${TEST_TMPDIR}/proj-b"
+vscode_workspace_setup "${workspace_file}" "${TEST_TMPDIR}" >/dev/null
+mkdir -p "${TEST_TMPDIR}/proj-c"
+vscode_workspace_setup "${workspace_file}" "${TEST_TMPDIR}" >/dev/null
+total_count=$(jq -r '[.folders[].path] | length' "${workspace_file}")
+distinct_count=$(jq -r '[.folders[].path] | unique | length' "${workspace_file}")
+assert_eq "${distinct_count}" "${total_count}" "workspace_setup re-runs should not duplicate folder paths"
+
 print_summary

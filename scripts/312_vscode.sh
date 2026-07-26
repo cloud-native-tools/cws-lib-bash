@@ -50,6 +50,16 @@ function _vscode_workspace_dirs_to_json() {
     jq -s .
 }
 
+# Append folder entries, dropping ones whose .path already exists while
+# keeping the original order (unique_by would re-sort the list).
+function _vscode_workspace_append_folders() {
+  local workspace_file=${1}
+  local folders_json=${2}
+
+  _vscode_workspace_apply_jq "${workspace_file}" \
+    ".folders |= (. + ${folders_json} | reduce .[] as \$f ([]; if any(.[]; .path == \$f.path) then . else . + [\$f] end))"
+}
+
 function vscode_workspace_setup() {
   local workspace_file=${1:-${VSCODE_DEFAULT_WORKSPACE:-work.code-workspace}}
   local project_root=${2:-${VSCODE_PROJECT_ROOT:-${WORK_DIR:-${PWD}}}}
@@ -73,7 +83,7 @@ function vscode_workspace_setup() {
     fi
   } || true)
 
-  _vscode_workspace_apply_jq "${resolved_workspace_file}" ".folders |= . + ${main_projects_json}"
+  _vscode_workspace_append_folders "${resolved_workspace_file}" "${main_projects_json}"
 }
 
 function vscode_workspace_add_folder() {
@@ -121,7 +131,7 @@ function vscode_workspace_add_folder() {
       jq -R '{"path":.}' |
       jq -s .
   )
-  _vscode_workspace_apply_jq "${resolved_workspace_file}" ".folders |= . + ${folder_json}"
+  _vscode_workspace_append_folders "${resolved_workspace_file}" "${folder_json}"
 }
 
 function vscode_workspace_add_python_search_paths() {
