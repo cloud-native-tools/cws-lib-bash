@@ -1,0 +1,22 @@
+{
+  "scope": "session",
+  "updated": "2026-07-30T11:58:09Z",
+  "entries": [
+    {
+      "id": "20260730T115809Z-docs-map-refresh-after-docs-bootstrap-run-docs-map-refresh-2",
+      "file": "20260730T115809Z-docs-map-refresh-after-docs-bootstrap-run-docs-map-refresh-2.md",
+      "scope": "session",
+      "source": "/speckit.instructions",
+      "feature": "",
+      "tags": [
+        "instructions",
+        "documentation-map",
+        "docs-bootstrap",
+        "reconcile"
+      ],
+      "title": "Docs-map refresh after docs bootstrap (run docs-map-refresh-20260730-195640)",
+      "created": "2026-07-30T11:58:09Z",
+      "summary": "Converged Documentation Map (added Glossary, Architecture, Docs Space rows; updated Development/Readme key content) and Tech Stack (scripts 55->59, removed vanished expect/, added docs/) after /specki"
+    }
+  ]
+}

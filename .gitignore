@@ -40,3 +40,4 @@ __pycache__/
 .ai/tools/*.md
 .ai/tools/*.json
 .specify/tools/*.json
+.specify/instructions.md-*

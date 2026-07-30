@@ -11,8 +11,11 @@ This project documentation is distributed across several key files. You MUST ref
 |----------|----------|---------|-------------|
 | **Constitution** | `.specify/memory/constitution.md` | Project governance & hard principles | Universal Generality (Principle I), TDD, quality gates, Bash standards |
 | **Feature Index** | `.specify/memory/features.md` | Feature roadmap status | F001–F015 functional, NF01–NF04 non-functional |
-| **Development** | `CONTRIBUTING.md` | Collaboration workflow | PR process, testing requirements, code style |
-| **Readme** | `README.md` | Project overview & quick start | Installation, `source` usage, `cws_bash_run` |
+| **Glossary** | `.specify/memory/glossary.md` | Project-wide vocabulary anchor | Canonical terms, variants, correction protocol |
+| **Architecture** | `ARCHITECTURE.md` | One-page architecture summary | Layers (bin/profile.d/scripts/test), key conventions |
+| **Docs Space** | `docs/` | Six-type documentation tree | `concepts/`, `tutorials/`, `tasks/`, `reference/`, `decisions/` (ADR), `contribute/`, `notes/`; indexed from `README.md` |
+| **Development** | `CONTRIBUTING.md` | Collaboration workflow | PR process, testing requirements; standards in `docs/contribute/coding-standards.md` |
+| **Readme** | `README.md` | Project overview & quick start | Installation, `source` usage, `cws_bash_run`, docs index |
 | **AI Prompt Specs** | `.github/prompts/` | SpecKit workflow prompts | `speckit.instructions.prompt.md` etc. |
 
 > **Directive**: When answering questions or generating code, ALWAYS check the relevant document from the map above first.
@@ -39,10 +42,10 @@ Escalation rules:
 - **Lint**: ShellCheck (`shellcheck -x`)
 - **Key Directories**:
   - `profile.d/`: Base variables, logging, utilities, network/file/process/storage helpers (loaded in order `00_`–`99_`)
-  - `scripts/`: Domain-specific function libraries (docker, kubernetes, git, python, terraform, etc. — 55 files)
+  - `scripts/`: Domain-specific function libraries (docker, kubernetes, git, python, terraform, etc. — 59 files)
   - `bin/`: Entry scripts (`cws_bash_env`, `cws_bash_run`, `cws_bash_test`, `cws_bash_setup`)
   - `test/`: Regression tests (`test_*.sh`)
-  - `expect/`: Expect automation interaction scripts
+  - `docs/`: Six-type documentation tree (concepts, tutorials, tasks, reference, decisions, contribute + notes)
 
 ## Runtime Loading Model (Critical)
 - `bin/cws_bash_env` sources `profile.d/*.sh` then `scripts/*.sh` in order — code executes at load time.

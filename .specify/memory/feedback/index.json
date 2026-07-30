@@ -1,0 +1,42 @@
+{
+  "store": "feedback",
+  "updated": "2026-07-30T11:58:19Z",
+  "threshold": 10,
+  "count_since_submission": 3,
+  "submitted_at": null,
+  "entries": [
+    {
+      "id": "20260730T115819Z-skill-memory-record",
+      "file": "20260730T115819Z-skill-memory-record.md",
+      "unit_id": "skill:memory-record",
+      "unit_type": "skill",
+      "run_id": "docs-map-refresh-20260730-195640",
+      "feature": "",
+      "partial": false,
+      "created": "2026-07-30T11:58:19Z",
+      "summary": "Recorded one session-scope entry capturing the /speckit.instructions residual report; single clean engine write, correct source and scope."
+    },
+    {
+      "id": "20260730T115756Z-speckit-instructions",
+      "file": "20260730T115756Z-speckit-instructions.md",
+      "unit_id": "/speckit.instructions",
+      "unit_type": "command",
+      "run_id": "docs-map-refresh-20260730-195640",
+      "feature": "",
+      "partial": false,
+      "created": "2026-07-30T11:57:56Z",
+      "summary": "Directed refresh after /speckit.docs bootstrap: Documentation Map gained Glossary/Architecture/Docs-Space rows and updated Development/Readme key-content; Tech Stack fixed stale scripts count (55->59)"
+    },
+    {
+      "id": "20260730T115359Z-speckit-docs",
+      "file": "20260730T115359Z-speckit-docs.md",
+      "unit_id": "/speckit.docs",
+      "unit_type": "command",
+      "run_id": "bootstrap-20260730-194211",
+      "feature": "",
+      "partial": false,
+      "created": "2026-07-30T11:53:59Z",
+      "summary": "Bootstrap sweep on cws-lib-bash: generated full docs/ skeleton (6 type dirs + notes + decisions index/template), created ARCHITECTURE.md, and resolved both root-entry oversize violations via user-conf"
+    }
+  ]
+}
