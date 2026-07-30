@@ -57,77 +57,56 @@ render_template() {
     "$input_file"
 }
 
-# Function to extract section body: Text between `## Header` and the CA start of next header `##` or `#`
-extract_section_body() {
-  local file="$1"
-  local header_pattern="$2"
-
-  # Check if header exists
-  if ! grep -q "$header_pattern" "$file"; then
-    return 0
-  fi
-
-  # Find start line
-  local start_line=$(grep -n "$header_pattern" "$file" | head -1 | cut -d: -f1)
-
-  # Start reading from the line AFTER the header
-  local body_start=$((start_line + 1))
-
-  # Print from body_start until next line starting with #
-  # We use awk to print lines until we see a line starting with top-level header '#'
-  # Note: This implies we only preserve top-level content blocks properly if they are delimited by headings
-  tail -n "+$body_start" "$file" | awk '/^#/ { exit } { print }'
-}
-
-# T007: Backup
+# T007: Backup + establish refresh base
+#
+# Non-destructive policy: when instructions already exist, that file is the
+# canonical refresh BASE. The script never renders the template over it and
+# never discards non-"Project Overview" sections (governance rules, recurring
+# lessons, registries, and other hand-authored knowledge). It only writes a
+# timestamped backup as a safety net. The full section-by-section refresh —
+# reconciling each section against current project reality and the latest
+# template structure — is performed by the /speckit.instructions command.
+#
+# The template is used ONLY to bootstrap a brand-new file when none exists.
+#
+# Backups are NON-CLOBBERING and fully timestamped (down to the second). An
+# older date-only name was overwritten by a second run on the same day, which
+# could destroy a pristine pre-damage copy. Preserving every generation keeps
+# the .specify/instructions.md-* history intact so a project damaged by an
+# older overwriting version can recover lost content via /speckit.instructions.
 if [ -f "$TARGET_FILE" ]; then
-  BACKUP_FILE="${TARGET_FILE}-$(date '+%Y-%m-%d')"
+  BACKUP_FILE="${TARGET_FILE}-$(date '+%Y-%m-%d-%H%M%S')"
+  # Guard against a collision within the same second (never overwrite history).
+  if [ -e "$BACKUP_FILE" ]; then
+    BACKUP_FILE="${BACKUP_FILE}-$$"
+  fi
   log info "Backing up existing instructions to $BACKUP_FILE"
   cp "$TARGET_FILE" "$BACKUP_FILE"
+  # Keep the accumulating local backups out of version control.
+  gitignore_add_pattern ".specify/instructions.md-*" "$REPO_ROOT/.gitignore"
 
-  log info "Performing Smart Fusion..."
-
-  # T008/T009: Smart Fusion Logic
-  # 1. Render the NEW template to a temp file
-  TEMP_NEW=$(mktemp)
-  render_template "$TEMPLATE_FILE" >"$TEMP_NEW"
-
-  # 2. Extract "Project Overview" from OLD file (Preserve user context)
-  OLD_OVERVIEW=$(extract_section_body "$BACKUP_FILE" "^## Project Overview")
-
-  # 3. Construct the fused file
-  if [ ! -z "$OLD_OVERVIEW" ] && [ "$OLD_OVERVIEW" != "" ]; then
-    log info "Preserving existing Project Overview..."
-    FUSED_FILE=$(mktemp)
-
-    # Methodology: Replace contents of "## Project Overview" in TEMP_NEW
-
-    # Print header
-    awk '/^## Project Overview/ { print; exit }' "$TEMP_NEW" >"$FUSED_FILE"
-
-    # Append old content
-    echo "$OLD_OVERVIEW" >>"$FUSED_FILE"
-
-    # Find start of NEXT section in TEMP_NEW
-    OVERVIEW_LINE=$(grep -n "^## Project Overview" "$TEMP_NEW" | cut -d: -f1)
-    NEXT_SECTION_REL=$(tail -n "+$((OVERVIEW_LINE + 1))" "$TEMP_NEW" | grep -n "^#" | head -1 | cut -d: -f1)
-
-    if [ ! -z "$NEXT_SECTION_REL" ]; then
-      ABS_NEXT_LINE=$((OVERVIEW_LINE + NEXT_SECTION_REL))
-      tail -n "+$ABS_NEXT_LINE" "$TEMP_NEW" >>"$FUSED_FILE"
-    fi
-
-    mv "$FUSED_FILE" "$TARGET_FILE"
-  else
-    log info "No existing Project Overview found or empty. Using template default."
-    mv "$TEMP_NEW" "$TARGET_FILE"
-  fi
-
-  rm -f "$TEMP_NEW"
-
+  log info "Existing instructions kept as the refresh base (not overwritten)."
+  log info "The /speckit.instructions command reconciles each section against current"
+  log info "project state and the latest template, and can recover content dropped by"
+  log info "older versions from the .specify/instructions.md-* backup history."
 else
   log info "Generating new instructions file from template..."
   render_template "$TEMPLATE_FILE" >"$TARGET_FILE"
+fi
+
+# Initialize the project glossary (non-destructive; create only if absent).
+# The glossary anchors project vocabulary and corrects voice/dictated input;
+# it is loaded ambiently by every /speckit.* command via the Documentation Map.
+GLOSSARY_ENGINE="$SCRIPT_DIR/../python/glossary-utils.py"
+GLOSSARY_TEMPLATE=".specify/templates/glossary-template.md"
+if [ -f "$GLOSSARY_ENGINE" ] && [ -f "$GLOSSARY_TEMPLATE" ]; then
+  if python3 "$GLOSSARY_ENGINE" --action init --from-template "$GLOSSARY_TEMPLATE" >/dev/null 2>&1; then
+    log info "Ensured project glossary at .specify/memory/glossary.md (non-destructive)"
+  else
+    log warning "Glossary init skipped (engine returned non-zero)"
+  fi
+else
+  log warning "Glossary engine or template not found; skipping glossary initialization"
 fi
 
 # Cleanup deprecated AI tool artifacts
@@ -169,5 +148,6 @@ popd >/dev/null
 ln -sf .specify/instructions.md QWEN.md
 ln -sf .specify/instructions.md CLAUDE.md
 ln -sf .specify/instructions.md QODER.md
+ln -sf .specify/instructions.md AGENTS.md
 
 log success "Instructions generated/updated at $TARGET_FILE"

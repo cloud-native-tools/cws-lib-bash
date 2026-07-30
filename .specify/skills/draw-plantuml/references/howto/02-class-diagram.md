@@ -220,6 +220,9 @@ Order "1" *-- "*" OrderItem : contains
 
 ```plantuml
 @startuml
+' Semantic Layout: Hub=Order, Edge=OrderItem/Customer, Peer=Money/OrderStatus, Sink=Repository
+skinparam nodesep 40
+skinparam ranksep 60
 skinparam class {
   BackgroundColor White
   ArrowColor Black
@@ -261,18 +264,60 @@ package "Domain Model" {
 }
 
 package "Value Objects" {
-  class Money {
-    - amount: BigDecimal
-    - currency: String
-    + add(other: Money): Money
+  together {
+    class Money {
+      - amount: BigDecimal
+      - currency: String
+      + add(other: Money): Money
+    }
+    class Currency {
+      - code: String
+      - symbol: String
+    }
   }
 }
 
+' Hub: Order is the central domain class
 Customer "1" --> "*" Order : places
 Order "1" *-- "*" OrderItem : contains
 OrderItem "*" --> "1" Product : references
+' Dependency (weak reference) uses dotted arrow
+Order ..> Money : uses
+' Hidden link to enforce top-down inheritance flow
+Order -[hidden]d-> OrderStatus
 @enduml
 ```
+
+## 语义布局分析
+
+> 类图的语义角色映射：
+
+| 语义角色 | 含义 | 典型类 |
+|---------|------|-------|
+| **Hub (中心)** | 核心领域类，关联最多 | Order、User、Product |
+| **Edge (边缘)** | 与核心类关联的辅助类 | OrderItem、Address、Payment |
+| **Entry (入口)** | 系统入口类 | Controller、API Handler |
+| **Sink (汇聚)** | 数据访问层 | Repository、DAO |
+| **Peer (对等)** | 同层级的值对象或枚举 | Money、Currency、Status |
+
+**位置草图**：
+```
+[Entry: Controller]
+        ↓
+[Hub: Order] ←→ [Edge: Customer]
+    ↓           ↓
+[Edge: OrderItem]  [Edge: Payment]
+        ↓
+[Sink: OrderRepository]
+```
+
+**布局优化要点**：
+- **语义驱动布局**：核心领域类（Hub）居中，关联类（Edge）环绕，值对象/枚举（Peer）通过 `together{}` 并排
+- **`together{}`**：值对象和枚举并排放置，如 `together { class Money; class Currency }`
+- **隐藏连线**：`Parent -[hidden]d-> Child` 强制继承层次从上到下
+- **虚线区分依赖**：`..>` 表示依赖（弱引用），`-->` 表示关联/组合（强引用）
+- **间距**：`skinparam nodesep 40`、`skinparam ranksep 60` 避免类框重叠
+- **继承在上、实现在下**：接口和抽象类放在上层，具体实现放在下层
 
 ## 类图建模最佳实践
 

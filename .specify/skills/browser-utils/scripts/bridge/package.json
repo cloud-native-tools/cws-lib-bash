@@ -1,0 +1,21 @@
+{
+  "name": "browser-utils-bridge",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "DEV-ONLY external WebSocket bridge for browser-utils: relay server + companion MV3 extension + controller client for driving/testing a real Chrome over WS.",
+  "bin": {
+    "bridge-server": "server.js",
+    "bridge-cli": "bridge-cli.js"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "setup": "npm install"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -74,6 +74,34 @@ class ToolArgument:
 
 
 @dataclass
+class EnvironmentApplicability:
+    """Where a tool's invocation is verified to hold, and how it differs elsewhere.
+
+    Every field is optional: an empty field means "no known variance along this
+    axis", never "verified everywhere".
+    """
+
+    verified_version: str = ""
+    version_differences: str = ""
+    platform: str = ""
+    architecture: str = ""
+    fallback: str = ""
+    preflight_check: str = ""
+
+    def is_empty(self) -> bool:
+        return not any(
+            (
+                self.verified_version,
+                self.version_differences,
+                self.platform,
+                self.architecture,
+                self.fallback,
+                self.preflight_check,
+            )
+        )
+
+
+@dataclass
 class ToolRecord:
     name: str
     tool_type: str
@@ -84,6 +112,7 @@ class ToolRecord:
     arguments: List[ToolArgument] = field(default_factory=list)
     returns: List[dict] = field(default_factory=list)
     behavioral_rules: List[BehavioralRule] = field(default_factory=list)
+    environment: EnvironmentApplicability = field(default_factory=EnvironmentApplicability)
     discovery_origin: str = "manual-entry"
     tool_id: Optional[str] = None
     last_updated: str = field(default_factory=lambda: date.today().isoformat())
@@ -218,16 +247,28 @@ def _normalize_tool_type(tool_type: str) -> str:
     return mapping.get(tool_type, tool_type)
 
 
+def _workspace_root_for(tools_dir: Path) -> Path:
+    """Resolve the workspace root that a tool record's canonical path is relative to.
+
+    Canonical layout is ``<workspace>/.specify/memory/tools``. When no ``.specify``
+    ancestor exists (a bare directory, as in tests), fall back to the deepest
+    available ancestor instead of indexing past the end of ``parents``.
+    """
+    root = tools_dir
+    while root.name != ".specify" and root.parent != root:
+        root = root.parent
+    if root.name == ".specify":
+        return root.parent
+    parents = tools_dir.parents
+    return parents[min(2, len(parents) - 1)] if len(parents) else tools_dir
+
+
 def save_record(tools_dir: Path, record: Any) -> Path:
     tools_dir.mkdir(parents=True, exist_ok=True)
     record.last_updated = date.today().isoformat()
     if not record.tool_id:
         record_file = _record_path(tools_dir, record.name)
-        root = tools_dir
-        while root.name != ".specify" and root.parent != root:
-            root = root.parent
-        workspace_root = root.parent if root.name == ".specify" else tools_dir.parents[2]
-        record.tool_id = _generate_tool_id(record_file, workspace_root)
+        record.tool_id = _generate_tool_id(record_file, _workspace_root_for(tools_dir))
 
     record_file = _record_path(tools_dir, record.name)
     origin = getattr(record, "discovery_origin", "manual-entry") or "manual-entry"
@@ -271,7 +312,32 @@ def save_record(tools_dir: Path, record: Any) -> Path:
     else:
         lines.extend(["", "- None"])
 
-    lines.extend(["", "## Returns", "", "- None"])
+    lines.extend(["", "## Returns"])
+    if record.returns:
+        lines.extend(["", "| Field | Description |", "|-------|-------------|"])
+        for item in record.returns:
+            if isinstance(item, dict):
+                field_name = item.get("field") or item.get("name") or ""
+                field_description = item.get("description", "")
+            else:
+                field_name, field_description = str(item), ""
+            lines.append(f"| {field_name} | {field_description} |")
+    else:
+        lines.extend(["", "- None"])
+
+    env = getattr(record, "environment", None)
+    if env is not None and not env.is_empty():
+        lines.extend(["", "## Environment Applicability", "", "| Field | Value |", "|-------|-------|"])
+        for label, value in (
+            ("Verified Version", env.verified_version),
+            ("Version Differences", env.version_differences),
+            ("Platform", env.platform),
+            ("Architecture", env.architecture),
+            ("Fallback", env.fallback),
+            ("Preflight Check", env.preflight_check),
+        ):
+            if value:
+                lines.append(f"| {label} | {value} |")
 
     rules = getattr(record, "behavioral_rules", []) or []
     lines.extend(["", "## Behavioral Rules", ""])
@@ -283,6 +349,87 @@ def save_record(tools_dir: Path, record: Any) -> Path:
 
     record_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return record_file
+
+
+def _section_body(content: str, heading: str) -> str:
+    if heading not in content:
+        return ""
+    block = content.split(heading, 1)[1]
+    next_section = block.find("\n## ")
+    return block[:next_section] if next_section != -1 else block
+
+
+def _parse_table_rows(block: str) -> List[List[str]]:
+    """Return the data rows of the first Markdown pipe table in ``block``."""
+    rows: List[List[str]] = []
+    for line in block.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        cells = [c.strip() for c in stripped.strip("|").split("|")]
+        if not cells or all(set(c) <= {"-", ":"} and c for c in cells):
+            continue  # separator row
+        if rows == [] and cells and cells[0].lower() in {"name", "field"}:
+            continue  # header row
+        rows.append(cells)
+    return rows
+
+
+def _parse_arguments(content: str) -> List[ToolArgument]:
+    arguments: List[ToolArgument] = []
+    for cells in _parse_table_rows(_section_body(content, "## Parameters")):
+        name = cells[0]
+        if not name:
+            continue
+        # Canonical shape is Name|Type|Required|Description|Default; tolerate
+        # narrower tables by falling back to the last cell as the description.
+        if len(cells) >= 5:
+            type_, required, description, default = cells[1], cells[2], cells[3], cells[4]
+        elif len(cells) == 4:
+            type_, required, description, default = cells[1], cells[2], cells[3], ""
+        elif len(cells) == 3:
+            type_, required, description, default = "", cells[1], cells[2], ""
+        else:
+            type_, required, description, default = "", "", cells[-1], ""
+        arguments.append(
+            ToolArgument(
+                name=name,
+                type=type_,
+                required=required.strip().lower() in {"yes", "true", "required"},
+                description=description,
+                default=default or None,
+            )
+        )
+    return arguments
+
+
+def _parse_returns(content: str) -> List[dict]:
+    returns: List[dict] = []
+    for cells in _parse_table_rows(_section_body(content, "## Returns")):
+        field_name = cells[0]
+        if not field_name:
+            continue
+        returns.append({"field": field_name, "description": cells[-1] if len(cells) > 1 else ""})
+    return returns
+
+
+def _parse_environment(content: str) -> EnvironmentApplicability:
+    labels = {
+        "verified version": "verified_version",
+        "version differences": "version_differences",
+        "platform": "platform",
+        "architecture": "architecture",
+        "fallback": "fallback",
+        "preflight check": "preflight_check",
+    }
+    env = EnvironmentApplicability()
+    for cells in _parse_table_rows(_section_body(content, "## Environment Applicability")):
+        if len(cells) < 2:
+            continue
+        attr = labels.get(cells[0].strip().lower())
+        if attr:
+            setattr(env, attr, cells[1].strip())
+    return env
 
 
 def load_record(tools_dir: Path, name: str) -> Optional[ToolRecord]:
@@ -325,8 +472,10 @@ def load_record(tools_dir: Path, name: str) -> Optional[ToolRecord]:
         status=fields.get("status", "Draft"),
         aliases=aliases,
         tool_id=fields.get("tool_id") or None,
-        arguments=[],
+        arguments=_parse_arguments(content),
+        returns=_parse_returns(content),
         behavioral_rules=behavioral_rules,
+        environment=_parse_environment(content),
         discovery_origin=fields.get("discovery_origin", "manual-entry"),
     )
     return record

@@ -1,0 +1,1 @@
+../../.specify/agents/system-designer.agent.md

@@ -36,7 +36,7 @@ Before using this skill, ensure Playwright is available:
 npm list playwright 2>/dev/null || echo "Playwright not installed"
 
 # Install (if needed)
-cd ${HOME}/.claude/skills/playwright-skill
+cd ${SKILL_HOME}/scripts/js
 npm run setup
 ```
 

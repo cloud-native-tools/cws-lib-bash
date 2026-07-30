@@ -5,9 +5,9 @@
 | Operation | Copilot Tool/Method |
 |-----------|---------------------|
 | Read agent template | Open file in editor or use search to find content |
-| Analyze template issues | Search across `templates/agent-role-*.md` files for patterns |
+| Analyze template issues | Search across `templates/agent-capacity-*.md` files for patterns |
 | Apply targeted fixes | Workspace edit on the target template file |
-| Validate template structure | `@terminal`: `grep -c '## Identity' templates/agent-role-<slug>-template.md` |
+| Validate template structure | `@terminal`: `grep -c '## Identity' templates/agent-capacity-<slug>-template.md` |
 | Check placeholder usage | `@terminal`: `grep -oE '\{\{[A-Z_]+\}\}' <file>` |
 | Compare with other roles | Open multiple template files side-by-side in VS Code |
 

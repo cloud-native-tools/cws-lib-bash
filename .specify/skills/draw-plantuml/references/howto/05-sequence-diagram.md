@@ -111,34 +111,55 @@ end
 
 ```plantuml
 @startuml
-actor Customer
-participant "Order Service" as OS
-participant "Inventory Service" as IS
-participant "Payment Service" as PS
-participant "Notification Service" as NS
-queue "Message Queue" as MQ
+' Semantic: Entry=Customer (left), Hub=OrderSvc (center), Edge=PaySvc/InvSvc, Sink=DB/MQ (right)
 
+' Entry — 发起交互的用户
+actor Customer order 1
+
+' Hub — 协调者/编排者
+participant "Order Service" as OS order 2
+
+' Edge — 被调用的依赖服务（紧邻排列）
+together {
+    participant "Inventory Service" as IS order 3
+    participant "Payment Service" as PS order 4
+}
+
+' Sink — 最终数据汇聚
+together {
+    participant "Notification Service" as NS order 5
+    queue "Message Queue" as MQ order 6
+}
+
+' -> 同步调用：Customer 发起订单
 Customer -> OS: createOrder(items)
 
 loop 对每个商品
+    ' -> 同步调用：查询库存
     OS -> IS: checkStock(productId, qty)
+    ' --> 同步返回
     IS --> OS: stockAvailable
 end
 
 alt 库存充足
+    ' -> 同步调用：处理支付
     OS -> PS: processPayment(amount)
+    ' --> 同步返回
     PS --> OS: paymentSuccess
     
-    OS -> MQ: publish(OrderCreatedEvent)
+    ' ->> 异步消息：发布事件到 MQ
+    OS ->> MQ: publish(OrderCreatedEvent)
     
     par 并行通知
-        MQ --> NS: OrderCreatedEvent
+        ' ->> 异步消息：MQ 投递事件
+        MQ ->> NS: OrderCreatedEvent
         NS -> NS: sendEmail()
     and
-        MQ --> NS: OrderCreatedEvent  
+        MQ ->> NS: OrderCreatedEvent  
         NS -> NS: sendSMS()
     end
     
+    ' --> 同步返回
     OS --> Customer: orderConfirmed
 else 库存不足
     OS --> Customer: orderFailed
@@ -196,6 +217,35 @@ Gateway --> User: success
 4. **添加控制逻辑**：用 `alt/loop/opt/par` 表达条件分支和循环
 5. **标注关键注释**：对于复杂逻辑添加 `note` 说明
 6. **检查完整性**：确认所有消息都有明确的发送者和接收者
+
+## 语义布局分析
+
+> 时序图的语义角色映射（角色决定参与者位置）：
+
+| 语义角色 | 含义 | 典型参与者 | 位置 |
+|---------|------|---------|------|
+| **Entry (入口)** | 发起交互的用户或系统 | User、Client、Browser | 最左侧 |
+| **Hub (中心)** | 协调者/编排者 | OrderService、API Gateway | 中间偏左 |
+| **Edge (边缘)** | 被调用的依赖服务 | PayService、Inventory | 中间偏右 |
+| **Sink (汇聚)** | 最终数据存储或外部系统 | Database、MQ、External API | 最右侧 |
+| **Peer (对等)** | 同层级的关联服务 | 同一团队的多个微服务 | 紧邻排列 |
+
+**位置规则**：从左到右 = Entry → Hub → Edge → Sink
+
+**布局技巧**：
+- 使用 `together {}` 将关联参与者紧邻放置
+- 使用 `order N` 关键字精确控制参与者位置（N 越小越靠左）
+- `->` 同步调用，`->>` 异步调用，`-->` 返回，`..>` 弱耦合
+
+**布局优化要点**：
+- **从左到右排列**：Entry（用户）最左，Hub（核心服务）居中，Sink（数据库/MQ）最右
+- **`together{}`**：关联服务紧邻排列，如 `together { participant PaySvc; participant InvSvc }`
+- **`order` 关键字**：`participant OrderSvc order 2` 精确控制位置
+- **箭头语义**：`->` 同步请求，`->>` 异步消息，`-->` 同步返回，`..>` 弱耦合回调
+- **间距**：核心服务放中间，减少长距离交叉箭头
+- **分组**：`box "Domain" #LightBlue` 将相关参与者框在一起（注意：monochrome 模式下不支持颜色）
+- **参与者构造型 + 着色（角色一眼可辨）**：`participant "订单服务" as OS <<Hub>> #BBD8EE`——构造型 `<<Entry/Hub/Edge/Sink>>` 声明语义角色，底色按角色族着色（与「位置规则」呼应：角色即位置、关联即同色）。比纯 `box` 分组更轻量，participant 不多时首选。
+- **note 预算 ≤ 5 条**：一张时序图的 note 总数控制在 5 条以内，每条只写非显而易见的信息（协议、超时、幂等等）；超过预算说明图承载了过多文字，细节应移入 legend 或配套文档。锚定侧别与配色遵守 [content.md 注释锚定纪律](../guide/content.md)。
 
 ## 最佳实践
 

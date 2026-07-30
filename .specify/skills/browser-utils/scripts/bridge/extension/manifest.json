@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "browser-utils bridge (dev)",
+  "version": "1.0.0",
+  "description": "DEV-ONLY companion extension for the browser-utils WebSocket bridge. Do not ship.",
+  "minimum_chrome_version": "116",
+  "permissions": [
+    "tabs",
+    "activeTab",
+    "scripting",
+    "debugger",
+    "alarms",
+    "offscreen",
+    "storage"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["console-interceptor.js"],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "action": {
+    "default_title": "browser-utils bridge (dev)"
+  }
+}

@@ -21,13 +21,24 @@
   IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
   Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
   you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
+
   Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
   Think of each story as a standalone slice of functionality that can be:
   - Developed independently
   - Tested independently
   - Deployed independently
   - Demonstrated to users independently
+
+  SCAFFOLDING IS OPEN-ENDED: the three story slots below are illustrative, not a quota.
+  Write exactly as many stories as the feature genuinely decomposes into, with whatever
+  priority distribution fits (e.g. two P1 stories, or four stories, or just one) —
+  duplicate a slot for more stories and DELETE any unused slots. Do not invent filler
+  stories to reach three, nor merge distinct journeys to stay at three.
+
+  CROSS-CUTTING CONTEXT: if the feature hinges on a specific input modality or
+  consumption channel (voice/dictated input vs typed, file import, API-only), record it
+  explicitly as a first-class assumption alongside the stories — modality shapes both
+  acceptance scenarios and edge cases, and surfacing it here beats burying it later.
 -->
 
 ### User Story 1 - [Brief Title] (Priority: P1)
@@ -73,7 +84,7 @@
 
 ---
 
-[Add more user stories as needed, each with an assigned priority]
+[Add exactly as many user stories as the feature decomposes into — no fixed count; delete unused slots above]
 
 ### Edge Cases
 

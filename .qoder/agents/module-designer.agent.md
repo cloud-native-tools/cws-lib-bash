@@ -1,0 +1,1 @@
+../../.specify/agents/module-designer.agent.md

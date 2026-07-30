@@ -67,7 +67,7 @@ This is the authoritative transition table cited by `/speckit.feature`, `/specki
 |------|------|----------------|------------------------------|
 | (n/a) | Draft | `/speckit.feature` | Feature row first added to `.specify/memory/features.md`. |
 | Draft | Planned | `/speckit.plan` | `plan.md`, `data-model.md`, `contracts/`, and `quickstart.md` exist for the requirement bound to this feature; Constitution Check has no unjustified Fail rows. |
-| Planned | Implemented | `/speckit.implement` | `tasks.md` has zero `[ ]` rows (all tasks are `[X]` closed or `[~]` deferred) AND `verification.log` records a `SC-NNN_status=pass|deferred` row for every Success Criterion in `requirements.md`. |
+| Planned | Implemented | `/speckit.implement` | `tasks.md` has zero `[ ]` rows (all tasks are `[X]` closed or `[~]` deferred) AND `verification.md` records a `SC-NNN_status=pass|deferred` row for every Success Criterion in `requirements.md`. |
 | Implemented | Ready for Review | `/speckit.review` (or human) | All deferred (`[~]`) tasks are resolved or explicitly waived, and review evidence has been produced. |
 | Ready for Review | Completed | Human / governance | Final acceptance. |
 

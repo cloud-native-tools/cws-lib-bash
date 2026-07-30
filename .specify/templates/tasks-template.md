@@ -65,7 +65,7 @@ Each task row starts with one of three checkbox states. They are first-class —
 
 - `- [ ]` — **Open**. Task has not been completed. A run is NOT complete while any `[ ]` remains.
 - `- [X]` — **Closed**. Task has been fully executed and verified.
-- `- [~]` — **Deferred**. Task is intentionally handed off to the user (or to a later phase). Reasons must be recorded in `verification.log` under `deferred_tasks=` and ideally a one-line `<!-- deferred: <reason> -->` inline comment on the task row itself. Typical deferral causes: Layer-2 docker smoke build requiring a real docker daemon, external system access not available in CI, multi-day backfill.
+- `- [~]` — **Deferred**. Task is intentionally handed off to the user (or to a later phase). Reasons must be recorded in `verification.md` under `deferred_tasks=` and ideally a one-line `<!-- deferred: <reason> -->` inline comment on the task row itself. Typical deferral causes: Layer-2 docker smoke build requiring a real docker daemon, external system access not available in CI, multi-day backfill.
 
 A `/speckit.implement` run is considered complete when **zero `[ ]` rows remain**. `[~]` rows are allowed at completion and surface in the run summary's "Deferred Tasks" block.
 
@@ -92,6 +92,13 @@ A `/speckit.implement` run is considered complete when **zero `[ ]` rows remain*
   - Delivered as an MVP increment
   
   DO NOT keep these sample tasks in the generated tasks.md file.
+
+  The samples are APP-SHAPED (models/services/endpoints). For template-only,
+  documentation, or prompt-framework specs, use the doc-feature taxonomy
+  instead (author-section / mirror-parity / render-verify / refresh-verify —
+  see the /speckit.tasks command's "Doc-feature phase shape") and turn every
+  row of plan.md's Mirror Obligations table into a paired dual-write +
+  diff-verify task set.
   ============================================================================
 -->
 
@@ -110,6 +117,10 @@ A `/speckit.implement` run is considered complete when **zero `[ ]` rows remain*
 **Purpose**: Core infrastructure that MUST be complete before ANY user story can be implemented
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
+
+> OMIT this phase entirely (and renumber subsequent phases) when the feature has no
+> blocking prerequisites — e.g. pure template/governance/documentation features. Do
+> NOT keep an empty phase header with "(no tasks)".
 
 Examples of foundational tasks (adjust based on your project):
 

@@ -128,29 +128,49 @@ search <|-- fuzzy
 
 ```plantuml
 @startuml
+' Semantic: Entry=buyer/seller/admin (left), Hub=电商平台, Edge=UseCases, Sink=payment/logistics (right)
 left to right direction
 skinparam packageStyle rectangle
+skinparam nodesep 30
+skinparam ranksep 40
 
+' --- Entry: 主要参与者（左侧） ---
 actor 买家 as buyer
 actor 卖家 as seller
 actor 管理员 as admin
+buyer -[hidden]d-> seller
+seller -[hidden]d-> admin
+
+' --- Sink: 次要参与者/外部系统（右侧） ---
 actor "支付系统" as payment <<外部系统>>
+actor "物流系统" as logistics <<外部系统>>
 
+' --- Hub: 系统边界 ---
 rectangle "电商平台" {
-  (浏览商品) as browse
-  (搜索商品) as search
-  (加入购物车) as addCart
-  (下单) as order
-  (支付) as pay
-  (确认收货) as confirm
-  (申请退款) as refund
+  ' --- Peer: 买家浏览相关用例 ---
+  together {
+    (浏览商品) as browse
+    (搜索商品) as search
+    (加入购物车) as addCart
+  }
 
+  ' --- Peer: 交易相关用例 ---
+  together {
+    (下单) as order
+    (支付) as pay
+    (确认收货) as confirm
+    (申请退款) as refund
+  }
+
+  ' --- Edge: 卖家用例 ---
   (发布商品) as publish
   (发货) as ship
 
+  ' --- Edge: 管理员用例 ---
   (用户管理) as userMgmt
   (商品审核) as audit
 
+  ' --- Edge: 包含的子用例 ---
   (验证库存) as checkStock
   (计算优惠) as calcDiscount
 }
@@ -173,6 +193,7 @@ order ..> checkStock : <<include>>
 order ..> calcDiscount : <<include>>
 order .> refund : <<extend>>
 pay --> payment
+ship --> logistics
 @enduml
 ```
 
@@ -278,6 +299,35 @@ operator --> stockMgmt
 实现阶段 → 基于设计模型编写代码
 测试阶段 → 基于用例编写测试用例
 ```
+
+## 语义布局分析
+
+> 用例图的语义角色映射：
+
+| 语义角色 | 含义 | 典型元素 | 位置 |
+|---------|------|---------|------|
+| **Entry (入口)** | 主要参与者（发起交互） | 买家、用户、管理员 | 左侧 |
+| **Hub (中心)** | 系统边界 | `rectangle "系统名"` | 中间 |
+| **Edge (边缘)** | 用例（系统功能） | 下单、支付、查看订单 | 系统边界内 |
+| **Sink (汇聚)** | 次要参与者/外部系统 | 支付系统、物流系统 | 右侧 |
+| **Peer (对等)** | 关联的用例组 | 浏览+搜索+加购物车 | `together{}` |
+
+**位置草图** (`left to right direction`)：
+
+```
+[Entry: 买家]    [Hub: 电商系统边界]    [Sink: 支付系统]
+     ↓           {用例: 下单}              ↑
+     ↓           {用例: 支付}              ↑
+     ↓           {用例: 查看订单}
+```
+
+**布局优化要点**：
+- **`left to right direction`**：用例图标准方向，主角色在左、系统中间、次要角色在右
+- **`together{}`**：关联用例并排，如 `together { usecase "浏览"; usecase "搜索" }`
+- **隐藏连线**：`买家 -[hidden]d-> 卖家` 控制参与者垂直顺序
+- **包含/扩展语义**：`..>` include 表示必须执行的子用例，`.>` extend 表示可选扩展
+- **间距**：`skinparam nodesep 30`、`skinparam ranksep 40` 避免用例重叠
+- **系统边界**：使用 `rectangle "系统名"` 明确划分系统内外
 
 ## 最佳实践
 

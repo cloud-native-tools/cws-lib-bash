@@ -11,6 +11,10 @@
   │   ├─ 软件组件/服务层面的组成？       → 组件图
   │   └─ 物理节点/硬件层面的组成？       → 部署图
   │
+  ├─ 描述"数据/界面如何组织"？         → 数据·界面图（专项）
+  │   ├─ 数据库表结构与表间关系？        → ER 图
+  │   └─ 界面布局与控件排布？           → Salt 线框图
+  │
   └─ 描述"系统如何运作/交互"？         → 行为图
       ├─ 对象之间按时间顺序的消息交互？   → 时序图
       ├─ 业务流程/算法步骤？             → 活动图
@@ -30,6 +34,12 @@
 | 用户能看到的系统功能 | **用例图** | [07-usecase-diagram.md](07-usecase-diagram.md) | "用户功能"、"角色权限"、"系统边界" |
 | 业务流程、工作流、算法步骤 | **活动图** | [08-activity-diagram.md](08-activity-diagram.md) | "业务流程"、"审批流程"、"工作流"、"算法" |
 | 对象的状态随事件变化 | **状态机图** | [09-state-machine-diagram.md](09-state-machine-diagram.md) | "状态流转"、"生命周期"、"订单状态" |
+| 数据库表结构与表间基数关系 | **ER 图**（专项） | [18-er-diagram.md](18-er-diagram.md) | "数据库设计"、"表结构"、"实体关系"、"数据建模" |
+| 界面布局与控件排布 | **Salt 线框图**（专项） | [19-salt-diagram.md](19-salt-diagram.md) | "界面原型"、"线框图"、"wireframe" |
+| 某时刻对象实例的快照 | **对象图** | 本文 §其他图类型 | "对象实例"、"运行时快照"、"测试数据" |
+| 信号/状态随时间轴变化 | **Timing 图** | 本文 §其他图类型 | "时序约束"、"信号波形"、"协议时序" |
+
+> 其余五种专项图（WBS/甘特图/思维导图/JSON/YAML）的选择入口见 SKILL.md「专项图表」表与 [howto/13–17](.)。
 
 ## 按开发阶段推荐
 
@@ -75,6 +85,61 @@
 | **编程语言模式** | 从模型生成代码 | 极其精确 | MDA 工具、代码生成 |
 
 > **推荐**：绝大多数场景下，草图模式就足够了。用 PlantUML 文本化描述，版本控制友好，随时可调整。
+
+## 其他图类型（无独立操作指南）
+
+以下图类型 PlantUML 官方支持、本技能可渲染，但使用频率低，此处仅给最小语法入口；需要深入时查阅官方文档。
+
+### 对象图（Object Diagram）
+
+展示某一时刻的对象实例及其属性值/链结，适合表达测试数据、运行时快照。语法与类图同源（`object` + 类图关系符），参考 [02-class-diagram.md](02-class-diagram.md)：
+
+```plantuml
+@startuml
+object "order1 : Order" as o1 {
+  id = 1001
+  status = "PAID"
+}
+object "user1 : User" as u1 {
+  username = "alice"
+}
+u1 --> o1 : places
+@enduml
+```
+
+官方文档：https://plantuml.com/zh/object-diagram
+
+### Timing 图（时序图/定时图）
+
+展示信号或对象状态随时间轴的变化，适合协议时序、硬件信号、 SLA 时间窗。`concise`（紧凑多态）/ `robust`（精确瞬时）两种时钟，需 Graphviz：
+
+```plantuml
+@startuml
+clock clk with period 1
+concise "请求状态" as REQ
+
+@0
+REQ is Idle
+
+@1
+REQ is Processing
+
+@4
+REQ is Done
+@enduml
+```
+
+官方文档：https://plantuml.com/zh/timing-diagram
+
+### 超出本技能范围的图类型
+
+以下 PlantUML 图类型与本技能「系统架构图」定位距离较远，**不提供指南**；确有需求时直接查阅官方文档自行编写，渲染脚本同样支持（nwdiag/Archimate 需额外组件）：
+
+- **nwdiag 网络图**（`@startnwdiag`）——机架/网段拓扑，部署图可覆盖大多数场景
+- **Archimate 企业架构图**——需外部 Archimate 库
+- **EBNF / Regex 图**——语法与正则可视化
+- **Ditaa**——ASCII Art 转图
+- **数学公式**（AsciiMath/JLaTeXMath）
 
 ## 注意事项
 

@@ -397,16 +397,31 @@ get_template_file() {
         shell-function)
             template_name="tool-shell-function-template.md"
             ;;
+        webhook)
+            template_name="tool-webhook-template.md"
+            ;;
     esac
-    
-    # Check template locations
-    if [ -f "$ROOT_DIR/.specify/templates/$template_name" ]; then
-        echo "$ROOT_DIR/.specify/templates/$template_name"
-    elif [ -f "$ROOT_DIR/templates/$template_name" ]; then
-        echo "$ROOT_DIR/templates/$template_name"
-    else
+
+    if [ -z "$template_name" ]; then
         echo ""
+        return
     fi
+
+    # Templates are owned by the create-tools skill; the templates/ paths are a
+    # fallback for installs predating the move.
+    local candidate
+    for candidate in \
+        "$ROOT_DIR/.specify/skills/create-tools/templates/$template_name" \
+        "$ROOT_DIR/skills/create-tools/templates/$template_name" \
+        "$ROOT_DIR/.specify/templates/$template_name" \
+        "$ROOT_DIR/templates/$template_name"; do
+        if [ -f "$candidate" ]; then
+            echo "$candidate"
+            return
+        fi
+    done
+
+    echo ""
 }
 
 # Create tool record from template
@@ -434,15 +449,32 @@ create_tool_record() {
     local date_today
     date_today=$(date +%Y-%m-%d)
     
-    # Replace placeholders in template
-    sed -e "s/\[TOOL NAME\]/$tool_name/g" \
-        -e "s/\[TOOL TYPE\]/$tool_type/g" \
-        -e "s/\[SOURCE IDENTIFIER\]/$source_identifier/g" \
-        -e "s|\[TOOL ID\]|$tool_id|g" \
-        -e "s|\[RESOURCE ID\]|$tool_id|g" \
-        -e "s|\[CANONICAL PATH\]|$canonical_path|g" \
-        -e "s/\[YYYY-MM-DD\]/$date_today/g" \
-        -e "s/\[Short, user-friendly description of what .* and when to use it\]/$description/g" \
+    # Replace placeholders in template. Values may contain slashes (paths) or
+    # ampersands, so use a control-char delimiter and escape the replacements.
+    sed_escape() {
+        printf '%s' "$1" | sed -e 's/[\\&]/\\\\&/g' -e $'s/\x01/\\\\\x01/g'
+    }
+
+    local esc_tool_name esc_tool_type esc_source esc_tool_id esc_canonical esc_date esc_description
+    esc_tool_name=$(sed_escape "$tool_name")
+    esc_tool_type=$(sed_escape "$tool_type")
+    esc_source=$(sed_escape "$source_identifier")
+    esc_tool_id=$(sed_escape "$tool_id")
+    esc_canonical=$(sed_escape "$canonical_path")
+    esc_date=$(sed_escape "$date_today")
+    esc_description=$(sed_escape "$description")
+
+    sed -e $'s\x01\\[TOOL NAME\\]\x01'"$esc_tool_name"$'\x01g' \
+        -e $'s\x01\\[TOOL TYPE\\]\x01'"$esc_tool_type"$'\x01g' \
+        -e $'s\x01\\[SOURCE IDENTIFIER\\]\x01'"$esc_source"$'\x01g' \
+        -e $'s\x01\\[TOOL ID\\]\x01'"$esc_tool_id"$'\x01g' \
+        -e $'s\x01\\[RESOURCE ID\\]\x01'"$esc_tool_id"$'\x01g' \
+        -e $'s\x01\\[CANONICAL PATH\\]\x01'"$esc_canonical"$'\x01g' \
+        -e $'s\x01\\[YYYY-MM-DD\\]\x01'"$esc_date"$'\x01g' \
+        -e $'s\x01\\[Short, user-friendly description of what .* and when to use it\\]\x01'"$esc_description"$'\x01g' \
+        -e $'s\x01^\\*\\*Source Identifier\\*\\*:.*\x01**Source Identifier**: '"$esc_source"$'  \x01' \
+        -e $'s\x01^\\*\\*Status\\*\\*:.*\x01**Status**: Draft  \x01' \
+        -e $'s\x01^\\*\\*Discovery Origin\\*\\*:.*\x01**Discovery Origin**: discovery-assisted  \x01' \
         "$template_file" > "$record_file"
     
     echo "$record_file|$canonical_path|$tool_id"
@@ -554,49 +586,55 @@ case "$ACTION" in
         # Check if we need to create a new record
         if [ "$ACTION" = "create" ]; then
             status=$(echo "$find_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
-            
-            if [ "$status" = "not_found" ]; then
+
+            # A discovery hit means the tool exists in the inventory — NOT that a
+            # definition record exists. Only the record file decides that.
+            resolved_tool_name=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('name',''))" 2>/dev/null || true)
+            discovered_source=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); t=data.get('tool') or {}; print(t.get('sourceName') or t.get('path') or '')" 2>/dev/null || true)
+            discovered_description=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('description',''))" 2>/dev/null || true)
+            if [ -z "$resolved_tool_name" ]; then
+                resolved_tool_name="$TOOL_NAME"
+            fi
+
+            record_file="$TOOLS_MEMORY_DIR/${resolved_tool_name}.md"
+            canonical_path=".specify/memory/tools/${resolved_tool_name}.md"
+            tool_id=$(format_tool_id "$canonical_path")
+
+            if [ -f "$record_file" ]; then
+                ensure_tool_id_in_record "$record_file" "$tool_id"
+
+                if [ "$JSON_MODE" = true ]; then
+                    echo "{\"status\": \"exists\", \"message\": \"Tool record already exists\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
+                else
+                    echo "Tool record already exists: $record_file"
+                    echo "tool_id: $tool_id"
+                fi
+            elif [ "$status" = "multiple_matches" ] && [ -z "$TOOL_TYPE" ]; then
+                report_error "Multiple discovery matches for '$TOOL_NAME'. Use --type <type> to disambiguate" "$JSON_MODE"
+                exit 1
+            else
                 if [ -z "$TOOL_TYPE" ]; then
                     report_error "Tool type is required when creating a new tool. Use --type <type>" "$JSON_MODE"
                     exit 1
                 fi
-                
+
                 validate_tool_type "$TOOL_TYPE" || exit 1
-                
-                # Extract source identifier from tool name or use default
-                source_identifier="$TOOL_NAME"
-                description="Tool for $TOOL_NAME"
-                
-                creation_output=$(create_tool_record "$TOOL_NAME" "$TOOL_TYPE" "$source_identifier" "$description")
+
+                # Prefer the discovered source path/description; the record is a
+                # Draft for the user to complete either way.
+                source_identifier="${discovered_source:-$resolved_tool_name}"
+                description="${discovered_description:-Tool for $resolved_tool_name}"
+
+                creation_output=$(create_tool_record "$resolved_tool_name" "$TOOL_TYPE" "$source_identifier" "$description")
                 record_file="${creation_output%%|*}"
                 rest="${creation_output#*|}"
                 canonical_path="${rest%%|*}"
                 tool_id="${rest#*|}"
-                
+
                 if [ "$JSON_MODE" = true ]; then
                     echo "{\"status\": \"created\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
                 else
                     echo "Created tool record: $record_file"
-                    echo "tool_id: $tool_id"
-                fi
-            elif [ "$status" = "found" ] || [ "$status" = "multiple_matches" ]; then
-                resolved_tool_name=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('name',''))" 2>/dev/null || true)
-                if [ -z "$resolved_tool_name" ]; then
-                    resolved_tool_name="$TOOL_NAME"
-                fi
-
-                record_file="$TOOLS_MEMORY_DIR/${resolved_tool_name}.md"
-                canonical_path=".specify/memory/tools/${resolved_tool_name}.md"
-                tool_id=$(format_tool_id "$canonical_path")
-
-                if [ -f "$record_file" ]; then
-                    ensure_tool_id_in_record "$record_file" "$tool_id"
-                fi
-
-                if [ "$JSON_MODE" = true ]; then
-                    echo "{\"status\": \"exists\", \"message\": \"Tool record already exists or multiple matches found\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
-                else
-                    echo "Tool already exists or multiple matches found. Use --type to disambiguate."
                     echo "tool_id: $tool_id"
                 fi
             fi

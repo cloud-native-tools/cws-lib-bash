@@ -3,264 +3,143 @@ name: draw-plantuml
 description: |
   Draw system architecture diagrams with PlantUML, render to SVG/PNG via PlantUML server, and output as HTML with rendered images.
   Use standard UML semantics (Component, Deployment, Sequence, Class/Package) to describe system architecture.
+  Also supports six non-UML specialty diagrams with native @start tags: WBS (工作分解结构), Gantt (甘特图), MindMap (思维导图), JSON 数据可视化, YAML 显示效果图, Salt UI 线框图;
+  plus ER 实体关系图 (@startuml + entity, crow's foot) for database design.
   Use when the user mentions "架构图", "architecture diagram", "UML图", "plantuml", "系统架构图", "画架构", "设计图", "组件图", "部署图", "时序图", "类图", "包图", "系统设计",
   "流程图", "状态图", "活动图", "用例图", "状态机图", "模块图", "交互图",
   "sequence diagram", "class diagram", "component diagram", "deployment diagram",
-  "activity diagram", "state diagram", "use case diagram", "package diagram"
+  "activity diagram", "state diagram", "use case diagram", "package diagram",
+  "工作分解结构", "WBS", "甘特图", "gantt", "项目计划图", "进度图", "思维导图", "mindmap", "脑图",
+  "JSON可视化", "JSON数据图", "json diagram", "YAML可视化", "YAML显示", "yaml diagram", "配置可视化", "数据结构图",
+  "ER图", "实体关系图", "数据库设计", "数据建模", "表结构", "ERD", "entity relationship", "crow's foot",
+  "UI原型", "线框图", "wireframe", "界面原型", "salt", "界面草图",
+  "复刻图", "图片重绘", "图片转UML", "replicate diagram", "redraw", "image to UML"
 skill_id: "<SKILL:.specify/skills/draw-plantuml/SKILL.md>"
 ---
 
-# Architecture Diagram Skill
+# 架构图绘制技能
 
-Draw system architecture diagrams using PlantUML syntax and standard UML semantics, render diagrams to SVG/PNG via the PlantUML server, and output as a complete HTML document with rendered diagram images and descriptive text.
+使用 PlantUML 语法和标准 UML 语义绘制系统架构图，通过 PlantUML 服务器渲染为 SVG/PNG，并输出为包含渲染图表和说明文字的完整 HTML 文档。
 
-## Core Principles
+## 核心原则
 
-### 1. UML Semantics, Not Free-Form Boxes
-Every diagram must follow standard UML diagram types. Avoid ad-hoc "boxes and arrows" — use proper UML elements (components, nodes, lifelines, classes) with correct relationships (dependency, association, realization, etc.).
+- **UML 语义，而非随意方框**：UML 类图表必须遵循标准 UML 图表类型，使用正确的 UML 元素和关系
+- **架构优先的叙事**：图和文字互补——文字解释*为什么*，图展示*什么*
+- **统一样式**：使用 `skinparam` / `<style>` 保持统一样式，UML 图每张核心元素 ≤7 个（硬上限 ≤15）
+- **专项图表遵循其原生语义**：WBS/甘特图/思维导图/JSON/YAML/Salt 六类非 UML 图表使用各自的原生语法（`@startwbs`/`@startgantt`/`@startmindmap`/`@startjson`/`@startyaml`/`@startsalt`）与原生配色，不套用 UML 的 skinparam 单色规则；ER 图虽被官方归为非 UML，但用 `@startuml` + `entity` 语法、走 Graphviz 布局，按 UML 图同套 skinparam 规范处理
 
-### 2. Architecture-First Narrative
-The markdown text should tell a story: start with system context, then drill into components and their interactions. Diagrams and text complement each other — text explains *why*, diagrams show *what*.
+### 方法论总纲（贯穿全流程，先「对」与「达意」再「好看」）
 
-### 3. PlantUML Best Practices
-For PlantUML-specific conventions (syntax, styling, element types, relationship notation), see [plantuml-guide.md](references/plantuml-guide.md). Key principles: use `skinparam` for consistent styling, keep diagrams ≤15 elements, use meaningful labels.
+下述四支柱是本技能所有优化手段的固化总纲，**单一事实来源为 [guide/diagram-principles.md](references/guide/diagram-principles.md)**（图表类型无关，适用于任意图；大图专项另见 [guide/large-diagram-playbook.md](references/guide/large-diagram-playbook.md)）。工作流各步都服从它：
 
-## Workflow
+1. **上下文驱动**：UML 脱离程序上下文无意义——先吃透文档/代码/描述、产出带出处的上下文摘要，保证程序整体正确、不臆造（principles §4.1）。
+2. **减法与拆分**：信息量大时优先整洁美观而非面面俱到，每图突出**一个核心点**；单图表达不下则按架构接缝**拆为图集**（概览图 + 下钻子图，图间层次与交叉引用，每图自足，图集共享稳定词汇）（principles §4.2/§4.3）。
+3. **UML 语义 + 视觉语义**：先选对图类型/元素种类/关系/构造型/接口（§1）；再按人类视角规划视觉语义——角色即位置、一对多用「单代表+多重性」、关联即同色、分组即框选（§2）。
+4. **文字修饰 + 收尾美化**：元素上只留简洁标题、详解外置到布局安全的 note、字号层级跨图统一（§3）；最后做对齐/着色/线条与大图专项美化（playbook）。
 
-This skill is designed to draw UML diagrams based on existing information (user descriptions, code, documents) and add corresponding text explanations. Follow the steps below in order.
+## 工作流
 
-### Step 1: Choose Diagram Type
+按以下 8 个步骤顺序执行；每步都服从上面的「方法论总纲」四支柱。每步核心说明如下，详细操作阅读对应参考文档。
 
-**MUST** first read [01-choose-diagram-type.md](references/howto/01-choose-diagram-type.md) to determine the appropriate UML diagram type(s).
+### Step 1: 语义解析 + 吃透上下文（上下文驱动）
 
-Based on the user's description, identify what they want to express and match it to the right diagram:
+分析用户输入以理解绘制意图；通过补充推断或交互式提问（`AskUserQuestion`，最多一轮 ≤4 个问题）确认意图。**面对文档/代码等丰富上下文时，先产出一份带出处的上下文摘要**（组件、关系、核心流程、关键决策），后续绘图与自检都对着它，保证程序整体正确、不臆造。
 
-- Use the **快速匹配表** (Quick Match Table) to map user keywords → diagram type
-- Use the **按开发阶段推荐** (By Development Phase) table if the user mentions a specific phase
-- Use the **选择决策流程** (Decision Flow) to narrow down structure vs behavior diagrams
+→ [00-semantic-analysis.md](references/howto/00-semantic-analysis.md)；上下文驱动见 [diagram-principles.md §4.1](references/guide/diagram-principles.md)
 
-If multiple aspects need to be expressed, select multiple diagram types — each diagram focuses on one perspective.
+### Step 2: 选图类型 + 定「单图 or 图集」（减法与拆分）
 
-### Step 2: Follow the How-To Guide
+从 8 种标准 UML 图表类型中选最合适的一或多种，每图聚焦**单一视角/一个核心点**。**信息量大或多面时做减法与拆分**：优先整洁美观而非面面俱到；单图表达不下则按架构接缝（分层/控制面数据面/静态行为/请求制品流/系统节点边界）**拆为图集**——一张概览/索引图在顶 + 下钻子图，图间体现层次与交叉引用（`▶ 见 图N`），每图自足，图集共享稳定词汇（编号/颜色/构造型跨图同义）。
 
-Once the diagram type is determined, **MUST** read and follow the corresponding how-to guide for detailed drawing instructions:
+→ [01-choose-diagram-type.md](references/howto/01-choose-diagram-type.md)；减法与拆分见 [diagram-principles.md §4.2/§4.3](references/guide/diagram-principles.md)
 
-| Diagram Type | How-To Guide |
-|-------------|-------------|
-| 类图 (Class Diagram) | [02-class-diagram.md](references/howto/02-class-diagram.md) |
-| 包图 (Package Diagram) | [06-package-diagram.md](references/howto/06-package-diagram.md) |
-| 组件图 (Component Diagram) | [03-component-diagram.md](references/howto/03-component-diagram.md) |
-| 部署图 (Deployment Diagram) | [04-deployment-diagram.md](references/howto/04-deployment-diagram.md) |
-| 时序图 (Sequence Diagram) | [05-sequence-diagram.md](references/howto/05-sequence-diagram.md) |
-| 用例图 (Use Case Diagram) | [07-usecase-diagram.md](references/howto/07-usecase-diagram.md) |
-| 活动图 (Activity Diagram) | [08-activity-diagram.md](references/howto/08-activity-diagram.md) |
-| 状态机图 (State Machine Diagram) | [09-state-machine-diagram.md](references/howto/09-state-machine-diagram.md) |
+### Step 3: 选元素 + 关系（UML 语义正确）
 
-Each how-to guide provides:
-- **Key elements**: UML elements and their PlantUML syntax
-- **Complete examples**: Runnable PlantUML code blocks
-- **Modeling steps**: Step-by-step instructions for constructing the diagram
-- **Best practices**: Common patterns and pitfalls
+选正确的 UML 元素种类（组件/节点/制品/数据库/接口/类/状态…）与关系类型（依赖/关联/实现/通信路径/控制信号/«deploy»«manifest»…）、构造型与多重性；为对外契约补 `interface` 与端口。**元素种类本身即语义，勿一律用 rectangle/component。**
 
-For additional PlantUML syntax details, also reference [plantuml-guide.md](references/plantuml-guide.md).
+→ [references/howto/](references/howto/)（02–09）；UML 语义先行见 [diagram-principles.md §1](references/guide/diagram-principles.md)
 
-### Step 3: Draft PlantUML Code
+### Step 4: 规划布局 + 视觉语义（人类视角）
 
-Based on the how-to guide and the user's system information:
+编码前先规划空间语义：
+- **视觉语义**：角色即位置（枢纽居中偏上、节点沿边/底，Hub/Edge/Entry/Sink）；一对多用**单代表元素 + 多重性标注**（`collections`/堆叠阴影/«×N»），不画 N 份兄弟盒；关联即同色（同子系统同色相族）；分组即框选（宏观逻辑分区用可见具名 frame、同类细分组用不可见 frame）。
+- **方向/宽高比决策**：数「最宽层宽 B」与「主流深 D」选方向（宽浅 `top to bottom`、深窄长链 `left to right`）；`C≈round(sqrt(N×1.3))` 估列数摆近正方形网格（嵌套图每个 frame 内同理）；单层兄弟 ≤6，超出下沉/拆 frame。
 
-1. Identify the key elements (participants/nodes/components/classes/etc.) from the user's description
-2. Define the relationships between them (dependencies, messages, transitions, etc.)
-3. Write PlantUML code with `@startuml` / `@enduml` wrapping
-4. Keep each diagram focused: ≤15 elements; split into multiple diagrams if larger
+→ [10-layout-planning.md](references/howto/10-layout-planning.md)、[layout.md §一/§2.1/§2.5](references/guide/layout.md)；视觉语义见 [diagram-principles.md §2](references/guide/diagram-principles.md)
 
-For PlantUML syntax details (element types, relationship notation, styling, patterns), reference [plantuml-guide.md](references/plantuml-guide.md). The guide includes a **Quick Syntax Reference by Diagram Type** table covering all 7 diagram types.
+### Step 5: 生成 PlantUML 代码
 
-### Step 4: Apply Standard Style
+按所选图类型操作指南与语法编写代码：`@startuml`/`@enduml` 包裹，先声明元素再声明关系，用方向关键字与分组（`together`/隐藏边）控制布局。
 
-After drafting PlantUML code, **MUST** apply the standard style configuration defined in [plantuml-style.md](references/plantuml-style.md). For each diagram:
+→ [11-code-generation.md](references/howto/11-code-generation.md)、[syntax-reference.md](references/guide/syntax-reference.md)
 
-1. Insert the **base style block** immediately after `@startuml` (before any diagram content):
-   ```plantuml
-   top to bottom direction
-   skinparam monochrome true
-   skinparam shadowing false
-   skinparam roundCorner 20
-   skinparam dpi 300
-   scale 2
-   skinparam defaultFontSize 14
-   skinparam defaultFontName "Arial, Helvetica, sans-serif"
-   skinparam padding 8
-   skinparam ArrowThickness 2
-   skinparam BorderThickness 2
-   skinparam svgDimensionStyle false
-   skinparam svgLinkTarget _blank
-   ```
-2. If the diagram contains `actor` elements or is a Use Case Diagram, additionally add:
-   ```plantuml
-   skinparam actorStyle awesome
-   ```
-3. Verify placement: all style declarations must appear **after** `@startuml` and **before** any element definitions
-4. Verify no conflicts: ensure no duplicate or overriding `skinparam` declarations exist in the diagram body
+### Step 6: 文字修饰（独立一步）
 
-This ensures all output diagrams have a consistent, document-friendly visual style (monochrome, no shadow, rounded corners), rendered at 300 DPI with 2x scale for maximum resolution and crispness in both SVG and PNG output.
+单独治理图元文字：**元素上只留很简洁的标题**（先去重——已被 interface/stereotype/嵌套表达的删掉）；**详细清晰的说明外置到 `note`**（用完整语言，非碎片；布局安全否则省——深层嵌套成员的 note 常被引擎甩到页边，改折叠进父级 note 或 legend）；**字号层级用 per-kind skinparam 统一设定**（标题>容器>组件>note>legend>箭头>stereotype），图内与跨图集一致，**禁用零散内联 `<size:>`/`**bold**`**（字号/粗细不一的头号成因）。
 
-### Step 5: Write Accompanying Text
+→ [diagram-principles.md §3](references/guide/diagram-principles.md)、[content.md](references/guide/content.md)
 
-For each diagram, prepare the following descriptive content (to be included in the final HTML):
-1. **Diagram Title** (will become H2/H3 heading in HTML)
-2. **Context**: 1-2 sentences on what this diagram represents and why this type was chosen
-3. **PlantUML source**: save the code as `.puml` file for reference and rendering
-4. **Explanation**: Key points for each key element and relationship
-5. **Design Rationale**: Why this structure/interaction pattern was chosen (if applicable)
+### Step 7: 应用样式 + 大图专项（对齐·着色·线条）
 
-### Step 6: Render PlantUML to SVG/PNG
+应用统一 skinparam/色彩模式，确保视觉一致。**大图（节点多/尺寸大）套用大图技术栈**：×N 语义折叠、弱化管线突出语义色、正交路由 + 隐藏边控宽高比消交叉、连线治理、隐藏脚手架的能与不能、legend 作单一细节仓；只用 SVG 交付大图。
 
-After drafting and styling all PlantUML code, render each diagram into an SVG (preferred) or PNG image file using the PlantUML rendering service. All diagrams must be rendered at the highest possible quality — the style block in Step 4 already ensures `skinparam dpi 300` and `scale 2` are embedded in the PlantUML source, producing high-resolution output for both formats.
+→ [style.md](references/guide/style.md)、[large-diagram-playbook.md](references/guide/large-diagram-playbook.md)
 
-**Rendering Service:**
-- SVG endpoint: `http://workspace.code-workspace.cloud:39156/plantuml/svg`
-- PNG endpoint: `http://workspace.code-workspace.cloud:39156/plantuml/png`
+### Step 8: 渲染、匹配与微调
 
-**Method:** HTTP POST with `Content-Type: text/plain`, body is the raw PlantUML text (including `@startuml` / `@enduml`).
+用渲染脚本渲染 SVG/PNG；读取生成图片与用户要求比对，发现差异微调代码重渲；图集则逐图检查自足性、交叉引用与跨图一致（配色/字号/编号/页脚）；最终组装为 HTML 文档输出。
 
-**Quality guarantees (built into the PlantUML source via Step 4 style block):**
-- `skinparam dpi 300` — PNG rendered at 300 DPI, ensuring high pixel density; SVG rasterized fallback also benefits
-- `scale 2` — diagram geometry doubled in size, increasing element spacing and detail precision
-- `skinparam defaultFontSize 14` — text remains legible at 2x scale
-- `skinparam ArrowThickness 2` / `BorderThickness 2` — lines stay visually clear after scaling
-- `skinparam svgDimensionStyle false` — SVG uses `viewBox` (no fixed width/height), enabling lossless CSS scaling
+→ [12-rendering-and-output.md](references/howto/12-rendering-and-output.md)
 
-**Procedure for each diagram:**
-1. Save the PlantUML source text to a temporary `.puml` file (e.g., `diagram-01.puml`)
-2. Use `curl` to POST the file content and save the response:
+## 专项图表（非 UML）
+
+除 8 种标准 UML 图表外，本技能还支持 7 种专项图表。其中 WBS/甘特图/思维导图/JSON/YAML/Salt 六种不遵循 UML 语义，各自有独立语法与原生配色；ER 图用 `@startuml` + `entity` 乌鸦脚语法，遵循 UML 样式规范。当用户意图属于以下场景时，在 Step 2 直接选用对应专项图表，并阅读其操作指南：
+
+| 专项图表 | 适用场景 | 起止标记 | 操作指南 |
+|---------|---------|---------|---------|
+| **WBS 工作分解结构** | 项目/交付物层级分解 | `@startwbs`/`@endwbs` | [13-wbs-diagram.md](references/howto/13-wbs-diagram.md) |
+| **甘特图 Gantt** | 项目进度、任务依赖、里程碑 | `@startgantt`/`@endgantt` | [14-gantt-diagram.md](references/howto/14-gantt-diagram.md) |
+| **思维导图 MindMap** | 知识梳理、发散规划 | `@startmindmap`/`@endmindmap` | [15-mindmap-diagram.md](references/howto/15-mindmap-diagram.md) |
+| **JSON 数据可视化** | 展示 JSON 数据结构 | `@startjson`/`@endjson` | [16-json-diagram.md](references/howto/16-json-diagram.md) |
+| **YAML 显示效果图** | 展示 YAML 配置结构 | `@startyaml`/`@endyaml` | [17-yaml-diagram.md](references/howto/17-yaml-diagram.md) |
+| **ER 实体关系图** | 数据库表结构、数据建模、表间基数 | `@startuml`（`entity` 语法） | [18-er-diagram.md](references/howto/18-er-diagram.md) |
+| **Salt UI 线框图** | 界面原型、表单/窗口线框 | `@startsalt`/`@endsalt` | [19-salt-diagram.md](references/howto/19-salt-diagram.md) |
+
+> 专项图表的渲染同样走 Step 8 的渲染脚本；除 ER 图外均无需 Graphviz（`dot`）即可渲染（ER 走 Graphviz 布局，本地 jar 渲染时须有 `dot`）。样式与美观要点见各操作指南的「布局与美观技巧」小节。
+
+## 输出要求
+
+- 输出为单个 HTML 文档，包含渲染的图表（不嵌入原始 PlantUML 文本）
+- 图表通过 [render-plantuml.sh](scripts/render-plantuml.sh) 渲染，同时产出 PNG 与 SVG
+- **默认优先选用 PNG 格式**引用/嵌入图片（最美观，且在 Preview / Markdown 预览中可直接查看）；仅当图表过宽/过大触及 PNG 4096px 上限或需任意无损缩放时改用 SVG
+- **嵌入 Markdown 文档时（最佳实践）**：默认看 PNG、细节不够可开 SVG 无损放大，**SVG/PNG 必须同时产出**。⚠️ Markdown 图片 `![]()` 与内联 HTML `<a>` 走**不同的路径解析管线**（有的渲染器会代理/改写 Markdown 图片 URL 却透传 HTML `href`），混用会导致两条路径不一致——故 **PNG 与 SVG 引用须用同一机制**：首选**全内联 HTML**（`<a href=x.svg target=_blank rel=noopener><img src=x.png></a>`，点图即开 SVG 新标签），渲染器会剥 HTML 时回退**全纯 Markdown**（同标签打开）。→ 见 [12-rendering-and-output.md §4.3](references/howto/12-rendering-and-output.md)
+- PNG/SVG 与 HTML 保存在同一目录，HTML 通过相对路径引用图片
+- PlantUML 源文件（`.puml`）保存以供未来编辑
+- 每张图至少包含标题、渲染图片和简要说明
+
+## 参考文档
+
+所有参考文档（操作指南、最佳实践、官方文档）的完整索引和说明，参见 [references/index.md](references/index.md)。
+
+## Feedback
+
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is
+running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
+directory) — skip this entire Feedback step: no engine call, no feedback entry.
+
+At the end of a substantial run of this skill, perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
+
+1. **Gate on qualification & completion.** Only proceed if this run reached a meaningful wrap-up. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
+2. **Reflect (no user input).** Review this run against this skill's declared purpose and produce a short review plus ≥1 concrete, skill-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
+3. **Scope guard.** Keep strictly to this skill's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
+4. **Dedup guard.** Use a stable `run_id`; if a parent flow already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
+5. **Persist** via the engine:
    ```bash
-   # SVG (preferred — vector, infinitely scalable, no quality loss on zoom)
-   curl -s -X POST -H "Content-Type: text/plain" --data-binary @diagram-01.puml \
-     "http://workspace.code-workspace.cloud:39156/plantuml/svg" -o diagram-01.svg
+   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
+     --unit-id "skill:draw-plantuml" --unit-type skill \
+     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
+     --review "<review prose>" --points-file "<points file>"
    ```
-   ```bash
-   # PNG (high-res 300 DPI via skinparam dpi 300 + scale 2)
-   curl -s -X POST -H "Content-Type: text/plain" --data-binary @diagram-01.puml \
-     "http://workspace.code-workspace.cloud:39156/plantuml/png" -o diagram-01.png
-   ```
-3. Verify the output is a valid SVG/PNG (`file diagram-01.svg` should show SVG/XML content; `file diagram-01.png` should show PNG with large dimensions)
-4. Name files descriptively: `{nn}-{short-title}.svg` or `{nn}-{short-title}.png` (e.g., `01-system-overview.svg`)
-5. **For PNG output**: verify image dimensions with `identify diagram-01.png` or `file diagram-01.png` — expect dimensions significantly larger than default (typically 2000px+ width) due to `scale 2` and 300 DPI
+6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
 
-**Prefer SVG** for scalability and crisp rendering at any zoom level; use PNG when the user explicitly requests it or when the target platform does not support SVG. Both formats are rendered at maximum quality by the style configuration.
-
-### Step 7: Assemble Final HTML Document
-
-Combine all rendered diagrams and text into a **single HTML document** that displays the architecture with embedded SVG/PNG images (not raw PlantUML code).
-
-**HTML Structure:**
-
-```html
-<!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-  <meta charset="UTF-8">
-  <title>[System Name] Architecture</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 960px; margin: 0 auto; padding: 2rem; line-height: 1.6; color: #333; }
-    h1 { border-bottom: 2px solid #eee; padding-bottom: 0.5rem; }
-    h2 { margin-top: 2rem; color: #2c3e50; }
-    h3 { color: #34495e; }
-    .diagram { text-align: center; margin: 1.5rem 0; }
-    .diagram img { max-width: 100%; height: auto; border: 1px solid #eee; border-radius: 4px; }
-    .explanation { background: #f8f9fa; padding: 1rem; border-radius: 4px; margin: 1rem 0; }
-  </style>
-</head>
-<body>
-  <h1>[System Name] Architecture</h1>
-  <section>
-    <h2>Overview</h2>
-    <p>[High-level system description]</p>
-  </section>
-  <section>
-    <h2>Architecture Diagrams</h2>
-    <h3>[Diagram 1 Title]</h3>
-    <p>[Context]</p>
-    <div class="diagram">
-      <img src="01-diagram-name.svg" alt="[Diagram 1 Title]" />
-    </div>
-    <div class="explanation">
-      [Explanation + Rationale]
-    </div>
-    <h3>[Diagram 2 Title]</h3>
-    ...
-  </section>
-  <section>
-    <h2>Summary</h2>
-    <p>[Key architectural decisions and trade-offs]</p>
-  </section>
-</body>
-</html>
-```
-
-**Key Rules:**
-- Reference SVG/PNG files using **relative paths** (diagrams and HTML in the same output directory)
-- Alternatively, if only one diagram exists, embed the SVG content inline in the HTML using `<svg>...</svg>` directly
-- Ensure all images have meaningful `alt` attributes
-- HTML should be self-contained and viewable by opening the `.html` file directly in a browser
-
-## Output Requirements
-
-- Output as a **single HTML document** (`.html` file) with rendered SVG/PNG diagrams
-- Diagrams MUST be rendered via the PlantUML server (`http://workspace.code-workspace.cloud:39156/plantuml/svg`) — do NOT embed raw PlantUML text in the final output
-- SVG/PNG image files saved alongside the HTML in the same output directory
-- HTML references images via relative paths (e.g., `<img src="01-overview.svg" />`)
-- For single-diagram outputs, inline SVG embedding is acceptable as an alternative
-- PlantUML source files (`.puml`) should also be saved for future editing/regeneration
-- Text descriptions in HTML semantic elements (headings, paragraphs, lists)
-- Default language: follow user's preferred language (Chinese by default for this project)
-- Each diagram must have at minimum: a title, a rendered image, and a brief explanation
-
-## Reference Documents
-
-### How-To Guides (`references/howto/`)
-
-Step-by-step guides organized by diagram type and PlantUML syntax. Start here for hands-on drawing:
-
-| # | Document | Content |
-|---|----------|---------|
-| 1 | [01-choose-diagram-type.md](references/howto/01-choose-diagram-type.md) | How to select the right UML diagram type based on user description, development phase, and system type |
-| 2 | [02-class-diagram.md](references/howto/02-class-diagram.md) | How to draw Class Diagrams — class definition, 6 relationship types with PlantUML syntax, packages, GRASP design principles |
-| 3 | [03-component-diagram.md](references/howto/03-component-diagram.md) | How to draw Component Diagrams — layered architecture, microservice patterns, interface and dependency modeling |
-| 4 | [04-deployment-diagram.md](references/howto/04-deployment-diagram.md) | How to draw Deployment Diagrams — physical topology, Kubernetes, cloud services, node-to-node communication |
-| 5 | [05-sequence-diagram.md](references/howto/05-sequence-diagram.md) | How to draw Sequence Diagrams — message types, combined fragments (alt/loop/par), activation bars, interaction flow |
-| 6 | [06-package-diagram.md](references/howto/06-package-diagram.md) | How to draw Package Diagrams — module organization, namespace hierarchy, layered architecture, dependency management |
-| 7 | [07-usecase-diagram.md](references/howto/07-usecase-diagram.md) | How to draw Use Case Diagrams — actors, use cases, system boundary, include/extend/generalization, use case description template |
-| 8 | [08-activity-diagram.md](references/howto/08-activity-diagram.md) | How to draw Activity Diagrams — business process modeling, swimlanes, fork/join for concurrency, decision nodes, control flow |
-| 9 | [09-state-machine-diagram.md](references/howto/09-state-machine-diagram.md) | How to draw State Machine Diagrams — object lifecycle, state transitions, events/guards/actions, composite states, implementation patterns |
-
-### Syntax Reference (`references/`)
-
-| Document | Content |
-|----------|---------|  
-| [plantuml-guide.md](references/plantuml-guide.md) | Complete PlantUML syntax reference for architecture diagrams: all supported diagram types, element types, relationship syntax, skinparam customization, and common patterns |
-| [plantuml-official-docs.md](references/plantuml-official-docs.md) | PlantUML official documentation and advanced features. Load on-demand for syntax edge cases or less common diagram types |
-
-### Source Documents (`references/document/`)
-
-Original reference materials on UML theory, PlantUML tools, modeling methodology, GRASP patterns, and best practices. Load on-demand for deeper understanding of design principles and methodology.
-
-## Quality Checklist
-
-Before delivering the final document, verify:
-- [ ] All PlantUML source files (`.puml`) have matching `@startuml` / `@enduml`
-- [ ] Each diagram has been successfully rendered to SVG/PNG via the PlantUML server
-- [ ] SVG/PNG files are valid (verified with `file` command)
-- [ ] PNG files have high dimensions (2000px+ width), confirming `dpi 300` and `scale 2` took effect
-- [ ] SVG files use `viewBox` without fixed width/height (confirm `svgDimensionStyle false` is active)
-- [ ] HTML references all diagram images with correct relative paths
-- [ ] Each diagram uses the correct UML type for its purpose
-- [ ] No diagram exceeds 15 elements (split if larger)
-- [ ] Text explanations reference specific elements in the diagram
-- [ ] `skinparam` provides consistent visual style across all diagrams
-- [ ] High-quality rendering params (`dpi 300`, `scale 2`, `ArrowThickness 2`, `BorderThickness 2`) present in all diagrams
-- [ ] Aliases and labels are human-readable (not code identifiers)
-- [ ] Document has a clear narrative flow from overview to details
-- [ ] Relationship labels are present and describe the interaction (e.g., "uses via HTTP", not just "uses")
-- [ ] No orphan elements (every element has at least one relationship)
-- [ ] HTML file opens correctly in a browser and displays all diagrams
+**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.

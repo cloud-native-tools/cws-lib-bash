@@ -12,6 +12,7 @@ This project documentation is distributed across several key files. You MUST ref
 |----------|----------|---------|-------------|
 | **Constitution** | `.specify/memory/constitution.md` | Single source of truth for principles | Coding standards, architectural rules, constraints |
 | **Feature Index** | `.specify/memory/features.md` | Feature roadmap status | List of project features |
+| **Glossary** | `.specify/memory/glossary.md` | Project vocabulary anchor & domain dictionary | Canonical terms, homophone/confusable variants, meanings; voice-input correction source (see `.specify/shared/workflow/glossary.md`) |
 | **Development** | `CONTRIBUTING.md` | Setup and Guidelines | Setup, testing, and pull request guidelines |
 | **Readme** | `README.md` or `README` | basic information of project | {TODO} |
 | **Project Documents** | `docs/` | High-level architecture | Architecture and design documentation |
@@ -33,6 +34,55 @@ Escalation rules:
 - If the suspected error impacts correctness, security, data loss, or large refactors: **pause and ask a clarifying question**.
 - If the issue is low-risk and the fix is obvious: proceed with the correction and mention it briefly.
 
+## Task Complexity Rubric
+
+Right-size your thinking to the task. Under-thinking complex or high-stakes tasks causes defects and rework (a **quality** cost); over-thinking trivial tasks wastes time and adds noise (an **efficiency** cost). Aim for the lowest thinking depth that safely fits the task — escalate when in doubt, and do not default to maximal effort.
+
+Classify each task by these signals: scope/size, uncertainty/novelty, blast radius/reversibility, cross-cutting impact, and requirements clarity. Then adopt the matching tier's thinking depth:
+
+| Tier | Typical signals | Thinking depth (what to actually do) |
+|------|-----------------|--------------------------------------|
+| **Trivial** | Tiny, well-scoped edit; no uncertainty; easily reversible; no cross-cutting impact; requirements crystal-clear | **Minimal** — act directly; little to no exploration; no written plan; a light sanity check (build/lint or the one relevant test) |
+| **Standard** | One area or a few files; low uncertainty; moderate, reversible risk; little cross-cutting; requirements clear | **Moderate** — read the directly relevant files; form a brief internal plan; run the related tests |
+| **Complex** | Multiple files/modules; real uncertainty or design choices; harder to reverse; cross-cutting; requirements mostly clear | **Deep** — explore broadly before editing; write an explicit plan (consider plan mode); weigh alternatives; add/adjust tests and verify behavior |
+| **High-stakes / Ambiguous** | High blast radius (shared infra, data migration, security, public API); hard or irreversible; or requirements unclear/conflicting | **Exhaustive** — thorough exploration; explicit plan with user checkpoints; edge-case and adversarial analysis; strong verification; confirm before irreversible actions; resolve unclear requirements first |
+
+- **Tie-break**: when a task's signals span more than one tier, choose the **higher tier**. Blast-radius/reversibility and requirements clarity dominate — a tiny edit to a shared, irreversible, or security-sensitive surface is High-stakes, not Trivial.
+- **Default**: if a task cannot yet be classified, treat it as **Standard**; but when the reason is unclear or under-specified requirements, that is itself a High-stakes / Ambiguous signal — clarify before proceeding rather than guessing.
+
+## Dogfooding Practice
+
+Dogfooding means the people who build a product also rely on it in their real daily work — developer and user tightly linked, often the same team — so a smooth **use → feedback → iterate** loop forms naturally. A project that provides development-assistance capabilities proves them the way a compiler proves itself by self-hosting: only a tool that performs well in its own engineering has earned the credibility to assist others. This section identifies two loops that already exist — it adds no new tools, steps, or storage.
+
+### Loop A — Feed your framework usage back upstream
+
+Real friction you hit while using the framework's commands and skills is valuable. The built-in feedback chain carries it upstream:
+
+1. **Record** — commands/skills self-record optimization points at wrap-up; you can also record friction you personally hit: `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "/speckit.<command>" --unit-type command --run-id "<id>" --review "<what happened>" --points "<suggestion>"` (unit-id must be `/speckit.<command>` or `skill:<name>`).
+2. **Threshold prompt** — check accumulation with `--action status`; when the count crosses the threshold, a consolidated prompt invites (never forces) submission.
+3. **Package** — `--action package` bundles pending entries into a local archive.
+4. **Manual submission** — delivering the archive to the framework's install-source repository is a deliberate, manual step. There is **no automatic transmission** of any feedback data; nothing leaves your machine unless you send it.
+
+### Loop B — Build the same loop for your own product
+
+The framework's shipped capabilities are enough to run a Dogfooding loop for **your own product** — no extra tooling required:
+
+| Capability | Role in your product's loop |
+|------------|-----------------------------|
+| Feedback engine (`feedback-utils.py`) | Record real-use findings about your product with `--unit-id "skill:<scenario-name>"` (unit-id accepts `/speckit.<command>` or `skill:<name>`); track accumulation with `--action status` / `--action list` |
+| Memory (session/knowledge) | Persist working notes and distilled lessons from real usage |
+| History | Distill past project conversations into reusable knowledge |
+| Review | Periodic retrospective checkpoint where findings are revisited |
+| Task records (tasks/verification) | Trace each finding to the iteration that addressed it |
+
+**Adoption advice (advisory — never a gate):**
+
+- **Staged rollout**: start with the core team first, then widen; forcing 100% usage of an immature product hurts more than it helps (over-idealization).
+- **Tailor to your product's shape**: if daily self-use is not suited to your product (embedded firmware, consumer hardware), substitute periodic real-environment drills or a designated proxy user group instead of forcing it.
+- **Anti-patterns to avoid**: *formalism* (going through the motions without real reliance), *echo chamber* (only builders participate — bring in non-technical roles), *dead-letter feedback* (findings recorded but never acted on — close or resolve every entry deliberately), *over-idealization* (mandating full usage regardless of maturity).
+
+The test of a healthy loop is simple: do team members rely on the product for real tasks, and does what they report visibly change the next iteration?
+
 ## Tech Stack & Resources
 - **Project Name**: {{PROJECT_NAME}}
 - **Root Path**: {{PROJECT_ROOT}}
@@ -53,15 +103,25 @@ Escalation rules:
 - Prefer scripts under `.specify/scripts/` and `scripts/` for repeatable operations.
 - `/speckit.*` commands are chat instructions, not terminal commands.
 - Treat Constitution as the authority for architecture and workflow constraints.
+- **Reuse a Tool before generating a script**: before writing script code for a complex or repeatable action, look for an existing **Tool** under `.specify/memory/tools/` and reuse it — its behavioral rules outrank your training knowledge, and its environment applicability (verified version / version differences / platform / architecture / fallback / preflight) tells you the form that actually holds here. No Tool for the capability? Writing the code is the expected outcome. See `.specify/shared/workflow/tool-reuse-gate.md` (Constitution Principle XII).
+
+### Terminology: "tools" means three different things
+- **Tool** (unqualified, in the tools domain) — a pre-verified reusable capability record at `.specify/memory/tools/<name>.md`, ID form `<TOOL:...>`, owned by `/speckit.tools`.
+- **AI agent CLI** — a supported coding agent (Claude Code, Codex CLI, Qoder CLI, …). Prefer "AI agent CLI" over "AI tool" when precision matters.
+- **Tool-call list** — the `tools:` frontmatter key on an agent (`Read`, `Grep`, `Bash`, …), i.e. the LLM's callable surface.
+
+Note also: `.specify/memory/tools.md` (file) is the discovery inventory regenerated by `refresh-tools.sh`; `.specify/memory/tools/` (directory) holds the authoritative definition records.
 
 ## AI Tool Compatibility
 - **Supported Agents**: Claude Code, GitHub Copilot, Qwen Code, opencode, Qoder
 - **Instructions Refresh**: Run `/speckit.instructions` to regenerate this file and compatibility symlinks.
 
 ## Spec Kit Runtime & Symlink Model
-- **Canonical instructions file**: `.specify/instructions.md` is the single source of truth for project-level AI instructions. Compatibility files such as `.github/copilot-instructions.md`, `.qoder/project_rules.md`, `QWEN.md`, `CLAUDE.md`, and `QODER.md` are symlinks to this file.
+- **Canonical instructions file**: `.specify/instructions.md` is the single source of truth for project-level AI instructions. Compatibility files such as `.github/copilot-instructions.md`, `.qoder/project_rules.md`, `QWEN.md`, `CLAUDE.md`, `QODER.md`, and `AGENTS.md` are symlinks to this file.
 - **Canonical skills directory**: `.specify/skills/` is the primary location for installed Spec Kit skills. `.github/skills` is a compatibility symlink to `.specify/skills/` for tools that discover skills under `.github/skills`.
 - **Do not duplicate symlink targets**: Treat these compatibility paths as aliases, not independent source files or directories. When reading or editing instructions and skills, prefer the canonical `.specify/...` paths and avoid applying the same change separately through each symlink.
+- **Do NOT break the symlinks (applies to both users and AI agents)**: The compatibility files/directories above are symbolic links, NOT copies — this is easy to miss because they *look* like ordinary files. Editing their content is safe: changes write through to the canonical `.specify/...` target and stay consistent across every tool. But **deleting, renaming, moving, or replacing** a link (e.g. an editor's "save as new file", or a manual `rm` + recreate) SEVERS it; the affected tool then silently reads stale or independent content and updates diverge across tools. Never delete-and-recreate these paths by hand.
+- **Detect & repair symlinks**: List every symlink in the project with `find . -type l` (or inspect a single path with `ls -l <path>` / `readlink <path>`) before assuming a compatibility file is a real file. If a link was accidentally broken or replaced with a regular file, run `/speckit.instructions` to regenerate the canonical instructions and recreate all compatibility symlinks.
 - **Regeneration behavior**: `/speckit.instructions` refreshes the instructions content and recreates compatibility symlinks. If a compatibility path appears to contain the same content as `.specify/instructions.md` or `.specify/skills/`, verify whether it is a symlink before treating it as a separate file.
 
 ## Resource Registry

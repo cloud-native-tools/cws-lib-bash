@@ -4,19 +4,7 @@
 $ARGUMENTS
 ```
 
-You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to supplement missing context and guide the constitution update process.
-
-The user input may include:
-
-1. Special requests that require extra care or custom handling during the constitution update workflow.
-2. Supplemental information that provides additional context or reference material.
-3. Specific governance principles, rules, or amendment intentions that go beyond the default scope described in this document.
-
-When processing the user input:
-
-1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
-2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
-3. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase the request with clearer wording. Provide brief guidance when possible.
+Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as governance principles, amendment intentions, or supplemental context.
 
 ## Outline
 
@@ -72,10 +60,55 @@ Follow this execution flow:
    - Replace every placeholder with concrete text (no bracketed tokens left except intentionally retained template slots that the project has chosen not to define yet—explicitly justify any left).
    - Preserve heading hierarchy and comments can be removed once replaced unless they still add clarifying guidance.
    - Ensure each Principle section: succinct name line, paragraph (or bullet list) capturing non‑negotiable rules, explicit rationale if not obvious.
+   - **MUST include** a principle for "Documentation-First" that is ordered ABOVE any
+     Test-First / testing principle (i.e. it MUST appear before the testing principle in
+     the principle list) and mandates:
+     - The project maintains sufficiently detailed and accurate documentation to serve as
+       context for AI agents / large language models (project knowledge and background).
+     - Documentation does NOT capture implementation details; those belong in the code.
+     - Documents are split into smaller, cohesive documents when they grow too complex.
+     - Documents cross-reference one another so basic navigation works through internal links.
+     - Markdown documents maintain basic metadata (title, purpose/summary, status,
+       last-updated date, related links).
    - **MUST include** a principle for "Feature-centric development" that mandates:
      - Feature list is the long‑lived project backbone.
      - Every spec/plan/tasks/implement step must re‑evaluate Feature additions/removals.
      - Feature changes are recorded and traceable to spec/plan evidence.
+   - **MUST include** a principle for "Code as the Single Source of Truth" that mandates:
+     - Source code is the authoritative source of truth for the project's actual state;
+       documentation describes intended/target behavior that may not yet be realized.
+     - When establishing or citing facts about how the system currently behaves, code MUST
+       take precedence over documentation, unless a document is explicitly designated as
+       authoritative for that fact.
+     - When code and documentation disagree, treat the divergence as a signal to update the
+       documentation (or flag the code as not-yet-implementing the intended goal), not to
+       trust the document as current reality.
+   - **MUST include** a principle for "Documentation Naming & Location Conventions" that mandates:
+     - ALL-CAPS Markdown filenames are RESERVED for conventional, ecosystem-recognized
+       root-level artifacts (e.g. `README.md`, `LICENSE`, `CHANGELOG.md`, `CONTRIBUTING.md`);
+       ordinary content documents use lowercase `kebab-case.md` and MUST NOT squat these names.
+     - A document's meaning derives from its FULL PATH, not just its filename: place docs so
+       that `<area>/<topic>.md` reads as "the <topic> of <area>" (e.g. `docs/team/overview.md`,
+       `docs/agents/design.md`), reusing generic filenames scoped by directory rather than
+       inventing globally-unique names.
+     - Tool/framework-mandated filenames are NON-NEGOTIABLE and MUST match the exact required
+       pattern and location (e.g. GitHub Copilot commands MUST be `.github/prompts/<name>.prompt.md`);
+       such names MUST NOT be renamed to fit project conventions.
+   - **MUST include** a principle for "Better-Harness Orientation" that mandates:
+     - The project treats itself as a *harness* for AI agent work — an environment in which
+       an agent can understand the task, execute on supported and repeatable paths, validate
+       its changes, deliver safely, and carry lessons forward — and improvement work is
+       oriented toward making that harness better.
+     - Improvements are located and motivated against the five Agent Work Loop dimensions
+       (Task Understanding, Controlled Execution, Change Validation, Reliable Delivery,
+       Learning Capture); the canonical goal model lives at
+       `.specify/shared/guidelines/better-harness.md` and MUST be referenced, not restated.
+     - Evidence discipline governs improvement claims: a configured asset proves at most that
+       a mechanism exists (configured ≠ used); unobserved evidence MUST NOT be treated as a
+       defect or a conclusion; "improved" MUST only be claimed from comparable before/after
+       evidence.
+     - This principle adds orientation, not machinery: it MUST NOT justify new scoring
+       systems, maturity reports, or tracking/recording engines.
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
 4. Consistency propagation checklist (convert prior checklist into active validations):
@@ -128,17 +161,6 @@ Do not create a new template; always operate on the existing `.specify/memory/co
 
 ## Handoffs
 
-**Before running this command**:
+**Before**: Use when governance/principles need introduction or amendment. If constitution exists at version ≥ 1.0.0 with no `$ARGUMENTS`, ask what amendments are desired.
 
-- Use when governance/principles need to be introduced or amended.
-- If constitution already exists at `/.specify/memory/constitution.md` with a version ≥ 1.0.0
-  and no user `$ARGUMENTS` specify changes, warn the user that the constitution is already
-  initialized and ask what amendments are desired.
-
-**After running this command**:
-
-- Run `/speckit.feature` to refresh feature index and per-feature detail files under the updated rules.
-- Run `/speckit.requirements` for any in-progress specs to ensure alignment with the new constitution.
-- If the "Constitution Check" in `plan-template.md` was modified, run `/speckit.plan` on any
-  open spec to re-validate against the updated principles.
-- Proceed with `/speckit.requirements` to ensure specs align with the updated constitution.
+**After**: `/speckit.feature` to refresh feature registry. `/speckit.requirements` for in-progress specs. `/speckit.plan` if "Constitution Check" in plan-template was modified.

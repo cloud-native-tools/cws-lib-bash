@@ -120,32 +120,53 @@ Presentation  →  Application  →  Domain  →  Infrastructure
 
 ```plantuml
 @startuml
-package "Presentation Layer" as PL {
-  [Controllers]
-  [Views]
+' 语义角色：Entry=Presentation, Hub=Domain, Edge=Application, Sink=Infrastructure
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 60
+
+together {
+  package "Presentation Layer" as PL {
+    [Controllers]
+    [Views]
+  }
 }
 
-package "Application Layer" as AL {
-  [OrderAppService]
-  [UserAppService]
+together {
+  package "Application Layer" as AL {
+    [OrderAppService]
+    [UserAppService]
+  }
 }
 
-package "Domain Layer" as DL {
-  [Order] as OrderEntity
-  [User] as UserEntity
-  [OrderService] as OrderDomainSvc
+together {
+  package "Domain Layer" as DL {
+    [Order] as OrderEntity
+    [User] as UserEntity
+    [OrderService] as OrderDomainSvc
+  }
 }
 
-package "Infrastructure Layer" as IL {
-  [OrderRepository]
-  [UserRepository]
-  [EmailSender]
+together {
+  package "Infrastructure Layer" as IL {
+    [OrderRepository]
+    [UserRepository]
+    [EmailSender]
+  }
 }
 
+' 隐藏连线强制分层顺序
+PL -[hidden]d-> AL
+AL -[hidden]d-> DL
+DL -[hidden]d-> IL
+
+' 强依赖（必须）
 PL --> AL
 AL --> DL
-AL --> IL
-DL --> IL
+
+' 弱依赖（可选/基础设施适配）
+AL ..> IL : <<optional>>
+DL ..> IL : <<adapter>>
 @enduml
 ```
 
@@ -259,6 +280,37 @@ B --> C
 3. **标注依赖方向**：从依赖方指向被依赖方，确保无循环
 4. **检查依赖合理性**：上层能依赖下层，下层不应依赖上层；域层不应依赖基础设施层（依赖倒置）
 5. **标注关键类/接口**：在包内放置代表性元素说明包的职责
+
+## 语义布局分析
+
+> 包图的语义角色映射：
+
+| 语义角色 | 含义 | 典型包 |
+|---------|------|-------|
+| **Hub (中心)** | 核心领域包，被最多包依赖 | Domain、Core |
+| **Edge (边缘)** | 特性包/有界上下文 | Order、Payment、Shipping |
+| **Entry (入口)** | 对外接口/API 包 | API、Controller、Interface |
+| **Sink (汇聚)** | 基础设施/持久化包 | Infrastructure、Persistence |
+| **Peer (对等)** | 同层级的功能包 | 同一有界上下文内的子包 |
+
+**位置草图**：
+```
+[Entry: API/Interface]
+        ↓ (依赖)
+[Hub: Domain/Core]
+    ↓           ↓
+[Edge: Order]  [Edge: Payment]  (together{})
+        ↓
+[Sink: Infrastructure]
+```
+
+**布局优化要点**：
+- **语义驱动布局**：高层包（Entry）在上，核心包（Hub）居中，基础设施包（Sink）在下
+- **`together{}`**：同层的功能包并排，如 `together { package "Order"; package "Payment" }`
+- **隐藏连线**：`Presentation -[hidden]d-> Application` 强制分层从上到下
+- **虚线区分依赖**：`..>` 表示弱依赖（可选），`-->` 表示强依赖（必须）
+- **`linetype ortho`**：包图使用正交布线，层级关系更清晰
+- **DDD 上下文**：用 `package` 嵌套表示有界上下文边界
 
 ## 最佳实践
 

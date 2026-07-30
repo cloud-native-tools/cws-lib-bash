@@ -4,11 +4,11 @@
 
 | Operation | Claude Code Tool/Method |
 |-----------|------------------------|
-| Read agent template | `Read` tool on `templates/agent-role-<slug>-template.md` |
-| Analyze template issues | `Bash`: `grep -n '<pattern>' templates/agent-role-*.md` for evidence gathering |
+| Read agent template | `Read` tool on `templates/agent-capacity-<slug>-template.md` |
+| Analyze template issues | `Bash`: `grep -n '<pattern>' templates/agent-capacity-*.md` for evidence gathering |
 | Apply targeted fixes | `Edit` tool with precise `old_string` matching on template files |
-| Validate template structure | `Bash`: `grep -c '## Identity' templates/agent-role-<slug>-template.md` |
-| Check placeholder usage | `Bash`: `grep -oE '\{\{[A-Z_]+\}\}' templates/agent-role-<slug>-template.md` |
+| Validate template structure | `Bash`: `grep -c '## Identity' templates/agent-capacity-<slug>-template.md` |
+| Check placeholder usage | `Bash`: `grep -oE '\{\{[A-Z_]+\}\}' templates/agent-capacity-<slug>-template.md` |
 | Compare with other roles | `Read` tool on related role templates for consistency checks |
 
 ## Best Practices

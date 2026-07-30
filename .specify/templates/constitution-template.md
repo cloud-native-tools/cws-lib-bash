@@ -29,7 +29,25 @@ CLIs MUST:
 
 Rationale: standardizes integration, observability, and automation.
 
-### III. Test-First Development
+### III. Documentation-First
+Documentation is a first-class deliverable and MUST take priority over test coverage:
+- The project MUST maintain sufficiently detailed and accurate documentation so it can
+  serve as reliable context for AI agents / large language models, supplying project
+  knowledge and background information.
+- Documentation MUST NOT record implementation details; implementation details belong in
+  the code itself.
+- Documents MUST stay focused and reasonably sized; when a document becomes too complex it
+  MUST be split into smaller, cohesive documents.
+- Documents MUST cross-reference one another so that basic navigation can be accomplished
+  purely through internal links.
+- Markdown documents MUST maintain basic metadata (e.g. title, purpose/summary, status,
+  last-updated date, and related links).
+
+Rationale: As agent capabilities grow, high-quality documentation becomes the primary
+knowledge context that lets LLMs understand a project accurately and reason effectively;
+it therefore ranks above testing in the principle hierarchy.
+
+### IV. Test-First Development
 Implementation MUST follow a Test-Driven Development style for core logic:
 - Write or update tests BEFORE implementing new behavior.
 - Ensure tests FAIL first (Red), then implement to make them PASS (Green).
@@ -41,7 +59,7 @@ At minimum:
 
 Rationale: reduces regressions and clarifies intent.
 
-### IV. Integration & Contract Testing
+### V. Integration & Contract Testing
 Integration/contract tests SHOULD cover:
 - Cross-service communication and external APIs.
 - Shared schemas or data contracts.
@@ -52,7 +70,7 @@ and document follow-up contract tests in the plan/tasks.
 
 Rationale: validates real-world behavior beyond unit tests.
 
-### V. Observability, Versioning & Simplicity
+### VI. Observability, Versioning & Simplicity
 All components MUST be observable and versioned:
 - Use structured logs for important events and errors.
 - Prefer semantic versioning (MAJOR.MINOR.PATCH).
@@ -61,7 +79,7 @@ All components MUST be observable and versioned:
 
 Rationale: makes systems debuggable, upgradable, and maintainable.
 
-### VI. Continuous Integration & Quality Gates
+### VII. Continuous Integration & Quality Gates
 Changes MUST be safe to merge:
 - Linting, formatting, and basic tests MUST pass in CI.
 - A minimal smoke test or example run SHOULD be provided for new features.
@@ -69,13 +87,33 @@ Changes MUST be safe to merge:
 
 Rationale: ensures consistent quality and predictable releases.
 
-### VII. Feature-Centric Development
+### VIII. Feature-Centric Development
 Feature is the long-term core framework of the project:
 - The Feature list MUST remain the "single source of truth" for the project.
 - Every phase of spec → plan → tasks → implement MUST review Feature additions/merges/splits/deletions.
 - Feature changes MUST be traceable to corresponding spec/plan evidence and recorded in the Feature detail.
 
 Rationale: Keep project evolution Feature-centric to ensure long-term consistency and maintainability.
+
+### IX. Better-Harness Orientation
+The project is a *harness* for AI agent work — an environment in which an agent can
+understand the task, execute on supported and repeatable paths, validate its changes,
+deliver safely, and carry lessons forward. Improvement work MUST be oriented toward
+making that harness better:
+- Locate and motivate improvements against the five Agent Work Loop dimensions
+  (Task Understanding, Controlled Execution, Change Validation, Reliable Delivery,
+  Learning Capture); the canonical goal model is `.specify/shared/guidelines/better-harness.md`
+  — reference it, do not restate it.
+- Evidence discipline governs improvement claims: a configured asset proves at most that a
+  mechanism exists (configured ≠ used); unobserved evidence MUST NOT be treated as a defect
+  or a conclusion; "improved" MUST only be claimed from comparable before/after evidence.
+- This principle adds orientation, not machinery: it MUST NOT justify new scoring systems,
+  maturity reports, or tracking/recording engines.
+
+Rationale: Like Dogfooding, Better Harness is a core mindset of the agent era — agents
+change code fast, but the workflow around them (fuzzy goals, improvised steps, unproven
+"it works", bypassed safeguards, lost lessons) is usually the weak point. Naming the goal
+lets every improvement answer "which part of the harness does this strengthen?".
 
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->

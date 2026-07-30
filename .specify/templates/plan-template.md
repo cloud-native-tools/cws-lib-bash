@@ -1,9 +1,10 @@
 # Implementation Plan: [SPEC]
 
 **Branch**: `[###-spec-name]` | **Date**: [DATE] | **Spec**: [link]
+**Requirement → Feature**: `[REQUIREMENTS_KEY]` → Feature [FEATURE_ID] [FEATURE_NAME]
 **Input**: Specification from `.specify/specs/[REQUIREMENTS_KEY]/requirements.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command, which **replaces** every `[PLACEHOLDER]` token in place — it MUST NOT append a second copy of this template below the filled content. See `.specify/templates/commands/plan.md` for the execution workflow.
 
 ## Summary
 
@@ -71,7 +72,7 @@
 ├── contracts/           # Phase 1 output (/speckit.plan command)
 ├── feature-ref.md       # Phase 1 output (/speckit.plan command)
 ├── tasks.md             # Phase 2 output (/speckit.tasks command - NOT created by /speckit.plan)
-└── verification.log     # Implementation output (/speckit.implement command)
+└── verification.md     # Implementation output (/speckit.implement command)
 ```
 
 <!--
@@ -103,6 +104,11 @@
 
   If your project does not match any of these, document what is true. The goal is
   evidence-faithful structure, not adherence to a fixed taxonomy.
+
+  MIRROR OBLIGATIONS: if any changed file has mirrors or generated runtime copies
+  (dual-written template dirs, per-tool command copies, script mirrors), list EVERY
+  copy explicitly in this tree — missed mirrors are the highest-frequency rework
+  source during implementation.
 -->
 
 ```text
@@ -114,6 +120,21 @@
 existing container-image factory by adding two new snippets under
 `script/snippets/docker/config/users/` and weaving them into 19 daemon images") and
 reference the real directories captured above. Explicitly note any new top-level dir.]
+
+### Mirror Obligations *(mandatory when any changed file has mirrors or generated copies)*
+
+<!--
+  ACTION REQUIRED: for every source file this spec touches that has mirrors or
+  generated runtime copies (dual-written template dirs, skills/ ↔ .specify/skills/,
+  shared/ ↔ .specify/shared/, per-tool command copies, script mirrors), list EVERY
+  affected copy as a first-class design output. /speckit.tasks turns each row into a
+  paired dual-write + diff-verify task; /speckit.implement checks every row off.
+  Delete this section only when the spec touches NO mirrored surface.
+-->
+
+| Source file (edited) | Mirror / generated copies (must land identically) | Verify |
+|----------------------|---------------------------------------------------|--------|
+| [e.g. `templates/commands/x.md`] | [e.g. `.specify/templates/commands/x.md`; `.claude/commands/speckit.x.md`; `.github/prompts/speckit.x.prompt.md`; `.qoder/commands/speckit.x.md`; `.qwen/commands/speckit.x.toml`; `.opencode/command/speckit.x.md`] | [e.g. `diff -q` for mirrors; regenerated copies contain the edit] |
 
 ## Complexity Tracking
 

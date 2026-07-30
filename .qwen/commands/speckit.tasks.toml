@@ -18,7 +18,23 @@ scripts:
 $ARGUMENTS
 ```
 
-You **MUST** analyze the user input in `$ARGUMENTS`, infer the user"
+Process `$ARGUMENTS` per the [User Input Protocol](shared/workflow/user-input-protocol.md). Detect input type and apply:
+- **Background info** → integrate as context constraints
+- **Task outline** → use as primary organizational structure
+- **Additional task entries** → parse, standardize, merge into appropriate phases
+
+If empty, generate a complete `tasks.md` from available design artifacts.
+
+## Glossary
+
+Consult the project glossary (`.specify/memory/glossary.md`, ambient via the Documentation Map) and apply the protocol in `.specify/shared/workflow/glossary.md`:
+
+- **Before acting on the user input**, map any recorded homophone/confusable variant to its canonical term (correcting voice/dictated input); surface each correction so the user can override it, and defer to the user on ambiguous variants.
+- **At wrap-up**, propose any new project-specific terms (`origin=auto`, `status=proposed`), excluding common words; run conflict detection and obtain explicit user confirmation before writing. User-authored entries are authoritative.
+
+## Outline
+
+1. **Setup**: Run `{SCRIPT}` from repo root and parse REQUIREMENTS_DIR and AVAILABLE_DOCS list. All paths must be absolute. For single quotes in args like "
 
 prompt = """
 ## User Input
@@ -27,40 +43,19 @@ prompt = """
 $ARGUMENTS
 ```
 
-You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to supplement task generation while preserving the default workflow.
+Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Detect input type and apply:
+- **Background info** → integrate as context constraints
+- **Task outline** → use as primary organizational structure
+- **Additional task entries** → parse, standardize, merge into appropriate phases
 
-The user input may include:
+If empty, generate a complete `tasks.md` from available design artifacts.
 
-1. Background info: Context, constraints, or business background.
-2. Task outline: Phase breakdown or high-level task structure.
-3. Additional task entries: Executable task items to merge into the final task list.
+## Glossary
 
-When processing the user input:
+Consult the project glossary (`.specify/memory/glossary.md`, ambient via the Documentation Map) and apply the protocol in `.specify/shared/workflow/glossary.md`:
 
-1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
-2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
-3. If `$ARGUMENTS` is empty, still generate a complete executable `tasks.md` from available design artifacts.
-4. You **MUST** first detect input type and then apply the corresponding handling strategy.
-5. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase with clearer wording.
-
-### Input Type Detection and Handling Strategy
-
-1. **Background Info Type**: If `$ARGUMENTS` primarily contains descriptive text, business context, constraints, or unstructured information
-   - Integrate this information as context into the task generation process
-   - Reference or reflect these constraints in relevant task descriptions
-   - Do not directly convert into specific task entries
-
-2. **Task Outline Type**: If `$ARGUMENTS` contains structured task breakdowns, phase divisions, or high-level task organization
-   - Use the outline structure as the primary framework for task organization
-   - Fill in concrete implementation details and file paths based on the outline
-   - Ensure generated tasks follow the specified structure and order
-
-3. **Additional Task Entries Type**: If `$ARGUMENTS` contains specific, executable task items (typically in list form)
-   - Parse and standardize these task entries to conform to task format specifications
-   - Integrate them into the corresponding user story phases or foundational tasks
-   - Maintain task ID continuity and correct dependency relationships
-
-You **MUST** first analyze the content and structure of `$ARGUMENTS` to determine its type, then apply the appropriate handling strategy.
+- **Before acting on the user input**, map any recorded homophone/confusable variant to its canonical term (correcting voice/dictated input); surface each correction so the user can override it, and defer to the user on ambiguous variants.
+- **At wrap-up**, propose any new project-specific terms (`origin=auto`, `status=proposed`), excluding common words; run conflict detection and obtain explicit user confirmation before writing. User-authored entries are authoritative.
 
 ## Outline
 
@@ -119,27 +114,7 @@ The tasks.md should be immediately executable - each task must be specific enoug
 
 ## Feature Integration
 
-The `/speckit.tasks` command automatically integrates with the feature tracking system:
-
-- If a `.specify/memory/features.md` file exists, the command will:
-  - Detect the current feature directory (format: `.specify/specs/[REQUIREMENTS_KEY]/`)
-  - Extract the feature ID from the directory name
-  - Update the corresponding feature entry in `.specify/memory/features.md`:
-    - Ensure status is "Implemented" (maintains status from planning phase)
-    - Keep the specification path unchanged
-    - Update the "Last Updated" date
-  - Automatically stage the changes to `.specify/memory/features.md` for git commit
-
-In addition, **The tasks phase MUST review the Feature list**:
-
-- Task breakdown may expose new Features or indicate that old Features are no longer applicable.
-- Ensure functional/non-functional Feature classification remains consistent.
-- If changes are discovered, the following must be updated synchronously:
-   - `.specify/memory/features/<ID>.md`
-   - `.specify/memory/features.md`
-- Record the "key changes / notes" brought by the task breakdown in the Feature detail.
-
-This integration ensures that all feature task generation activities are properly tracked and linked to their corresponding entries in the project's feature index.
+Apply [Feature Integration Protocol](.specify/shared/workflow/feature-integration.md). This command maintains status from planning phase. Additionally, **the tasks phase MUST review the Feature list** — task breakdown may expose new Features or invalidate old ones. Update `.specify/memory/features.md` and detail files synchronously if changes are discovered.
 
 ## Task Generation Rules
 
@@ -161,6 +136,24 @@ or
 ```text
 **Tests Mode**: OFF (constitution.md declares no test-mandating principle; spec did not request TDD)
 ```
+
+**Template-only / doc-feature gate**: if the constitution (or plan.md's Constitution Check) carries a *template-only features* principle (e.g. a Principle VII-style rule that template/prompt/doc artifacts are governed by structural contract tests rather than runtime tests), cite THAT gate in the banner and emit **structural contract tests** (content/heading/mirror-parity assertions on the artifact) — not unit/integration tests, which have nothing to run against. Do not re-derive this from feature history each run.
+
+### Environment Prerequisites (probe at generation time)
+
+When any generated task depends on an external environment (docker daemon, network-pullable images, a live cluster, special hardware):
+
+1. **Probe availability now**: check each required environment during task generation (e.g. `docker info`, a registry pull check) instead of letting `/speckit.implement` discover the gap mid-run.
+2. **Emit a per-phase prerequisites block**: each affected phase lists its environment prerequisites explicitly so a runner can skip or defer the phase as a unit.
+3. **Pre-validate named targets**: any concrete build/smoke target named in a task MUST have a locally satisfiable dependency chain (base images pullable, toolchain present). If unsatisfiable, either substitute a satisfiable target up front or pre-flag the task `[~]`-eligible in Notes with the substitution guidance.
+
+### Pin Hygiene (test-authoring rule)
+
+Tasks that author or modify tests MUST follow pin-hygiene so the project's own next increment does not break its own contracts:
+
+1. **Version pins use floor semantics**: assert `parsed >= (MAJOR, MINOR)`, never `startswith("X.Y")` — a later legitimate bump must not fail an unrelated contract.
+2. **Surface-file lists must be real**: every file path listed in a test fixture/surface list MUST be existence-checked at authoring time (or the list derived from the tree); a phantom entry turns the whole test into a permanent FileNotFoundError.
+3. **Counts are contracts, not conveniences**: hard-code a count only when the count itself is the contract (then update it in the same task that changes the population); otherwise derive it with `len(...)` from a glob.
 
 ### Checklist Format (REQUIRED)
 
@@ -208,6 +201,7 @@ Every task MUST strictly follow this format:
 2. **From Contracts**:
    - Map each contract/endpoint → to the user story it serves
    - If tests requested: Each contract → contract test task [P] before implementation in that story's phase
+   - Prefer one test file per contract document rather than per story: when multiple stories append to a single shared test file, [P] parallel markers become invalid and stories serialize on that file
 
 3. **From Data Model**:
    - Map each entity to the user story(ies) that need it
@@ -227,6 +221,38 @@ Every task MUST strictly follow this format:
   - Within each story: Tests (if requested) → Models → Services → Endpoints → Integration
   - Each phase should be a complete, independently testable increment
 - **Final Phase**: Polish & Cross-Cutting Concerns
+
+**Asset-migration phase shape (porting/vendoring an external code subset)**: when a spec copies an external codebase subset in as a hosted asset, split the copy from its acceptance: the **physical copy + static dependency-closure check** is Foundational (Phase 2 — it blocks everything), while **governance artifacts** (provenance ledger, license, ported regression tests, mirrors) belong to the user story that owns the asset. Two standard acceptance actions for the copy task: (1) grep-assert every import resolves to the runtime's builtins or inside the subset; (2) **actually resolve all entry modules with the runtime** (e.g. `node -e "await import(...)"` per entry) — checklist-driven copying misses transitive dependencies that only real module resolution exposes.
+
+**Doc-feature phase shape (template-only / documentation / prompt-framework specs)**: when the spec's deliverables are templates, docs, prompts, or skills rather than runtime code, "Models → Services → Endpoints" does not apply — do not force it. Switch the within-story order to the doc-feature taxonomy:
+1. **author-section** — write/edit the template or document section itself
+2. **mirror-parity** — for each row of plan.md's *Mirror Obligations* table, emit a **paired task set**: one task to dual-write every mirror/copy AND one task to verify parity (`diff -q` for mirrors; grep-for-the-edit for regenerated per-tool copies). Mirror pairs are first-class tasks, never implicit side-effects of the authoring task.
+3. **render-verify** — actually render/execute the artifact (render the diagram, run the template through its consumer) and inspect the output
+4. **refresh-verify** — re-run the artifact's refresh/regeneration path to confirm repeatability
+The app-shaped examples in the tasks template are illustrative, not mandatory; pick the taxonomy that matches the spec's actual deliverables.
+
+## Feedback
+
+At wrap-up (the same lifecycle point where this command prompts for a Git commit), perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
+
+1. **Gate on qualification & completion.** Only proceed if this command reached its wrap-up stage. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
+2. **Reflect (no user input).** Review this run against `/speckit.tasks`'s declared purpose and produce a short review plus ≥1 concrete, command-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
+3. **Scope guard.** Keep strictly to this command's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
+4. **Dedup guard.** Use a stable `run_id` (e.g. the feature key + a run timestamp); if a nested skill/command already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
+5. **Persist** via the engine:
+   ```bash
+   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
+     --unit-id "/speckit.tasks" --unit-type command \
+     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
+     --review "<review prose>" --points-file "<points file>"
+   ```
+6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
+
+**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+
+## Documentation
+
+At the same wrap-up point as the Feedback step, apply the docs-sync evaluation per the canonical convention in `.specify/shared/workflow/docs-step.md`: assess whether information produced by this run (new capabilities, key decisions, structural changes) needs to be recorded into the project documentation space, and conclude with exactly one of `需记录（目标文档 + 要点）` or `无需记录`. Never block wrap-up; incremental judgment only (no full reconcile sweep); when a move/archive-level change is needed, recommend running `/speckit.docs` instead of executing it here.
 
 ## Handoffs
 

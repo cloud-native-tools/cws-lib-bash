@@ -198,6 +198,15 @@ fi
 
 [[ -f "$QUICKSTART" ]] && docs+=("quickstart.md")
 
+# Include checklists/ directory (only if it exists and has files)
+if [[ -d "$REQUIREMENTS_DIR/checklists" ]] && [[ -n "$(ls -A "$REQUIREMENTS_DIR/checklists" 2>/dev/null)" ]]; then
+    docs+=("checklists/")
+fi
+
+# Include feature linkage + verification artifacts when present
+[[ -f "$REQUIREMENTS_DIR/feature-ref.md" ]] && docs+=("feature-ref.md")
+[[ -f "$REQUIREMENTS_DIR/verification.md" ]] && docs+=("verification.md")
+
 # Include tasks.md if requested and it exists
 if $INCLUDE_TASKS && [[ -f "$TASKS" ]]; then
     docs+=("tasks.md")
@@ -234,6 +243,9 @@ else
     check_file "$DATA_MODEL" "data-model.md"
     check_dir "$CONTRACTS_DIR" "contracts/"
     check_file "$QUICKSTART" "quickstart.md"
+    check_dir "$REQUIREMENTS_DIR/checklists" "checklists/"
+    check_file "$REQUIREMENTS_DIR/feature-ref.md" "feature-ref.md"
+    check_file "$REQUIREMENTS_DIR/verification.md" "verification.md"
     
     if $INCLUDE_TASKS; then
         check_file "$TASKS" "tasks.md"

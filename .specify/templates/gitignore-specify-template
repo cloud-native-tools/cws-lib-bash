@@ -1,0 +1,5 @@
+# /speckit.history scratch (de-noised transcripts); .md docs + .manifest.json are tracked
+history/.work/
+
+# /speckit.team run intermediate workspace (transient); team defs + runs/ reports stay tracked
+teams/.work/

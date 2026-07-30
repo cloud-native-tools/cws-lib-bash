@@ -10,7 +10,7 @@
 | GitHub Copilot | `${SKILL_WORKDIR}/.github/copilot-instructions.md` |
 | Claude Code | `${SKILL_WORKDIR}/CLAUDE.md` |
 | Qwen Code | `${SKILL_WORKDIR}/QWEN.md` |
-| Qoder | `${SKILL_WORKDIR}/QODER.md` 或 `${SKILL_WORKDIR}/.qoder/project_rules.md` |
+| Qoder | `${SKILL_WORKDIR}/AGENTS.md` 或 `${SKILL_WORKDIR}/QODER.md` 或 `${SKILL_WORKDIR}/.qoder/project_rules.md` |
 | opencode | `${SKILL_WORKDIR}/AGENTS.md` |
 
 3. 若以上文件均不存在，创建 `${SKILL_WORKDIR}/.specify/instructions.md` 并写入引用行。
@@ -20,5 +20,5 @@
 在目标文档的 Documentation Map 表格中添加一行：
 
 ```markdown
-| **Git Workflow** | `docs/git-workflow.md` | 分支同步机制与操作文件 | 三层分支模型、rebase 同步流程、推送策略、安全底线 |
+| **Git Workflow** | `.specify/memory/git-workflow.md` | 分支同步机制与操作文件 | 三层分支模型、rebase 同步流程、推送策略、安全底线 |
 ```

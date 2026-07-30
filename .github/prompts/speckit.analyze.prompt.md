@@ -4,19 +4,7 @@
 $ARGUMENTS
 ```
 
-You **MUST** analyze the user input in `$ARGUMENTS`, infer the user's intent, and use that intent to supplement the analysis context and focus areas.
-
-The user input may include:
-
-1. Special requests that require extra care or custom handling during the analysis workflow.
-2. Supplemental information that provides additional context or reference material.
-3. Additional analysis focus areas that go beyond the default scope described in this document.
-
-When processing the user input:
-
-1. You **MUST** treat `$ARGUMENTS` as parameters for the current command.
-2. Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
-3. If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase the request with clearer wording. Provide brief guidance when possible.
+Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as supplemental analysis focus areas, not standalone instructions.
 
 ## Goal
 
@@ -111,46 +99,33 @@ Create internal representations (do not include raw artifacts in output):
 Focus on high-signal findings. Limit to 50 findings total; aggregate remainder in overflow summary.
 
 #### A. Duplication Detection
-
-- Identify near-duplicate requirements
-- Mark lower-quality phrasing for consolidation
+- Near-duplicate requirements → mark lower-quality for consolidation
 
 #### B. Ambiguity Detection
-
-- Flag vague adjectives (fast, scalable, secure, intuitive, robust) lacking measurable criteria
-- Flag unresolved placeholders (TODO, TKTK, ???, `<placeholder>`, etc.)
+- Vague adjectives (fast, scalable, secure) lacking measurable criteria
+- Unresolved placeholders (TODO, TKTK, ???)
 
 #### C. Underspecification
-
-- Requirements with verbs but missing object or measurable outcome
-- User stories missing acceptance criteria alignment
-- Tasks referencing files or components not defined in spec/plan
+- Requirements missing measurable outcome
+- Tasks referencing undefined components
 
 #### D. Constitution Alignment
-
-- Any requirement or plan element conflicting with a MUST principle
-- Missing mandated sections or quality gates from constitution
+- Any element conflicting with MUST principles
+- Missing mandated sections/quality gates
 
 #### E. Coverage Gaps
-
-- Requirements with zero associated tasks
-- Tasks with no mapped requirement/story
-- Non-functional requirements not reflected in tasks (e.g., performance, security)
+- Requirements with zero tasks; tasks with no requirement
+- Non-functional requirements not reflected in tasks
 
 #### F. Inconsistency
-
-- Terminology drift (same concept named differently across files)
-- Data entities referenced in plan but absent in spec (or vice versa)
-- Task ordering contradictions (e.g., integration tasks before foundational setup tasks without dependency note)
-- Conflicting requirements (e.g., one requires Next.js while other specifies Vue)
+- Terminology drift across files
+- Data entities in plan but absent in spec (or vice versa)
+- Task ordering contradictions
 
 #### G. Feature Relevance & Accuracy
-
-- Determine whether the current requirement implementation scope is actually related to a concrete feature candidate
-- Flag missing feature binding when requirement text clearly implies a feature capability but no feature can be mapped
-- Flag incorrect or stale feature metadata in requirements (wrong Feature ID/name, mismatched scope wording)
-- Flag index/detail divergence in feature registry (same feature with conflicting name/status/description)
-- Flag requirement-feature inconsistency where requirement claims one feature but tasks/plan evidence aligns with another
+- Missing feature binding when requirement implies feature capability
+- Incorrect/stale feature metadata
+- Index/detail divergence or requirement-feature inconsistency
 
 ### 5. Severity Assignment
 
@@ -170,82 +145,55 @@ Feature-specific severity rules:
 
 ### 6. Produce Compact Analysis Report
 
-Output a Markdown report (no file writes) with the following structure:
-
-## Specification Analysis Report
+Output Markdown report (no file writes):
 
 | ID | Category | Severity | Location(s) | Summary | Recommendation |
 |----|----------|----------|-------------|---------|----------------|
-| A1 | Duplication | HIGH | requirements.md:L120-134 | Two similar requirements ... | Merge phrasing; keep clearer version |
 
-(Add one row per finding; generate stable IDs prefixed by category initial.)
+One row per finding; stable IDs prefixed by category initial.
 
-**Coverage Summary Table:**
+Also include: **Coverage Summary Table**, **Feature Linkage Summary Table**, **Constitution Alignment Issues**, **Unmapped Tasks**, **Metrics** (Total Reqs, Tasks, Coverage %, Feature Linkage %, Ambiguity/Duplication/Inconsistency/Critical counts).
 
-| Requirement Key | Has Task? | Task IDs | Notes |
-|-----------------|-----------|----------|-------|
+### 7. Next Actions & Remediation
 
-**Feature Linkage Summary Table:**
-
-| Requirement Key | Candidate Feature | Confidence | Status | Notes |
-|-----------------|-------------------|------------|--------|-------|
-
-**Constitution Alignment Issues:** (if any)
-
-**Unmapped Tasks:** (if any)
-
-**Metrics:**
-
-- Total Requirements
-- Total Tasks
-- Coverage % (requirements with >=1 task)
-- Feature Linkage Coverage % (requirements with identified feature candidate)
-- Ambiguity Count
-- Duplication Count
-- Feature Inconsistency Count
-- Critical Issues Count
-
-### 7. Provide Next Actions
-
-At end of report, output a concise Next Actions block:
-
-- If CRITICAL issues exist: Recommend resolving before `/speckit.implement`
-- If only LOW/MEDIUM: User may proceed, but provide improvement suggestions
-- Provide explicit command suggestions: e.g., "Run /speckit.feature to refresh feature registry", "Run /speckit.requirements with refinement", "Run /speckit.plan to adjust architecture", "Manually edit tasks.md to add coverage for 'performance-metrics'"
-
-### 8. Offer Remediation
-
-Ask the user: "Would you like me to suggest concrete remediation edits for the top N issues?" (Do NOT apply them automatically.)
+- CRITICAL issues: resolve before `/speckit.implement`
+- LOW/MEDIUM only: proceed with suggestions
+- Offer: "Would you like concrete remediation edits for top N issues?" (do NOT apply automatically)
 
 ## Operating Principles
 
-### Context Efficiency
+- Read-only: NEVER modify files
+- Focus on actionable findings; limit to 50 rows; summarize overflow
+- Prioritize constitution violations (always CRITICAL)
+- Feature checks are evidence-based; lower confidence when evidence is weak
+- Report zero issues gracefully (emit success report with coverage statistics)
+- Deterministic: rerunning without changes produces consistent results
 
-- **Minimal high-signal tokens**: Focus on actionable findings, not exhaustive documentation
-- **Progressive disclosure**: Load artifacts incrementally; don't dump all content into analysis
-- **Token-efficient output**: Limit findings table to 50 rows; summarize overflow
-- **Deterministic results**: Rerunning without changes should produce consistent IDs and counts
+## Feedback
 
-### Analysis Guidelines
+At wrap-up (the same lifecycle point where this command prompts for a Git commit), perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
 
-- **NEVER modify files** (this is read-only analysis)
-- **NEVER hallucinate missing sections** (if absent, report them accurately)
-- **Prioritize constitution violations** (these are always CRITICAL)
-- **Feature checks are evidence-based** (use spec/plan/tasks plus feature index/detail; if evidence is weak, lower confidence instead of over-asserting)
-- **Use examples over exhaustive rules** (cite specific instances, not generic patterns)
-- **Report zero issues gracefully** (emit success report with coverage statistics)
+1. **Gate on qualification & completion.** Only proceed if this command reached its wrap-up stage. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
+2. **Reflect (no user input).** Review this run against `/speckit.analyze`'s declared purpose and produce a short review plus ≥1 concrete, command-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
+3. **Scope guard.** Keep strictly to this command's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
+4. **Dedup guard.** Use a stable `run_id` (e.g. the feature key + a run timestamp); if a nested skill/command already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
+5. **Persist** via the engine:
+   ```bash
+   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
+     --unit-id "/speckit.analyze" --unit-type command \
+     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
+     --review "<review prose>" --points-file "<points file>"
+   ```
+6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
 
-## Context
+**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
 
-{ARGS}
+## Documentation
+
+At the same wrap-up point as the Feedback step, apply the docs-sync evaluation per the canonical convention in `.specify/shared/workflow/docs-step.md`: assess whether information produced by this run (new capabilities, key decisions, structural changes) needs to be recorded into the project documentation space, and conclude with exactly one of `需记录（目标文档 + 要点）` or `无需记录`. Never block wrap-up; incremental judgment only (no full reconcile sweep); when a move/archive-level change is needed, recommend running `/speckit.docs` instead of executing it here.
 
 ## Handoffs
 
-**Before running this command**:
+**Before**: Run `/speckit.tasks` first so there is a complete `tasks.md` to analyze.
 
-- Run `/speckit.tasks` first so there is a complete `tasks.md` to analyze.
-
-**After running this command**:
-
-- If CRITICAL/HIGH issues are found, apply fixes in `/speckit.requirements`, `/speckit.plan`, or `/speckit.tasks` (as appropriate) and re-run analysis.
-- If issues are acceptable or resolved, proceed to `/speckit.implement`.
+**After**: If CRITICAL/HIGH issues found, fix via `/speckit.requirements`, `/speckit.plan`, or `/speckit.tasks` and re-run. Otherwise proceed to `/speckit.implement`.

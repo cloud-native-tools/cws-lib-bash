@@ -128,13 +128,24 @@ US --> DB
 
 ```plantuml
 @startuml
+' === Semantic Roles ===
+' Hub: API Gateway (all traffic passes through)
+' Edge: Order, User, Product, Payment (business services)
+' Sink: OrderDB, UserDB, MQ, Cache (data stores & infra)
+
+skinparam linetype ortho
+skinparam nodesep 40
+skinparam ranksep 60
+
 cloud "API Gateway" as GW
 
 package "Core Services" {
-  component [Order Service] as Order
-  component [User Service] as User
-  component [Product Service] as Product
-  component [Payment Service] as Payment
+  together {
+    component [Order Service] as Order
+    component [User Service] as User
+    component [Product Service] as Product
+    component [Payment Service] as Payment
+  }
 }
 
 package "Infrastructure" {
@@ -151,8 +162,13 @@ GW --> Product : REST
 Order --> Payment : gRPC
 Order --> MQ : publish events
 Order --> OrderDB
+Order ..> Cache : optional read
 User --> UserDB
 User --> Cache
+
+' === Layout Control ===
+GW -[hidden]d-> Order
+GW -[hidden]d-> User
 @enduml
 ```
 
@@ -163,6 +179,35 @@ User --> Cache
 3. **定义组件间的通信方式**：同步（REST/gRPC）还是异步（消息队列）？
 4. **标注依赖方向**：箭头从依赖方指向被依赖方，避免双向依赖
 5. **添加接口**：对于关键的组件边界，标注接口契约
+
+## 语义布局分析
+
+> 组件图的语义角色映射：
+
+| 语义角色 | 含义 | 典型组件 |
+|---------|------|---------|
+| **Hub (中心)** | 所有流量经过的核心组件 | API Gateway、消息中间件 |
+| **Edge (边缘)** | 连接到 Hub 的业务模块 | 各微服务、业务组件 |
+| **Entry (入口)** | 外部访问接口 | Web App、Mobile App |
+| **Sink (汇聚)** | 数据存储或外部系统 | Database、Cache、External API |
+| **Peer (对等)** | 同层级、同职责的组件 | 同一业务层的多个服务 |
+
+**位置草图**：
+```
+[Entry: Web/Mobile] → [Hub: API Gateway]
+                              ↓
+            [Edge: Service A]  [Edge: Service B]  (together{})
+                    ↓                  ↓
+            [Sink: DB-A]         [Sink: DB-B]
+```
+
+**布局优化要点**：
+- **语义驱动布局**：Hub（如 API Gateway）在上方，Edge（各微服务）在下方，Sink（数据库）在最下方或右侧
+- **`together{}`**：同一业务层的组件并排放置，如 `together { [Order Svc]; [User Svc]; [Pay Svc] }`
+- **隐藏连线**：`gateway -[hidden]d-> orderSvc` 强制网关在服务上方
+- **虚线区分依赖强度**：`..>` 表示可选依赖或弱依赖，`-->` 表示强依赖
+- **`linetype ortho`**：组件图使用正交布线更整洁，配合 `nodesep ≥ 40`、`ranksep ≥ 60`
+- **按层分组**：使用 `package` 或 `frame` 按架构层划分（表示层/业务层/数据层）
 
 ## 最佳实践
 
