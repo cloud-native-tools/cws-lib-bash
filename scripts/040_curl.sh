@@ -70,16 +70,28 @@ function curl_mirror_file() {
   local path=$(dirname $(echo ${url} | sed 's@https\?://[^/]*/@@g'))
   if [ -z "${url}" ]; then
     log warn "Usage: download_file [url] "
+    return ${RETURN_FAILURE:-1}
   else
+    local status=${RETURN_SUCCESS:-0}
     mkdir -p ${dir}/${path}
     pushd ${dir}/${path} >/dev/null 2>&1
-    if curl_download -O ${url}; then
+    # ${CURL_FAILED_OPTS} carries --continue-at -, so an already-complete file makes
+    # curl request a range past EOF: the server answers 416 and --fail exits 22 even
+    # though nothing is wrong. Capture the status code and treat 416 as already-mirrored.
+    local http_code
+    http_code=$(curl_download -O --write-out '%{http_code}' ${url})
+    local rc=$?
+    if [ "${rc}" -eq 0 ]; then
       log notice "download [${url}] into [${dir}/${path}] success"
+    elif [ "${http_code}" = "416" ]; then
+      log notice "download [${url}] into [${dir}/${path}] already complete (http 416)"
     else
-      log error "download [${url}] into [${dir}/${path}] failed"
+      log error "download [${url}] into [${dir}/${path}] failed (exit ${rc}, http ${http_code})"
+      status=${RETURN_FAILURE:-1}
     fi
     popd >/dev/null 2>&1
     echo "${url} -> ${dir}/${path}"
+    return ${status}
   fi
 }
 
