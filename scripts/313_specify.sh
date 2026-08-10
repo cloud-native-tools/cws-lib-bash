@@ -105,7 +105,7 @@ function specify_check() {
 
 # Initialize a new Specify project
 # Usage: specify_init <ai_tool> [project_name]
-# Available AI tools: all, claude, copilot, qwen, qoder, opencode
+# Available AI tools: all, claude, copilot, qoder, opencode
 function specify_init() {
   local ai_tool=${1}
   local project_name=${2:-.}
@@ -114,16 +114,16 @@ function specify_init() {
   # Validate AI tool parameter
   if [ -z "${ai_tool}" ]; then
     log error "Usage: specify_init <ai_tool> [project_name]"
-    log error "Available AI tools: all, claude, copilot, qwen, qoder, opencode"
+    log error "Available AI tools: all, claude, copilot, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
   fi
 
   case "${ai_tool}" in
-  all | claude | copilot | opencode | qwen | qoder )
+  all | claude | copilot | opencode | qoder )
     ;;
   *)
     log error "Unsupported AI tool: ${ai_tool}"
-    log error "Available AI tools: all, claude, copilot, qwen, qoder, opencode"
+    log error "Available AI tools: all, claude, copilot, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
     ;;
   esac
@@ -136,14 +136,14 @@ function specify_init() {
   log info "Initializing Specify project with AI tool: ${ai_tool}, project name: ${project_name}"
 
   if [ "${ai_tool}" = "all" ]; then
-    local tools=(claude copilot opencode qwen qoder)
+    local tools=(claude copilot opencode qoder)
     local tool=""
     local tool_ignore_agent_tools=false
 
     for tool in "${tools[@]}"; do
       tool_ignore_agent_tools=false
       case "${tool}" in
-      claude | opencode | qwen | qoder)
+      claude | opencode | qoder)
         tool_ignore_agent_tools=true
         ;;
       esac
@@ -183,12 +183,6 @@ function specify_init_copilot() {
   specify_init copilot "${project_name}"
 }
 
-# Initialize a Specify project with Qwen Code
-function specify_init_qwen_code() {
-  local project_name=${1:-.}
-  specify_init qwen "${project_name}" true
-}
-
 # Initialize a Specify project with Qoder
 function specify_init_qoder() {
   local project_name=${1:-.}
@@ -219,15 +213,11 @@ function specify_deinit() {
   case "${ai_tool}" in
   all)
     rm -rfv .github/prompts/speckit.*.prompt.md
-    rm -rfv .qwen/commands/speckit.*.toml
     rm -rfv .qoder/commands/speckit.*.md
     rm -rfv .opencode/command/speckit.*.md
     ;;
   copilot)
     rm -rfv .github/prompts/speckit.*.prompt.md
-    ;;
-  qwen)
-    rm -rfv .qwen/commands/speckit.*.toml
     ;;
   qoder)
     rm -rfv .qoder/commands/speckit.*.md
@@ -236,7 +226,7 @@ function specify_deinit() {
     rm -rfv .opencode/command/speckit.*.md
     ;;
   *)
-    log error "Usage: specify_deinit [copilot|qwen|qoder|opencode|all]"
+    log error "Usage: specify_deinit [copilot|qoder|opencode|all]"
     return "${RETURN_FAILURE:-1}"
     ;;
   esac
