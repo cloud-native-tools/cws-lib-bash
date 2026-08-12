@@ -350,16 +350,6 @@ function file_real_size() {
   log notice "Physical size: $((physical_size * 512)) bytes"
 }
 
-function file_create() {
-  local filepath=${1}
-  if [ -z "${filepath}" ]; then
-    log error "Usage: file_create <filepath>"
-    return ${RETURN_FAILURE}
-  fi
-  mkdir -pv $(dirname ${filepath#/})
-  touch ${filepath#/}
-}
-
 function install_executable_files() {
   install -D -v -m 0755 $@
 }
@@ -474,6 +464,51 @@ function cp_file() {
     mkdir -p $(dirname ${dest})
     cp -rfv ${src[@]} ${dest}
   fi
+}
+
+# Ensure a file exists, creating any missing parent directories first.
+# This is NOT plain touch(1) semantics: standard touch fails with ENOENT
+# when a parent directory is missing, while this function creates the whole
+# directory chain so the file is guaranteed to exist afterwards.
+# For files that already exist, only the timestamps are updated (content
+# is never touched), which matches touch(1).
+# Usage: touch_file <file> [file ...]
+function touch_file() {
+  if [ $# -eq 0 ]; then
+    log error "Usage: touch_file <file> [file ...]"
+    return ${RETURN_FAILURE}
+  fi
+
+  local target_file parent_dir
+  for target_file in "$@"; do
+    if [ -z "${target_file}" ]; then
+      log error "touch_file: empty file path"
+      return ${RETURN_FAILURE}
+    fi
+
+    if [ -d "${target_file}" ]; then
+      log error "touch_file: target is a directory: ${target_file}"
+      return ${RETURN_FAILURE}
+    fi
+
+    # The missing-parent-directory case is the one thing touch(1) refuses
+    # to handle (ENOENT); create the chain here so the touch below always
+    # succeeds. Existing files only get their timestamps updated by touch.
+    parent_dir=$(dirname "${target_file}")
+    if [ ! -d "${parent_dir}" ]; then
+      mkdir -p "${parent_dir}" || {
+        log error "touch_file: failed to create directory: ${parent_dir}"
+        return ${RETURN_FAILURE}
+      }
+    fi
+
+    touch "${target_file}" || {
+      log error "touch_file: failed to touch file: ${target_file}"
+      return ${RETURN_FAILURE}
+    }
+  done
+
+  return ${RETURN_SUCCESS}
 }
 
 function mv_file() {
