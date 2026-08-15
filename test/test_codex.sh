@@ -10,10 +10,10 @@ function codex() {
 }
 
 output=$(codex_dev "fix bug")
-assert_eq "--approval-mode suggest fix bug" "${output}" "codex_dev should use suggest approval mode and pass args"
+assert_eq "-a untrusted fix bug" "${output}" "codex_dev should use untrusted approval policy and pass args"
 
 output=$(codex_yolo "run tests")
-assert_eq "--approval-mode full-auto run tests" "${output}" "codex_yolo should use full-auto approval mode and pass args"
+assert_eq "--dangerously-bypass-approvals-and-sandbox run tests" "${output}" "codex_yolo should bypass approvals and sandbox and pass args"
 
 output=$(codex_print "summarize")
 assert_eq "--quiet summarize" "${output}" "codex_print should use quiet mode and pass args"

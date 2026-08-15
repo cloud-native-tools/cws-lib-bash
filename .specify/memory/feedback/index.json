@@ -1,10 +1,21 @@
 {
   "store": "feedback",
-  "updated": "2026-07-30T11:58:19Z",
+  "updated": "2026-08-11T18:33:21Z",
   "threshold": 10,
-  "count_since_submission": 3,
+  "count_since_submission": 4,
   "submitted_at": null,
   "entries": [
+    {
+      "id": "20260811T183321Z-skill-cli-setup",
+      "file": "20260811T183321Z-skill-cli-setup.md",
+      "unit_id": "skill:cli-setup",
+      "unit_type": "skill",
+      "run_id": "codex-approval-mode-removed-20260812",
+      "feature": "",
+      "partial": false,
+      "created": "2026-08-11T18:33:21Z",
+      "summary": "codex-cli 0.146.0 已移除 --approval-mode 参数（codex_yolo 启动报错 unexpected argument）。cli-setup 技能两处仍引用旧 flag：scripts/config-agent.sh:526（codex dev 分支 --approval-mode suggest）与 references/permission-modes.md（"
+    },
     {
       "id": "20260730T115819Z-skill-memory-record",
       "file": "20260730T115819Z-skill-memory-record.md",
