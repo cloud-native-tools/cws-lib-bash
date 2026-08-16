@@ -473,16 +473,59 @@ function git_pull_all() {
   git pull --all --rebase $@
 }
 
+# git_push [remote] [branch] [extra git push args]
+# Push <branch> to <remote> (defaults: upstream remote of the current branch,
+# else origin; current branch). When the push dies mid-transfer with a
+# middlebox-corruption signature ("Bad packet length", "Connection corrupted",
+# "Broken pipe", sideband disconnect), retry automatically via
+# git_push_by_chunk. Other failures (ref rejected, auth) cannot be fixed by
+# chunking and are returned as-is.
 function git_push() {
-  local remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD).remote)
-  local branch=$(git branch --show-current)
+  local remote=""
+  local branch=""
+  if [ $# -ge 1 ]; then remote=$1; shift; fi
+  if [ $# -ge 1 ]; then branch=$1; shift; fi
+  if [ -z "${remote}" ]; then
+    remote=$(git config --get branch.$(git rev-parse --abbrev-ref HEAD 2>/dev/null).remote 2>/dev/null)
+  fi
   if [ -z "${remote}" ]; then
     remote="origin"
   fi
+  if [ -z "${branch}" ]; then
+    branch=$(git branch --show-current 2>/dev/null)
+  fi
+  if [ -z "${branch}" ]; then
+    log error "Usage: git_push [remote] [branch] [extra git push args]"
+    return ${RETURN_FAILURE:-1}
+  fi
+
   log notice "git push [${branch}] to [${remote}]"
-  git push ${remote} ${branch}
+  local out
+  out=$(git push "$@" ${remote} ${branch} 2>&1)
+  local st=$?
+  printf '%s\n' "${out}"
+  if [ ${st} -eq 0 ]; then
+    return ${RETURN_SUCCESS:-0}
+  fi
+
+  local corrupt_pattern='Bad packet length|Connection corrupted|Broken pipe|unexpected disconnect while reading sideband'
+  if printf '%s' "${out}" | grep -qE "${corrupt_pattern}"; then
+    log warning "push to ${remote} died mid-transfer; retrying with git_push_by_chunk"
+    if [ $# -gt 0 ]; then
+      log warning "extra push args ($*) are not forwarded to git_push_by_chunk"
+    fi
+    git_push_by_chunk "${remote}" "${branch}"
+    return $?
+  fi
+
+  return ${st}
 }
 
+# git_push_all [branch] [extra git push args]
+# Push <branch> (default: current) and tags to every remote except origin.
+# Branch pushes go through git_push, so a corrupt link is retried with
+# git_push_by_chunk automatically. Continues past failures and reports any
+# failed remotes at the end.
 function git_push_all() {
   local branch=${1}
   if [ -z "${branch}" ]; then
@@ -490,14 +533,149 @@ function git_push_all() {
   else
     shift
   fi
+  local failed=()
   for remote in $(git remote); do
     if [ "${remote}" = "origin" ]; then
       continue
     fi
     log info "===================   Local:[${branch}], Remote:[${remote}/${branch}]    ==================="
-    git push $@ ${remote} ${branch}
+    if ! git_push "${remote}" "${branch}" "$@"; then
+      failed+=("${remote}")
+    fi
     git push ${remote} --tags
   done
+  if [ ${#failed[@]} -gt 0 ]; then
+    log error "push failed on remotes: ${failed[*]}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  return ${RETURN_SUCCESS:-0}
+}
+
+# git_push_by_chunk [remote] [branch] [max_step]
+# Push <branch> to <remote> in adaptive first-parent windows, for links where a
+# middlebox kills bulk transfers mid-session ("Bad packet length" /
+# "Connection corrupted" / "Broken pipe" right after the transfer starts).
+# - Windows walk the first-parent chain: it is linear, so every intermediate
+#   tip is a fast-forward, and merge commits carry their side branches along.
+# - Progress is judged by `git ls-remote` after each attempt, NOT by the push
+#   exit code: on such links a push may report failure while the ref update
+#   has already landed (phantom failure, sometimes only visible seconds late).
+# - A no-progress window is retried, then halved; a landed window grows back
+#   up to <max_step> (default 32 fp commits; 64 died on the gitee link).
+# Safe to re-run at any time: it resumes from the actual remote tip.
+function git_push_by_chunk() {
+  local remote=${1:-origin}
+  local branch=${2:-$(git branch --show-current 2>/dev/null)}
+  local max_step=${3:-32}
+  local max_tries=2
+
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    log error "Not in a git repository"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if [ -z "${branch}" ]; then
+    log error "Usage: git_push_by_chunk [remote] [branch] [max_step]"
+    return ${RETURN_FAILURE:-1}
+  fi
+  if ! git rev-parse --verify --quiet "${branch}" >/dev/null; then
+    log error "Branch not found: ${branch}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  log info "===================  Chunked push Local:[${branch}], Remote:[${remote}/${branch}]  ==================="
+
+  # First-parent chain, oldest first
+  local -a commits=()
+  mapfile -t commits < <(git rev-list --first-parent --reverse "${branch}")
+  local total=${#commits[@]}
+
+  _git_push_by_chunk_remote_tip() {
+    local out
+    out=$(git ls-remote "${remote}" "refs/heads/${branch}" 2>/dev/null) || return 1
+    awk -v ref="refs/heads/${branch}" '$2 == ref {print $1}' <<<"${out}"
+  }
+
+  # First fp-chain index whose closure contains $1 (monotonic on a linear chain,
+  # so binary search is valid). Caller guarantees $1 is an ancestor of branch.
+  _git_push_by_chunk_cover_index() {
+    local lo=0 hi=$((total - 1)) mid
+    while ((lo < hi)); do
+      mid=$(((lo + hi) / 2))
+      if git merge-base --is-ancestor "$1" "${commits[$mid]}"; then hi=${mid}; else lo=$((mid + 1)); fi
+    done
+    echo "${lo}"
+  }
+
+  local tip
+  if ! tip=$(_git_push_by_chunk_remote_tip); then
+    log error "Failed to query remote: ${remote}"
+    return ${RETURN_FAILURE:-1}
+  fi
+  local i=-1
+  if [ -n "${tip}" ]; then
+    if ! git merge-base --is-ancestor "${tip}" "${branch}"; then
+      log error "Remote tip ${tip} is not an ancestor of ${branch}; chunked push only fast-forwards"
+      return ${RETURN_FAILURE:-1}
+    fi
+    i=$(_git_push_by_chunk_cover_index "${tip}")
+  fi
+  log info "fp-chain commits: ${total}, remote tip: ${tip:-none}, covered index: ${i}"
+
+  local step=${max_step}
+  while ((i < total - 1)); do
+    local j=$((i + step))
+    ((j > total - 1)) && j=$((total - 1))
+    local sha=${commits[$j]}
+    local ok=0
+    local try
+    for ((try = 1; try <= max_tries; try++)); do
+      log info ">>> target index $((j + 1))/${total} ($((j - i)) fp commits) attempt ${try}: ${sha}"
+      local out
+      out=$(git push "${remote}" "${sha}:refs/heads/${branch}" 2>&1)
+      local st=$?
+      printf '%s\n' "${out}" | grep -vE '^Warning: Permanently added'
+      if [ ${st} -eq 0 ]; then
+        ok=1
+        break
+      fi
+      if printf '%s' "${out}" | grep -qE 'non-fast-forward|rejected|denied'; then
+        log error "Remote rejected ${sha}; aborting (window halving cannot fix a ref rejection)"
+        return ${RETURN_FAILURE:-1}
+      fi
+      sleep 2
+      local newtip
+      if newtip=$(_git_push_by_chunk_remote_tip) && [ -n "${newtip}" ] && [ "${newtip}" != "${tip}" ]; then
+        log warning "Transport error but remote advanced to ${newtip} (phantom failure)"
+        ok=1
+        break
+      fi
+      log warning "No progress (attempt ${try}, transport)"
+      sleep $((try * 3))
+    done
+    if [ ${ok} -eq 1 ]; then
+      if ! tip=$(_git_push_by_chunk_remote_tip) || [ -z "${tip}" ]; then
+        log error "Failed to re-query remote tip after progress; re-run to resume"
+        return ${RETURN_FAILURE:-1}
+      fi
+      i=$(_git_push_by_chunk_cover_index "${tip}")
+      ((step < max_step)) && step=$((step * 2))
+    else
+      step=$((step / 2))
+      log warning "Halving window to ${step}"
+      if [ ${step} -lt 1 ]; then
+        log error "Cannot advance past covered index ${i}; a single merge may carry too many objects"
+        return ${RETURN_FAILURE:-1}
+      fi
+    fi
+  done
+
+  local local_head=$(git rev-parse "${branch}")
+  if [ "${tip}" = "${local_head}" ]; then
+    log notice "MATCH: ${remote}/${branch} == local ${branch} (${local_head})"
+    return ${RETURN_SUCCESS:-0}
+  fi
+  log error "MISMATCH: remote=${tip:-none} local=${local_head}"
+  return ${RETURN_FAILURE:-1}
 }
 
 function git_add() {
