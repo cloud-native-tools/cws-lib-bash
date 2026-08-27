@@ -149,6 +149,53 @@ function ssh_fix_permission() {
   find ${target} \( -name id_rsa -o -name id_rsa.pub -o -name authorized_keys -o -name known_hosts \) | xargs chmod 400
 }
 
+# Resolves an ssh-config host alias to its directly-connected endpoint
+# ("<host> <port>" on stdout), following the ProxyJump chain: ProxyJump
+# targets often resolve to 127.0.0.1 (jumper-local view), so the first network
+# hop is the meaningful endpoint for reachability checks (net_ping).
+# Prints nothing and returns failure on unresolved host or over-deep chain.
+function ssh_resolve_endpoint() {
+  local host_name=${1}
+  local config_file=${2:-${HOME}/.ssh/config}
+  if [ -z "${host_name}" ]; then
+    return ${RETURN_FAILURE}
+  fi
+  local target=${host_name}
+  local override_port=""
+  local resolved net_host net_port net_jump i
+  for i in 1 2 3 4 5; do
+    resolved=$(ssh -G -F "${config_file}" "${target}" 2>/dev/null | awk '$1 == "hostname" { h = $2 } $1 == "port" { p = $2 } $1 == "proxyjump" { j = $2 } END { printf "%s|%s|%s", h, p, j }')
+    net_host="${resolved%%|*}"
+    resolved="${resolved#*|}"
+    net_port="${resolved%%|*}"
+    net_jump="${resolved##*|}"
+    if [ -z "${net_host}" ]; then
+      return ${RETURN_FAILURE}
+    fi
+    if [ -z "${net_jump}" ]; then
+      # directly-connected endpoint reached
+      if [ -n "${override_port}" ]; then
+        net_port="${override_port}"
+      fi
+      echo "${net_host} ${net_port:-22}"
+      return ${RETURN_SUCCESS}
+    fi
+    # follow the jump chain towards the first network hop
+    target="${net_jump#*@}"
+    if [[ "${target}" == *:* ]]; then
+      override_port="${target##*:}"
+      target="${target%%:*}"
+    else
+      override_port=""
+    fi
+    if [ -z "${target}" ]; then
+      return ${RETURN_FAILURE}
+    fi
+  done
+  # jump chain too deep (or circular): unresolved
+  return ${RETURN_FAILURE}
+}
+
 # Pings an SSH host
 function ssh_ping() {
   local host_name=${1}
@@ -164,7 +211,10 @@ function ssh_ping() {
     shift
   fi
   # Use batch mode and disable all interactive authentication methods
-  if ssh -o BatchMode=yes \
+  # RemoteCommand=none / RequestTTY=no: neutralize host-level RemoteCommand
+  # directives (e.g. interactive login wrappers), otherwise ssh aborts with
+  # "Cannot execute command-line and remote command." and the host looks offline
+  if ssh -n -o BatchMode=yes \
     -o ConnectTimeout=5 \
     -o PasswordAuthentication=no \
     -o PubkeyAuthentication=yes \
@@ -174,6 +224,8 @@ function ssh_ping() {
     -o StrictHostKeyChecking=no \
     -o UserKnownHostsFile=/dev/null \
     -o LogLevel=ERROR \
+    -o RemoteCommand=none \
+    -o RequestTTY=no \
     -F ${config_file} \
     ${host_name} $@ exit >/dev/null 2>&1; then
     return ${RETURN_SUCCESS}

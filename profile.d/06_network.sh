@@ -56,7 +56,26 @@ function net_my_login_ip() {
 }
 
 function net_ping() {
-  ping -c 4 -i 0.5 -W 1 $@ >/dev/null 2>&1
+  local host=${1}
+  local port=${2}
+  if [ -z "${host}" ]; then
+    return ${RETURN_FAILURE}
+  fi
+  if [ -n "${port}" ]; then
+    # TCP reachability check on host:port
+    if ! have nc; then
+      log warn "[nc] is required for TCP net_ping"
+      return ${RETURN_FAILURE}
+    fi
+    if is_macos; then
+      nc -z -G 5 "${host}" "${port}" >/dev/null 2>&1
+    else
+      nc -z -w 5 "${host}" "${port}" >/dev/null 2>&1
+    fi
+  else
+    # ICMP ping (no port given)
+    ping -c 4 -i 0.5 -W 1 "${host}" >/dev/null 2>&1
+  fi
 }
 
 function net_is_ip() {
