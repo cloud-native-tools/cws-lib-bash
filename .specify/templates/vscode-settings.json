@@ -1,18 +1,30 @@
 {
   "chat.promptFilesRecommendations": {
+    "speckit.agents": true,
     "speckit.analyze": true,
     "speckit.checklist": true,
     "speckit.clarify": true,
     "speckit.constitution": true,
+    "speckit.derive": true,
+    "speckit.docs": true,
     "speckit.feature": true,
+    "speckit.feedback": true,
+    "speckit.goal": true,
+    "speckit.history": true,
     "speckit.implement": true,
     "speckit.instructions": true,
+    "speckit.interview": true,
     "speckit.plan": true,
+    "speckit.requirements": true,
     "speckit.research": true,
     "speckit.review": true,
+    "speckit.sanitize": true,
+    "speckit.session": true,
     "speckit.skills": true,
-    "speckit.requirements": true,
-    "speckit.tasks": true
+    "speckit.tasks": true,
+    "speckit.team": true,
+    "speckit.todo": true,
+    "speckit.tools": true
   },
   "chat.tools.terminal.autoApprove": {
     "/(\\n|.)+/": true

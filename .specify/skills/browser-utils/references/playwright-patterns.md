@@ -1,10 +1,18 @@
-# Playwright Automation Patterns (Tier 3)
+# Playwright Automation Patterns (Tier 2)
 
 Code examples and patterns for Playwright-based headless browser automation.
-These patterns are used when Tier 1 (built-in browser) and Tier 2 (MCP connector)
-are not available.
+These patterns are used when Tier 1 (built-in browser) is not available —
+Playwright is the default script-driven path.
 
 For the complete Playwright API reference, see [playwright-api.md](./playwright-api.md).
+
+> **Every launch example in this file uses `headless: true` — the F0 focus-safe default.** An
+> automation window must never contend for the user's system focus, and a headed launch also
+> aborts with `Missing X server or $DISPLAY` on any host without a display. Headed is opt-in,
+> never the default: resolve the rung with `${SKILL_HOME}/scripts/focus-safe-launch.py` and follow
+> [focus-safe-launch.md](./focus-safe-launch.md), which owns the ladder (F0 headless / F1 headed on
+> a virtual display / F2 announced desktop window). Where an example below keeps `headless: false`,
+> it is an explicitly marked F2 exception and says why.
 
 ---
 
@@ -30,9 +38,9 @@ node -e "require('playwright'); console.log('playwright OK')" \
 
 ---
 
-## Run Modes (Tier 3)
+## Run Modes (Tier 2)
 
-Tier 3 has two mutually exclusive run modes. Pick the mode **before writing a script**
+Tier 2 has two mutually exclusive run modes. Pick the mode **before writing a script**
 (see SKILL.md § Run Mode Selection). This section is the launch recipe for each.
 
 ### Mode 1 — Clean Test Browser (default)
@@ -63,7 +71,7 @@ const { chromium } = require('playwright');
 const TARGET_URL = 'http://localhost:3001';
 
 (async () => {
-  const browser = await chromium.launch({ headless: false }); // bundled Chromium, mock keychain kept
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default; bundled Chromium, mock keychain kept
   try {
     const page = await browser.newPage();
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -94,7 +102,7 @@ fs.writeFileSync(FIXTURE,
   '<body><h1 id="hello">clean browser works</h1></body></html>');
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   try {
     const page = await browser.newPage();
     await page.goto('file://' + FIXTURE, { waitUntil: 'domcontentloaded' });
@@ -151,11 +159,11 @@ const TARGET_URL = 'https://internal.example.com/dashboard';
   let context;
   try {
     context = await chromium.launchPersistentContext(USER_DATA_DIR, {
-      headless: false,
+      headless: false,                                // F2 EXCEPTION — announce the window first; try F0 when no human interaction is needed
       channel: 'chrome',                              // real Chrome → keychain key matches
       ignoreDefaultArgs: ['--use-mock-keychain'],     // use the REAL keychain to decrypt cookies
       viewport: { width: 1440, height: 900 },
-      args: ['--no-first-run', '--no-default-browser-check'],
+      args: ['--no-first-run', '--no-default-browser-check', '--window-size=1440,900', '--window-position=64,64'],
     });
     const page = context.pages()[0] || (await context.newPage());
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded', timeout: 30000 });
@@ -185,7 +193,7 @@ const TARGET_URL = 'https://internal.example.com/dashboard';
 
 ---
 
-## SPA Site Traversal & Module Extraction (Tier 3)
+## SPA Site Traversal & Module Extraction (Tier 2)
 
 Use this pattern to **map every functional module of a single-page app** (left-nav +
 hash routes) and produce a structured design doc: for each module, its route, label,
@@ -787,7 +795,7 @@ three things must be right:
    (async () => {
      let context;
      try {
-       context = await chromium.launch({ headless: false }); // or Mode 2 persistent context
+       context = await chromium.launch({ headless: true }); // F0 default; or Mode 2 persistent context
        const page = context.pages()[0] || (await context.newPage());
        await traverse(page, TARGET_URL, { mode: 'mode1' }); // runInfo from bash preflight
      } catch (e) { console.error('FATAL:', e.message); }
@@ -835,7 +843,7 @@ const { chromium } = require('playwright');
 const TARGET_URL = 'http://localhost:3001'; // Auto-detected or from user
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   const page = await browser.newPage();
 
   await page.goto(TARGET_URL);
@@ -857,7 +865,7 @@ const { chromium } = require('playwright');
 const TARGET_URL = 'http://localhost:3001';
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   const page = await browser.newPage();
 
   const viewports = [
@@ -891,7 +899,7 @@ const { chromium } = require('playwright');
 const TARGET_URL = 'http://localhost:3001';
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   const page = await browser.newPage();
 
   await page.goto(`${TARGET_URL}/login`);
@@ -916,7 +924,7 @@ const { chromium } = require('playwright');
 const TARGET_URL = 'http://localhost:3001';
 
 (async () => {
-  const browser = await chromium.launch({ headless: false, slowMo: 50 });
+  const browser = await chromium.launch({ headless: true, slowMo: 50 }); // F0 default; slowMo only matters on F1/F2
   const page = await browser.newPage();
 
   await page.goto(`${TARGET_URL}/contact`);
@@ -939,7 +947,7 @@ const TARGET_URL = 'http://localhost:3001';
 const { chromium } = require('playwright');
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   const page = await browser.newPage();
 
   await page.goto('http://localhost:3000');
@@ -974,7 +982,7 @@ const { chromium } = require('playwright');
 const { chromium } = require('playwright');
 
 (async () => {
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
   const page = await browser.newPage();
 
   try {
@@ -998,7 +1006,7 @@ For quick one-off tasks, execute code inline without creating files:
 
 ```bash
 cd ${SKILL_HOME}/scripts/js && node run.js "
-const browser = await chromium.launch({ headless: false });
+const browser = await chromium.launch({ headless: true }); // F0 focus-safe default
 const page = await browser.newPage();
 await page.goto('http://localhost:3001');
 await page.screenshot({ path: '/tmp/quick-screenshot.png', fullPage: true });

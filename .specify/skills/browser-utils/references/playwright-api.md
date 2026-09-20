@@ -1,6 +1,6 @@
 # Playwright Skill - Complete API Reference
 
-This document contains the comprehensive Playwright API reference and advanced patterns. For quick-start execution patterns, see [SKILL.md](SKILL.md).
+This document contains the comprehensive Playwright API reference and advanced patterns. For quick-start execution patterns, see [SKILL.md](../SKILL.md).
 
 ## Table of Contents
 
@@ -84,8 +84,8 @@ const { chromium } = require('playwright');
 (async () => {
   // Launch browser
   const browser = await chromium.launch({
-    headless: false,  // Set to true for headless mode
-    slowMo: 50       // Slow down operations by 50ms
+    headless: true,   // F0 focus-safe default — see references/focus-safe-launch.md
+    slowMo: 50       // Slow down operations by 50ms (only meaningful on the headed rungs F1/F2)
   });
 
   const context = await browser.newContext({

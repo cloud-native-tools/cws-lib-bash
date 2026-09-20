@@ -23,6 +23,8 @@
 
 使用 `rectangle "Zone Title" as zone_alias #line.dashed { ... }` 创建带虚线边框的视觉分区，将相关组件分组。
 
+> ⚠️ **实测：内联 `#line.dashed` 会把该元素的 `BorderThickness` 重置回 1px 基线**（`#line.dashed;line.bold` 同样无效）。当分区边框还要承担权重档（粗细 >1px）时，虚线必须改由 stereotype 作用域块内的 `BorderStyle dashed` 给出（`rectangle "Zone" as z <<zone>> { ... }` + `skinparam rectangle<<zone>> { BorderThickness 3; BorderStyle dashed }`）——配方与实测数据见 [../sds-realization.md §1.3](../sds-realization.md)。
+
 ### 2.2 水平流向
 
 在图表顶部使用 `left to right direction` 实现从左到右的流向布局（常见于管道型、数据流型和 DevOps 架构图）。

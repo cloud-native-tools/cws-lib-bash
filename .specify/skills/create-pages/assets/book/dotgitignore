@@ -1,0 +1,4 @@
+# Hugo build artifacts (generated from the Markdown in this directory).
+public/
+resources/
+.hugo_build.lock

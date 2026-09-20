@@ -1,0 +1,19 @@
+{
+  "name": "excalidraw-render-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Self-hosted Excalidraw render service: POST scene JSON / Mermaid text -> SVG/PNG. Used by the draw-excalidraw skill.",
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@excalidraw/excalidraw": "^0.18.0",
+    "@excalidraw/mermaid-to-excalidraw": "^2.2.2",
+    "playwright-core": "^1.49.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

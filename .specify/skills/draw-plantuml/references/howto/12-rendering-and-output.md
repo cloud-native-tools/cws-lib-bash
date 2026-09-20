@@ -8,14 +8,14 @@
 
 ### 1.0 渲染后端与环境准备（首次使用必读）
 
-渲染脚本 `render-plantuml.sh` 支持两种后端，通过 `PLANTUML_BACKEND` 选择（默认 `auto`）：
+渲染脚本 `render-plantuml.sh` 支持两种后端，通过 `PLANTUML_BACKEND` 选择（**默认 `server`——远端渲染优先**）：
 
 | 后端 | 触发条件 | 依赖 | 说明 |
 |------|---------|------|------|
-| **server** | `PLANTUML_SERVER` 可达 | 一个 PlantUML 服务器 + `python3` | 首选；脚本将源码做 Deflate+Base64 编码后 GET `/svg/{enc}`、`/png/{enc}`（官方 PlantUML server 协议） |
-| **local** | 服务器不可达且找到本地 jar | `java` + PlantUML jar（+ CJK 字体） | 完全离线；专项图（WBS/甘特/思维导图/JSON/YAML）无需 Graphviz |
+| **server** | 默认 | 一个 PlantUML 服务器 + `python3` | **首选且默认**；脚本将源码做 Deflate+Base64 编码后 GET `/svg/{enc}`、`/png/{enc}`（官方 PlantUML server 协议），**无需下载/配置任何本地渲染工具** |
+| **local** | 仅用户明确确认后（`PLANTUML_BACKEND=local`） | `java` + PlantUML jar（+ CJK 字体；UML 类图还需 graphviz） | 完全离线；**本地渲染必须先在用户确认后显式启用**，脚本绝不静默回退 |
 
-`auto` 会先探测服务器，不可达时自动回退到本地 jar。
+**远端优先与用户确认**：`server`（默认）与 `auto` 均先探测 `PLANTUML_SERVER` → `PLANTUML_SERVER_FALLBACKS`（空格分隔的备选服务器列表，默认 `https://www.plantuml.com/plantuml` 公共实例——均为远端，不涉及本地工具）。**仅当全部服务器不可达时**，脚本才会询问用户是否改用本地渲染：交互终端直接提示 `[y/N]`；在 agent 驱动的 Bash（非 TTY）中则打印指引并退出（exit 1）——agent 必须先询问用户、获确认后以 `PLANTUML_BACKEND=local` 重试。**禁止静默下载 jar / 配置本地渲染工具链。** 所有 HTTP 请求携带显式 UA（`render-plantuml.sh/1.0`）——plantuml.com 会以 403 拦截 urllib 等默认 UA。
 
 **默认远程服务器**——脚本默认使用自建的 PlantUML server 渲染表图：
 
@@ -23,7 +23,7 @@
 http://xuanji-plantuml.aliyun-inc.com:9696/plantuml
 ```
 
-如需指向其他服务器，设置 `PLANTUML_SERVER=<url>`（URL 以上下文路径结尾，不含 `/svg` 等后缀）。
+如需指向其他服务器，设置 `PLANTUML_SERVER=<url>`（URL 以上下文路径结尾，不含 `/svg` 等后缀）。自建服务器在家庭网络等环境不可达时，脚本自动回退到 `PLANTUML_SERVER_FALLBACKS`（默认含 plantuml.com；设为空字符串可禁用公网回退）。
 
 **自建远程服务器（Docker）**——上述默认服务器由以下 Docker 镜像在主机 `xuanji-plantuml.aliyun-inc.com` 上运行；如需自行部署，可复用相同命令：
 
@@ -38,7 +38,7 @@ docker run -d --name plantuml --restart unless-stopped \
 
 > 容器内 PlantUML server 监听 `9696`、上下文路径为 `/plantuml`，故渲染地址为 `http://<host>:9696/plantuml`。该镜像为官方 PlantUML server（1.2026.1），仅支持编码后 GET 渲染，不接受原始文本 POST——渲染脚本已按此协议实现。
 
-**离线（本地 jar）环境准备**——要复现本技能内「推荐测试图」的同等质量成图，需一次性准备：
+**离线（本地 jar）环境准备**——仅当**用户确认使用本地渲染**（`PLANTUML_BACKEND=local`）时才需要；远端渲染可用时无需任何本地准备。需一次性准备：
 
 ```bash
 # 1) PlantUML jar（放到脚本会自动搜索的任一路径）
@@ -58,7 +58,7 @@ fc-cache -f ${HOME}/.local/share/fonts
 #    sudo dnf install -y graphviz   （专项 5 图不需要）
 ```
 
-> 可用 `PLANTUML_BACKEND=local` 强制本地渲染，`PLANTUML_JAR=/path/to.jar` 指定 jar，`PLANTUML_LIMIT_SIZE=16384` 调整像素上限。
+> 用户确认本地渲染后，可用 `PLANTUML_BACKEND=local` 指定本地渲染，`PLANTUML_JAR=/path/to.jar` 指定 jar，`PLANTUML_LIMIT_SIZE=16384` 调整像素上限。
 
 ### 1.1 渲染脚本
 
@@ -107,6 +107,8 @@ node ${SKILL_HOME}/scripts/svg-to-png-cjk.cjs <input.svg> <output-cjk.png> 2
 
 该脚本在浏览器中使用系统 CJK 字体渲染，确保文字正确显示。详见 [layout.md §六](../guide/layout.md) 中的 CJK 渲染问题详解。
 
+> **换渲染后端必复验**：`legend` 里的 `<back:#…>` 色块与 CJK 字体渲染支持随**渲染服务**而异——更换服务器或改用本地 jar 后，必须重渲并肉眼复验图例色块与中文显示（见 [style.md §十](../guide/style.md) 图例契约的「渲染服务依赖」注）。
+
 ---
 
 ## 二、渲染验证
@@ -115,7 +117,7 @@ node ${SKILL_HOME}/scripts/svg-to-png-cjk.cjs <input.svg> <output-cjk.png> 2
 
 1. **SVG 有效性**：`file diagram-01.svg` 应显示 "SVG document"
 2. **SVG viewBox**：中等图表的 SVG viewBox 应至少在一个轴上 ≥ 3840（确认 `scale 4 + dpi 300` 已生效）
-3. **SVG 无固定尺寸**：确认使用 `viewBox` 而无固定 width/height（确认 `svgDimensionStyle false` 已生效）
+3. **SVG 固定长宽比（防拉伸变形）**：根元素 `<svg>` 必须带 `preserveAspectRatio="xMidYMid meet"` 且 `width`/`height` 与 viewBox 成比例（长边 ≤ 2400px）——`render-plantuml.sh` 渲染后自动执行 `fix_svg_aspect`。⚠️ **不要**手动删除 width/height 或改回 `preserveAspectRatio="none"`：新窗口打开 SVG 时会因拉伸导致图形变形（用户端实际显示问题，人工确认过的严重缺陷）
 4. **PNG 有效性**：`file diagram-01.png` 应显示 "PNG image data" 且两个轴尺寸 ≤ 4095
 5. **PNG 非空白**：4000+ 像素图片的文件大小应 > 100KB（空白的 4096×4096 ≈ 60KB）
 6. **脚本输出**：应输出 "Rendering Complete" 且无 WARNING
@@ -235,6 +237,32 @@ node ${SKILL_HOME}/scripts/svg-to-png-cjk.cjs <input.svg> <output-cjk.png> 2
 
 - **原则**：PNG 与 SVG 引用**用同一种机制**（要么全 HTML、要么全 Markdown），保证两条路径经**同一解析管线**、写法一致；`rel="noopener"` 保证 `target="_blank"` 安全。若确需混用，**必须在目标渲染器里分别验证两条路径**并各自调整。
 
+### 4.4 复现性附录（推荐：渲染命令 + puml 源码 + 依赖说明）
+
+HTML 交付物附带**复现性附录**，让读者/评审无需翻找源码目录即可重新渲染。渲染图仍是 HTML 的主体；附录默认收起，不干扰阅读：
+
+- **渲染命令**：给出本图实际使用的渲染调用（含 CJK 补跑脚本）：
+  ```bash
+  # 默认远端渲染（PLANTUML_BACKEND=server）；渲染 PNG+SVG 双格式
+  bash ${SKILL_HOME}/scripts/render-plantuml.sh 01-system-overview.puml . 01-system-overview
+  # 含 CJK 文字时补跑（系统字体渲染中文 PNG）：
+  node ${SKILL_HOME}/scripts/svg-to-png-cjk.cjs 01-system-overview.svg 01-system-overview-cjk.png 2
+  ```
+  > **可移植性铁律**：命令一律用 `${SKILL_HOME}` 相对形式（SKILL_HOME = 技能根目录），**禁止写死绝对路径**（如 `/storage/…/.qoder/skills/…`）——绝对路径在其它机器/环境不可复现，评审实测扣分项。
+- **puml 源码**：将 `.puml` 完整源码放入**可折叠 `<details>`** 块（默认收起，与「渲染图为主体」不冲突）：
+  ```html
+  <details>
+    <summary>PlantUML 源码（点击展开，用于重新渲染）</summary>
+    <pre><code>@startuml
+  ...完整源码...
+  @enduml</code></pre>
+  </details>
+  ```
+  > **源码一致性铁律**：附录源码必须与磁盘上**实际渲染所用的 `.puml` 逐字节一致**——直接从磁盘文件复制进 `<details>`，**不得手抄、不得省略渲染脚本注入的 `skinparam`/`scale` 样式块**（实测缺陷：HTML 版缺 shadowing/roundCorner/dpi/scale/defaultFontName 却多出 actorStyle awesome，按 HTML 重渲无法复现实际产物）。
+- **依赖说明**：注明渲染后端（server/local）、CJK 字体脚本、以及本地渲染所需的 `java` + jar + Graphviz（见 §1.0），让复现者按图索骥；本地渲染路径须同时注明"已获用户确认"。**须覆盖离线 fallback**：服务器不可达时的本地渲染路径（`java` + jar + Graphviz + CJK 字体，见 §1.0「离线（本地 jar）环境准备」），让复现者在断网环境也能重建产物。
+
+> 交付自查：HTML 里能回答"这张图怎么重新生成？"——命令可复制、源码可展开、依赖有说明，三者齐备才算可复现。
+
 ---
 
 ## 五、输出要求
@@ -288,3 +316,6 @@ node ${SKILL_HOME}/scripts/svg-to-png-cjk.cjs <input.svg> <output-cjk.png> 2
 - [ ] 文字说明引用了图表中的具体元素
 - [ ] 文档有从总览到细节的清晰叙事流
 - [ ] HTML 文件在浏览器中正确打开并显示所有图表
+- [ ] HTML 含复现性附录：渲染命令（render-plantuml.sh 调用 + CJK 补跑脚本）、依赖说明（后端/CJK/本地工具链，含离线 fallback）、可折叠的 puml 源码（默认收起）——见 §4.4
+- [ ] 附录渲染命令用 `${SKILL_HOME}` 相对路径（无写死绝对路径）
+- [ ] 附录 puml 源码与磁盘实际渲染的 `.puml` 逐字节一致（含渲染脚本注入的样式块，直接从磁盘复制，未手抄/省略）

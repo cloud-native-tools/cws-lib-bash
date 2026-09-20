@@ -1,0 +1,13 @@
+{{- /* Child index of the current section, rendered from the live page tree.
+
+Used by the mounted section-index stub so that a documentation directory without an
+index.md still gets a real landing page (and therefore a clickable sidebar entry).
+Also usable from a hand-written index.md. Never stale: the list is computed at build
+time, not generated into a file. */ -}}
+{{- with .Page.Pages }}
+<ul class="speckit-children">
+  {{- range . }}
+  <li><a href="{{ .RelPermalink }}">{{ partial "docs/title" . }}</a></li>
+  {{- end }}
+</ul>
+{{- end }}

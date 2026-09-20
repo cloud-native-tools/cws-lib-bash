@@ -40,7 +40,7 @@ INDEX_NAME = "index.md"
 ALLOWED_SPECIAL = {
     "LICENSE.md", "NOTICE.md", "SECURITY.md", "CODEOWNERS.md",
     "CODE_OF_CONDUCT.md", "AGENTS.md", "AGENT.md", "CLAUDE.md", "QODER.md",
-    "QWEN.md", "GEMINI.md", "IFLOW.md", "HERMES.md", "OPENCODE.md",
+    "GEMINI.md", "HERMES.md", "OPENCODE.md",
 }
 
 LINK_RE = re.compile(r"\[[^\]]*\]\(([^)\s]+)\)")
@@ -217,8 +217,9 @@ def check_links(root: Path, files: list[Path], violations: list) -> None:
                 })
 
 
-def cmd_validate(root: Path) -> dict:
+def cmd_validate(root: Path, extra_special: set[str] | None = None) -> dict:
     violations: list[dict] = []
+    allowed_special = ALLOWED_SPECIAL | (extra_special or set())
     lower_registry = {name.lower(): name for name in REGISTRY}
     for path in sorted(root.glob("*.md")):
         name = path.name
@@ -235,7 +236,7 @@ def cmd_validate(root: Path) -> dict:
                 "kind": "reserved-name-case", "path": name,
                 "detail": f"rename to {lower_registry[name.lower()]}",
             })
-        elif name not in ALLOWED_SPECIAL and re.sub(r"[^A-Za-z]", "", path.stem).isupper() \
+        elif name not in allowed_special and re.sub(r"[^A-Za-z]", "", path.stem).isupper() \
                 and len(re.sub(r"[^A-Za-z]", "", path.stem)) >= 2:
             violations.append({
                 "kind": "reserved-name-misuse", "path": name,
@@ -401,6 +402,10 @@ def main() -> int:
     parser.add_argument("--scope", default="unspecified", help="audit scope label")
     parser.add_argument("--summary", default="", help="audit summary line")
     parser.add_argument("--items-file", default=None, help="JSON file with audit items")
+    parser.add_argument("--allow-special", action="append", default=None, metavar="NAME",
+                        help="additional tool-mandated ALL-CAPS filename to accept at the "
+                             "project root (repeatable); extends the ADR-0001 registry "
+                             "without editing this engine")
     args = parser.parse_args()
 
     root = Path(args.root).resolve()
@@ -415,7 +420,7 @@ def main() -> int:
     elif args.action == "stats":
         out = cmd_stats(root)
     elif args.action == "validate":
-        out = cmd_validate(root)
+        out = cmd_validate(root, set(args.allow_special or []))
     elif args.action == "fix-links":
         out = cmd_fix_links(root, args.moves, args.apply)
     else:

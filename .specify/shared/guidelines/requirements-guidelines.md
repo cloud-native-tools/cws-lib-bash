@@ -53,6 +53,8 @@ Generate a checklist file at `FEATURE_DIR/checklists/requirements.md`:
 2. Document specific issues found (quote relevant spec sections)
 3. Treat `Feature ID: Need clarification` as pending (requires `/speckit.clarify`)
 
+**Sanctioned variant — clarify in-session first.** When a `[NEEDS CLARIFICATION]` marker can be settled inside the current session (one question round, each accepted answer recorded under `## Clarifications` > `### Session YYYY-MM-DD`), resolving it **before** the checklist is written is compliant, and the checklist is then *expected* to pass green on its first pass. A first-pass all-green checklist reached this way is a legitimate outcome, not a skipped validation step: the checklist MUST still be created, reviewed item by item, and stamped with pass/fail status. The iteration path below remains the fallback for markers that cannot be settled in-session and for items failing on other grounds.
+
 ### Handle Validation Results
 
 - **All items pass**: Mark checklist complete and proceed
@@ -98,6 +100,8 @@ Generate a checklist file at `FEATURE_DIR/checklists/requirements.md`:
 - Avoid HOW to implement (no tech stack, APIs, code structure)
 - Written for business stakeholders, not developers
 - DO NOT create checklists embedded in the spec (separate command)
+- User-facing wording and context rules are defined once in `.specify/shared/guidelines/user-facing-comprehension.md` (this file covers surface classes ⑤ and ⑦); its condition sets MUST NOT be restated here.
+- Recorded gap, deliberately not filled: class ⑦'s plan- and task-artifact side carries no wording rules of its own — a stakeholder / plain-language / business search of those two templates returns zero hits — and this discipline adds none, because a plan and a task list are written for implementers rather than for stakeholders. Adding wording rules there would widen scope, not close a gap.
 
 ### Section Requirements
 

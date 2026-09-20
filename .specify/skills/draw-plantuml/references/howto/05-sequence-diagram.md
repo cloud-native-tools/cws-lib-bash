@@ -246,6 +246,9 @@ Gateway --> User: success
 - **分组**：`box "Domain" #LightBlue` 将相关参与者框在一起（注意：monochrome 模式下不支持颜色）
 - **参与者构造型 + 着色（角色一眼可辨）**：`participant "订单服务" as OS <<Hub>> #BBD8EE`——构造型 `<<Entry/Hub/Edge/Sink>>` 声明语义角色，底色按角色族着色（与「位置规则」呼应：角色即位置、关联即同色）。比纯 `box` 分组更轻量，participant 不多时首选。
 - **note 预算 ≤ 5 条**：一张时序图的 note 总数控制在 5 条以内，每条只写非显而易见的信息（协议、超时、幂等等）；超过预算说明图承载了过多文字，细节应移入 legend 或配套文档。锚定侧别与配色遵守 [content.md 注释锚定纪律](../guide/content.md)。
+- **组合片段着色 + 关键路径高亮（视觉引导）**：`alt/opt/group/loop` 等组合片段支持尾部带色——`alt 库存充足 #LightGreen`、`else 库存不足 #LightPink`、`group 主流程 #LightBlue`——把**关键工作流/happy path 所在片段用浅色块标出**，异常/备选分支用另一浅色，读者一眼定位主线；`activate A #FFDAB9` 可给关键参与者的激活条单独着色，与片段色呼应。注意：**着色与 `skinparam monochrome true` 互斥**（monochrome 会把所有颜色转灰度），需要彩色高亮时必须省略 monochrome（见 [style.md §三 关键路径着色](../guide/style.md)），全图着色片段控制在 2~3 个以内，避免满屏色块
+- **group 标签带对应接口/RPC 名**：`group 创建流程 · CreateSandbox`——组合片段标签里标注该阶段对应的接口/RPC 名，读者一眼知道每段交互对应哪个契约（片段标签允许比元素标签长，不受 ≤10 字符限制），长时序图的可读性显著提升
+- **长图用阶段分隔线或拆子图**：流程块多（4 个以上）的时序图用 `== 阶段名 ==` 分隔线划分生命周期阶段（如 `== 创建/执行 ==`、`== 暂停/恢复 ==`、`== 销毁 ==`）；体量仍大则按阶段**拆为两张子图**（如「创建/执行」+「暂停/恢复/销毁」），图集带 `▶ 见 图N` 交叉引用——避免一张长图滚动疲劳，符合「减法与拆分」（见 [diagram-principles.md §4.2/§4.3](../guide/diagram-principles.md)）
 
 ## 最佳实践
 

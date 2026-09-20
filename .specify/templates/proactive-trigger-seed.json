@@ -1,0 +1,416 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "templates/commands/*.md ## Handoffs + owning-sections (shared/workflow/feedback-step.md §Threshold prompt protocol, templates/commands/feedback.md §Outline) @ e1000fe9",
+  "situations": [
+    {
+      "id": "s01",
+      "name": "requirements-unclear-needs-clarification",
+      "stage": "requirements-unclear",
+      "signals": [
+        "needs-clarification"
+      ],
+      "match": {
+        "stage": "requirements-unclear",
+        "signalsAll": [
+          "needs-clarification"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s02",
+      "name": "requirements-draft-no-plan",
+      "stage": "requirements-draft",
+      "signals": [
+        "no-plan"
+      ],
+      "match": {
+        "stage": "requirements-draft",
+        "signalsAll": [
+          "no-plan"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s03",
+      "name": "no-spec-feature-index-absent",
+      "stage": "no-spec",
+      "signals": [
+        "feature-index-absent"
+      ],
+      "match": {
+        "stage": "no-spec",
+        "signalsAll": [
+          "feature-index-absent"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s04",
+      "name": "planned-no-tasks",
+      "stage": "planned",
+      "signals": [
+        "no-tasks"
+      ],
+      "match": {
+        "stage": "planned",
+        "signalsAll": [
+          "no-tasks"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s05",
+      "name": "tasks-ready-open-tasks-checklist-absent",
+      "stage": "tasks-ready",
+      "signals": [
+        "open-tasks",
+        "checklist-absent"
+      ],
+      "match": {
+        "stage": "tasks-ready",
+        "signalsAll": [
+          "open-tasks",
+          "checklist-absent"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s06",
+      "name": "tasks-ready-open-tasks",
+      "stage": "tasks-ready",
+      "signals": [
+        "open-tasks"
+      ],
+      "match": {
+        "stage": "tasks-ready",
+        "signalsAll": [
+          "open-tasks"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s07",
+      "name": "implementing-open-tasks",
+      "stage": "implementing",
+      "signals": [
+        "open-tasks"
+      ],
+      "match": {
+        "stage": "implementing",
+        "signalsAll": [
+          "open-tasks"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s08",
+      "name": "implemented-deferred-tasks",
+      "stage": "implemented",
+      "signals": [
+        "deferred-tasks"
+      ],
+      "match": {
+        "stage": "implemented",
+        "signalsAll": [
+          "deferred-tasks"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s09",
+      "name": "non-feature-feedback-threshold",
+      "stage": "non-feature",
+      "signals": [
+        "feedback-threshold"
+      ],
+      "match": {
+        "stage": "non-feature",
+        "signalsAll": [
+          "feedback-threshold"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s10",
+      "name": "non-feature-introspection-pending",
+      "stage": "non-feature",
+      "signals": [
+        "introspection-pending"
+      ],
+      "match": {
+        "stage": "non-feature",
+        "signalsAll": [
+          "introspection-pending"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s11",
+      "name": "non-feature-docs-drift",
+      "stage": "non-feature",
+      "signals": [
+        "docs-drift"
+      ],
+      "match": {
+        "stage": "non-feature",
+        "signalsAll": [
+          "docs-drift"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s12",
+      "name": "non-feature-instructions-stale",
+      "stage": "non-feature",
+      "signals": [
+        "instructions-stale"
+      ],
+      "match": {
+        "stage": "non-feature",
+        "signalsAll": [
+          "instructions-stale"
+        ],
+        "signalsAny": []
+      }
+    },
+    {
+      "id": "s13",
+      "name": "no-spec-constitution-absent",
+      "stage": "no-spec",
+      "signals": [
+        "constitution-absent"
+      ],
+      "match": {
+        "stage": "no-spec",
+        "signalsAll": [
+          "constitution-absent"
+        ],
+        "signalsAny": []
+      }
+    }
+  ],
+  "rules": [
+    {
+      "ruleId": "r-001",
+      "situationId": "s01",
+      "flow": "/speckit.clarify",
+      "invocation": "/speckit.clarify",
+      "rationale": "Resolve the open clarification markers before planning, so the plan is not built on guesses.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 30,
+      "provenance": {
+        "file": "templates/commands/requirements.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "If spec has `[NEEDS CLARIFICATION]` or `Related Feature: Need clarification` → `/speckit.clarify`."
+      }
+    },
+    {
+      "ruleId": "r-002",
+      "situationId": "s02",
+      "flow": "/speckit.plan",
+      "invocation": "/speckit.plan",
+      "rationale": "Turn the settled requirements into an implementation plan and its design artifacts.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 40,
+      "provenance": {
+        "file": "templates/commands/requirements.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "Otherwise → `/speckit.plan`."
+      }
+    },
+    {
+      "ruleId": "r-003",
+      "situationId": "s03",
+      "flow": "/speckit.feature",
+      "invocation": "/speckit.feature",
+      "rationale": "Bootstrap the feature registry so later flows can bind a feature instead of improvising one mid-run.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 20,
+      "provenance": {
+        "file": "templates/commands/requirements.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "recommended whenever `.specify/memory/features.md` is absent or still a placeholder"
+      }
+    },
+    {
+      "ruleId": "r-004",
+      "situationId": "s04",
+      "flow": "/speckit.tasks",
+      "invocation": "/speckit.tasks",
+      "rationale": "Derive a dependency-ordered task list from the design artifacts.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 50,
+      "provenance": {
+        "file": "templates/commands/clarify.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "Mode B → `/speckit.tasks`."
+      }
+    },
+    {
+      "ruleId": "r-005",
+      "situationId": "s05",
+      "flow": "/speckit.checklist",
+      "invocation": "/speckit.checklist",
+      "rationale": "Generate a requirements-quality checklist so the open tasks are gated before implementation.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 60,
+      "provenance": {
+        "file": "templates/commands/tasks.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "Optionally run `/speckit.checklist` to create quality gates."
+      }
+    },
+    {
+      "ruleId": "r-006",
+      "situationId": "s06",
+      "flow": "/speckit.implement",
+      "invocation": "/speckit.implement",
+      "rationale": "Execute the task list phase by phase once the checklist is satisfied.",
+      "confirmationClass": "destructive",
+      "origin": "seed",
+      "priority": 70,
+      "provenance": {
+        "file": "templates/commands/checklist.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "Once satisfied → `/speckit.implement`."
+      },
+      "notes": "confirmationClass per shared/guidelines/confirmation-gates.md (criteria cited by path, not restated here); doubtful cases are treated as destructive, so this flow never becomes auto-executing."
+    },
+    {
+      "ruleId": "r-007",
+      "situationId": "s07",
+      "flow": "/speckit.analyze",
+      "invocation": "/speckit.analyze",
+      "rationale": "Check cross-artifact consistency for drift while implementation is in flight.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 80,
+      "provenance": {
+        "file": "templates/commands/implement.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "Optional `/speckit.analyze` for drift detection."
+      }
+    },
+    {
+      "ruleId": "r-008",
+      "situationId": "s08",
+      "flow": "/speckit.review",
+      "invocation": "/speckit.review",
+      "rationale": "Review the SDD process for this feature, including what was deferred and why.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 90,
+      "provenance": {
+        "file": "templates/commands/implement.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "`/speckit.review` for SDD process quality evaluation."
+      }
+    },
+    {
+      "ruleId": "r-009",
+      "situationId": "s09",
+      "flow": "/speckit.feedback",
+      "invocation": "/speckit.feedback",
+      "rationale": "Accumulated feedback reached the threshold — let the command judge where it points and route itself.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 120,
+      "provenance": {
+        "file": "shared/workflow/feedback-step.md",
+        "anchorKind": "owning-section",
+        "anchor": "Threshold prompt protocol",
+        "quote": "`/speckit.feedback` command, never the raw `feedback-utils.py` engine path."
+      }
+    },
+    {
+      "ruleId": "r-010",
+      "situationId": "s10",
+      "flow": "/speckit.feedback",
+      "invocation": "/speckit.feedback",
+      "rationale": "Open feedback entries are awaiting introspection — the command judges where they point and routes them itself.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 130,
+      "provenance": {
+        "file": "templates/commands/feedback.md",
+        "anchorKind": "owning-section",
+        "anchor": "Outline",
+        "quote": "Run § Introspection over the open `internal` entries"
+      }
+    },
+    {
+      "ruleId": "r-011",
+      "situationId": "s11",
+      "flow": "/speckit.docs",
+      "invocation": "/speckit.docs",
+      "rationale": "Reconcile the documentation space against the current tree; moves and archives are handled there.",
+      "confirmationClass": "destructive",
+      "origin": "seed",
+      "priority": 100,
+      "provenance": {
+        "file": "templates/commands/sanitize.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "delegate 项按分诊建议移交 `/speckit.docs` / `/speckit.instructions` / sync-mirrors"
+      },
+      "notes": "confirmationClass per shared/guidelines/confirmation-gates.md (criteria cited by path, not restated here); doubtful cases are treated as destructive, so this flow never becomes auto-executing."
+    },
+    {
+      "ruleId": "r-012",
+      "situationId": "s12",
+      "flow": "/speckit.instructions",
+      "invocation": "/speckit.instructions",
+      "rationale": "Regenerate the project instruction file and its per-tool compatibility links.",
+      "confirmationClass": "reversible",
+      "origin": "seed",
+      "priority": 110,
+      "provenance": {
+        "file": "templates/commands/docs.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "run `/speckit.instructions` to refresh generated instruction files."
+      }
+    },
+    {
+      "ruleId": "r-013",
+      "situationId": "s13",
+      "flow": "/speckit.constitution",
+      "invocation": "/speckit.constitution",
+      "rationale": "Establish the project constitution first — governance rules gate every later artifact.",
+      "confirmationClass": "destructive",
+      "origin": "seed",
+      "priority": 10,
+      "provenance": {
+        "file": "templates/commands/feature.md",
+        "anchorKind": "handoffs",
+        "anchor": "## Handoffs",
+        "quote": "**Before**: `/speckit.constitution` if governance rules change."
+      },
+      "notes": "confirmationClass per shared/guidelines/confirmation-gates.md (criteria cited by path, not restated here); doubtful cases are treated as destructive, so this flow never becomes auto-executing."
+    }
+  ]
+}

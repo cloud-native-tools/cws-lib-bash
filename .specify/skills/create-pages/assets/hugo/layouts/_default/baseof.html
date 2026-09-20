@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="{{ .Site.Language.Lang | default "en" }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ partial "title.html" . }} · {{ .Site.Title }}{{ end }}</title>
+{{- with .Site.Params.description }}
+<meta name="description" content="{{ . }}">
+{{- end }}
+<link rel="stylesheet" href="{{ "css/site.css" | relURL }}">
+</head>
+<body>
+<header class="site-header">
+  <a class="site-title" href="{{ .Site.Home.RelPermalink }}">{{ .Site.Title }}</a>
+  <nav class="site-nav">
+    {{- range .Site.Home.Sections.ByTitle }}
+    <a href="{{ .RelPermalink }}">{{ partial "title.html" . }}</a>
+    {{- end }}
+  </nav>
+</header>
+<main class="content">
+{{ block "main" . }}{{ end }}
+</main>
+<footer class="site-footer">
+  Built with Hugo from this project's Markdown documentation space.
+</footer>
+</body>
+</html>

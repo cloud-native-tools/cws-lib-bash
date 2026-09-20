@@ -1,6 +1,6 @@
 # Glossary Protocol (Correction · Enrichment · Conflict)
 
-**Feature 031 — Glossary Mechanism.** This file is the single source of truth for how
+This file is the single source of truth for how
 `/speckit.*` commands use the project glossary at `.specify/memory/glossary.md`. Commands
 embed a lightweight `## Glossary` step that points here (modeled on the `## Feedback` step).
 
@@ -22,6 +22,10 @@ easily-confused words).
 
 - When a correction is applied, **surface it** so it is traceable and the user can override
   it — e.g. `note: interpreted 『speck it』as canonical 『Spec Kit』 (glossary)`.
+- How that correction is **worded for the reader** — vocabulary, the context it must carry, and
+  which terms may stand unexplained — is governed by
+  `.specify/shared/guidelines/user-facing-comprehension.md` (this file covers surface class ⑨);
+  its condition sets MUST NOT be restated here.
 - The correction is an **interpretation aid only** — never destructively rewrite the user's
   literal input.
 - If a variant is **ambiguous** (maps to more than one canonical term) or unrecognized, do
@@ -50,6 +54,10 @@ The engine reports **structural** collisions (identical canonical; a variant alr
 a different canonical). Additionally apply prompt-side judgment for **phonetic/near-duplicate**
 and **same-term/different-meaning** clashes.
 
+Non-conflicting writes MUST proceed directly (non-blocking) and be merged into the flow's
+wrap-up report — only conflicts and overwrites of user-authored entries stop for user
+resolution (see below; criteria: `shared/guidelines/confirmation-gates.md`).
+
 - On any detected or plausible conflict, **present it** (candidate, colliding entries, kind)
   and obtain an **explicit user resolution** (`keep-existing` / `replace` / `merge-variant` /
   `add-distinct` / `defer`) **before writing**.
@@ -62,6 +70,7 @@ and **same-term/different-meaning** clashes.
 - `origin=user` entries are **authoritative**: automatic proposals MUST NOT overwrite them
   without explicit user confirmation. The engine refuses an `auto` write over a `user` entry
   unless `--confirmed-resolution` is given.
+  > Gate probe: gate-glossary-user-entry-overwrite — after the user decision, record firing evidence per confirmation-gates.md §门控观察协议 (non-blocking).
 - User-authored entries are **preserved across regenerations** — instruction generation
   creates the glossary only if absent and never discards existing content.
 

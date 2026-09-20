@@ -1,0 +1,4 @@
+# 渲染服务运行时产物（可重建：npm install && npm run build）
+node_modules/
+static/dist/
+package-lock.json

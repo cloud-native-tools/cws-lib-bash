@@ -8,7 +8,7 @@ skill_id: "<SKILL:.specify/skills/improve-agent/SKILL.md>"
 
 ## Goal
 
-Improve **an existing single-agent artifact** based on evidence from real usage — user feedback, failure cases, behavioral drift, or observed inefficiencies. Targets include role templates, the shared supervision snippet, and generated custom agents. The result is a targeted update that fixes the identified issues while preserving the artifact's established structure. To adjust or optimize a multi-agent **team** (stages, orchestration, thresholds), use `improve-team` via `/speckit.team`.
+Improve **an existing single-agent artifact** based on evidence from real usage — user feedback, failure cases, behavioral drift, or observed inefficiencies. Targets include role templates, the shared supervision snippet, generated agents, and execution configs. The result is a targeted update that fixes the identified issues while preserving the artifact's established structure. To adjust or optimize a multi-agent **team** (stages, orchestration, thresholds), use `improve-team` via `/speckit.team`.
 
 Goal anchor (Constitution Principle XIII): this skill is a Better-Harness instrument — improving an agent artifact strengthens the **Task Understanding** and **Controlled Execution** dimensions (clearer role intent, more reliable guided behavior) and closes the **Learning Capture** loop; goal model in `.specify/shared/guidelines/better-harness.md`.
 
@@ -16,33 +16,38 @@ Goal anchor (Constitution Principle XIII): this skill is a Better-Harness instru
 
 The input is a description of the agent to improve and what went wrong or could be better. Parse:
 
+- **Layer (mandatory, explicit)**: which agent layer the improvement targets — `template` / `instance` / `execution` (taxonomy: `.specify/shared/definitions/agent-definitions.md`). Never infer the layer silently; if the request does not state it and the target identifier does not imply it unambiguously, ask the user before editing anything.
 - **Target identifier**: Resolve to exactly one artifact of a supported kind (see § Target Classification):
-  - `skills/create-agent/templates/agent-capacity-*-template.md` (role)
+  - `.specify/agents/templates/*.agent.md` (an installed role Template)
+  - `skills/create-agent/templates/agent-capacity-*-template.md` (an abstract capacity Class)
   - `skills/create-agent/templates/agent-supervision-delegation.md` (shared supervision snippet — edits here propagate to ALL supervisors)
-  - `.specify/agents/*.agent.md` (a generated custom agent)
+  - `.specify/agents/instances/*.agent.md` (a generated custom / project-custom agent)
+  - `.specify/agents/execution/configs/*.yaml` or `execution/scripts/*` (dispatch config / wrapper)
 - **Improvement direction**: What specifically needs to change — extracted from user feedback, observed failures, or behavioral drift.
-- **Evidence**: Concrete examples of the problem (conversation excerpts, incorrect outputs, missing behaviors).
+- **Evidence**: Concrete examples of the problem (conversation excerpts, incorrect outputs, missing behaviors; for the execution layer, runtime logs under `.specify/agents/execution/logs/` are first-class evidence — read them, never edit them).
 
 ## Target Classification
 
-Before the workflow, classify the target and route to the matching refinement rules:
+Before the workflow, classify the target by **layer + kind** and route to the matching refinement rules:
 
-| Target kind | Match | Route to |
-|-------------|-------|----------|
-| role | `agent-capacity-*-template.md` | Workflow steps 1–6 (root-cause on the six mandatory sections) |
-| supervision snippet | `agent-supervision-delegation.md` | Workflow steps 3–5; WARN that changes affect every supervisor (single source) |
-| custom | `.specify/agents/*.agent.md` | Workflow steps 1–6 against the generated file's own structure |
+| Layer | Target kind | Match | Route to |
+|-------|-------------|-------|----------|
+| template | role Template | `.specify/agents/templates/*.agent.md` | Workflow steps 1–6 (root-cause on the six mandatory sections) |
+| template | capacity Class | `agent-capacity-*-template.md` | Workflow steps 1–6 (root-cause on the six mandatory sections) |
+| template | supervision snippet | `agent-supervision-delegation.md` | Workflow steps 3–5; WARN that changes affect every supervisor (single source) |
+| instance | custom / project-custom | `.specify/agents/instances/*.agent.md` | Workflow steps 1–6 against the generated file's own structure; keep the Template reference (`capacity-scope:`) intact — capability gaps route to the template layer instead |
+| execution | dispatch config / script | `.specify/agents/execution/{configs,scripts}/*` | Workflow steps 2–6 driven by log evidence; preserve the Visibility Contract (`.specify/shared/definitions/subagent-definitions.md`); logs themselves are read-only evidence, never a target |
 
-If the identifier matches multiple kinds or none, ask one clarifying question.
+If the identifier matches multiple kinds or none, ask one clarifying question. A misbehaving **running** execution is out of scope — terminate/re-dispatch it; the durable fix lands in one of the three layers above.
 
 ## Workflow
 
 ### 1. Identify the target template
 
-- Parse the user's input for a role name, slug, or template path
-- Resolve to `skills/create-agent/templates/agent-capacity-<slug>-template.md`
-- If multiple templates match or none match, ask one clarifying question
-- Read the current template content before making changes
+- Parse the user's input for a role name, slug, or artifact path, plus the declared **layer**
+- Resolve within the declared layer: `template` → `.specify/agents/templates/<slug>.agent.md` or `skills/create-agent/templates/agent-capacity-<slug>-template.md`; `instance` → `.specify/agents/instances/<slug>.agent.md`; `execution` → `.specify/agents/execution/configs/<slug>.yaml`
+- If multiple artifacts match or none match, ask one clarifying question
+- Read the current artifact content before making changes
 
 ### 2. Gather evidence
 
@@ -91,7 +96,7 @@ For each issue, determine whether the root cause is in:
 
 ## Constraints
 
-- This skill operates on templates in `skills/create-agent/templates/`, NOT on generated agents in `.specify/agents/`
+- The **layer** MUST be explicit before any edit; the layer decides the editable surface (template → templates stores; instance → `.specify/agents/instances/`; execution → `execution/{configs,scripts}/` only — logs are read-only evidence)
 - Changes MUST be evidence-based — do not optimize from generic best practices without concrete evidence
 - The established template structure (six mandatory sections) MUST be preserved
 - Handoff chain consistency with other role templates MUST be maintained
@@ -109,10 +114,8 @@ Before executing this skill's workflow, identify which AI agent you are:
 | **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded; tools include `workspace edit`, `@terminal` |
 | **Qoder CLI** | `.qoder/` directory exists; `AGENTS.md` instructions loaded |
 | **opencode** | `.opencode/` directory exists |
-| **Qwen Code** | `QWEN.md` instructions loaded; `.qwen/` directory exists |
 | **Codex CLI** | `.codex/` directory exists |
 | **Hermes Agent** | `.hermes/` directory exists |
-| **iFlow** | `.iflow/` directory exists |
 
 If you cannot identify your agent, skip Step 2 and proceed with the standard workflow.
 
@@ -124,7 +127,7 @@ If you identified your agent in Step 1, check if a guide exists at:
 ${SKILL_HOME}/references/<agent-slug>-guide.md
 ```
 
-Where `<agent-slug>` is: `claude-code`, `copilot`, `qoder`, `opencode`, `qwen`, `codex`, `hermes`, or `iflow`.
+Where `<agent-slug>` is: `claude-code`, `copilot`, `qoder`, `opencode`, `codex`, `hermes`.
 
 If the guide exists, read it and apply the agent-specific tool mappings, best practices, and pitfall avoidances during execution. If no guide exists for your agent, proceed with the standard workflow.
 
@@ -158,25 +161,14 @@ The feedback document MUST contain:
 
 Only generate feedback when a genuine agent-specific obstacle was encountered.
 
+## Self-Improvement Routing
+
+Start every run with SI-0 from `.specify/shared/workflow/self-improvement-workflow.md`. This skill is an Assisted Improvement executor by default. If the target Agent supplied the initiating signal from its own completed execution, preserve origin=`self` while this skill acts as the delegated improver. Reuse the existing evidence step as SI-2, write the Step-E intervention ledger after edits, and report outcome pending until a later comparable Agent Execution. This `improve-agent` Skill’s own run evidence targets `improve-skills`, not the Agent currently being improved.
+
 ## Feedback
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is
 running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
 directory) — skip this entire Feedback step: no engine call, no feedback entry.
 
-At the end of a substantial run of this skill, perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
-
-1. **Gate on qualification & completion.** Only proceed if this run reached a meaningful wrap-up. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
-2. **Reflect (no user input).** Review this run against this skill's declared purpose and produce a short review plus ≥1 concrete, skill-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
-3. **Scope guard.** Keep strictly to this skill's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
-4. **Dedup guard.** Use a stable `run_id`; if a parent flow already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
-5. **Persist** via the engine:
-   ```bash
-   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
-     --unit-id "skill:improve-agent" --unit-type skill \
-     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
-     --review "<review prose>" --points-file "<points file>"
-   ```
-6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
-
-**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+At wrap-up, run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this skill's scope; persist one entry via `feedback-utils.py --action record --unit-id "skill:improve-agent" --unit-type skill`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.

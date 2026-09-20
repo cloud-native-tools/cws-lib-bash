@@ -49,25 +49,72 @@ description: "Task list template for feature implementation"
 - DoD-5: Code reviewed and approved
 - DoD-6: Changes validated against success criteria from requirements.md
 
-**DoD Status**: pending | green   <!-- flip to `green` only when every DoD-N row above is satisfied -->
+**DoD Status**: pending | green | green-with-void   <!-- flip to `green` only when every DoD-N row above is satisfied.
+     Use `green-with-void` when every row is satisfied except one whose PREMISE is measurably false and therefore
+     cannot be satisfied at all (e.g. it names a script that does not write the file it claims to regenerate).
+     Voiding a row requires: (a) cited measurement, not assertion; (b) an inline annotation on this line naming the
+     void row; (c) when the false premise lives in a framework artifact, a correction entry naming every surface that
+     repeats it. A void row is neither "met" nor an open task — never fold it silently into `green`, and never block a
+     finished feature on a requirement that cannot exist. -->
 
+## Completion Gate
+
+<!--
+  ACTION REQUIRED: Define machine-checkable gate items that /speckit.implement MUST
+  re-validate against the current tree before declaring the run complete — the
+  all-tasks-[X] state alone is NOT trusted. Each item names the concrete check
+  command that proves it. Same format rule as DoD: use `- GATE-N:` prefix, never
+  checkbox syntax.
+
+  A gate item is satisfied only by running its check NOW and reading the output
+  (see implement.md's IDENTIFY→RUN→READ→VERIFY→CLAIM gate function). After 3
+  consecutive failed re-validations with no newly closed item, implement STOPS
+  and escalates instead of retrying.
+
+  Every check command MUST name a command that exists in THIS project, existence-checked
+  at authoring time (same rule tasks.md applies to surface-file lists). The commands below
+  are placeholders — substitute this project's real test entry and paths; never inherit a
+  framework-specific runner path, which resolves in the Spec Kit repo and nowhere else.
+-->
+
+- GATE-1: Full test suite has zero NEW failures vs recorded baseline — check: `<this project's test runner>` + `comm -13 baseline current`
+- GATE-2: Every mirror obligation from plan.md verified byte-identical — check: `diff -rq <source> <mirror>`
+- GATE-3: No `[ ]` or `[>]` task rows remain — check: `grep -cE '^- \[[ >]\]' tasks.md` returns 0
+- GATE-4: verification.md lists every SC-NNN with a status — check: grep SC ids against requirements.md
+
+## Environment Prerequisites
+
+<!--
+  ACTION REQUIRED only when a task depends on an external environment
+  (container runtime, image registry, live cluster, special hardware).
+  This section is the SINGLE landing point for probe conclusions: /speckit.tasks
+  probes at generation time (never cached across runs) and records each verdict
+  here ONCE with its probe command and date. Per-phase prerequisite notes and
+  [~] deferral notes on task rows MUST reference this section instead of
+  restating verdicts. Delete the section entirely when no external environment
+  dependency exists.
+-->
+
+- <dependency>: <available | partial | unavailable> — probe: `<command>` @ <date>; affected phases/tasks: <phase/task refs or none>
 
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
+- **[blockedBy: T001,T002]** (optional): explicit dependency tag — this task MUST NOT start until every listed task is `[X]`. Machine-checkable alternative to prose like "depends on T012"; prefer it whenever a dependency exists. Tasks without the tag follow phase order only.
 - Include exact file paths in descriptions
 - **Verification tasks**: Add explicit manual QA/verification tasks when they are separate from automated tests
 
 ### Task State Sigil (REQUIRED)
 
-Each task row starts with one of three checkbox states. They are first-class — `/speckit.implement` parses them and `/speckit.review` enumerates them across features.
+Each task row starts with one of the checkbox states below. They are first-class — `/speckit.implement` parses them and `/speckit.review` enumerates them across features.
 
 - `- [ ]` — **Open**. Task has not been completed. A run is NOT complete while any `[ ]` remains.
+- `- [>]` — **Claimed / in progress**. Used only in multi-agent runs: an executor flips `[ ]`→`[>]` when it picks the task up, so parallel workers never double-claim. Single-agent runs may skip this state. A `[>]` left behind by a dead worker is reclaimable after verifying no fresher evidence exists.
 - `- [X]` — **Closed**. Task has been fully executed and verified.
 - `- [~]` — **Deferred**. Task is intentionally handed off to the user (or to a later phase). Reasons must be recorded in `verification.md` under `deferred_tasks=` and ideally a one-line `<!-- deferred: <reason> -->` inline comment on the task row itself. Typical deferral causes: Layer-2 docker smoke build requiring a real docker daemon, external system access not available in CI, multi-day backfill.
 
-A `/speckit.implement` run is considered complete when **zero `[ ]` rows remain**. `[~]` rows are allowed at completion and surface in the run summary's "Deferred Tasks" block.
+A `/speckit.implement` run is considered complete when **zero `[ ]` or `[>]` rows remain**. `[~]` rows are allowed at completion and surface in the run summary's "Deferred Tasks" block.
 
 ## Path Conventions
 
@@ -156,7 +203,7 @@ Examples of foundational tasks (adjust based on your project):
 
 - [ ] T012 [P] [US1] Create [Entity1] model in src/models/[entity1].py
 - [ ] T013 [P] [US1] Create [Entity2] model in src/models/[entity2].py
-- [ ] T014 [US1] Implement [Service] in src/services/[service].py (depends on T012, T013)
+- [ ] T014 [US1] [blockedBy: T012,T013] Implement [Service] in src/services/[service].py
 - [ ] T015 [US1] Implement [endpoint/feature] in src/[location]/[file].py
 - [ ] T016 [US1] Add validation and error handling
 - [ ] T017 [US1] Add logging for user story 1 operations
@@ -286,12 +333,14 @@ Task: "Create [Entity2] model in src/models/[entity2].py"
 
 ## Implementation Strategy
 
-### MVP First (User Story 1 Only)
+### MVP First
+
+**MVP scope rule**: the MVP is the smallest set of **same-priority** user stories whose checkpoints are each independently testable. With a single P1 story that is just User Story 1; when MULTIPLE P1 stories only together form an independently valuable increment (e.g. authoring without its consumption surface is half a mechanism), the MVP covers all of them. State the chosen MVP scope explicitly, and give every story phase a `**Checkpoint**` note describing its independent test.
 
 1. Complete Phase 1: Setup
 2. Complete Phase 2: Foundational (CRITICAL - blocks all stories)
-3. Complete Phase 3: User Story 1
-4. **STOP and VALIDATE**: Test User Story 1 independently
+3. Complete the MVP story set (per the rule above)
+4. **STOP and VALIDATE**: test each MVP story independently per its checkpoint
 5. Deploy/demo if ready
 
 ### Incremental Delivery

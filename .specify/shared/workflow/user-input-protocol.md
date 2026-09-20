@@ -18,6 +18,17 @@ Every command receives user input via the `$ARGUMENTS` placeholder. When process
    - Do **NOT** treat the input as a standalone instruction that overrides or replaces the command workflow.
    - If the input contains clear ambiguity, confusion, or likely misspellings that materially affect interpretation, stop and ask the user to rephrase the request with clearer wording. Provide brief guidance when possible.
 
+## Mid-Run Addendum Input
+
+Input that arrives **after** the command has already started — a new directive, a correction, or added scope supplied between steps — is an **addendum** to the running command, not a new invocation:
+
+1. Process it under the Standard Rules above: parameters for the current command, never a standalone instruction that replaces the workflow.
+2. **Batch, do not interleave**: when several addenda arrive across one run, integrate them together at the next artifact-write point. Never alternate partial artifact edits with new-input intake — the batch is integrated once, and any validation gate it triggers is re-run once.
+3. **Upstream artifact first**: an addendum that changes requirement scope MUST land in the upstream artifact it belongs to, and that artifact's validation gate MUST be re-run, before downstream work continues. Downstream artifacts built against a stale upstream are untrustworthy by construction.
+4. **Record verbatim**: each addendum is recorded append-only under the artifact's `## Clarifications` > `### Session YYYY-MM-DD` heading, so the run stays auditable.
+
+Per-command steps name *which* artifact an addendum lands in and what restructuring it needs; the batching, ordering, and recording rules are owned here.
+
 ## Empty Arguments Handling
 
 - If `$ARGUMENTS` is empty, the command should use its default behavior (defined per-command).

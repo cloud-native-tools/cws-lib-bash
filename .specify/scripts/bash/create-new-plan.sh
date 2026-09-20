@@ -13,6 +13,7 @@ fi
 
 # Parse command line arguments
 JSON_MODE=false
+FORCE=false
 ARGS=()
 
 for arg in "$@"; do
@@ -20,9 +21,13 @@ for arg in "$@"; do
         --json) 
             JSON_MODE=true 
             ;;
+        --force) 
+            FORCE=true 
+            ;;
         --help|-h) 
-            echo "Usage: $0 [--json]"
+            echo "Usage: $0 [--json] [--force]"
             echo "  --json    Output results in JSON format"
+            echo "  --force   Overwrite an existing plan.md (in-place amend is preferred)"
             echo "  --help    Show this help message"
             exit 0 
             ;;
@@ -47,6 +52,13 @@ check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
 # Ensure the feature directory exists
 mkdir -p "$REQUIREMENTS_DIR"
+
+# Guard: never clobber an existing plan.md (in-place amend ≠ re-scaffold).
+if [[ -f "$IMPL_PLAN" && "$FORCE" != "true" ]]; then
+    echo "Error: $IMPL_PLAN already exists." >&2
+    echo "Amend it in place instead of re-scaffolding, or pass --force to overwrite." >&2
+    exit 1
+fi
 
 # Copy plan template if it exists
 TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"

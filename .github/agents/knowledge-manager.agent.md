@@ -1,1 +1,0 @@
-../../.specify/agents/knowledge-manager.agent.md

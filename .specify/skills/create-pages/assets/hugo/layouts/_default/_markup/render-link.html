@@ -1,0 +1,19 @@
+{{- /* Keep repo-native relative Markdown links working on the rendered site.
+       `../concepts/overview.md` is resolved through Hugo's page graph and replaced by
+       the target page's real URL, so the Markdown needs no site-specific rewriting and
+       the result is correct under any URL scheme. Anything that does not resolve to a
+       page (images, external links, bare fragments, unpublished paths) is passed
+       through untouched. */ -}}
+{{- $dest := .Destination -}}
+{{- if and (strings.HasSuffix (index (split $dest "#") 0) ".md")
+           (not (strings.Contains $dest "://")) -}}
+  {{- $parts := split $dest "#" -}}
+  {{- $lookup := strings.TrimSuffix ".md" (index $parts 0) -}}
+  {{- with .Page.GetPage $lookup -}}
+    {{- $dest = .RelPermalink -}}
+    {{- if gt (len $parts) 1 -}}
+      {{- $dest = printf "%s#%s" .RelPermalink (index $parts 1) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+<a href="{{ $dest }}"{{ with .Title }} title="{{ . }}"{{ end }}>{{ .Text | safeHTML }}</a>

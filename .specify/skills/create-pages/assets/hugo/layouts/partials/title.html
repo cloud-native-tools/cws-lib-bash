@@ -1,0 +1,16 @@
+{{- /* Page title with an <h1> fallback.
+
+Documentation here carries no YAML front matter, and Hugo (verified v0.163.3)
+returns an empty .Title for such pages — rendering "<title>· Site</title>" and
+blank link text. Fall back to the first <h1> of the rendered content, which is
+the document's authoritative title. */ -}}
+{{- $title := .Title -}}
+{{- if not $title -}}
+  {{- with findRE `<h1[^>]*>(.*?)</h1>` .Content 1 -}}
+    {{- $title = index . 0 | replaceRE `<[^>]+>` "" | plainify -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $title -}}
+  {{- $title = .File.BaseFileName | humanize | title -}}
+{{- end -}}
+{{- $title -}}

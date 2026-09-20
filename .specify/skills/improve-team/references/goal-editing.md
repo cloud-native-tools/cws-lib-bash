@@ -1,6 +1,6 @@
 # 编辑团队 Goal（modify 操作规范）
 
-**Owner**: `improve-team`. 本文规范 `modify` 模式下对团队 **goal** 的编辑行为。goal 概念本身的定义见 [`../../create-team/references/goal.md`](../../create-team/references/goal.md)（单一真相源）。
+**Owner**: `improve-team`. 本文规范 `modify` 模式下对团队 **goal** 的编辑行为。goal **概念本身**(定义、与 requirement 的分界、判据权威、单一性)的单一事实源是 `.specify/shared/definitions/goal-definitions.md`;团队侧的 goal **操作**规范见 [`../../create-team/references/goal.md`](../../create-team/references/goal.md)。
 
 ## 原则
 
@@ -14,7 +14,9 @@
 2. **Classify the edit**——判断本次改动属于：
    - **结构编辑**（加/减成员、换模式、调阈值/并行度/维度）→ 保结构、证据驱动的最小改动，且**保持服务于当前 goal**；
    - **goal 编辑**（重定义总体目标）→ 进入下一步。
-3. **Redefine the goal**——把新 goal 写成可验证形式（含成功标准/阈值），更新 frontmatter `goal` 字段与 `## Goal` 小节。
+3. **Redefine the goal**——分两种情形,内容改到正确的事实源:
+   - **团队引用了定义**(声明了 `goal_slug`)→ goal 的**内容**属于 `.specify/goal/<goal-slug>/goal.md`,经 `/speckit.goal`(`modify` / `criteria` / `status`)重定义,**不在 `team.md` 里就地改**;`improve-team` 只负责下一步的结构重对齐。
+   - **存量内联团队**(未声明 `goal_slug`)→ 把新 goal 写成可验证形式(含成功标准/阈值),更新 frontmatter `goal` 字段与 `## Goal` 小节;需要时可提议改用 `/speckit.goal migrate` 归档为定义。
 4. **Realign structure to the new goal**——重新评估花名册与协作模式是否仍能达成新 goal：
    - 新 goal 是否需要新增/移除角色或阶段？
    - 协作模式是否仍合适（parallel / serial / iteration / continuous）？

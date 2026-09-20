@@ -135,6 +135,6 @@ git tag -d _gitexcludes_pre_sync 2>/dev/null || true
 - `.gitexcludes` 文件本身是**固定排除项**，无需在文件中列出自己。各分支可能有不同的排除规则，因此它永远不被其他分支覆盖。
 - 前置和后置均会打印明确的信息（`[EXCL]`、`[✓ RESTORED]`、`[✗ REMOVED]`、`[✓ FIXED]`），供用户确认排除结果。
 - 临时标签 `_gitexcludes_pre_sync` 仅存在于操作过程中，完成后立即清理。
-- 若 rebase 产生冲突，需先解决冲突再执行后置。
+- 若 rebase 产生冲突，需先解决冲突再执行后置。其中 `.gitexcludes` 的 add/add 冲突是可预判模式（下层分支补建该文件后，已有同名文件的上层分支首次追赶 rebase 必然触发），解法固定为保留变基分支自己的版本（rebase 中为 `--theirs` 侧），详见 [troubleshooting.md](./troubleshooting.md)。
 - 否定模式 `!` 当前被跳过（简化处理），未来可按需扩展。
 - `git ls-files -- "$pattern"` 使用 pathspec 匹配，对目录级 pattern（如 `.github/`）会匹配其下所有文件。

@@ -13,19 +13,32 @@ This project documentation is distributed across several key files. You MUST ref
 | **Constitution** | `.specify/memory/constitution.md` | Single source of truth for principles | Coding standards, architectural rules, constraints |
 | **Feature Index** | `.specify/memory/features.md` | Feature roadmap status | List of project features |
 | **Glossary** | `.specify/memory/glossary.md` | Project vocabulary anchor & domain dictionary | Canonical terms, homophone/confusable variants, meanings; voice-input correction source (see `.specify/shared/workflow/glossary.md`) |
-| **Development** | `CONTRIBUTING.md` | Setup and Guidelines | Setup, testing, and pull request guidelines |
+| **Development** | `CONTRIBUTING.md` *(default — drop this row when absent, or repoint to the project's real dev guide)* | Setup and Guidelines | Setup, testing, and pull request guidelines |
 | **Readme** | `README.md` or `README` | basic information of project | {TODO} |
 | **Project Documents** | `docs/` | High-level architecture | Architecture and design documentation |
+| **Confirmation Gates** | `.specify/shared/guidelines/confirmation-gates.md` | Confirmation-gate governance criteria | Two-level taxonomy (destructive/irreversible → front-loaded confirmation; reversible → auto-execute + execution report), destructive list, governance-kept list, doubtful-strict rule, anti-backflow constraint |
+| **Objective Analysis** | `.specify/shared/workflow/objective-analysis-gate.md` | Same-author detection delegation criteria | When the artifacts under analysis were written by the agent now analyzing them, detection MUST be delegated to fresh-context read-only subagents; firing condition, the seven gate rules, severity-cap discipline, scope limits |
 | [Other Doc] | [Path] | [Purpose] | [Summary] |
 
 > **Directive**: When answering questions or generating code, ALWAYS check the relevant document from the map above first.
 
+## Proactive Flow Trigger
+
+Every user turn carries a silent assessment of which flow is worth running next, and a suggestion appears only when a known situation actually matches. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/proactive-trigger.md` (do NOT copy its rules; reference the file) — which owns the situation vocabulary, the promotion semantics, the telemetry retention window, and the tuning protocol:
+
+- **Assess every turn (每回合评估)**: judge on each user turn whether the current state makes some flow worth running. The assessment itself is silent — zero user-visible output when no flow applies or nothing changed since the previous turn.
+- **Same pass, compliance first (同一趟、合规先行)**: make that judgement in the same pass as, and after, the compliance checks the Documentation Map directive above requires. A suggestion never precedes them.
+- **Evidence budget (证据预算)**: rely only on information already in context. When that is insufficient, escalate through the criteria the discipline doc declares; never pull artifact bodies into context in order to decide.
+- **Suggestion shape (建议形态)**: one non-blocking line = what the flow is for + the exact invocation the engine supplies. The user may adopt it or ignore it; ignoring never affects their current request.
+- **Engine entry (引擎入口)**: state inspection, reset, disabling, and tuning all go through the `trigger-utils.py` engine, whose action list the discipline doc carries. No new name to memorize is introduced.
+
 ## Fact, Correctness & Logic Checks (Input Sanity)
-User-provided context can be wrong (misconceptions), incomplete, or contain typos. Before acting on user input, perform a basic sanity check to avoid propagating errors.
+User-provided context can be wrong (misconceptions), incomplete, or contain typos — and so can a premise inherited from an earlier artifact in the same workflow. Before acting on either, perform a basic sanity check to avoid propagating errors.
 
 Minimum checks:
 - **Names & identifiers**: Verify file paths, module/package names, commands, and symbols exist in the repo. If uncertain, search the workspace rather than guessing.
 - **Factual claims**: Treat user statements as hypotheses; confirm against the repo (code/config), the Documentation Map, or authoritative references.
+- **Inherited premises**: A count, path, or assertion carried forward from an upstream artifact (a specification, plan, or task list) is also a hypothesis, not a fact — re-measure it (`test -e`, `git ls-files`, re-run the count) before acting on it, and never let a check scoped to one kind of step stand in for the others.
 - **Logical consistency**: Detect contradictions between requirements, constraints, and desired outcomes (e.g., incompatible versions, mutually exclusive goals).
 - **Typos & near-misses**: Correct obvious typos (paths, flags, option names) and explicitly state the corrected interpretation.
 - **Assumptions**: If you must assume, keep assumptions minimal, label them clearly, and prefer reversible changes.
@@ -34,54 +47,74 @@ Escalation rules:
 - If the suspected error impacts correctness, security, data loss, or large refactors: **pause and ask a clarifying question**.
 - If the issue is low-risk and the fix is obvious: proceed with the correction and mention it briefly.
 
+## One Source Of Truth
+
+Every fact — a concept's meaning, a normative rule, a threshold, an enumerated list, a configuration value, a count — MUST have exactly one authoritative definition point (its **owner**), and every other location MUST reach it by reference. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/one-source-of-truth.md` (do NOT copy its rules; reference the file) — and binds all commands, skills, and agents:
+
+- **Owner, declared**: an owning document says so in its opening lines and names what it owns. Where several candidates exist, authority goes to code first (facts about actual behavior), then a machine-generated artifact (anything a generator can derive, especially counts and indexes), then an authored document (definitional facts).
+- **Reference, not copy**: cite the owner's path (plus a section anchor when relevant); never restate its table, threshold literal, or enumeration. A summary is fine only while a reader who intends to act must still open the owner. If changing a fact would require editing more than one file, the discipline is already broken.
+- **Only three duplicates are legitimate**: a machine-regenerated copy (mirrors, per-tool copies, generated indexes — never hand-edited), a literal pinned in a test to detect drift, and a dated record that is never cited as current reality. Anything else repeating a fact is stale-in-waiting: repair it by turning it into a reference, not by correcting its wording.
+
+Owner-selection order, the duplicate conditions, the counts/enumerations rules, and the disagreement procedure: `.specify/shared/guidelines/one-source-of-truth.md`.
+
 ## Task Complexity Rubric
 
-Right-size your thinking to the task. Under-thinking complex or high-stakes tasks causes defects and rework (a **quality** cost); over-thinking trivial tasks wastes time and adds noise (an **efficiency** cost). Aim for the lowest thinking depth that safely fits the task — escalate when in doubt, and do not default to maximal effort.
+Right-size your thinking to the task: under-thinking complex or high-stakes tasks causes defects and rework (a **quality** cost); over-thinking trivial tasks wastes time and adds noise (an **efficiency** cost). Classify each task by scope/size, uncertainty/novelty, blast radius/reversibility, cross-cutting impact, and requirements clarity, then adopt the matching depth — **Trivial → Minimal**, **Standard → Moderate**, **Complex → Deep**, **High-stakes/Ambiguous → Exhaustive**. Tie-break to the **higher tier** (blast radius and requirements clarity dominate); treat unclassifiable tasks as **Standard** (the default), and treat unclear/under-specified requirements as themselves a High-stakes signal — clarify before proceeding.
 
-Classify each task by these signals: scope/size, uncertainty/novelty, blast radius/reversibility, cross-cutting impact, and requirements clarity. Then adopt the matching tier's thinking depth:
+Full tier table with signals and thinking-depth prescriptions: `.specify/shared/guidelines/task-complexity-rubric.md`.
 
-| Tier | Typical signals | Thinking depth (what to actually do) |
-|------|-----------------|--------------------------------------|
-| **Trivial** | Tiny, well-scoped edit; no uncertainty; easily reversible; no cross-cutting impact; requirements crystal-clear | **Minimal** — act directly; little to no exploration; no written plan; a light sanity check (build/lint or the one relevant test) |
-| **Standard** | One area or a few files; low uncertainty; moderate, reversible risk; little cross-cutting; requirements clear | **Moderate** — read the directly relevant files; form a brief internal plan; run the related tests |
-| **Complex** | Multiple files/modules; real uncertainty or design choices; harder to reverse; cross-cutting; requirements mostly clear | **Deep** — explore broadly before editing; write an explicit plan (consider plan mode); weigh alternatives; add/adjust tests and verify behavior |
-| **High-stakes / Ambiguous** | High blast radius (shared infra, data migration, security, public API); hard or irreversible; or requirements unclear/conflicting | **Exhaustive** — thorough exploration; explicit plan with user checkpoints; edge-case and adversarial analysis; strong verification; confirm before irreversible actions; resolve unclear requirements first |
+## Token Efficiency Discipline
 
-- **Tie-break**: when a task's signals span more than one tier, choose the **higher tier**. Blast-radius/reversibility and requirements clarity dominate — a tiny edit to a shared, irreversible, or security-sensitive surface is High-stakes, not Trivial.
-- **Default**: if a task cannot yet be classified, treat it as **Standard**; but when the reason is unclear or under-specified requirements, that is itself a High-stakes / Ambiguous signal — clarify before proceeding rather than guessing.
+LLM token usage efficiency is a framework-level quality attribute. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/token-efficiency.md` (do NOT copy its rules; reference the file) — and binds all commands, skills, and agents:
+
+- **Program-First (程序优先)**: text/data judgments expressible as fixed rules (pattern matching, structural validation, counting, dedup, sorting, diff) go to deterministic programs (scripts/engines/regex), never to the LLM; the LLM receives verdicts or digests only.
+- **Summary-First (摘要优先)**: never inject the whole raw content of machine-managed data files (feedback, memory, evidence, history stores, run artifacts, inventories) into LLM context; consume digests, field projections, or targeted excerpts, escalating per the discipline doc's escalation ladder (exceptions: edit target, small-file threshold, recorded justification).
+- **Consumption Observation (消耗观察)**: at feedback wrap-up, self-assess avoidable token spend; findings carry the stable `token-efficiency` marker (retrievable via `feedback-utils.py --action list --contains token-efficiency`); never fabricate token counts.
+
+## User-Facing Comprehension
+
+Every user-facing output has to be readable by someone who did not take part in the run. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/user-facing-comprehension.md` (do NOT copy its rules; reference the file) — and binds all commands, skills, and agents:
+
+- **Jargon is bounded, not banned (行话有界而非禁绝)**: a closed whitelist decides when a term may stand unexplained and a closed blacklist decides what may never reach a reader. Outside the whitelist counts as a violation — there is no "use sparingly" middle tier, because that is not decidable.
+- **Context is bounded as well (上下文同样有界)**: each message carries the facts a reader needs in order to act without opening another artifact, and reaches everything else by path reference. Restating an artifact the reader could open themselves is a violation at any length.
+- **One reader, one verdict (判定对象唯一)**: a single baseline reader definition serves both the jargon side and the context side; a per-class override takes effect where it is declared and is never written back into the owner.
+- **Judgement is reproducible (判定可复现)**: two independent reviewers applying the criteria to the same message must reach the same verdict. Disagreement means the criteria need fixing, not that both reviewers are right.
+- **Governed surfaces are a closed set (受约束的界面类为封闭集)**: which kinds of user-facing output the discipline governs is enumerated in the owner, and that list grows only by revising it — never per command template.
+
+Should the owner document be missing from a project, it ships with the framework: refresh the project instructions to restore it together with its mirror copy. Do not reconstruct the rules from memory or act on a summary of them.
 
 ## Dogfooding Practice
 
-Dogfooding means the people who build a product also rely on it in their real daily work — developer and user tightly linked, often the same team — so a smooth **use → feedback → iterate** loop forms naturally. A project that provides development-assistance capabilities proves them the way a compiler proves itself by self-hosting: only a tool that performs well in its own engineering has earned the credibility to assist others. This section identifies two loops that already exist — it adds no new tools, steps, or storage.
+Dogfooding — the people who build a product also rely on it in their real daily work, so a smooth **use → feedback → iterate** loop forms naturally — proves development-assistance capabilities the way self-hosting proves a compiler. Two loops already exist and add no new tools, steps, or storage:
 
-### Loop A — Feed your framework usage back upstream
+- **Loop A — feed framework usage upstream**: record real friction via `feedback-utils.py` (`--action record`); a threshold prompt invites (never forces) consolidated submission (`/speckit.feedback package`, manual delivery — **no automatic transmission** ever).
+- **Loop B — run the same loop for your own product**: reuse the framework's feedback / memory / history / review / task-record capabilities; adoption advice is advisory, never a gate — avoid the anti-patterns *formalism*, *echo chamber*, *dead-letter feedback*, *over-idealization*.
 
-Real friction you hit while using the framework's commands and skills is valuable. The built-in feedback chain carries it upstream:
+Operational steps, the capability table, and adoption advice: `.specify/shared/guidelines/dogfooding.md`.
 
-1. **Record** — commands/skills self-record optimization points at wrap-up; you can also record friction you personally hit: `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "/speckit.<command>" --unit-type command --run-id "<id>" --review "<what happened>" --points "<suggestion>"` (unit-id must be `/speckit.<command>` or `skill:<name>`).
-2. **Threshold prompt** — check accumulation with `--action status`; when the count crosses the threshold, a consolidated prompt invites (never forces) submission.
-3. **Package** — `--action package` bundles pending entries into a local archive.
-4. **Manual submission** — delivering the archive to the framework's install-source repository is a deliberate, manual step. There is **no automatic transmission** of any feedback data; nothing leaves your machine unless you send it.
+## Two Hats: Framework Source vs Client Runtime
 
-### Loop B — Build the same loop for your own product
+A self-hosting repository is **two things at once**: the framework's own source (`templates/`, `shared/`, `scripts/`, `src/`) and one of its client projects (`.specify/`, installed by the same init/refresh flow every downstream project uses). The same logic exists in two roles, and edits are not interchangeable:
 
-The framework's shipped capabilities are enough to run a Dogfooding loop for **your own product** — no extra tooling required:
+- **Name the hat before editing.** A change intended for *every* consuming project MUST land in the framework sources and ride the publish → install → init flow. A direct edit to this repo's `.specify/` runtime copies is a client-side instance fix: it never reaches another project, and the next refresh may overwrite it.
+- **Mirrors are generated, never hand-edited.** The `.specify/` copies are a controlled projection of the sources — edit the source, then re-sync.
+- **Path-resolution trap.** Because both surfaces live in one tree, any "walk up to the nearest ancestor containing `.specify/`" heuristic **self-matches here**, resolving every invocation to the framework repo instead of the caller's workspace. Engine self-location may fire only on a literal `.specify` component of its own resolved path, and the negative case needs its own assertion — this defect surfaces as workspace state written into the framework repo, not as a failing test.
 
-| Capability | Role in your product's loop |
-|------------|-----------------------------|
-| Feedback engine (`feedback-utils.py`) | Record real-use findings about your product with `--unit-id "skill:<scenario-name>"` (unit-id accepts `/speckit.<command>` or `skill:<name>`); track accumulation with `--action status` / `--action list` |
-| Memory (session/knowledge) | Persist working notes and distilled lessons from real usage |
-| History | Distill past project conversations into reusable knowledge |
-| Review | Periodic retrospective checkpoint where findings are revisited |
-| Task records (tasks/verification) | Trace each finding to the iteration that addressed it |
+> Not the same subject as **Dogfooding Practice** above. That section is the use → feedback → iterate loop; this one is *which of the two source trees an edit belongs in*. Two different owners, one shared word — check which you need.
 
-**Adoption advice (advisory — never a gate):**
+Full rule, its rationale, and the three-copy topology: `.specify/shared/definitions/dogfooding-definitions.md` § 2.1.
 
-- **Staged rollout**: start with the core team first, then widen; forcing 100% usage of an immature product hurts more than it helps (over-idealization).
-- **Tailor to your product's shape**: if daily self-use is not suited to your product (embedded firmware, consumer hardware), substitute periodic real-environment drills or a designated proxy user group instead of forcing it.
-- **Anti-patterns to avoid**: *formalism* (going through the motions without real reliance), *echo chamber* (only builders participate — bring in non-technical roles), *dead-letter feedback* (findings recorded but never acted on — close or resolve every entry deliberately), *over-idealization* (mandating full usage regardless of maturity).
+## Ask, Record, Repeat
 
-The test of a healthy loop is simple: do team members rely on the product for real tasks, and does what they report visibly change the next iteration?
+Three ideas, one loop — **acquire → retain → keep reachable**. Each closes a failure mode the other two cannot, and all three fail *silently*:
+
+- **Ask (问好过于猜)**: when a load-bearing fact is unknown or ambiguous, ask rather than guess — but resolve it from the repo and docs first, batch related questions together, and bring a recommendation with its tradeoff so the user is deciding, not researching. One question is cheap; a wrong premise is expensive and gets cited downstream as though it were fact.
+- **Record (好记性不如烂笔头)**: an answer obtained from the user MUST be written where the next turn will read it — conversation context dies with the session, so an answer kept only there was never recorded. Record the **rule, not the instance** (举一反三): generalize from the single correction to its class, note *why* it holds, and handle the sibling cases in the same pass.
+- **Repeat (重要的事情说三遍)**: a rule stated in exactly one place is effectively absent, because nothing guarantees a reader will open that place. Correct ownership does not equal reachability. The house pattern is three surfaces — owner doc (detail) → ambient section (summary + pointer) → contract test (drift guard). Repetition count is an importance signal in both directions: a rule you keep re-deriving is a rule that still needs a surface.
+
+**Boundary with One Source Of Truth**: repetition is legitimate in **pointer shape** (a short normative reminder plus the owner's path) and forbidden in **content shape** (restating the owner's table, threshold literal, or enumeration). Mechanical test — if changing the fact requires editing more than the owner, it is already a copy; convert it back into a reference rather than re-wording it to agree.
+
+Full philosophy, the load-bearing criteria, and where each kind of answer belongs: `.specify/shared/guidelines/ask-record-repeat.md`.
 
 ## Tech Stack & Resources
 - **Project Name**: {{PROJECT_NAME}}
@@ -110,44 +143,30 @@ The test of a healthy loop is simple: do team members rely on the product for re
 - **AI agent CLI** — a supported coding agent (Claude Code, Codex CLI, Qoder CLI, …). Prefer "AI agent CLI" over "AI tool" when precision matters.
 - **Tool-call list** — the `tools:` frontmatter key on an agent (`Read`, `Grep`, `Bash`, …), i.e. the LLM's callable surface.
 
-Note also: `.specify/memory/tools.md` (file) is the discovery inventory regenerated by `refresh-tools.sh`; `.specify/memory/tools/` (directory) holds the authoritative definition records.
+Note also: the regenerated discovery inventories are `.specify/tools/{system,shell,project}.json` (machine-generated, never hand-edited); `.specify/memory/tools/` (directory) holds the authoritative definition records. `.specify/memory/tools.md` (singular file) is a separate hand-maintained MCP-server index, not the tools inventory. Ownership and the exact regeneration path: `.specify/shared/definitions/tool-definitions.md`.
 
 ## AI Tool Compatibility
-- **Supported Agents**: Claude Code, GitHub Copilot, Qwen Code, opencode, Qoder
+- **Supported Agents**: Claude Code, opencode, Qoder, Codex CLI, Hermes Agent, GitHub Copilot
 - **Instructions Refresh**: Run `/speckit.instructions` to regenerate this file and compatibility symlinks.
 
+## Spec Kit Framework Map
+
+The `.specify/` layout is a **map, not a manual** — *what* exists and *where* it lives; the *how* belongs to the documents each row points to. Highlights: project memory `.specify/memory/` (constitution, features, glossary, `tools/` records), artifact templates `.specify/templates/`, automation scripts `.specify/scripts/`, installed skills `.specify/skills/` (guide: `.specify/skills.md`), agent layer `.specify/agents/` (templates/instances/execution), teams `.specify/teams/`, shared conventions `.specify/shared/`, feature specs `.specify/specs/<ID>-<slug>/`.
+
+Full table with per-row notes: `.specify/shared/definitions/framework-map.md`. Agent layer taxonomy (Template → Instance → Execution) is defined once in `.specify/shared/definitions/agent-definitions.md` — consult it before creating/refining/running agents.
+
 ## Spec Kit Runtime & Symlink Model
-- **Canonical instructions file**: `.specify/instructions.md` is the single source of truth for project-level AI instructions. Compatibility files such as `.github/copilot-instructions.md`, `.qoder/project_rules.md`, `QWEN.md`, `CLAUDE.md`, `QODER.md`, and `AGENTS.md` are symlinks to this file.
-- **Canonical skills directory**: `.specify/skills/` is the primary location for installed Spec Kit skills. `.github/skills` is a compatibility symlink to `.specify/skills/` for tools that discover skills under `.github/skills`.
-- **Do not duplicate symlink targets**: Treat these compatibility paths as aliases, not independent source files or directories. When reading or editing instructions and skills, prefer the canonical `.specify/...` paths and avoid applying the same change separately through each symlink.
-- **Do NOT break the symlinks (applies to both users and AI agents)**: The compatibility files/directories above are symbolic links, NOT copies — this is easy to miss because they *look* like ordinary files. Editing their content is safe: changes write through to the canonical `.specify/...` target and stay consistent across every tool. But **deleting, renaming, moving, or replacing** a link (e.g. an editor's "save as new file", or a manual `rm` + recreate) SEVERS it; the affected tool then silently reads stale or independent content and updates diverge across tools. Never delete-and-recreate these paths by hand.
-- **Detect & repair symlinks**: List every symlink in the project with `find . -type l` (or inspect a single path with `ls -l <path>` / `readlink <path>`) before assuming a compatibility file is a real file. If a link was accidentally broken or replaced with a regular file, run `/speckit.instructions` to regenerate the canonical instructions and recreate all compatibility symlinks.
-- **Regeneration behavior**: `/speckit.instructions` refreshes the instructions content and recreates compatibility symlinks. If a compatibility path appears to contain the same content as `.specify/instructions.md` or `.specify/skills/`, verify whether it is a symlink before treating it as a separate file.
 
-## Resource Registry
-Use this machine-maintained section to track reusable resource identifiers created by SpecKit commands. Keep entries deduplicated and sorted when updating this file. Record each resource as a single row in the corresponding horizontal Markdown table, and keep column names aligned with the corresponding agent/skill/tool templates. When no records exist, keep a single row with `None yet.` in the first column and `-` in the remaining columns.
+`.specify/instructions.md` is the single source of truth for project-level AI instructions; compatibility files (`CLAUDE.md`, `QODER.md`, `AGENTS.md`, `.github/copilot-instructions.md`) and the skills alias `.github/skills` are **symlinks** into `.specify/`. Edit through canonical `.specify/...` paths — never delete/rename/recreate a link by hand (that severs it and the affected tool silently diverges). A broken or replaced link is repaired by running `/speckit.instructions`, which regenerates the canonical instructions and all compatibility symlinks.
 
-### Agents
-<!-- AGENTS_REGISTRY_START -->
-<!-- Record each agent as one table row with the columns below. -->
-| Agent Name | Agent ID | Description | Argument Hint | Target | User Invocable | Disable Model Invocation | Tools | Agents | Model | Handoffs | Canonical Path |
-|------------|----------|-------------|---------------|--------|----------------|--------------------------|-------|--------|-------|----------|----------------|
-| None yet. | - | - | - | - | - | - | - | - | - | - | - |
-<!-- AGENTS_REGISTRY_END -->
+Full model (per-consumer notes incl. Qoder CLI vs IDE, detection commands, regeneration behavior): `.specify/shared/workflow/symlink-model.md`.
 
-### Skills
-<!-- SKILLS_REGISTRY_START -->
-<!-- Record each skill as one table row with the columns below. -->
-| Skill Name | Skill ID | Description | Argument Hint | User Invocable | Disable Model Invocation | Canonical Path |
-|------------|----------|-------------|---------------|----------------|--------------------------|----------------|
-| None yet. | - | - | - | - | - | - |
-<!-- SKILLS_REGISTRY_END -->
+## Git Workflow
+Branch roles (MAIN / PRE / DEV) are machine-maintained by the `git-workflow` skill in **`.specify/git-workflow.md`** — that managed block is the **single source of truth** for every git operation in this project. Do not edit it by hand and do not record branch information anywhere else; the operational procedure (pre-checks, rebase sequences, push strategy, `.gitexcludes` subroutine, safety rules) lives in the skill and its references.
 
-### Tools
-<!-- TOOLS_REGISTRY_START -->
-<!-- Record each tool as one table row with the columns below. -->
-| Tool Name | Tool ID | Tool Type | Source Identifier | Aliases | Status | Last Updated | Description | Resource ID | Canonical Path |
-|-----------|---------|-----------|-------------------|---------|--------|--------------|-------------|-------------|----------------|
-| None yet. | - | - | - | - | - | - | - | - | - |
-<!-- TOOLS_REGISTRY_END -->
+## Skills & Tools
+No registration tables are maintained — agents discover resources natively from the filesystem:
+
+- **Skills**: `.specify/skills/`, one directory per skill; system guide: `.specify/skills.md`. Create/improve via the `create-skills` / `improve-skills` skills.
+- **Tools**: `.specify/memory/tools/<name>.md` definition records; system guide: `.specify/tools.md`. Reuse a Tool before generating a script (`.specify/shared/workflow/tool-reuse-gate.md`); create/improve via the `create-tools` / `improve-tools` skills.
 

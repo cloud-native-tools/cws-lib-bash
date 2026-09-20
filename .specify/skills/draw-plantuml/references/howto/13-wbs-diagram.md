@@ -187,6 +187,10 @@ WBS 支持两种深度记法，功能完全等价，二选一即可（不要混�
 
 在 `@startwbs` 内用 `<style> ... </style>` 定义针对 `wbsDiagram` 的样式，可复用类、按深度选择、统一去框等。常用元素：
 
+> ⚠️ **`@startwbs` 默认是灰白单色**：不写 `<style>` 的 WBS 所有节点同一种浅灰底、层级只靠连线区分，状态 / 责任方 / 完成度完全看不出来。**要状态色与层级对比，`<style>` 是必需项而不是可选装饰**——至少设 `rootNode` / `node` / `leafNode` 三档字号与底色，再加状态样式类（见「完整示例 · 带状态色 · 责任人 · 里程碑锚点的交付 WBS」）。
+>
+> ⚠️ **每个属性必须独占一行，或用 `;` 分隔**：`node { FontSize 18 Margin 9 }` 这种"一行多属性、无分隔符"的写法**不报错**，但实测画布从 `725×1912` 膨胀到 `2862×8100`（甘特图同样中招，膨胀约 50 倍）。写成多行、或写 `node { FontSize 18; Margin 9 }` 都正常。本文正文里为紧凑而写成一行的样式片段，抄进 `.puml` 时务必补 `;` 或拆行。
+
 | 选择器 | 作用范围 | 常用属性 |
 |--------|---------|---------|
 | `wbsDiagram { ... }` | 整张 WBS 图 | `LineColor`、`RoundCorner`、`BackgroundColor` |
@@ -318,6 +322,110 @@ wbsDiagram {
 - 订单服务下的 `****>` 强制挂右侧，库存服务用 `***<` 挂左侧，让第二层的子树左右分布。
 - 测试阶段整组用 `***<` 挂左侧，进一步压缩整体宽度。
 
+### 带状态色 · 责任人 · 里程碑锚点的交付 WBS（实测 1.58:1 / 正文有效字号 19.0px）
+
+最终读者看 WBS 时问的是三件事：**分解成了什么、每块什么状态、谁负责**。把这三层信息一次编进节点即可，不必另配表格。下面这张图用四个状态样式类（已完成 / 进行中 / 未开始 / 有风险）、节点第二行 `\n【责任人】`、阶段标题上的 `◆Mn` 里程碑锚点与 `✓` 完成标记，配一条横排图例把编码说明清。实测：`viewBox 14775×9337`、长宽比 1.58:1、正文有效字号 19.0px@1400px，量测判据全通过。
+
+```plantuml
+@startwbs
+<style>
+wbsDiagram {
+  LineColor #4A6C7A
+  LineThickness 1.6
+  RoundCorner 12
+  node {
+    Padding 16
+    Margin 9
+    FontSize 18
+    FontColor #22333B
+    MaximumWidth 260
+  }
+  rootNode {
+    BackgroundColor #24485A
+    FontColor white
+    FontStyle bold
+    FontSize 25
+    RoundCorner 18
+    Padding 30
+    Margin 14
+    MaximumWidth 460
+  }
+  leafNode {
+    BackgroundColor #EEF3F6
+    LineColor #A7BCC6
+    FontColor #34505C
+    FontSize 16
+    RoundCorner 8
+    Padding 12
+    Margin 8
+  }
+  .done {
+    BackgroundColor #C6E9CB
+    LineColor #3E9256
+    FontStyle bold
+  }
+  .doing {
+    BackgroundColor #BBD8EE
+    LineColor #2E6E9E
+    FontStyle bold
+  }
+  .todo {
+    BackgroundColor #D6DBDF
+    LineColor #7A8A95
+    FontStyle bold
+  }
+  .risk {
+    BackgroundColor #F6CFCA
+    LineColor #C9584D
+    FontStyle bold
+  }
+}
+</style>
+* 电商平台 v2.0 项目交付
+' 左侧两列逆序声明：渲染后从左到右为 需求与设计 → 后端开发
+**< 后端开发 ◆M2 <<doing>>
+*** 用户服务 60%
+**** 注册登录\n【张三】
+**** 权限管理\n【张三】
+*** 订单服务 40%
+**** 下单流程\n【李四】
+**** 支付对接\n【李四】
+**< 需求与设计 ✓ ◆M1 <<done>>
+*** 需求调研 100%
+**** 竞品分析\n【王五】
+**** 用户访谈\n【王五】
+*** 系统架构设计 100%
+**** 技术选型\n【赵六】
+**** 接口契约\n【赵六】
+' 右侧两列正序声明：从左到右为 前端开发 → 测试与上线
+** 前端开发 <<doing>>
+*** Web 端 55%
+**** 商品浏览\n【周七】
+**** 购物车结算\n【周七】
+*** 移动端 20% <<risk>>
+**** iOS 客户端\n【吴八】
+**** Android 客户端\n【吴八】
+** 测试与上线 ◆M3 <<todo>>
+*** 集成测试 0%
+**** 接口联调\n【郑九】
+**** 端到端用例\n【郑九】
+*** 发布上线 0%
+**** 灰度发布\n【钱十】
+**** 性能压测\n【钱十】
+legend bottom
+  <size:20>  <back:#C6E9CB>       </back> 已完成 ✓    <back:#BBD8EE>       </back> 进行中    <back:#D6DBDF>       </back> 未开始    <back:#F6CFCA>       </back> 有风险    ◆Mn 里程碑锚点    【…】责任人  </size>
+endlegend
+@endwbs
+```
+
+要点：
+- **责任人用节点第二行 `\n【姓名】`**：中括号把人名与工作包名在视觉上分开，不挤在一行、也不需要额外一层节点；`leafNode` 的框会自动包住两行。
+- **`◆Mn` 当里程碑锚点**：WBS 本身不表达时间，但把 `◆M1`/`◆M2`/`◆M3` 写在阶段标题上，就能与甘特图/里程碑视图的 `M1…Mn` 一一对照，读者可以在两张图之间对齐。菱形符号 `◆` 渲染稳定。
+- **完成标记用 `✓`(U+2713)，不要用 `✔`(U+2714)**：`✔` 在部分渲染环境的字体里没有字形、会渲染成豆腐块（实测两者走的字体回退不同，`✔` 的字宽比 `✓` 宽约 5%）。
+- **状态类可用在任意深度**：`<<risk>>` 打在中间节点「移动端」上，能精确标出风险落在哪个子块，而不是整个阶段一起变红。
+- **未开始（`.todo`）底色要明显深于 `leafNode`**：`#D6DBDF` 对 `leafNode` 的 `#EEF3F6`，否则缩略预览时"未开始阶段"会与普通叶子混成一片。
+- **图例把三套编码一次说清**：色块 = 状态、`◆Mn` = 里程碑锚点、`【…】` = 责任人；横排铺在底部空带，同时兼作压低重心的留白平衡器。
+
 ## 布局与美观技巧
 
 ### 阶段顺序与阅读方向（保证语义正确）
@@ -344,8 +452,98 @@ wbsDiagram {
   若图较窄或状态项较多，也可竖排——每行一个 `<size:18><back:#色值>          </back> 说明</size>`，各行色值紧邻时色块会纵向首尾相接堆成等宽实心色柱、三行自动对齐。
 - **图例位置兼作留白平衡器（关键·压低重心）**：WBS 树主体通常只占画布上方约 3/4，下方一条横带容易空旷、造成"重心偏上、下半部利用率低"。把 legend 放到这条下方空带里正好补重：**四列子树左右高度对称时，用 `legend bottom` + 横排图例铺满根节点正下方的最空区域**，重心居中、左右不偏、横向撑满；**若某一象限（如左下）明显更空，则用 `legend left` 定点补白**。避免用 `legend right`/`top` 把图例放到本就不空的一侧——那样只会让空白转移、重心更偏。改完务必渲染确认下方空带是否被有效填补。
 
+### 用 `caption` 声明"图内为什么缺某类信息"
+
+WBS（以及思维导图）支持 `caption <一句话>`，实测有效：它渲染在图例**下方**、左对齐、无框，且不参与树布局（不改变节点排布）。这个位置最适合放一句**图内声明**——说明"本图为什么没有某类信息"，避免读者把"没采到"误读为"没有"：
+
+```plantuml
+@startwbs
+<style>
+wbsDiagram {
+  LineColor #4A6C7A
+  RoundCorner 10
+  node {
+    Padding 14
+    Margin 9
+    FontSize 18
+  }
+  rootNode {
+    BackgroundColor #24485A
+    FontColor white
+    FontStyle bold
+    FontSize 24
+    Padding 24
+  }
+  leafNode {
+    BackgroundColor #EEF3F6
+    LineColor #A7BCC6
+    FontSize 16
+  }
+  .done  { BackgroundColor #C6E9CB; LineColor #3E9256; FontStyle bold }
+  .doing { BackgroundColor #BBD8EE; LineColor #2E6E9E; FontStyle bold }
+  .todo  { BackgroundColor #D6DBDF; LineColor #7A8A95; FontStyle bold }
+}
+</style>
+caption 本图仅表达工作分解与完成状态；责任人信息未在数据源中记录，故全图不带【责任人】标注
+* 交付分解
+' 父节点「后端开发」= 1 个已完成 + 1 个未开始 → 混合态，判为进行中
+**< 后端开发 <<doing>>
+*** 用户服务 <<done>>
+*** 订单服务 <<todo>>
+** 前端开发 <<todo>>
+*** Web 端 <<todo>>
+*** 移动端 <<todo>>
+legend bottom
+  <size:20>  <back:#C6E9CB>       </back> 已完成 ✓    <back:#BBD8EE>       </back> 进行中    <back:#D6DBDF>       </back> 未开始  </size>
+endlegend
+@endwbs
+```
+
+要点：
+- **`caption` 承载"缺失声明"，`legend` 承载"编码说明"**，两者职责不同、可并存（上例即同时出现）。典型 caption 内容：某个维度的材料不存在于数据源、本图只覆盖某个子集、某类标注被刻意省略。
+- **一句话、陈述事实**，不要写成免责声明或流程说明。
+- 若按 [guide/style.md](../guide/style.md) §十 的图例契约裁剪后图例只剩 1 行、不再承载区分作用，就把整个 `legend` 换成 `caption`——不要留一个单行图例框。
+
+### 父节点状态由子节点聚合时，聚合规则必须覆盖混合态
+
+只要父节点（阶段 / 中间节点）的状态是从子节点**推**出来的，就必须先把聚合规则写清。常见的三分支写法是有缺口的：
+
+```
+全部子节点已完成            → done
+存在"进行中"子节点          → doing
+否则                        → todo   ← 缺口在这里
+```
+
+"否则"这一支会把**"部分已完成 + 部分未开始、但没有任何一项显式进行中"**的父节点判成 `todo`（未开始色）。实测这会造成明显的视觉误导：读者在同一个父节点下看到绿色的已完成子节点，父节点自己却是未开始的灰色，第一反应是图错了。
+
+规则必须显式补上这一支：
+
+```
+全部子节点已完成                          → done（已完成）
+存在"进行中"子节点                        → doing（进行中）
+有"已完成"但无"进行中"且有"未开始"        → doing（进行中 / 部分完成）  ← 必须显式覆盖
+全部子节点未开始                          → todo（未开始）
+```
+
+配套两条纪律：
+
+- **状态类可用在任意深度**，但同一层的判定口径必须一致——不要一部分父节点按聚合、另一部分按手工标注。
+- **图例 / 图说里的状态计数必须与图元逐一核对**：写"3 个阶段进行中"就去数图里有几个 `<<doing>>`。计数与图元不一致是最容易被一眼抓住的缺陷；同时按 [guide/style.md](../guide/style.md) §十 检查零实例编码（例如聚合后全图已无 `todo` 阶段，图例就不该保留"未开始"那一行）。状态的符号 / 颜色冗余编码见 [guide/style.md](../guide/style.md) §九。
+
 ### 尺寸、清晰度与留白（成图美观的关键）
 
+- **内联进文档前先量「有效字号」，别按 `width="100%"` 一把梭（关键）**：能不能一眼读清，取决于 `有效字号 = SVG font-size × 显示宽度 ÷ viewBox 宽`，而不是声明的 `FontSize`。渲染后跑量测脚本：
+
+  ```bash
+  ${SKILL_HOME}/scripts/measure-svg-layout.py <图.svg> --display-width <文档栏宽>
+  ```
+
+  看 `display.readable`（阈值 12px）。实测：4 层 × 4 列的 WBS 成图 `14775×9337`，在 1400px 栏宽下正文有效字号 19.0px，清晰；但节点再多一档、画布宽到 16000+ 时，同样 `width="100%"` 内联进窄栏就会掉到 2~3px、完全不可读——**画布越大、内联后越糊，这与"图很大所以很清楚"的直觉正好相反**。三条处置（按优先级）：
+  1. **按子树拆成多张 WBS**（概览图 + 下钻子图），这是唯一能同时保住清晰度与信息量的办法；
+  2. 按脚本给出的 `display.widthPxNeededForBodyThreshold` **显式指定内联宽度**，配合横向滚动或"点开看大图"链接；
+  3. 减少末层节点 / 合并同类工作包，把画布压回去。
+
+  **放大 `zoom`/`scale` 无效**——画布与字号同比放大，有效字号不变。
 - **主动放大字号，让文字清晰不拥挤**：不要依赖默认字号。在 `node { FontSize 16~18 }` 设正文字号、`rootNode { FontSize 20~24 }` 突出根节点。**叶子字号不要压得太小**：`leafNode { FontSize 16~17 }` 即可——相对根节点 22~24 仍有层次，但在缩小预览时不会因为叶子太小（如 15）而局促、难读。字号偏大后成图在缩放/嵌入文档时仍锐利可读，是"清晰度"得分的直接来源。
 - **用 `Padding` / `Margin` 拉开呼吸感**：在 `node { Padding 14~18; Margin 10~14 }` 同时加大**框内**留白（Padding，文字不顶框）与**框间**间距（Margin，节点不相邻挤压）。根节点可给更大的 `Padding 22~24`。这是消除"局促感"、避免"标签顶到边框"最有效的两个旋钮。
 - **给密集堆叠的叶子列更大的 `Margin`（缓解拥挤）**：当某列有 4 个叶子上下堆叠（如"后端开发/前端开发"下各挂两组 2 叶子）时，默认行距会显拥挤。把 `leafNode { Margin }` 单独调到 11~12（比中间节点 `node` 的 `Margin` 略大），拉开叶子行距，堆叠列不再挤成一坨。

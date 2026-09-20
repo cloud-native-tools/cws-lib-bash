@@ -1,0 +1,6 @@
+# Hugo build image, shared by stage 2 (local builds run in this image, so local and CI
+# render with the same Hugo) and stage 3 (the image the rendered CI pipeline runs in).
+# Environment-specific: the default below is only pullable inside the Alibaba-internal
+# environment. Override per environment, and keep this file the single source of truth.
+# Format: first non-empty, non-comment line is the image reference.
+reg.docker.alibaba-inc.com/xuanji-images/hugo:latest

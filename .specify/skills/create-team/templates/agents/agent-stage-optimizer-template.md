@@ -3,7 +3,7 @@ name: "{{AGENT_NAME}}-optimizer"
 description: "Optimizer stage agent for {{AGENT_NAME}} — optimizes execution environment and context"
 user-invocable: false
 disable-model-invocation: false
-model: auto
+model-tier: auto
 ---
 
 You are the **Optimizer** stage agent within the {{AGENT_NAME}} EEI triad for the {{PROJECT_NAME}} project.

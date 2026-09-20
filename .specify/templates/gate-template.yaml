@@ -1,0 +1,29 @@
+# Mechanical write-path gate (P2, harvested from loop-engineering gate.yaml +
+# intellegix orchestrator-guard). Copied to a project as .specify/gate.yaml.
+#
+# Checked by scripts/python/gate-check.py BEFORE writes during /speckit.implement
+# and before any L2+ team mutate action. Pure mechanical evaluation — the LLM
+# never "interprets" this file; the checker's exit code decides.
+#
+# Glob syntax: fnmatch patterns matched against repo-relative paths.
+# Evaluation order: deny > confirm > allow (first match in that order wins).
+
+# Paths that must NEVER be written by an agent (exit 2 = deny, escalate to human)
+deny:
+  - ".env"
+  - ".env.*"
+  - "**/secrets/**"
+  - "**/credentials/**"
+  - "**/*.pem"
+  - "**/*.key"
+  - ".git/**"
+
+# Paths that require explicit human confirmation before writing (exit 1 = confirm)
+confirm:
+  - ".github/workflows/**"
+  - ".specify/memory/constitution.md"
+  - "pyproject.toml"
+
+# Everything else is allowed (exit 0). Add explicit allow entries only to
+# document intent; absence of a match already means allow.
+allow: []

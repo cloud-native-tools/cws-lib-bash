@@ -1,0 +1,70 @@
+# 项目输入表单（project-input/v1）—— summarize-project 的必要信息表
+# 落位：<交付目录>/data/project-input.yaml；字段定义见 references/required-info.md
+# 档位：[R] 必填-阻断  [I] 可推断（留空即可，模型/校验脚本会推断并标注）  [O] 可选
+# 日期一律 yyyy-mm-dd。留空 = 「本表未提供」，脚本按档位处置，绝不臆造。
+
+schema: project-input/v1
+
+project:
+  project_name: ""          # [R] 项目对外名称
+  project_desc: ""          # [O] 一句话定位（用于概览背景）
+  baseline_date: ""         # [R] 基准日 D0（yyyy-mm-dd），一切排期判断以此为参照
+  project_start: ""         # [O] 项目起点（甘特时间轴起点）
+  repos: []                 # [O] 仅在需要 repo 补充取材时声明（默认留空 = 不扫任何 repo）
+  #  - repo_id: main
+  #    repo_path: /abs/path/to/repo
+  #    repo_role: "代码主仓"
+  #    derive_fields: ["people.owner_name"]   # 声明「从 repo 定向推导」的字段，未声明的字段不查 repo
+
+phases: []                  # [I] 阶段；留空则由工作项分组推断
+#  - phase_id: P-01
+#    phase_name: "需求与设计"
+#    phase_order: 1
+
+work_items: []              # 与 milestones 至少一组非空（[R] 组级要求）
+#  - item_id: T-01          # [I] 留空自动生成
+#    item_name: "需求调研"   # [R]
+#    phase_id: P-01         # [I] 外键 → phases.phase_id
+#    owner_id: U-01         # [O] 外键 → people.owner_id
+#    planned_start: 2026-03-02   # [O]
+#    planned_end: 2026-03-09     # [O] 缺失 → 无法判定延期（不上红）
+#    actual_start: ""            # [O]
+#    actual_end: 2026-03-09      # [O]
+#    status: "已完成"             # [I] 源字面量即可，归一化交给引擎
+#    progress_pct:               # [O] 只在材料明写百分比时填，并给 progress_source
+#    progress_source: ""
+#    checks: {done: 22, open: 4, deferred: 1}   # [O] 可计数依据（勾选比）
+#    depends_on: [T-00]          # [I] 外键 → work_items.item_id
+#    source: "PMO 导出#Sheet1!A12" # [I] 缺失时由 sources[] 推断
+
+milestones: []              # 与 work_items 至少一组非空（[R] 组级要求）
+#  - milestone_id: M-01     # [I]
+#    milestone_name: "需求冻结"  # [R]
+#    planned_date: 2026-03-09    # [O] 与 anchor_item_id 二选一，皆缺 → 无锚点
+#    actual_date: ""             # [O]
+#    status: ""                  # [I] 由引擎判定
+#    anchor_item_id: ""          # [O] 外键 → work_items.item_id
+#    owner_id: ""                # [O] 外键 → people.owner_id
+#    achieved_evidence: ""       # [O] 达成依据（评审记录/发布记录）
+#    source: ""                  # [I]
+
+people: []                  # [O] 人员；缺失则全项目负责人记「未记录」并显式声明
+#  - owner_id: U-01
+#    owner_name: "张三"
+#    owner_role: "开发负责人"    # [I] 未知写 未记录，不得臆断
+
+features: []                # [O] 特性清单（《需求与特性》章节）
+#  - feature_id: F-01
+#    feature_name: "统一登录"   # [R]（该组非空时）
+#    status: "已完成"           # [I]
+#    source: ""                 # [I]
+
+sources: []                 # [I] 每组信息的来源声明
+#  - source_id: S-01
+#    source_kind: management-export   # management-export | user-form | context | repo
+#    source_ref: "PMO 周报导出 2026-04-06.xlsx"
+#    covers: [work_items, milestones]
+
+# coverage: {candidate_total: 0, excluded: 0, granularity_truncated: 0, unattributed: 0, source_label: ""}
+# status_map: {}            # [O] 项目自有状态字面量 → 四态的覆盖映射
+

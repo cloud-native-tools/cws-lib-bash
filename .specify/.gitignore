@@ -3,3 +3,6 @@ history/.work/
 
 # /speckit.team run intermediate workspace (transient); team defs + runs/ reports stay tracked
 teams/.work/
+
+# Agent Execution runtime logs (agent-definitions.md layer 3); configs/ and scripts/ stay tracked
+agents/execution/logs/

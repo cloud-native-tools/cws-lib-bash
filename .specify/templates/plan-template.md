@@ -130,11 +130,24 @@ reference the real directories captured above. Explicitly note any new top-level
   affected copy as a first-class design output. /speckit.tasks turns each row into a
   paired dual-write + diff-verify task; /speckit.implement checks every row off.
   Delete this section only when the spec touches NO mirrored surface.
+
+  The live mirror pairs are defined in scripts/python/sync-mirrors.py MIRROR_PAIRS —
+  consult it, not memory. NOTE: `.specify/templates/commands/` is RETIRED (the
+  templates pair excludes commands/); command templates fan out ONLY to the
+  regen-command-copies.py per-tool copies listed below.
+
+  BASELINE DRIFT: a Verify cell is an expected result, and expected results are
+  measured, never pre-written. Run the mirror check once BEFORE the edit, record the
+  drift it already reports, and state the criterion as "no NEW drift on the mirror
+  pairs this spec touches". An absolute pass criterion (a bare exit code or "all
+  green") is unpassable whenever unrelated drift predates this spec — writing it down
+  anyway ships a criterion nobody measured and forces a correction pass at
+  implementation time.
 -->
 
 | Source file (edited) | Mirror / generated copies (must land identically) | Verify |
 |----------------------|---------------------------------------------------|--------|
-| [e.g. `templates/commands/x.md`] | [e.g. `.specify/templates/commands/x.md`; `.claude/commands/speckit.x.md`; `.github/prompts/speckit.x.prompt.md`; `.qoder/commands/speckit.x.md`; `.qwen/commands/speckit.x.toml`; `.opencode/command/speckit.x.md`] | [e.g. `diff -q` for mirrors; regenerated copies contain the edit] |
+| [e.g. `templates/commands/x.md`] | [e.g. `.claude/commands/speckit.x.md`; `.github/prompts/speckit.x.prompt.md`; `.qoder/commands/speckit.x.md`; `.opencode/command/speckit.x.md` — per-tool copies via regen-command-copies.py; NO `.specify/templates/commands/` mirror (retired)] | [e.g. `diff -q` on the pairs touched here, judged against the baseline measured before the edit — "no NEW drift"; regenerated copies contain the edit. Never a pre-written exit code] |
 
 ## Complexity Tracking
 
@@ -145,3 +158,21 @@ reference the real directories captured above. Explicitly note any new top-level
 |-----------|------------|-------------------------------------|
 | [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
 | [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
+
+## Phase 1: Design Artifacts Summary
+
+<!--
+  ACTION REQUIRED (backfill ONLY — delete this comment when filling):
+  Fill this section AFTER the Phase 1 artifacts (data-model.md, contracts/,
+  quickstart.md, feature-ref.md) have landed on disk — never pre-write counts
+  here. Record the actual artifact inventory: entity count, contract count and
+  names, quickstart scenario count, and any drift from the Phase 0 expectation.
+  Summarize after, not before: pre-written counts routinely drift from the
+  actual output and force a correction pass.
+-->
+
+| Artifact | Path | Count / Scope |
+|----------|------|---------------|
+| [e.g. Data model] | [`data-model.md`] | [N entities] |
+| [e.g. Contracts] | [`contracts/`] | [N files: names] |
+| [e.g. Quickstart] | [`quickstart.md`] | [N scenarios] |

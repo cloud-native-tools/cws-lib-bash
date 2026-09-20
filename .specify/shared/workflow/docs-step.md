@@ -1,6 +1,6 @@
 # Canonical `## Documentation` Step (Docs-Sync Evaluation)
 
-**Feature 037 — Docs Command.** This file is the single source of truth for the
+This file is the single source of truth for the
 `## Documentation` docs-sync evaluation step that every **complex** command template
 embeds at its wrap-up stage — the same lifecycle point as the `## Feedback` step.
 Simple commands MUST NOT embed it. Embedding templates reference this file and keep

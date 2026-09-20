@@ -1,3 +1,7 @@
+---
+description: 跨产物只读一致性分析，检查需求/规划/任务间的漂移与缺口
+---
+<!-- AUTO-GENERATED from templates/commands/analyze.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
 ## User Input
 
 ```text
@@ -12,9 +16,9 @@ Identify inconsistencies, duplications, ambiguities, underspecified items, and f
 
 ## Operating Constraints
 
-**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
+**STRICTLY READ-ONLY**: Do **not** modify any files. Output a structured analysis report. (Single sanctioned exception: the wrap-up Feedback step's engine entry — local bookkeeping, not an artifact modification.) Offer an optional remediation plan (user must explicitly approve before any follow-up editing commands would be invoked manually).
 
-**Constitution Authority**: The project constitution (`.specify/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/speckit.analyze`.
+**Constitution Authority**: The project constitution (`.specify/memory/constitution.md`) is **non-negotiable** within this analysis scope. Constitution conflicts are automatically CRITICAL and require adjustment of the spec, plan, or tasks—not dilution, reinterpretation, or silent ignoring of the principle. If a principle itself needs to change, that must occur in a separate, explicit constitution update outside `/speckit.analyze`. This precedence also governs the §5.5 validation pass: a validator verdict MAY narrow a Constitution finding's evidence boundary but MUST NOT lower its severity (handling: § 5.5 **Constitution carve-out**).
 
 ## Execution Steps
 
@@ -98,6 +102,10 @@ Create internal representations (do not include raw artifacts in output):
 
 Focus on high-signal findings. Limit to 50 findings total; aggregate remainder in overflow summary.
 
+**Same-author detection delegation**: when the artifacts under analysis were produced by the agent now running this command, in the current session — the ordinary case for a `requirements → clarify → plan → tasks` chain run without a break — self-review is weak evidence, and detection MUST be delegated to fresh-context read-only subagents rather than left to the §5.5 validation wave. Apply the canonical gate in `.specify/shared/workflow/objective-analysis-gate.md` (single source of truth; do not restate its rules here). This command's local parameters: the propagation-surface cap is **MEDIUM** (used when no downstream artifact inherits the finding), and the fallback marker is `(detected: direct read, subagent unavailable)`.
+
+Analyze's split of the artifact set into disjoint scopes — an application of the owner's rule 1 to this artifact set, not a restatement of it: (a) spec ↔ plan ↔ research consistency — duplication, ambiguity, underspecification, count and cross-reference drift; (b) plan ↔ contracts ↔ data-model ↔ tasks coverage — every requirement reaches a task, every task maps back, every claimed mapping is true; (c) feature linkage + registry + constitution alignment.
+
 #### A. Duplication Detection
 - Near-duplicate requirements → mark lower-quality for consolidation
 
@@ -126,6 +134,7 @@ Focus on high-signal findings. Limit to 50 findings total; aggregate remainder i
 - Missing feature binding when requirement implies feature capability
 - Incorrect/stale feature metadata
 - Index/detail divergence or requirement-feature inconsistency
+- **Stage-recording duties**: derive the latest stage actually reached from the artifacts present in REQUIREMENTS_DIR, then check the bound Feature's index row and detail file against the recording duties owned by `.specify/shared/workflow/feature-integration.md` § Core Protocol (steps 2–3) — read that owner; do not re-derive its list here. Judge the two duties separately: a status that is lawfully held (including a terminal status that MUST NOT regress — rule owner: `.specify/templates/feature-details-template.md` § Extension slice rule) never waives the stage record, so a correct status beside a stale date or note is still a finding.
 
 ### 5. Severity Assignment
 
@@ -143,6 +152,26 @@ Feature-specific severity rules:
 - **MEDIUM**: Requirement likely feature-related but binding confidence is low due to incomplete metadata
 - **LOW**: Cosmetic naming drift where semantic intent still matches
 
+### 5.5 Finding Validation (independent subagent pass)
+
+Before reporting, every **CRITICAL** and **HIGH** finding MUST be confirmed by an independent read-only validation subagent:
+
+- **Fresh context**: the validator receives ONLY the finding (id, category, claim, severity) and its evidence location(s) — never the detection reasoning or the other findings.
+- **Task**: re-read the cited artifacts and return one verdict — `confirm` (evidence supports the claim), `reject` (claim not supported — state why), or `downgrade` (real but overstated — propose severity) — plus both **evidence-boundary fields**: `evidence_supported` (what the cited artifacts actually substantiate, with locations) and `evidence_not_supported` (what the claim asserts beyond that, or what the validator could not observe). A verdict returned without both fields is incomplete; ask for them again rather than reporting the severity alone.
+- **Constitution carve-out**: `downgrade` never applies to a Constitution finding — severity precedence is owned by Operating Constraints § **Constitution Authority**, not by this pass. When a validator confirms a principle conflict but proposes a lower severity, keep CRITICAL and adopt only its evidence-boundary fields as the row's scope note.
+- **Batching**: validate findings in one parallel dispatch wave; a validator MUST NOT validate a finding it produced. When detection was also delegated under §4's same-author rule, the detection agents and the validators MUST be disjoint sets (owner: `.specify/shared/workflow/objective-analysis-gate.md` rule 5) — a detector validating its own finding is the self-review this pass exists to remove.
+- **Downgrade rate is a reported metric**: state how many findings were sent, `confirm`ed, `downgrade`d, and `reject`ed. A wave that downgrades most of what it receives is evidence that detection over-rated severity, and that observation belongs in the report's remediation advice (tighten §4's propagation-surface requirement) rather than being absorbed silently. Do not present a large downgrade count as though the detection pass had been accurate.
+- **Report handling**: only `confirm`ed findings keep CRITICAL/HIGH in the main table; `downgrade`d rows get the new severity with a `(validated: downgraded)` note; `reject`ed rows move to a separate **Unvalidated Findings** appendix (never silently dropped). Every validated row carries the validator's `evidence_supported` / `evidence_not_supported` boundary verbatim — a downgrade that drops the boundary discards the very reason it was downgraded. MEDIUM/LOW skip validation.
+- **Zero-finding floor**: "no findings" is itself a verdict and MUST carry evidence. When the passes yield no CRITICAL/HIGH, do not simply skip the wave — re-read a sample of the coverage mapping (every requirement whose coverage rests on a single task row, plus a sample of the remaining rows) and record the sample size and its outcome in the Coverage Summary. When the run yields zero findings at any severity, the report MUST state which detection passes ran and what was sampled to confirm the absence.
+- **Subagent-unavailable fallback**: if the validation subagent dispatch fails twice in a row (upstream error), a direct evidence re-read by the analyzing agent MAY substitute; the report row MUST then carry `(validated: direct re-read, subagent unavailable)` so the weaker evidence path is visible to the reader.
+
+**DO-NOT-FLAG list** (noise control — do not report these at any severity):
+- Style/wording preferences already consistent within the project's own conventions
+- Intentional template placeholders (`[REQUIREMENT NAME]`, `TXXX`, sample tasks marked as samples)
+- Deferred `[~]` tasks whose recorded reason cites an evidence file in the requirement's directory (probe, baseline, or verification record) — they are deliberate, not gaps. The exemption is evidence-bound: an uncited reason does not qualify, and a task merely *eligible* for deferral (pre-marked as deferrable but not actually deferred) is NOT exempt without that citation — treat it as a coverage question and let the evidence file decide.
+- Cross-references into `.specify/` mirrors that duplicate canonical paths by design
+- Pre-existing baseline test failures already recorded in the feature's baseline file
+
 ### 6. Produce Compact Analysis Report
 
 Output Markdown report (no file writes):
@@ -154,6 +183,14 @@ One row per finding; stable IDs prefixed by category initial.
 
 Also include: **Coverage Summary Table**, **Feature Linkage Summary Table**, **Constitution Alignment Issues**, **Unmapped Tasks**, **Metrics** (Total Reqs, Tasks, Coverage %, Feature Linkage %, Ambiguity/Duplication/Inconsistency/Critical counts).
 
+**Rerun delta (post-remediation runs)**: when a prior analysis of the same requirement is available (an earlier report in context or one supplied by the user), the report MUST separate the two directions of change instead of presenting one flat list:
+
+- **Resolved Since Last Run** — prior finding IDs, each with the evidence that closed it (artifact + location), not merely an assertion that it is gone.
+- **New Since Last Run** — finding IDs absent from the prior report, including ones the remediation itself introduced.
+- Findings unchanged from the prior run stay in the main table marked `(carried over)`.
+
+The headline verdict MUST NOT read as "ready to implement" on the strength of a fully cleared prior set while any new or carried-over CRITICAL/HIGH finding remains open — a cleared backlog and a clean rerun are different claims and the report states both separately.
+
 ### 7. Next Actions & Remediation
 
 - CRITICAL issues: resolve before `/speckit.implement`
@@ -163,34 +200,24 @@ Also include: **Coverage Summary Table**, **Feature Linkage Summary Table**, **C
 ## Operating Principles
 
 - Read-only: NEVER modify files
+- Self-authored artifacts are not self-auditable: when this session produced them, delegate detection as well as validation (§4 **Same-author detection delegation**; owner `.specify/shared/workflow/objective-analysis-gate.md`)
 - Focus on actionable findings; limit to 50 rows; summarize overflow
-- Prioritize constitution violations (always CRITICAL)
+- Prioritize constitution violations (always CRITICAL — never a `downgrade` candidate: §5.5 **Constitution carve-out**)
 - Feature checks are evidence-based; lower confidence when evidence is weak
-- Report zero issues gracefully (emit success report with coverage statistics)
-- Deterministic: rerunning without changes produces consistent results
+- Report zero issues gracefully (emit success report with coverage statistics) — the absence of findings is itself a claim that carries verification evidence: §5.5 **Zero-finding floor**
+- Deterministic: rerunning without changes produces consistent results; a rerun *after* remediation additionally reports its delta per §6 **Rerun delta**
 
 ## Feedback
 
-At wrap-up (the same lifecycle point where this command prompts for a Git commit), perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
-
-1. **Gate on qualification & completion.** Only proceed if this command reached its wrap-up stage. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
-2. **Reflect (no user input).** Review this run against `/speckit.analyze`'s declared purpose and produce a short review plus ≥1 concrete, command-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
-3. **Scope guard.** Keep strictly to this command's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
-4. **Dedup guard.** Use a stable `run_id` (e.g. the feature key + a run timestamp); if a nested skill/command already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
-5. **Persist** via the engine:
-   ```bash
-   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
-     --unit-id "/speckit.analyze" --unit-type command \
-     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
-     --review "<review prose>" --points-file "<points file>"
-   ```
-6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
-
-**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+At wrap-up (the same lifecycle point where this command prompts for a Git commit), run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this command's scope; persist one entry via `feedback-utils.py --action record --unit-id "/speckit.analyze" --unit-type command`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
 
 ## Documentation
 
 At the same wrap-up point as the Feedback step, apply the docs-sync evaluation per the canonical convention in `.specify/shared/workflow/docs-step.md`: assess whether information produced by this run (new capabilities, key decisions, structural changes) needs to be recorded into the project documentation space, and conclude with exactly one of `需记录（目标文档 + 要点）` or `无需记录`. Never block wrap-up; incremental judgment only (no full reconcile sweep); when a move/archive-level change is needed, recommend running `/speckit.docs` instead of executing it here.
+
+## Artifact Commit
+
+At wrap-up, **before** the Feedback and Documentation steps, commit the artifact this command produced — and only that artifact, staged by explicit path. Follow the canonical convention in `.specify/shared/workflow/artifact-commit-step.md`: run the deletion-surface audit first, use a single-line message per `.specify/templates/commit-template.md`, never `git add -A`, and never fold another command's uncommitted artifacts into this commit (report that as an upstream deviation instead). A read-only run that produced no artifact skips this step and says so in one line rather than creating an empty commit. Committing here does not advance the feature's lifecycle status and does not push.
 
 ## Handoffs
 

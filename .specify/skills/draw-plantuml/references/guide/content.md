@@ -247,7 +247,7 @@ end note
 ' ✗ 差：元素标签过长，导致框体过宽
 component [用户订单管理服务主模块] as OrderMain
 participant "用户认证与授权服务中心" as Auth
-A -> B : 发送订单创建请求并等待确认
+A -> B : 发送订单创建请求并等待响应
 
 ' ✓ 好：简短标签 + note 补充说明
 component [订单服务] as Order

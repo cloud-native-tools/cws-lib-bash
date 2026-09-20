@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from templates/commands/history.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
 ## User Input
 
 ```text
@@ -11,13 +12,21 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 
 ## Outline
 
-`/speckit.history` distills the **current AI tool's** past conversations **for the current project** into a durable, theme-aggregated knowledge base at `.specify/history/`. It does **not** store transcripts verbatim — it extracts long-term value: decisions, reusable lessons, open TODOs, key interaction flows, and points of user↔model disagreement.
+`/speckit.history` distills the **current AI tool's** past conversations **for the current project** into a durable, theme-aggregated knowledge base at `.specify/history/`.
+
+**Scope & unit of work** — what makes this command distinct from `/speckit.session`:
+
+- **Scope = ALL history**: it reads the tool's *entire* past conversation record for this project (every session in the store), not one session. Runs are incremental only to avoid re-reading; the analytical horizon is always the full corpus.
+- **Unit of work = concepts/themes**: the output is mined *information* — decisions, lessons, TODOs, flows, conflicts — grouped into concepts or themes (one or many), each aggregating evidence across sessions. A concept may draw on 20 sessions; a session may feed 5 concepts.
+- **Counterpart**: operating on a *single* session as a data object (export, naming, archiving) is `/speckit.session`'s job — that command manages session **data** and does not parse content into concepts.
+
+This command does **not** store transcripts verbatim — it extracts long-term value: decisions, reusable lessons, open TODOs, key interaction flows, and points of user↔model disagreement.
 
 It is **incremental**: a manifest tracks which sessions were already distilled, so re-runs only process new ones and merge into the existing documents.
 
 ### Step 1: Identify Tool & Project
 
-1. **Identify the executing agent** following `.specify/shared/workflow/agent-configuration.md` → "Step 1: Identify Executing Agent" (Claude Code / Copilot / Qoder / opencode / Qwen / Codex / …).
+1. **Identify the executing agent** following `.specify/shared/workflow/agent-configuration.md` → "Step 1: Identify Executing Agent" (Claude Code / Copilot / Qoder / opencode / Codex / Hermes / …).
 2. Run `.specify/scripts/bash/collect-history.sh --json` from repo root. It auto-detects the tool and prints JSON:
    ```json
    {
@@ -26,7 +35,7 @@ It is **incremental**: a manifest tracks which sessions were already distilled, 
      "session_store": "<path or null>", "session_count": <int>,
      "output_dir": "<...>/.specify/history",
      "manifest_path": "<...>/.specify/history/.manifest.json",
-     "supported_tools": ["claude"], "note": "<explanation>"
+     "supported_tools": ["claude", "qoder"], "note": "<explanation>"
    }
    ```
    - If the detected `tool` is wrong, re-run with `--tool <key>` (append to the script call).
@@ -92,22 +101,7 @@ Summarize: tool & project detected, sessions distilled this run vs skipped (with
 
 ## Feedback
 
-At wrap-up (the same lifecycle point where this command prompts for a Git commit), perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
-
-1. **Gate on qualification & completion.** Only proceed if this command reached its wrap-up stage. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
-2. **Reflect (no user input).** Review this run against `/speckit.history`'s declared purpose and produce a short review plus ≥1 concrete, command-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
-3. **Scope guard.** Keep strictly to this command's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
-4. **Dedup guard.** Use a stable `run_id` (e.g. the feature key + a run timestamp); if a nested skill/command already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
-5. **Persist** via the engine:
-   ```bash
-   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
-     --unit-id "/speckit.history" --unit-type command \
-     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
-     --review "<review prose>" --points-file "<points file>"
-   ```
-6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
-
-**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+At wrap-up (the same lifecycle point where this command prompts for a Git commit), run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this command's scope; persist one entry via `feedback-utils.py --action record --unit-id "/speckit.history" --unit-type command`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
 
 ## Handoffs
 

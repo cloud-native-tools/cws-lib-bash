@@ -25,7 +25,8 @@
 | Requirement Name | [REQUIREMENT_NAME] |
 | Related Feature | [FEATURE_ID] [FEATURE_NAME] |
 | Repository | [REPO_NAME] |
-| Repository URL | [REPO_URL] |
+| Repository URL | [REPO_URL] (from `git remote -v`; in a fork `origin` may be the UPSTREAM, so list the remote that actually holds these commits) |
+| Reachability of COMMIT_SHA | [PUSHED_TO: <remotes> \| UNRESOLVABLE: `git branch -r --contains HEAD` is empty — cite absolute paths + `git show <sha>:<path>` instead of URLs] |
 | Branch | [BRANCH] |
 | Commit SHA | [COMMIT_SHA_FULL] (short: [COMMIT_SHA_SHORT]) |
 | Repo Root (absolute) | [REPO_ROOT_ABS] |
@@ -74,7 +75,7 @@ Reconstruct what actually happened during this feature's SDD lifecycle. Capture 
 
 - **Severity**: [P0 | P1 | P2]
 - **Category**: [Template | Command Prompt | Automation | Workflow | Documentation]
-- **Location**: [ABS_PATH or [REPO_URL]/blob/[COMMIT_SHA_FULL]/relative/path#Lstart-Lend]
+- **Location**: [ABS_PATH — preferred; use [REPO_URL]/blob/[COMMIT_SHA_FULL]/relative/path#Lstart-Lend ONLY when §0 records the commit as pushed and the remote is HTTPS-web-accessible]
 - **Evidence** (verbatim quote):
 
   ```
@@ -137,6 +138,7 @@ The generator MUST tick every box below before submitting the report. If any box
 - [ ] No placeholder tokens (`[...]`) remain anywhere in the report.
 - [ ] Section 4 is short and bullet-only — no multi-paragraph narrative summaries leaked back in.
 - [ ] Section 5 recommendations each cite an exact target file in the spec-kit repo and at least one source finding ID.
+- [ ] P0 validation status is stated explicitly. When the review raised zero P0 findings, use the standard wording: "No P0 findings raised; the P0 independent-validation pass is vacuously satisfied." — do not leave the path unmentioned and do not improvise per-run phrasing.
 
 ## 8. Feedback
 

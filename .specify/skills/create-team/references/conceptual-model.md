@@ -34,7 +34,7 @@ Worked examples (from a real misclassification): a `consistency-checker` judging
 `Meta` is not a label — it is the **authority gate** for a specific class of writes. Only a `Meta` agent may modify:
 
 - the **team's own configuration** (`team.md`: roster, pattern config, thresholds, budget),
-- **agent definitions** (`.specify/agents/<slug>.agent.md`, role/stage templates),
+- **agent definitions** (`.specify/agents/{templates,instances}/<slug>.agent.md`, role/stage templates),
 - **skill definitions** (`SKILL.md`, its references and templates).
 
 This is the real reason the retired coupling *felt* compulsory: in a complex team, the agent that performs continuous improvement usually does rewrite prompts, agent definitions, or skill guides — and such an agent must indeed be `Meta`. That observation is correct; generalizing it into "evaluator/optimizer ⇒ Meta" was not.
@@ -79,7 +79,7 @@ The team domain has **four** collaboration patterns. Each encodes a different **
 ## Lifecycle: temporary vs persistent members
 
 - **temporary** — a worker/stage agent instantiated for a single run from a stage/worker template; discarded when the run ends. Lives only in the orchestrator's context.
-- **persistent** — a reusable agent stored at `.specify/agents/<slug>.agent.md` and symlinked into each supported tool.
+- **persistent** — a reusable agent stored at `.specify/agents/templates/<slug>.agent.md` (role Template) or `.specify/agents/instances/<slug>.agent.md` (Instance) and symlinked into each supported tool.
 
 ## Template home
 

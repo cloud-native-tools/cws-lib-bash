@@ -1,0 +1,17 @@
+{
+  "name": "mermaid-render-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "mermaid.ink-compatible render server for internal deployment (pako state protocol: /svg/pako:{state}, /img/pako:{state}?type=png)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "mermaid": "^11.4.0",
+    "puppeteer-core": "^24.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,14 @@
+{{ define "main" }}
+<article class="page home">
+  {{- with .Content }}{{ . }}{{ else }}<h1>{{ .Site.Title }}</h1>
+  <p>Documentation space rendered from Markdown.</p>{{ end }}
+  <ul class="section-cards">
+    {{- range .Site.Home.Sections.ByTitle }}
+    <li>
+      <a href="{{ .RelPermalink }}">{{ partial "title.html" . }}</a>
+      <span class="count">{{ len .RegularPagesRecursive }} pages</span>
+    </li>
+    {{- end }}
+  </ul>
+</article>
+{{ end }}

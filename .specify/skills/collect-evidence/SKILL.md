@@ -74,21 +74,4 @@ python3 .specify/scripts/python/evidence-utils.py --action collect \
 running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
 directory) — skip this entire Feedback step: no engine call, no feedback entry.
 
-At wrap-up, perform the agent self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`:
-
-1. Gate on qualification & completion; skip trivial/no-op runs.
-2. Reflect without user input; produce a short review plus ≥1 concrete optimization point, or exactly `No significant optimization points identified this run.`
-3. Scope guard: `scope: local`, this skill only.
-4. Dedup via stable `run_id`.
-5. Persist:
-
-   ```bash
-   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
-     --unit-id "skill:collect-evidence" --unit-type skill \
-     --run-id "<stable-run-id>" \
-     --review "<review prose>" --points-file "<points file>"
-   ```
-
-6. If `should_prompt` is true, surface the consolidated submission prompt; below threshold, do not prompt.
-
-Abort/partial rule: if the run failed before wrap-up, skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+At wrap-up, run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this skill's scope; persist one entry via `feedback-utils.py --action record --unit-id "skill:collect-evidence" --unit-type skill`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.

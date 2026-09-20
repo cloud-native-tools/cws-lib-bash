@@ -69,20 +69,44 @@ def resolve_claude(project_path: Path) -> Dict[str, object]:
     }
 
 
+def resolve_qoder(project_path: Path) -> Dict[str, object]:
+    """Locate the Qoder CLI session store for ``project_path``."""
+    base = Path.home() / ".qoder" / "projects"
+    encoded = _encode_claude_project_dir(project_path.resolve())
+    store = base / encoded
+    if not store.is_dir() and base.is_dir():
+        candidates = sorted(
+            d for d in base.iterdir()
+            if d.is_dir() and d.name.endswith(encoded.split("-")[-1])
+        )
+        if candidates:
+            store = candidates[0]
+    supported = store.is_dir()
+    session_count = len(list(store.glob("*.jsonl"))) if supported else 0
+    return {
+        "supported": supported,
+        "session_store": str(store),
+        "session_count": session_count,
+        "note": (
+            "Qoder CLI JSONL session store."
+            if supported
+            else f"Expected Qoder history at {store}, but it does not exist."
+        ),
+    }
+
+
 # Tools without a resolver yet: honest hint about where history *might* live,
 # marked unsupported so the command reports instead of guessing/parsing wrongly.
 UNSUPPORTED_TOOL_HINTS: Dict[str, str] = {
     "codex": "~/.codex/sessions (rollout logs) — format not yet adapted.",
     "copilot": "VS Code Copilot Chat history is stored in the editor workspace state (not a plain-text local store) — not yet adapted.",
-    "qoder": "~/.qoder or the Qoder app data dir — format not yet adapted.",
     "opencode": "opencode local session store — format not yet adapted.",
-    "qwen": "~/.qwen session store — format not yet adapted.",
     "hermes": "~/.hermes session store — format not yet adapted.",
-    "iflow": "~/.iflow session store — format not yet adapted.",
 }
 
 STORE_RESOLVERS: Dict[str, Callable[[Path], Dict[str, object]]] = {
     "claude": resolve_claude,
+    "qoder": resolve_qoder,
 }
 
 # Directory signals used to guess the current tool when --tool is omitted.
@@ -91,10 +115,8 @@ _TOOL_DIR_SIGNALS = {
     "copilot": ".github",
     "qoder": ".qoder",
     "opencode": ".opencode",
-    "qwen": ".qwen",
     "codex": ".codex",
     "hermes": ".hermes",
-    "iflow": ".iflow",
 }
 
 

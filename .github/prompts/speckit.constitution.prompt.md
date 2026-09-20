@@ -1,3 +1,4 @@
+<!-- AUTO-GENERATED from templates/commands/constitution.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
 ## User Input
 
 ```text
@@ -109,6 +110,29 @@ Follow this execution flow:
        evidence.
      - This principle adds orientation, not machinery: it MUST NOT justify new scoring
        systems, maturity reports, or tracking/recording engines.
+   - **MUST include** a principle for "One Source of Truth (Authority & Reference Discipline)" that mandates:
+     - Every fact — a concept's meaning, a normative rule, a threshold, an enumerated list, a
+       configuration value, a count — has exactly one authoritative definition point (its
+       **owner**), and every other location reaches it by reference rather than by copy.
+     - The full discipline (owner declaration, the owner-selection order, when a duplicate is
+       legitimate, the counts and enumerations rules, the disagreement procedure) lives at
+       `.specify/shared/guidelines/one-source-of-truth.md` and MUST be referenced, not restated.
+     - On a disagreement the owner is authoritative and every diverging location is stale; the
+       repair converts the copy into a reference instead of re-wording it to agree.
+     - This principle adds a way of writing, not machinery: it MUST NOT justify a duplicate-fact
+       scanner, an authority registry, or any other new scoring or tracking system.
+   - **MUST include** a principle for "User-Facing Comprehension (No Jargon, With Context)" that mandates:
+     - Every message a flow sends to a human is readable by someone who did not take part in the
+       run, which bounds both its vocabulary and the context it carries.
+     - The full discipline (permitted-jargon whitelist, forbidden-jargon blacklist, context floor
+       and ceiling, their adjudication order, reproducible verdict questions) lives at
+       `.specify/shared/guidelines/user-facing-comprehension.md` and MUST be referenced, not
+       restated.
+     - Jargon is bounded rather than banned — a term stands unexplained only where a closed
+       whitelist condition holds — and context is bounded the same way: carry the facts a reader
+       needs in order to act, and reach everything else by path reference.
+     - This principle adds a way of writing, not machinery: it MUST NOT justify a jargon linter, a
+       wording scorer, a maturity report, or any other new tracking system.
    - Ensure Governance section lists amendment procedure, versioning policy, and compliance review expectations.
 
 4. Consistency propagation checklist (convert prior checklist into active validations):
@@ -121,7 +145,7 @@ Follow this execution flow:
      no stale principle numbers or removed principle references allowed.
    - `/.specify/templates/tasks-template.md` → Any "per Constitution Principle X" refs
      MUST use the correct principle number and name after update.
-   - `/README.md` and `/docs/quickstart.md` → Update any references to changed principles.
+   - `/README.md` and `/docs/tutorials/quickstart.md` → Update any references to changed principles.
    - If any file CANNOT be updated automatically, flag it in the Sync Impact Report
      with the specific file path, line range (if determinable), and what needs manual review.
 

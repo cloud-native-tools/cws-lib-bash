@@ -10,14 +10,14 @@
 | Validate frontmatter | `@terminal`: `python -c "import yaml; ..."` |
 | Check line count | `@terminal`: `wc -l <skill-path>/SKILL.md` |
 | Run skill_id refresh | `@terminal`: `scripts/bash/create-new-skill.sh --refresh-only --name <name> --json` |
-| Verify registry | `@terminal`: `grep '<skill_id>' .specify/instructions.md` |
+| Verify discoverability | `@terminal`: `ls .specify/skills/<name>/SKILL.md` |
 | Move content to references | Workspace edit to create new reference file and update SKILL.md pointer |
 
 ## Best Practices
 
 - Use Copilot Chat to analyze SKILL.md content and identify improvement areas based on user feedback
 - Make small, targeted workspace edits — large replacements may truncate content
-- Use `@terminal` for all validation commands (line count, frontmatter, registry grep)
+- Use `@terminal` for all validation commands (line count, frontmatter, discoverability check)
 - When moving content to references, create the reference file first, then update SKILL.md in a separate edit
 
 ## Known Pitfalls
@@ -25,7 +25,7 @@
 - **Workspace edit truncation**: Large SKILL.md files (400+ lines) may cause workspace edit to lose content. Always verify file integrity after large edits
 - **No background validation**: Copilot cannot run background tasks for validation. All checks must be sequential via `@terminal`
 - **grep limitations in chat**: Copilot Chat's search may miss content in large files. Use `@terminal` with `grep` for reliable pattern matching
-- **Registry update conflicts**: When updating `.specify/instructions.md`, the file may be large. Make minimal edits to the Skills table row only
+- **Rename leaves a stale directory**: discovery is by directory — after a rename, remove the old directory and verify no two `SKILL.md` files share the same frontmatter `name`
 - **Path resolution**: `${SKILL_HOME}` must be resolved to the physical path manually. Use `@terminal` with `readlink -f` if needed
 
 ## Capability Notes

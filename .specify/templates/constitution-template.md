@@ -115,6 +115,82 @@ change code fast, but the workflow around them (fuzzy goals, improvised steps, u
 "it works", bypassed safeguards, lost lessons) is usually the weak point. Naming the goal
 lets every improvement answer "which part of the harness does this strengthen?".
 
+### X. Non-Destructive Remediation
+Problems MUST be fixed at their root cause, never by destroying the artifact that
+exhibits them:
+- Deleting files, code, or data MUST NOT be used as a shortcut to make an immediate
+  problem disappear; a "fix" that works by destruction proves the approach is wrong,
+  not that the problem is solved.
+- When an obstacle is encountered, the underlying cause MUST be identified and repaired;
+  bypassing safety checks or removing the surface that exposes the problem is forbidden.
+- When a destructive operation is genuinely required (deletion, force-overwrite, reset),
+  it MUST be explicitly confirmed with the user before execution.
+
+Rationale: destructive shortcuts destroy information and trust, and usually recreate the
+same problem elsewhere; mandatory confirmation keeps irreversible actions under human control.
+
+### XI. Complete & Correct Options, or None
+Presenting options that are incomplete or incorrect is WORSE than presenting no options:
+- Any option set offered to the user (choices, plans, recommendations) MUST be verified
+  correct and MUST cover the realistic decision space.
+- When correctness or completeness cannot be ensured, the open question MUST be presented
+  directly instead of a partial or speculative option list.
+- A known-imperfect option MUST be labeled with its gap rather than presented as solid.
+
+Rationale: wrong or partial options mislead decisions more than no guidance at all — they
+manufacture false confidence and foreclose alternatives the user never saw.
+
+### XII. One Source of Truth (Authority & Reference Discipline)
+Every fact — a concept's meaning, a normative rule, a threshold, an enumerated list, a
+configuration value, a count — MUST have exactly one authoritative definition point (its
+**owner**), and every other location MUST reach it by reference:
+- The full discipline — owner declaration, the owner-selection order (code, then a
+  machine-generated artifact, then an authored document), when a duplicate is legitimate,
+  and the disagreement procedure — is defined once in
+  `.specify/shared/guidelines/one-source-of-truth.md`; consumers MUST reference it, do not
+  restate it.
+- **Reference, not copy**: a consuming location cites the owner's path, plus a section anchor
+  when the fact is one section of a larger owner, and MUST NOT restate the owner's table,
+  threshold literal, or enumeration.
+- **Repair direction**: on a disagreement the owner is authoritative and every diverging
+  location is stale. The repair MUST convert the copy into a reference rather than re-word it
+  to agree — correcting a copy is an instance fix, removing its ability to diverge is the
+  mechanism fix.
+- Only three duplicates are legitimate: a machine-regenerated copy, a literal pinned in a test
+  so that it fails when the owner changes, and a dated record never cited as current reality.
+  Any other repetition of a fact MUST be converted into a reference.
+- This principle adds a way of writing, not machinery: it MUST NOT be used to justify a
+  duplicate-fact scanner, an authority registry, or any other new scoring or tracking system.
+
+Rationale: a fact restated in several places is not merely redundant — the copies disagree
+silently, and a reader cannot tell which one is current. Correcting a copy leaves the copy, so
+the drift returns; only removing its ability to diverge ends it.
+
+### XIII. User-Facing Comprehension (No Jargon, With Context)
+Every message a flow sends to a human MUST be readable by someone who did not take part in the
+run, which bounds both its vocabulary and the context it carries:
+- The discipline — the permitted-jargon whitelist, the forbidden-jargon blacklist, the context
+  floor and ceiling, their adjudication order, and the reproducible verdict questions — is
+  defined once in `.specify/shared/guidelines/user-facing-comprehension.md`; consumers MUST
+  reference it, do not restate it.
+- Jargon MUST be bounded rather than banned: a term may stand unexplained only where a closed
+  whitelist condition holds, and anything outside that whitelist counts as a violation.
+  Internal identifiers and engine call forms MUST NOT reach a reader who has a user-facing
+  path available, and an abbreviation first used in a message MUST be annotated in place.
+- Context MUST be bounded in the same breath: each message carries the facts a reader needs in
+  order to act without opening another artifact, and reaches everything else by path
+  reference. Restating an artifact the reader could open themselves MUST NOT be counted as
+  supplying context.
+- Judgement MUST be reproducible rather than a matter of taste: two independent reviewers
+  applying the criteria to one message MUST reach the same verdict, and a disagreement is a
+  defect in the criteria, not a difference of opinion.
+- This principle adds a way of writing, not machinery: it MUST NOT be used to justify a jargon
+  linter, a wording scorer, a maturity report, or any other new tracking system.
+
+Rationale: an unreadable prompt does not fail loudly. A reader who has to decode a term guesses
+and then acts confidently on the wrong meaning, and a reader who has to page away for context
+answers a different question — both look like a completed flow while the decision goes wrong.
+
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 

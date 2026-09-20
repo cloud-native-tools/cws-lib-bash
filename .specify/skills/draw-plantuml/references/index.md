@@ -9,10 +9,19 @@
 ```
 references/
 ├── index.md           ← 本文件（汇总索引）
+├── sds-realization.md ← SDS 实现手册（受 draw-diagram 委派时的档位/几何落地）
 ├── howto/             ← 操作指南（分步指南，对应工作流步骤）
 ├── guide/             ← 最佳实践与优化指南
 └── document/          ← 官方文档与参考手册
 ```
+
+---
+
+## 根级文档
+
+| 文档 | 对应步骤 | 内容说明 |
+|------|---------|---------|
+| [sds-realization.md](sds-realization.md) | Step 4/7/8（**仅受 draw-diagram 委派时**） | SDS 实现手册（语法层落地点）——输入契约（只实现不改语义）、`weight_plan` 档位 → skinparam/`!define` 宏映射（含实测 stroke-width）、graphviz 自动布局下的几何**逼近**配方（MinimumWidth / 隐藏边秩脚手架 / `<<ph>>` 占位 / 虚线边框）、量测自检、**偏离声明模板**。SDS schema 与档位语义属语义层：`../../draw-diagram/references/semantic-model.md` |
 
 ---
 
@@ -23,20 +32,20 @@ references/
 | # | 文档 | 对应步骤 | 内容说明 |
 |---|------|---------|---------|
 | 0 | [00-semantic-analysis.md](howto/00-semantic-analysis.md) | Step 1 | 语义分析与意图理解——分类输入类型（直接描述/图片复刻/模糊/代码可视化）、提取内容、差距分析、交互式确认 |
-| 1 | [01-choose-diagram-type.md](howto/01-choose-diagram-type.md) | Step 2 | 选择图表类型——快速匹配表、按开发阶段/系统类型推荐、常见组合模式 |
+| 1 | [01-choose-diagram-type.md](howto/01-choose-diagram-type.md) | Step 2 | 选择图表类型——快速匹配表、按开发阶段/系统类型推荐、常见组合模式、**需求清单覆盖检查**（点名多类图时逐项核对独立图表交付） |
 | 2 | [02-class-diagram.md](howto/02-class-diagram.md) | Step 3/6 | 类图——类定义、6 种关系类型、GRASP 设计原则 |
 | 3 | [03-component-diagram.md](howto/03-component-diagram.md) | Step 3/6 | 组件图——分层架构、微服务模式、接口和依赖建模 |
-| 4 | [04-deployment-diagram.md](howto/04-deployment-diagram.md) | Step 3/6 | 部署图——物理拓扑、Kubernetes、云服务、节点间通信 |
-| 5 | [05-sequence-diagram.md](howto/05-sequence-diagram.md) | Step 3/6 | 时序图——消息类型、组合片段（alt/loop/par）、激活条、交互流程 |
-| 6 | [06-package-diagram.md](howto/06-package-diagram.md) | Step 3/6 | 包图——模块组织、命名空间层次、分层架构、依赖管理 |
+| 4 | [04-deployment-diagram.md](howto/04-deployment-diagram.md) | Step 3/6 | 部署图——物理拓扑、Kubernetes、云服务、节点间通信；**note 预算治理（端口+职责两行）**、控制面/工作节点密则拆分、namespace 名作 frame 标签 |
+| 5 | [05-sequence-diagram.md](howto/05-sequence-diagram.md) | Step 3/6 | 时序图——消息类型、组合片段（alt/loop/par）、激活条、交互流程；**组合片段着色与关键路径高亮** |
+| 6 | [06-package-diagram.md](howto/06-package-diagram.md) | Step 3/6 | 包图——模块组织、命名空间层次、分层架构、依赖管理；**双层资源模型（声明层 ↔ 动态层）模式** |
 | 7 | [07-usecase-diagram.md](howto/07-usecase-diagram.md) | Step 3/6 | 用例图——角色、用例、系统边界、include/extend/generalization |
 | 8 | [08-activity-diagram.md](howto/08-activity-diagram.md) | Step 3/6 | 活动图——业务流程建模、泳道、fork/join 并发、决策节点 |
-| 9 | [09-state-machine-diagram.md](howto/09-state-machine-diagram.md) | Step 3/6 | 状态机图——对象生命周期、状态转换、事件/守卫/动作、组合状态 |
+| 9 | [09-state-machine-diagram.md](howto/09-state-machine-diagram.md) | Step 3/6 | 状态机图——对象生命周期、状态转换、事件/守卫/动作、组合状态；**点名状态机时必须交付独立状态机图（note 摘要不算）** |
 | 10 | [10-layout-planning.md](howto/10-layout-planning.md) | Step 4 | 布局规划——多区域复杂布局、布局故障排除、CJK 渲染问题 |
 | 11 | [11-code-generation.md](howto/11-code-generation.md) | Step 6 | 代码生成——草拟流程、标签与注释规则（≤10 字符 + note）、配套文字准备 |
-| 12 | [12-rendering-and-output.md](howto/12-rendering-and-output.md) | Step 8 | 渲染、匹配验证与输出——SVG/PNG 渲染、HTML 组装、质量检查清单 |
-| 13 | [13-wbs-diagram.md](howto/13-wbs-diagram.md) | 专项 | WBS 工作分解结构——层级分解、左右方向、无框节点、算术记法、`<style>` 配色 |
-| 14 | [14-gantt-diagram.md](howto/14-gantt-diagram.md) | 专项 | 甘特图——任务/工期/依赖、里程碑、完成度、颜色、分隔符、工作日历、今日标记、时间刻度 |
+| 12 | [12-rendering-and-output.md](howto/12-rendering-and-output.md) | Step 8 | 渲染、匹配验证与输出——SVG/PNG 渲染、HTML 组装、质量检查清单；**复现性附录（渲染命令 + puml 源码 + 依赖说明）** |
+| 13 | [13-wbs-diagram.md](howto/13-wbs-diagram.md) | 专项 | WBS 工作分解结构——层级分解、左右方向、无框节点、算术记法、`<style>` 配色；状态色 + `\n【责任人】` + `◆Mn` 里程碑锚点的信息编码、内联「有效字号」分档规则 |
+| 14 | [14-gantt-diagram.md](howto/14-gantt-diagram.md) | 专项 | 甘特图——任务/工期/依赖、里程碑、完成度、颜色、分隔符、工作日历、今日标记、时间刻度；刻度/zoom 实测决策矩阵、里程碑视图写法、`on {}` 与依赖箭头对排期的实测影响、量测自检三判据 |
 | 15 | [15-mindmap-diagram.md](howto/15-mindmap-diagram.md) | 专项 | 思维导图——OrgMode/Markdown/算术三套写法、左右分支、无框节点、`<style>` 与命名样式类 |
 | 16 | [16-json-diagram.md](howto/16-json-diagram.md) | 专项 | JSON 数据可视化——对象/数组/嵌套渲染、`#highlight` 路径高亮、`jsonDiagram` `<style>` |
 | 17 | [17-yaml-diagram.md](howto/17-yaml-diagram.md) | 专项 | YAML 显示效果——嵌套映射/列表渲染、`# highlight` 路径高亮、`yamlDiagram` `<style>` |
@@ -99,7 +108,10 @@ UML 理论、PlantUML 语法参考、官方文档和建模方法论的原始参�
 | 布局怎么规划 | [howto/10-layout-planning.md](howto/10-layout-planning.md) + [guide/layout.md](guide/layout.md) §一 |
 | 标签和注释怎么写 | [howto/11-code-generation.md](howto/11-code-generation.md) §二 + [guide/content.md](guide/content.md) §1.5 |
 | 样式怎么配 | [guide/style.md](guide/style.md) |
+| 受 draw-diagram 委派：SDS 档位怎么落成线宽、几何怎么逼近 | [sds-realization.md](sds-realization.md) §1（档位→语法，实测）+ §2（graphviz 逼近手段的能与不能） |
+| 自动布局兑现不了的 SDS 项怎么声明 | [sds-realization.md](sds-realization.md) §3（量化偏离声明模板）+ §2.2（量测取证） |
 | 怎么渲染和验证 | [howto/12-rendering-and-output.md](howto/12-rendering-and-output.md) |
+| WBS/甘特成图够不够清晰、标签有没有越界、某写法有没有改排期 | `../scripts/measure-svg-layout.py`（量测三判据 + `--compare` A/B）；判据说明见 [howto/14-gantt-diagram.md](howto/14-gantt-diagram.md) 「量测自检」与 [howto/13-wbs-diagram.md](howto/13-wbs-diagram.md) 「尺寸、清晰度与留白」 |
 | 布局出问题怎么排查 | [howto/10-layout-planning.md](howto/10-layout-planning.md) §三 + [guide/layout.md](guide/layout.md) §四 |
 | 复杂大图太乱/太大怎么美化 | [guide/large-diagram-playbook.md](guide/large-diagram-playbook.md) |
 | 某个语法怎么写 | [guide/syntax-reference.md](guide/syntax-reference.md) + [document/00-plantuml-overview.md](document/00-plantuml-overview.md) |

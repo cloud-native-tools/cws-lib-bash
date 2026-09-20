@@ -1,6 +1,6 @@
 # Evidence Contract — findings.json 人读版
 
-> 机器合同:`.specify/specs/034-evidence-infra/contracts/findings-contract.md`(C-F1…C-F14);本文为消费者速览。
+> 机器合同:findings-contract(框架仓库 spec 034,C-F1…C-F14);本文为消费者速览。
 
 ## 存储布局
 

@@ -1,0 +1,234 @@
+/*
+  delivery.css — 交付页面的统一样式（single owner: skills/draw-diagram/assets/delivery.css）
+  规则与交付形态的 owner 是 ../references/delivery-contract.md（D1–D6）；本文件只负责**页面外观**。
+
+  用法（D1 要求「自足 HTML」）：把本文件**逐字节内联**进页面的 <style> 块 —— 从磁盘复制，不凭记忆重写、
+  不用 <link> 外链（外链会让 HTML 单独打开时失去样式）。
+
+  分工边界：本表只管**页面骨架**（背景 / 卡片 / 标题 / 正文 / 图框 / 复现性附录 / 暗色 / 打印）。
+  图表内部的样式（如 d3 的 .axis / .tooltip、ECharts 的 option 配色）归各引擎自己，不写在这里。
+
+  期望的页面结构（类名可省略：只写语义标签也有完整样式）：
+
+    <body>
+      <main class="container">              <!-- 卡片；也可只写 <main> -->
+        <h1 class="chart-title">…</h1>      <!-- 标题；也可只写 <h1> -->
+        <div class="toolbar">…</div>        <!-- 可选：按钮行 -->
+        <div id="chart"></div>              <!-- 可选：脚本渲染型图表的宿主 -->
+        <figure class="diagram">            <!-- 图片型图表 -->
+          <img src="x.svg" alt="…">         <!-- 默认保持原尺寸、溢出横向滚动；确需缩小时加 class="fit" -->
+          <figcaption>…</figcaption>        <!-- 一句话交代这张图看什么；**不是图例**（D4） -->
+        </figure>
+        <section class="prose">…</section>  <!-- D5：用用户原始术语讲架构或流程 -->
+        <details class="repro-appendix">    <!-- D2：复现性附录，默认收起 -->
+          <summary>复现信息</summary><pre><code>…</code></pre>
+        </details>
+        <p class="meta">…</p>               <!-- 可选：来源、生成时间等小字 -->
+      </main>
+    </body>
+*/
+
+:root {
+  --bg: #f5f6f8;
+  --card: #ffffff;
+  --ink: #1c1e21;
+  --muted: #5f6672;
+  --line: #e3e6ea;
+  --accent: #2b6cb0;
+  --code-bg: #f4f5f7;
+  --radius: 12px;
+  --measure: 960px;
+  --shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 8px 24px rgba(16, 24, 40, .06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --card: #1b1e23;
+    --ink: #e6e8eb;
+    --muted: #9aa2ad;
+    --line: #2c313a;
+    --accent: #6ba6ff;
+    --code-bg: #22262c;
+    --shadow: none;
+  }
+
+  /* 暗色下给图一张「白纸」：导出的 PNG/SVG 与脚本渲染的图表，其墨色多为浅色背景而写死
+     （深灰文字、浅色网格），直接压在深色卡片上会不可读。垫白底比给每个引擎做暗色主题便宜且不失真。 */
+  figure img, figure svg, #chart {
+    background: #ffffff;
+    border-radius: 8px;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  padding: clamp(16px, 4vw, 48px) clamp(12px, 4vw, 32px);
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei",
+               "Noto Sans CJK SC", "Source Han Sans SC", sans-serif;
+  font-size: 15px;
+  line-height: 1.75;
+  text-rendering: optimizeLegibility;
+}
+
+/* ── 卡片 ─────────────────────────────────────────────── */
+
+.container, body > main, body > article {
+  width: 100%;
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(20px, 3.5vw, 40px);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* ── 文字层级 ─────────────────────────────────────────── */
+
+.chart-title, h1 {
+  margin: 0 0 .35em;
+  font-size: 22px;
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -.01em;
+}
+
+h2 { margin: 1.8em 0 .5em; font-size: 17px; font-weight: 620; line-height: 1.4; }
+h3 { margin: 1.5em 0 .4em; font-size: 15px; font-weight: 620; }
+
+p, ul, ol { margin: 0 0 1em; }
+li { margin: .25em 0; }
+
+.prose { max-width: 78ch; }
+.prose > :last-child { margin-bottom: 0; }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+strong { font-weight: 650; }
+
+.meta {
+  margin: 1.5em 0 0;
+  padding-top: .9em;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
+code, pre, kbd {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas,
+               "Liberation Mono", monospace;
+  font-size: .875em;
+}
+
+:not(pre) > code {
+  padding: .15em .4em;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+/* ── 图表 ─────────────────────────────────────────────── */
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+}
+
+.toolbar button {
+  padding: 4px 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+
+#chart { width: 100%; min-height: 420px; }
+
+figure.diagram, figure:has(> img), figure:has(> svg) {
+  margin: 1.5em 0;
+  overflow-x: auto;
+}
+
+/* 交付的图片（PNG/SVG 文件）带固有像素尺寸：**保持原尺寸、溢出时横向滚动**。
+   等比缩小到手机宽度会把图上文字压到 ~5px，等于不可读 —— 宁可滚动。
+   确需缩小时（小图、缩略图）给 figure 加 class="fit"。
+   居中用 margin-inline:auto 而非 text-align:center：后者在内容溢出时
+   会把左半截推到滚动可达范围之外（负向 scrollLeft 不存在）。 */
+figure img { display: block; max-width: none; margin-inline: auto; }
+figure.fit img { max-width: 100%; }
+
+/* 内联 SVG（脚本渲染的响应式图表）按容器缩放是它的设计意图，保持 */
+figure svg { display: block; max-width: 100%; height: auto; margin-inline: auto; }
+
+figcaption {
+  margin-top: .8em;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* ── 复现性附录 ───────────────────────────────────────── */
+
+.repro-appendix, details {
+  margin-top: 1.5em;
+  border-top: 1px solid var(--line);
+  padding-top: .9em;
+}
+
+.repro-appendix > summary, details > summary {
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.repro-appendix > summary:hover, details > summary:hover { color: var(--accent); }
+
+.repro-appendix pre, details pre {
+  margin: .8em 0 0;
+  padding: 12px 14px;
+  max-height: 24em;
+  overflow: auto;
+  background: var(--code-bg);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  text-align: left;
+  white-space: pre;
+}
+
+.repro-appendix ul { margin: .8em 0 0; padding-left: 1.4em; color: var(--muted); font-size: 13px; }
+
+/* ── 打印 ─────────────────────────────────────────────── */
+
+@media print {
+  body { padding: 0; background: #fff; color: #000; font-size: 12px; }
+  .container, body > main, body > article {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .toolbar, .repro-appendix, details { display: none; }
+  figure.diagram, figure:has(> img), figure:has(> svg) { break-inside: avoid; }
+  figure.wide { overflow: visible; }
+  figure.wide img, figure.wide svg { max-width: 100%; }
+  a { color: #000; }
+}

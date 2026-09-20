@@ -45,6 +45,10 @@ Before advancing to `Implemented`:
 3. Verification log completeness: every `SC-NNN` has a status row
 4. Deferred task registry: `deferred_tasks=` in `verification.md` lists all `[~]` IDs
 5. Only if ALL checks pass: advance status
+6. Void DoD rows: a DoD row whose premise is measurably false is **void**, not unmet. It does not block the flip, but
+   it MUST carry cited measurement, an inline annotation on the `DoD Status` line, and prominent surfacing in the
+   wrap-up report. Record the correction where the false premise lives (see `templates/tasks-template.md` DoD Status).
+   Never report the Definition of Done as plainly "met" while a void row is folded silently into it
 
 ## Feature Binding Rules (requirements phase)
 

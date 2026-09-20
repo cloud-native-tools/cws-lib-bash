@@ -2,7 +2,7 @@
 """Match a user goal against the predefined team presets.
 
 Deterministic scorer for create-team step 2. It only ranks candidates; the
-calling agent decides what to do with them (see references/teams.md).
+calling agent decides what to do with them (see references/team-presets.md).
 
 Inputs (one of):
   --goal "<text>"     the user's goal / request text
@@ -63,6 +63,14 @@ def parse_frontmatter(text: str) -> dict:
     for raw in block.splitlines():
         if re.match(r"^signals:\s*$", raw):
             in_signals = True
+            continue
+        flow = re.match(r"^signals:\s*\[(.*)\]\s*$", raw)
+        if flow:
+            signals.extend(
+                item.strip().strip("\"'")
+                for item in flow.group(1).split(",")
+                if item.strip()
+            )
             continue
         if in_signals:
             item = re.match(r"^\s+-\s+(.*\S)\s*$", raw)

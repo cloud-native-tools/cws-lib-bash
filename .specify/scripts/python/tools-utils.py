@@ -263,6 +263,20 @@ def _workspace_root_for(tools_dir: Path) -> Path:
     return parents[min(2, len(parents) - 1)] if len(parents) else tools_dir
 
 
+def _self_improvement_contract() -> str:
+    """Load the canonical Tool-record Self-Improvement contract fragment."""
+    repo_root = Path(__file__).resolve().parents[2]
+    if repo_root.name == ".specify":
+        repo_root = repo_root.parent
+    for candidate in (
+        repo_root / ".specify/skills/create-tools/templates/tool-self-improvement.md",
+        repo_root / "skills/create-tools/templates/tool-self-improvement.md",
+    ):
+        if candidate.is_file():
+            return candidate.read_text(encoding="utf-8").strip()
+    raise FileNotFoundError("tool-self-improvement.md is missing")
+
+
 def save_record(tools_dir: Path, record: Any) -> Path:
     tools_dir.mkdir(parents=True, exist_ok=True)
     record.last_updated = date.today().isoformat()
@@ -347,6 +361,7 @@ def save_record(tools_dir: Path, record: Any) -> Path:
     else:
         lines.append("- None")
 
+    lines.extend(["", _self_improvement_contract()])
     record_file.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return record_file
 

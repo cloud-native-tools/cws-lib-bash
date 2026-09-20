@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# common-todo.sh — Shared helper functions for /speckit.todo search-todo.sh script
+# common-todo.sh — Shared helper functions for /speckit.todo search-todo.py script (Python, .sh heritage name)
 # 
 # This file provides reusable functions for:
 # - Repository root discovery

@@ -208,6 +208,9 @@ GW -[hidden]d-> User
 - **虚线区分依赖强度**：`..>` 表示可选依赖或弱依赖，`-->` 表示强依赖
 - **`linetype ortho`**：组件图使用正交布线更整洁，配合 `nodesep ≥ 40`、`ranksep ≥ 60`
 - **按层分组**：使用 `package` 或 `frame` 按架构层划分（表示层/业务层/数据层）
+- **分组语义要显式（勿用嵌套 component 表达分组）**：需要表达"这组组件同属一个逻辑分组"时，用**带标签的 `package`/`frame`/`rectangle`** 显式框选并加分组标签（如 `package "Worker Runtime"`、`rectangle "快照引擎域"`）。组件套组件（`component A { component B }`）只表达"内含/部署于"语义，用来表达分组既弱又易与含括关系混淆——**分组即框选**（见 [diagram-principles.md §2](../guide/diagram-principles.md)）
+- **包内按「入口 → 枢纽 → 出口」排列**：package/frame 内部的组件声明与摆放顺序跟随数据流——入口组件在左/上、枢纽居中、出口在右/下，让主要箭头顺流短连、减少跨包回绕的长连线；顺序摆不平时用 `-[hidden]` 连线固定包内次序（`入口 -[hidden]r-> 枢纽`）
+- **行间对齐用隐藏边拉平**：入口行/枢纽行/出口行各自的兄弟组件串 `-[hidden]r->`（或 `-[hidden]d->`）隐藏链，把**同一排组件对齐到同一水平线**、同排宽度一致——排列仍显乱时优先补隐藏边而非改语义（见 [large-diagram-playbook.md §4c](../guide/large-diagram-playbook.md)）
 
 ## 最佳实践
 
@@ -218,6 +221,8 @@ GW -[hidden]d-> User
 - **标注通信协议**：在依赖线上标注 `REST`、`gRPC`、`JDBC`、`Kafka` 等，让图自解释
 - **组件数量控制在 15 个以内**：超过则拆分为多张图（如按层拆分、按业务域拆分）
 - **使用颜色区分层次**：表现层、业务层、数据层用不同背景色区分
+- **caption 保持短句**：caption 单行渲染且参与版面，**长 caption 会被引擎换行、挤压组件布局**——控制在 ~20 字内；迁移状态等长说明拆成第二行 caption（`caption 第一行\n第二行`）或移入 `note`/legend，不要让 caption 承担长文职责
+- **演进/合并关系用虚线映射连线入图**：旧组件并入新组件、重构映射（如旧 envd→新 wasmd）用 `..>` 虚线映射连线画进图内并在 legend 加一行说明，**不要只写进 caption 文字**——图内可见的映射连线比 caption 声明更可靠，读者无需读正文即知演进关系
 
 ## 常见误区
 

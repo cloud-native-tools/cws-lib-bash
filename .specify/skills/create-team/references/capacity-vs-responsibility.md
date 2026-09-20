@@ -10,7 +10,7 @@ Two skills author agent-shaped Markdown, and the recurring confusion is "which o
 | **What it defines** | **capacity** — what this agent *can do* | **responsibility** — what this agent *is accountable for inside one team* |
 | **Question answered** | "who is this professional?" | "what is this seat in the formation?" |
 | **Scope of validity** | team-agnostic; valid in any team or standalone | valid only inside the team/run that instantiated it |
-| **Typical lifecycle** | `persistent` — stored at `.specify/agents/<slug>.agent.md` | mostly `temporary` — lives in the orchestrator's context for one run |
+| **Typical lifecycle** | `persistent` — stored at `.specify/agents/templates/<slug>.agent.md` | mostly `temporary` — lives in the orchestrator's context for one run |
 | **Files** | `agent-capacity-<X>-template.md`, `agent-project-custom-template.md`, `agent-supervision-delegation.md`, `agent-skill-enablement.md` | `agent-team-supervisor-template.md`, `agent-stage-{executor,evaluator,optimizer}-template.md`, the `agent-*-orchestration-template.md` set, `agent-workflow-schema.md`; `teams/` stays in `templates/` |
 
 ## What belongs to capacity (create-agent)
@@ -36,7 +36,7 @@ Responsibility is the accountability the team assigns to a seat for one goal. It
 ## Authoring rules (both directions)
 
 1. **No cross-writing.** A responsibility template MUST NOT re-declare capacity (`skills:`, tool lists, professional expertise) — it references an agent that already has it, or a stage template that carries the minimum. A capacity template MUST NOT encode team position (stage assignment, territories, `blockedBy`, run-workspace paths, peer names).
-2. **Capacity is referenced, responsibility is instantiated.** A team roster row points at a capacity artifact (`.specify/agents/<slug>.agent.md`) or at a stage template, then layers the run's responsibility on top via the roster fields (`role`, `stage`, `type`, `lifecycle`, `territory`, `blockedBy`, `angle`).
+2. **Capacity is referenced, responsibility is instantiated.** A team roster row points at a capacity artifact (`.specify/agents/templates/<slug>.agent.md`, or a project Instance under `.specify/agents/instances/`) or at a stage template, then layers the run's responsibility on top via the roster fields (`role`, `stage`, `type`, `lifecycle`, `territory`, `blockedBy`, `angle`).
 3. **Same role, many responsibilities.** One capacity artifact may occupy different seats in different teams (a `qa-engineer` as executor in one team, as independent verifier in another). Never fork the capacity artifact to express a new seat — express it in the roster.
 4. **Edit routing.** "The agent lacks a tool / a skill / domain judgement" → `create-agent`. "The seat has the wrong scope / stage / handoff / reporting duty" → `create-team`.
 5. **The Team Supervisor is the one legitimate overlap.** It is a *role* (capacity: coordination + gating) whose only meaningful responsibility is team management, so its template lives in the team domain. It is the exception, not a precedent.
@@ -44,4 +44,4 @@ Responsibility is the accountability the team assigns to a seat for one goal. It
 ## Related
 
 - The three orthogonal dimensions (Role × Stage × Type) and the static/dynamic split: [`conceptual-model.md`](conceptual-model.md).
-- Predefined team shapes that pre-assign responsibilities for a known goal: [`teams.md`](teams.md).
+- Predefined team shapes that pre-assign responsibilities for a known goal: [`team-presets.md`](team-presets.md).

@@ -106,6 +106,18 @@ init_review_file() {
     local file="$1"
     mkdir -p "$REVIEW_DIR"
 
+    # note/report 可在未解析 diff 范围时创建报告 (如无 main 分支):
+    # 基准/目标引用不可解析则跳过 diff 概览, 避免 'fatal: bad revision' 噪音
+    local stat_block files_block
+    if git rev-parse --verify "$GIT_BASE" >/dev/null 2>&1 \
+        && git rev-parse --verify "$GIT_HEAD" >/dev/null 2>&1; then
+        stat_block=$(get_diff_stat)
+        files_block=$(get_changed_files | sed 's/^/- `/;s/$/`/')
+    else
+        stat_block="(基准 ${GIT_BASE} 或目标 ${GIT_HEAD} 不可解析 — 用 GIT_BASE=<ref> 指定后可重建概览)"
+        files_block="$stat_block"
+    fi
+
     cat > "$file" << EOF
 # Code Review Report
 
@@ -120,12 +132,12 @@ init_review_file() {
 ## 变更概览
 
 \`\`\`
-$(get_diff_stat)
+${stat_block}
 \`\`\`
 
 ## 变更文件
 
-$(get_changed_files | sed 's/^/- `/;s/$/`/')
+${files_block}
 
 ---
 

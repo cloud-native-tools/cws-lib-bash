@@ -71,6 +71,8 @@ Issue ALL agent calls in a **single response block**:
 
 **Key**: Multiple sub-agent invocations in one response = parallel execution.
 
+**Worktree isolation** (when the team config sets `isolation: worktree`): dispatch each *writing* agent with worktree isolation so it works on its own branch in a physically separate tree; read-only agents dispatch normally. After completion, the Lead reviews each branch diff and merges sequentially — a merge conflict means territory validation was wrong (stop and repartition, do not resolve ad hoc). Never remove a worktree that still has uncommitted changes.
+
 ### Step 4: Completion Monitoring
 
 Poll for completion manifests at each agent's declared output path in the run workspace:

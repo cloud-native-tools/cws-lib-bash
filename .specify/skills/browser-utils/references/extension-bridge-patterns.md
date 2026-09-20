@@ -1,7 +1,7 @@
 # Extension Bridge Patterns (WebSocket ↔ MV3 Extension)
 
 Reliability and design patterns for driving a Chrome extension from an external process
-over a **persistent WebSocket** — the architecture behind Tier 2 (MCP connector +
+over a **persistent WebSocket** — the architecture behind Tier 3 (MCP connector +
 Chrome extension) and any custom "control Chrome from Node/Python" bridge.
 
 Distilled from a production browser-bridge: a Node server that exposes browser

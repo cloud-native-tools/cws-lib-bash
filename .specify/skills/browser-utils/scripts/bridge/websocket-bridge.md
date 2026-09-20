@@ -115,7 +115,7 @@ The companion extension drives the browser (pages, DOM, console, screenshots) �
 - Use `navigate` / `click` / `evaluate` to exercise the target's content-script and
   page-level effects, and `getConsole` / screenshots to assert outcomes.
 - To drive the target's own popup/SW internals, prefer Playwright's
-  `serviceWorker.evaluate()` path (see the extension-e2e-test skill) — that is the right
+  `serviceWorker.evaluate()` path (see the browser-extension skill) — that is the right
   tool for in-extension internals; this bridge is for real-browser, real-login flows.
 
 ## Ports & env

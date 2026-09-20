@@ -18,8 +18,20 @@ Use this checklist when improving a Skill after a real execution. The focus is e
 - Each issue has an observed symptom.
 - Each issue has a likely cause in the current Skill instructions or resources.
 - Each issue has a desired next-run behavior.
-- Issues are grouped by failure mode: trigger/discovery, scope inference, missing context, wrong tool choice, unsafe step, unclear output, validation gap, or resource/reference issue.
+- Issues are grouped by failure mode: trigger/discovery, scope inference, missing context, wrong tool choice, unsafe step, unclear output, validation gap, constraint non-compliance, or resource/reference issue.
+- Before any observation is labeled a pitfall or recorded into memory / agent guides / references, it passes the misuse-vs-pitfall reflection gate (expected behavior under a wrong method is not a pitfall; see loop-playbook `### Misuse-vs-pitfall reflection gate`).
+- Wrong-method observations are fixed as explicit method-selection decision branches (intent → correct tool/flag/entry point), optionally with a one-line misuse guard — never as pitfall entries blaming the tool for its designed behavior.
 - One-off environment noise is excluded unless the Skill should handle it in future runs; successful fallback warnings are tracked as validation notes, not root causes.
+
+## Constraint Placement and Compliance
+
+- Runs where the workflow was followed but a hard rule was violated are classified as constraint non-compliance, and diagnosed as a placement problem first (see [constraint-placement.md](./constraint-placement.md)).
+- Hard constraints in the target Skill live in one compact, clearly delimited block, not scattered across step prose.
+- Steps that repeatedly violate one rule carry that rule's concrete text inline at the decision point — not a pointer such as "see Constraints" (a measured no-op).
+- No constraint block is duplicated across sections; one source of truth only (duplication measurably reduces compliance).
+- Prohibitions are paired with the required alternative to avoid negation-priming toward the banned behavior.
+- Completion conditions are objective and checkable (named sections, tables, counts, exit codes), not subjective adverbs.
+- A placement fix is verified against the previously failing high-difficulty constraints, not against position-immune easy rules.
 
 ## Root-Cause-Driven Improvement
 
@@ -74,14 +86,17 @@ Use this checklist when improving a Skill after a real execution. The focus is e
 - `./assets/` contains static templates or reusable output files only.
 - Resource references are relative to the Skill root and do not form deep reference chains.
 
-## Compatibility and Registry
+## Compatibility and Discoverability
 
 - `.specify/skills/<name>/` is the primary copy.
 - `.github/skills/<name>` is a compatibility entrypoint, preferably a symlink or placeholder, not an independent divergent copy; a directory-level `.github/skills -> ../.specify/skills` symlink is also valid.
-- `.specify/instructions.md` has one deduplicated Skills registry row per canonical `skill_id`.
-- If `skill_id` metadata is added or corrected, the Skills registry row is checked and updated in the same improvement loop.
-- Registry rows are sorted and no `None yet.` placeholder remains once real entries exist.
-- `/speckit.skills` prompt sources use `./scripts/` for Skill-owned scripts and call `refresh-tools.sh` with explicit source flags before `--json`.
+- No registration table exists (see `.specify/skills.md`): discoverability means `.specify/skills/<name>/SKILL.md` exists, its frontmatter `name` matches the directory, and no other skill directory carries the same `name` value.
+- If `skill_id` metadata is added or corrected, re-verify that discoverability in the same improvement loop.
+
+## Token Efficiency (纪律引用: `.specify/shared/guidelines/token-efficiency.md`)
+
+- Improvements preserve or restore token-efficiency program-first: fixed-rule judgments stay delegated to scripts/engines; no change moves deterministic work back into LLM context.
+- Improvements preserve or restore token-efficiency summary-first: no change introduces whole-file injection of machine-managed data; summary/projection access modes are preferred.
 
 ## Validation Summary Template
 

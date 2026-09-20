@@ -139,6 +139,7 @@ get_feature_paths() {
   cat <<EOF
 REPO_ROOT='$repo_root'
 CURRENT_BRANCH='$current_branch'
+BRANCH_RESOLVED_FROM_SPEC_DIR=true
 REQUIREMENT_ID='$requirement_id'
 HAS_GIT='$has_git_repo'
 REQUIREMENTS_DIR='$feature_dir'

@@ -393,6 +393,71 @@ title 2026 产品路线规划
 - **防裁剪/防顶边框的自检**：渲染后检查四条边——标题与图例是否贴顶/贴边、最外层叶子文字是否被画布裁掉、深色根节点白字是否离框足够远。若出现顶字，优先加大对应节点的 `Padding`；若某个节点特别宽把整图撑变形，用 `\n` 换行或 `MaximumWidth` 折行收窄它。
 - **方向的选择**：内容偏"两三个大类各自很深"时用默认左右放射；内容偏"一个主题下并列很多同级项"时可试 `top to bottom direction` 做成自上而下的树。**长宽比目标约 1.6:1（16:10）到 2:1**：若默认左右放射后长宽比过于扁平（超过 2.2:1），优先按上一条"每侧加一个分支"把高度撑起来；仍过扁再考虑把部分分支移到另一侧或改用 `top to bottom direction`，让长宽比回到舒展区间。
 
+### 分组节点不得使用状态色（实测）
+
+一张脑图里常同时存在两类节点：**分组节点**（只做归类，如"交易域/用户域"）与**业务叶子**（承载真实条目与状态）。若给分组节点也套上三态状态色，读者会把"分组"读成"状态"——看到一个灰色的"交易域"就以为该域未开始。规则：
+
+- **分组节点用中性色，且必须在图例里显式标注「分组节点（非状态）」**，让它在语义上退出状态编码。
+- **根节点不打任何状态类**：根是题眼，不参与状态。
+- **中性色必须与"未开始"灰明显拉开**（实测踩坑）：先用 `#CFD8DC`（描边 `#78909C`）做分组色、`#D6DBDF` 做"未开始"色，成图里两者**几乎无法区分**，图例上的两个色块看起来是同一个颜色，等于规则白写。把分组色加深到 `#B0BEC5`（描边 `#546E7A`）并加粗后，分组节点与"未开始"叶子一眼可分。经验档位：分组色取 **200~300 级中性灰蓝**（比所有状态色都更"深而不彩"），状态色留在 **100~200 级的彩色档**。
+
+```plantuml
+@startmindmap
+<style>
+mindmapDiagram {
+  node {
+    FontSize 17
+    RoundCorner 12
+    Padding 12
+    Margin 14
+  }
+  rootNode {
+    BackgroundColor #2C3E50
+    FontColor white
+    FontStyle bold
+    FontSize 22
+  }
+  arrow {
+    LineColor #99A3A4
+    LineThickness 2
+  }
+  legend {
+    FontSize 18
+    BackgroundColor #FBFCFC
+    LineColor #99A3A4
+    Padding 12
+  }
+  ' 分组节点：更深的中性灰蓝，明确不参与状态编码
+  .group { BackgroundColor #B0BEC5; LineColor #546E7A; FontStyle bold }
+  .done  { BackgroundColor #C6E9CB; LineColor #3E9256 }
+  .doing { BackgroundColor #BBD8EE; LineColor #2E6E9E }
+  .todo  { BackgroundColor #D6DBDF; LineColor #7A8A95 }
+}
+</style>
+title 能力域分解
+legend top
+  <size:18><back:#B0BEC5>      </back> 分组节点（非状态）   <back:#C6E9CB>      </back> 已完成 ✓   <back:#BBD8EE>      </back> 进行中   <back:#D6DBDF>      </back> 未开始</size>
+endlegend
+
+* 平台能力
+** 交易域 <<group>>
+*** 下单 <<done>>
+*** 支付 <<doing>>
+** 用户域 <<group>>
+*** 注册登录 <<done>>
+*** 权限模型 <<todo>>
+left side
+** 数据域 <<group>>
+*** 埋点采集 <<doing>>
+*** 指标计算 <<todo>>
+** 运维域 <<group>>
+*** 发布流水线 <<done>>
+*** 告警值守 <<todo>>
+@endmindmap
+```
+
+图例四行覆盖了图内出现的全部四种编码、且没有一行是零实例——这正是 [guide/style.md](../guide/style.md) §十 的图例契约（可用那一节的自检脚本核对，本例两个方向均为空列表）；状态同时用符号 `✓` 冗余编码，符号字形白名单见同文 §九。
+
 ## 推荐测试图
 
 下面是一张综合了**左右均衡分置（每侧 3 个一级分支、每侧 16 个叶子）、根节点强对比 + 大 Margin 呼吸圈拉开中心、按深度递减的字号层次、一级分支同色系配色（浅底/中线/深字）、加深连线强化主干、无框灰字叶子（18 号保清晰）、多叶子分支短词化缓解拥挤、顶部色块图例强化可读性、收敛到 ~1.5:1 的均衡长宽比**的思维导图，适合作为渲染测试与效果基准（已用本地 jar 验证可正常渲染，成图约 4091×2754px、长宽比约 1.49:1、两侧对称、四象限填满、中心开阔、密集叶子行距舒展、无裁剪重叠、文字不顶边框）。

@@ -3,7 +3,7 @@
 
 Single-source fan-out: ``templates/commands/<stem>.md`` is the source of truth.
 This script regenerates every per-tool runtime copy (.claude/commands/,
-.github/prompts/, .qoder/commands/, .qwen/commands/, .opencode/command/, ...)
+.github/prompts/, .qoder/commands/, .opencode/command/, ...)
 using the canonical generator in ``src/specify_cli`` — the same code path as
 ``specify init`` — so hand-syncing copies is never required. Only tools whose
 command directory already exists in the repo are regenerated.
@@ -45,8 +45,6 @@ from specify_cli import (  # noqa: E402
 # the repo root so templates/commands/ resolves to the working tree.
 specify_cli.get_resource_path = lambda: REPO_ROOT
 
-MIRROR_DIR = ".specify/templates/commands"
-
 
 def _tool_dirs() -> dict[str, Path]:
     """Existing per-tool command directories in this repo."""
@@ -74,17 +72,6 @@ def _generate_all(base: Path) -> list[Path]:
     return written
 
 
-def _mirror_drift() -> list[str]:
-    src = REPO_ROOT / "templates" / "commands"
-    dst = REPO_ROOT / MIRROR_DIR
-    drift = []
-    for f in sorted(src.glob("*.md")):
-        target = dst / f.name
-        if not target.exists() or not filecmp.cmp(f, target, shallow=False):
-            drift.append(f"{MIRROR_DIR}/{f.name}")
-    return drift
-
-
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--check", action="store_true", help="report drift without writing")
@@ -109,15 +96,13 @@ def main() -> int:
                 if (agent, f.name) not in expected:
                     drift.append(f"{f.relative_to(REPO_ROOT)} (stale, no source template)")
 
-    drift.extend(_mirror_drift())
-
     if args.check:
         if drift:
             print("DRIFT detected:")
             for d in drift:
                 print(f"  {d}")
             return 1
-        print("OK: all per-tool command copies and the .specify mirror match the source templates.")
+        print("OK: all per-tool command copies match the source templates.")
         return 0
 
     # write mode
@@ -125,9 +110,8 @@ def main() -> int:
     # directories are user-writable, so remove-then-regenerate succeeds where
     # an in-place open() would fail.
     import os
-    import shutil
 
-    for live_dir in list(_tool_dirs().values()) + [REPO_ROOT / MIRROR_DIR]:
+    for live_dir in list(_tool_dirs().values()):
         for f in live_dir.glob("*"):
             if f.is_file() and not os.access(f, os.W_OK):
                 os.remove(f)
@@ -142,10 +126,7 @@ def main() -> int:
             "sh",
         )
 
-    src = REPO_ROOT / "templates" / "commands"
-    for f in sorted(src.glob("*.md")):
-        shutil.copyfile(f, REPO_ROOT / MIRROR_DIR / f.name)
-    print(f"Regenerated command copies for {len(_tool_dirs())} tools + synced {MIRROR_DIR}/.")
+    print(f"Regenerated command copies for {len(_tool_dirs())} tools.")
     if drift:
         print("Fixed drift:")
         for d in drift:

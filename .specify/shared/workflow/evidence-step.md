@@ -1,6 +1,6 @@
 # Canonical `## Evidence` Step (evidence-step)
 
-所有"证据驱动优化"类消费单元(improve-skills / improve-agent / improve-team 及未来消费者)的标准证据步骤**单一事实源**。各消费单元只引用本文件,不复制定义;修订本文件即修订全部消费者。与 `feedback-step.md`(自省记录)对偶:feedback-step 写反馈,evidence-step 读证据。证据层与其全部消费单元共同服务于宪法原则 XIII 声明的 **Better Harness 目标**——目标模型(五维 Agent Work Loop、前馈/反馈回路、改进轨道)单一事实源见 `.specify/shared/guidelines/better-harness.md`;本文件的红线即该目标模型的证据纪律载体。
+所有"证据驱动优化"类消费单元(improve-skills / improve-agent / improve-team / improve-tools、Self-Improvement workflow 及未来消费者)的标准证据步骤**单一事实源**。各消费单元只引用本文件,不复制定义;修订本文件即修订全部消费者。与 `feedback-step.md`(自省记录)对偶:feedback-step 写反馈,evidence-step 读证据。证据层与其全部消费单元共同服务于宪法原则 XIII 声明的 **Better Harness 目标**——目标模型(五维 Agent Work Loop、前馈/反馈回路、改进轨道)单一事实源见 `.specify/shared/guidelines/better-harness.md`;本文件的红线即该目标模型的证据纪律载体。Self-Improvement 只消费本步骤的判定与台账,不得重定义 evidenceState 或另建证据库(见 `.specify/shared/workflow/self-improvement-workflow.md`)。
 
 ## Positioning & Red Lines
 

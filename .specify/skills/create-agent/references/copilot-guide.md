@@ -4,10 +4,10 @@
 
 | Operation | Copilot Tool/Method |
 |-----------|---------------------|
-| Create new .agent.md file | Workspace edit to `.specify/agents/<name>.agent.md` |
+| Create new .agent.md file | Workspace edit to `.specify/agents/templates/<name>.agent.md` (template layer) or `.specify/agents/instances/<name>.agent.md` (instance layer) |
 | Update existing .agent.md | Workspace edit with targeted replacement |
 | Validate YAML frontmatter | `@terminal`: `python -c "import yaml; ..."` |
-| Check for existing agents | `@terminal`: `ls .specify/agents/*.agent.md` |
+| Check for existing agents | `@terminal`: `ls .specify/agents/{templates,instances}/*.agent.md` |
 | Test agent invocation | Use VS Code agent picker to find and invoke the new agent |
 | Verify symlinks | `@terminal`: `ls -la .github/agents/` |
 | Update instructions registry | Workspace edit on `.specify/instructions.md` |

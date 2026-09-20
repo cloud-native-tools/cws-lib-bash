@@ -1,0 +1,14 @@
+# docker compose for the excalidraw render service.
+#   docker compose up -d --build
+# Then point the draw-excalidraw skill at it:
+#   export EXCALIDRAW_SERVER=http://<host>:8383
+services:
+  excalidraw-render:
+    build: .
+    image: excalidraw-render:latest
+    ports:
+      - "8383:8383"
+    restart: unless-stopped
+    environment:
+      EXCALIDRAW_HOST: 0.0.0.0
+      EXCALIDRAW_PORT: "8383"

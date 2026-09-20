@@ -19,7 +19,11 @@
   - One key=value per line. Values are free text unless schema below says otherwise.
   - Lines starting with `#` are comments.
   - SC rows MUST follow `SC-NNN_<field>=<value>` with fields {status, value, note}.
-  - `status` is one of: pass | fail | partial | deferred | unknown.
+  - `status` is one of: pass | fail | partial | deferred | unknown. THIS FILE OWNS THAT VOCABULARY: a DoD row or gate
+    that constrains SC statuses MUST draw from this set, not from a narrower subset of it. A DoD row reading
+    "record `pass` or `deferred`" silently forbids `partial`, so an honest `partial` (mechanical half measured, stated
+    measurement condition not met) then fails the DoD and forces a reclassification judgement call. When `deferred` is
+    used, ALSO write `SC-NNN_deferred_reason=`.
   - When a metric is numeric, also record the raw measurement via `SC-NNN_value=`.
   - When status=deferred, ALSO include SC-NNN_deferred_reason= explaining what would unblock.
 -->

@@ -440,6 +440,21 @@ create_tool_record() {
         report_error "Template not found for tool type '$tool_type'" "$JSON_MODE"
         exit 1
     fi
+
+    local self_improvement_template=""
+    local candidate
+    for candidate in \
+        "$ROOT_DIR/.specify/skills/create-tools/templates/tool-self-improvement.md" \
+        "$ROOT_DIR/skills/create-tools/templates/tool-self-improvement.md"; do
+        if [ -f "$candidate" ]; then
+            self_improvement_template="$candidate"
+            break
+        fi
+    done
+    if [ -z "$self_improvement_template" ]; then
+        report_error "Self-Improvement contract template not found" "$JSON_MODE"
+        exit 1
+    fi
     
     local record_file="$TOOLS_MEMORY_DIR/${tool_name}.md"
     local canonical_path
@@ -476,6 +491,8 @@ create_tool_record() {
         -e $'s\x01^\\*\\*Status\\*\\*:.*\x01**Status**: Draft  \x01' \
         -e $'s\x01^\\*\\*Discovery Origin\\*\\*:.*\x01**Discovery Origin**: discovery-assisted  \x01' \
         "$template_file" > "$record_file"
+    printf '\n' >> "$record_file"
+    cat "$self_improvement_template" >> "$record_file"
     
     echo "$record_file|$canonical_path|$tool_id"
 }

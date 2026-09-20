@@ -24,6 +24,7 @@ fi
 
 JSON_MODE=false
 SHORT_NAME=""
+FORCE=false
 ARGS=()
 i=1
 while [ $i -le $# ]; do
@@ -31,6 +32,9 @@ while [ $i -le $# ]; do
     case "$arg" in
         --json) 
             JSON_MODE=true 
+            ;;
+        --force)
+            FORCE=true
             ;;
         --short-name)
             if [ $((i + 1)) -gt $# ]; then
@@ -52,6 +56,8 @@ while [ $i -le $# ]; do
             echo "Options:"
             echo "  --json              Output in JSON format"
             echo "  --short-name <name> Provide a custom short name (2-4 words) for the branch"
+            echo "  --force             Overwrite an existing requirements.md with the template"
+            echo "                      (default: no-clobber — an existing spec file is kept)"
             echo "  --help, -h          Show this help message"
             echo ""
             echo "Behavior:"
@@ -128,15 +134,45 @@ cd "$REPO_ROOT"
 SPECS_DIR="$REPO_ROOT/.specify/specs"
 mkdir -p "$SPECS_DIR"
 
+# Derive the next feature number. Number sources (each keeps its number
+# reserved — missing any of them can reuse a number):
+#   1. top-level spec dirs under .specify/specs/
+#   2. archived spec dirs under .specify/specs/.archive/ (archived specs keep
+#      their numbers; a globally-max archived number would otherwise collide)
+#   3. git branch names in the exact top-level <NNN>-<slug> form. For remote
+#      branches exactly ONE remote-name segment is stripped first; slash-
+#      namespaced branches (e.g. origin/community/4059-*, origin/fix/4198-*)
+#      are NOT spec numbering — their trailing digits must be excluded, or
+#      the next number gets inflated (e.g. 200 instead of 045).
 HIGHEST=0
+consider_number_candidate() {
+    local name="$1"
+    local number
+    number=$(printf '%s' "$name" | grep -o '^[0-9]\+' || echo "0")
+    number=$((10#$number))
+    if [ "$number" -gt "$HIGHEST" ]; then HIGHEST=$number; fi
+}
 if [ -d "$SPECS_DIR" ]; then
-    for dir in "$SPECS_DIR"/*; do
+    for dir in "$SPECS_DIR"/* "$SPECS_DIR"/.archive/*; do
         [ -d "$dir" ] || continue
-        dirname=$(basename "$dir")
-        number=$(echo "$dirname" | grep -o '^[0-9]\+' || echo "0")
-        number=$((10#$number))
-        if [ "$number" -gt "$HIGHEST" ]; then HIGHEST=$number; fi
+        consider_number_candidate "$(basename "$dir")"
     done
+fi
+if [ "$HAS_GIT" = true ]; then
+    # Local branches: top-level form only (any slash → not spec numbering).
+    while IFS= read -r branch; do
+        [ -n "$branch" ] || continue
+        case "$branch" in */*) continue ;; esac
+        consider_number_candidate "$branch"
+    done < <(git branch --format='%(refname:short)' 2>/dev/null)
+    # Remote branches: strip exactly the remote-name segment, then apply the
+    # same top-level rule (a remaining slash means slash-namespaced → skip).
+    while IFS= read -r branch; do
+        [ -n "$branch" ] || continue
+        branch="${branch#*/}"
+        case "$branch" in */*) continue ;; esac
+        consider_number_candidate "$branch"
+    done < <(git branch -r --format='%(refname:short)' 2>/dev/null)
 fi
 
 NEXT=$((HIGHEST + 1))
@@ -242,7 +278,11 @@ mkdir -p "$REQUIREMENTS_DIR"
 
 TEMPLATE="$REPO_ROOT/.specify/templates/requirements-template.md"
 SPEC_FILE="$REQUIREMENTS_DIR/requirements.md"
-if [ -f "$TEMPLATE" ]; then 
+if [ -f "$SPEC_FILE" ] && [ "$FORCE" != true ]; then
+    # No-clobber guard: re-entering the flow on an existing spec dir (e.g. a
+    # manually scaffolded spec) MUST NOT destroy the existing specification.
+    >&2 echo "[specify] Warning: $SPEC_FILE already exists — kept unchanged (no-clobber). Pass --force to overwrite with the template."
+elif [ -f "$TEMPLATE" ]; then 
     cp "$TEMPLATE" "$SPEC_FILE"
     
     # Replace placeholder with actual description

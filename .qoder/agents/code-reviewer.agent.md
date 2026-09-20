@@ -1,1 +1,0 @@
-../../.specify/agents/code-reviewer.agent.md

@@ -68,7 +68,6 @@ add_doc_path() {
     local path="$1"
     # Exclusion list
     if [[ "$path" == "CLAUDE.md" ]] || \
-       [[ "$path" == "QWEN.md" ]] || \
        [[ "$path" == "QODER.md" ]] || \
        [[ "$path" == "AGENTS.md" ]] || \
        [[ "$path" == ".github/copilot-instructions.md" ]] || \
@@ -160,6 +159,9 @@ data = {
     'IMPL_PLAN': os.environ.get('IMPL_PLAN'),
     'SPECS_DIR': os.environ.get('REQUIREMENTS_DIR'),
     'BRANCH': os.environ.get('CURRENT_BRANCH'),
+    'BRANCH_NOTE': ('resolved from latest spec dir (branch prefix mismatch / non-feature branch)'
+                     if os.environ.get('BRANCH_RESOLVED_FROM_SPEC_DIR') == 'true'
+                     else 'git branch'),
     'HAS_GIT': os.environ.get('HAS_GIT'),
     'AVAILABLE_DOCS': available_docs
 }

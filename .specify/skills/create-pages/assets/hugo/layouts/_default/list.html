@@ -1,0 +1,21 @@
+{{ define "main" }}
+<article class="page">
+  {{- with .Content }}{{ . }}{{ else }}<h1>{{ partial "title.html" $ }}</h1>{{ end }}
+  {{- with .Sections.ByTitle }}
+  <h2>Sections</h2>
+  <ul class="doc-list">
+    {{- range . }}
+    <li><a href="{{ .RelPermalink }}">{{ partial "title.html" . }}</a> <span class="count">{{ len .RegularPagesRecursive }}</span></li>
+    {{- end }}
+  </ul>
+  {{- end }}
+  {{- with .RegularPages.ByTitle }}
+  <h2>Pages</h2>
+  <ul class="doc-list">
+    {{- range . }}
+    <li><a href="{{ .RelPermalink }}">{{ partial "title.html" . }}</a></li>
+    {{- end }}
+  </ul>
+  {{- end }}
+</article>
+{{ end }}

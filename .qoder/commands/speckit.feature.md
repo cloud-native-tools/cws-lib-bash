@@ -1,3 +1,7 @@
+---
+description: 维护项目特性注册表（索引与特性详情文件）
+---
+<!-- AUTO-GENERATED from templates/commands/feature.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
 ## User Input
 
 ```text
@@ -25,6 +29,7 @@ Features are classified: **functional** (user-facing) vs **non-functional** (qua
 - **Tolerance band**: rows whose Name/Description/Status still match repo reality are left untouched — do not rewrite descriptions for cosmetic wording, do not touch `Last Updated` on unchanged rows.
 - **Archive-not-delete**: never remove a feature row or detail file because the capability disappeared from the code — keep the row and mark its status/description accordingly (history is part of the registry's value).
 - **Never regress status**: registry convergence must not move a feature's status backward (e.g. Implemented → Draft) without explicit user confirmation.
+  > Gate probe: gate-feature-status-regression — after the user decision, record firing evidence per confirmation-gates.md §门控观察协议 (non-blocking).
 
 ## Actions
 

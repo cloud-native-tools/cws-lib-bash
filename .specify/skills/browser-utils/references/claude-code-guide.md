@@ -1,6 +1,6 @@
 # Browser Utils — Claude Code Guide
 
-**Tier**: 3 (Playwright headless automation)
+**Tier**: 2 (Playwright headless automation)
 
 Claude Code does not have a built-in browser or `browser-use` MCP access by default.
 Use the Playwright script execution path for all browser automation tasks.
@@ -17,7 +17,7 @@ Use the Playwright script execution path for all browser automation tasks.
 
 ## Best Practices
 
-- Always use `headless: false` by default — Claude Code can render visible browser windows
+- **Focus-safe launch — never hard-code the headless flag**: resolve the rung with `${SKILL_HOME}/scripts/focus-safe-launch.py` before writing launch code. Claude Code runs inside the user's own terminal session on their desktop, so a headed window steals focus from the work they are doing — F0 (headless) is the default, F1 (`xvfb-run -a`) covers headed-only defects with zero desktop presence, and an announced F2 is for the user explicitly asking to watch. Ladder owner: [focus-safe-launch.md](./focus-safe-launch.md)
 - Write scripts to `/tmp/` exclusively; never write test files to the skill directory
 - Use `Bash` tool with `timeout: 30000` for Playwright operations that may hang
 - Use `run_in_background: true` for long-running server processes
@@ -25,7 +25,7 @@ Use the Playwright script execution path for all browser automation tasks.
 
 ## Known Pitfalls
 
-- **Strategy selection**: Claude Code always falls to Tier 3. Do not attempt to use `browser-use` MCP tools unless the MCP server is explicitly configured
+- **Strategy selection**: Claude Code always falls to Tier 2. Do not attempt to use `browser-use` MCP tools unless the MCP server is explicitly configured
 - **Run mode first**: Decide Mode 1 (clean test browser) vs Mode 2 (real Chrome profile) before writing a script (SKILL.md § Run Mode Selection). For Mode 2, use `AskUserQuestion` to confirm the profile when login state is ambiguous, and preflight the profile with `Bash` (`ps aux | grep user-data-dir=...`) — a running Chrome on the profile makes the launch hand off and exit
 - **WebFetch vs Playwright**: `WebFetch` tool does NOT support `file://` URLs or JavaScript-rendered pages. Always use Playwright via `Bash` for local file testing
 - **Timeout on slow renders**: Playwright `waitForSelector` may exceed the default Bash 2-minute timeout. Set explicit `timeout` parameter on the Bash call
@@ -34,6 +34,6 @@ Use the Playwright script execution path for all browser automation tasks.
 
 ## Capability Notes
 
-- **Supported**: Full Playwright automation (Tier 3), visible browser mode, screenshot capture and visual inspection, background task management, parallel test execution via Agent tool
+- **Supported**: Full Playwright automation (Tier 2), visible browser mode, screenshot capture and visual inspection, background task management, parallel test execution via Agent tool
 - **Limited**: Cannot interact with browser UI directly (no mouse/keyboard outside of Playwright scripts); large screenshot files may be slow to read; no `browser-use` MCP access
-- **Unsupported**: Tier 1 (built-in browser); Tier 2 (MCP connector) unless explicitly configured; real-time browser streaming; clipboard access from within Playwright
+- **Unsupported**: Tier 1 (built-in browser); Tier 3 (MCP connector) unless explicitly configured; real-time browser streaming; clipboard access from within Playwright

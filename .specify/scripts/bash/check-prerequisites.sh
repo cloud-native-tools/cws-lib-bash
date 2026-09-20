@@ -15,7 +15,12 @@
 #   --help, -h          Show help message
 #
 # OUTPUTS:
-#   JSON mode: {"REQUIREMENTS_DIR":"...", "FEATURE_ID":"...", "FEATURE_NAME":"...", "AVAILABLE_DOCS":["..."]}
+#   JSON mode: {"REQUIREMENTS_DIR":"...", "FEATURE_ID":"...", "FEATURE_NAME":"...", "AVAILABLE_DOCS":["..."], "MODE":"A|B|C|NONE", "WRITABLE":true|false}
+#     MODE     — phase detected from file existence: A = requirements only
+#                (plan.md missing), B = plan.md exists (tasks.md missing),
+#                C = tasks.md exists, NONE = requirements.md missing.
+#     WRITABLE — write-bit probe: feature dir AND the mode's target artifact
+#                accept writes (false e.g. on root-owned spec dirs).
 #   Text mode: REQUIREMENTS_DIR:... \n AVAILABLE_DOCS: \n ✓/✗ file.md
 #   Paths only: REPO_ROOT: ... \n BRANCH: ... \n REQUIREMENTS_DIR: ... etc.
 
@@ -125,14 +130,47 @@ if [[ -f "$FEATURE_SPEC" ]]; then
     FEATURE_NAME=$(sed -n 's/^\*\*Feature Name\*\*:[[:space:]]*//p' "$FEATURE_SPEC" | head -n 1)
 fi
 
+# Phase detection (MODE) — same rule as /speckit.clarify Phase 0, computed
+# from file existence in REQUIREMENTS_DIR so callers do not redo it agent-side:
+#   A = post-requirements (plan.md missing), B = post-plan (tasks.md missing),
+#   C = post-tasks. NONE = requirements.md missing → callers must route to
+#   /speckit.requirements first (clarify's abort rule).
+MODE="NONE"
+if [[ -f "$FEATURE_SPEC" ]]; then
+    if [[ -f "$TASKS" ]]; then
+        MODE="C"
+    elif [[ -f "$IMPL_PLAN" ]]; then
+        MODE="B"
+    else
+        MODE="A"
+    fi
+fi
+
+# Writability probe (WRITABLE) — write-bit stat on the feature dir and the
+# mode's target artifact (the fail-fast probe the commands otherwise perform
+# as a separate agent-side step; root-owned dirs are the known failure class).
+# Reported as a JSON boolean; the caller still decides whether to stop.
+MODE_TARGET=""
+case "$MODE" in
+    A) MODE_TARGET="$FEATURE_SPEC" ;;
+    B) MODE_TARGET="$IMPL_PLAN" ;;
+    C) MODE_TARGET="$TASKS" ;;
+esac
+WRITABLE=false
+if [[ -d "$REQUIREMENTS_DIR" && -w "$REQUIREMENTS_DIR" ]]; then
+    if [[ -z "$MODE_TARGET" || ! -e "$MODE_TARGET" || -w "$MODE_TARGET" ]]; then
+        WRITABLE=true
+    fi
+fi
+
 # If paths-only mode, output paths and exit (support JSON + paths-only combined)
 if $PATHS_ONLY; then
     if $JSON_MODE; then
         # Minimal JSON paths payload (no validation performed)
         # Note: REQUIREMENT_ID is extracted from branch name, not FEATURE_ID
         # Feature metadata must be retrieved from .specify/memory/features.md
-        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENT_ID":"%s","REQUIREMENTS_DIR":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s"}\n' \
-            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENT_ID" "$REQUIREMENTS_DIR" "$FEATURE_ID" "$FEATURE_NAME" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS"
+        printf '{"REPO_ROOT":"%s","BRANCH":"%s","REQUIREMENT_ID":"%s","REQUIREMENTS_DIR":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","FEATURE_SPEC":"%s","IMPL_PLAN":"%s","TASKS":"%s","MODE":"%s","WRITABLE":%s}\n' \
+            "$REPO_ROOT" "$CURRENT_BRANCH" "$REQUIREMENT_ID" "$REQUIREMENTS_DIR" "$FEATURE_ID" "$FEATURE_NAME" "$FEATURE_SPEC" "$IMPL_PLAN" "$TASKS" "$MODE" "$WRITABLE"
     else
         echo "REPO_ROOT: $REPO_ROOT"
         echo "BRANCH: $CURRENT_BRANCH"
@@ -222,8 +260,8 @@ if $JSON_MODE; then
         json_docs="[${json_docs%,}]"
     fi
     
-    printf '{"REQUIREMENTS_DIR":"%s","REQUIREMENT_ID":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","AVAILABLE_DOCS":%s}\n' \
-        "$REQUIREMENTS_DIR" "$REQUIREMENT_ID" "$FEATURE_ID" "$FEATURE_NAME" "$json_docs"
+    printf '{"REQUIREMENTS_DIR":"%s","REQUIREMENT_ID":"%s","FEATURE_ID":"%s","FEATURE_NAME":"%s","AVAILABLE_DOCS":%s,"MODE":"%s","WRITABLE":%s}\n' \
+        "$REQUIREMENTS_DIR" "$REQUIREMENT_ID" "$FEATURE_ID" "$FEATURE_NAME" "$json_docs" "$MODE" "$WRITABLE"
 else
     # Text output
     echo "REQUIREMENTS_DIR:$REQUIREMENTS_DIR"

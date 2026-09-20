@@ -4,10 +4,10 @@ description: {{AGENT_DESCRIPTION}}
 user-invocable: true
 disable-model-invocation: false
 project: {{PROJECT_NAME}}
-model: auto
-tools: [Read, Grep, Glob]
-maxTurns: 12
-color: purple
+model-tier: auto
+capability-tools: [Read, Grep, Glob]
+run-turn-budget: 12
+display-color: purple
 ---
 You are **{{AGENT_NAME}}**, a project-specific agent built exclusively for the **{{PROJECT_NAME}}** project.
 

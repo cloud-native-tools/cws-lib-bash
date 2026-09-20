@@ -73,6 +73,8 @@ This is the authoritative transition table cited by `/speckit.feature`, `/specki
 
 **Critical contract**: `/speckit.plan` MUST land status `Planned` (not `Implemented`). `/speckit.implement` MUST advance `Planned → Implemented` only when the DoD above is satisfied; if any task is `[~]` deferred, append a ` (deferred: T<comma-list>)` suffix to the `Last Updated` cell in `features.md` so the deferral is visible at the index level.
 
+**Extension slice rule**: when a later requirement plans an extension of a Feature whose status is already `Implemented`, the status is NOT regressed (`Implemented → Planned` is not a legal transition). Instead: keep the status, record the extension's planning in the Feature detail (Latest Review / Key Changes) and in the `features.md` Last Updated cell, and let the extension's own `/speckit.implement` run re-assert `Implemented` with updated evidence when it closes.
+
 ## Placeholder Glossary
 
 | Token | Meaning / Source |

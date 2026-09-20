@@ -1,6 +1,6 @@
 # Browser Utils — GitHub Copilot Guide
 
-**Tier**: 3 (Playwright headless automation)
+**Tier**: 2 (Playwright headless automation)
 
 Copilot does not have a built-in browser or `browser-use` MCP access.
 Use the Playwright script execution path for all browser automation tasks.
@@ -17,7 +17,7 @@ Use the Playwright script execution path for all browser automation tasks.
 
 ## Best Practices
 
-- Prefer `headless: true` mode — Copilot runs in IDE context where visible browsers may not display properly
+- **Focus-safe launch — resolve the rung, do not hard-code the flag**: Copilot's IDE context cannot display a headed window at all, so F0 (headless) is the only practical rung here; the ladder and its platform limits are owned by [focus-safe-launch.md](./focus-safe-launch.md)
 - Use `@terminal` for all shell commands; Copilot Chat cannot execute commands directly
 - Keep Playwright scripts simple — Copilot has limited ability to debug complex async flows
 - Save screenshots to a known location and tell the user to open them manually in VS Code
@@ -31,6 +31,6 @@ Use the Playwright script execution path for all browser automation tasks.
 
 ## Capability Notes
 
-- **Supported**: Script generation via workspace edit, terminal command execution, file creation (Tier 3 Playwright)
+- **Supported**: Script generation via workspace edit, terminal command execution, file creation (Tier 2 Playwright)
 - **Limited**: No background task management; no direct image viewing in chat; terminal output may be truncated; no `browser-use` MCP access
-- **Unsupported**: Tier 1 (built-in browser); Tier 2 (MCP connector); visible browser mode in IDE context; real-time script debugging; parallel test execution
+- **Unsupported**: Tier 1 (built-in browser); Tier 3 (MCP connector); visible browser mode in IDE context; real-time script debugging; parallel test execution

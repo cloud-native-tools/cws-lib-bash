@@ -1,0 +1,11 @@
+{{- /* Keep repo-native relative image paths working under pretty URLs: resolve the
+       destination against the content file's own directory, then emit it relative to the
+       current page. Media beside Markdown and media in dedicated asset directories are
+       both published at their repo-relative path by the scaffold's static mounts. */ -}}
+{{- $dest := .Destination -}}
+{{- if and (not (strings.Contains $dest "://")) (not (hasPrefix $dest "/")) -}}
+  {{- with .Page.File -}}
+    {{- $dest = path.Join .Dir $dest | relURL -}}
+  {{- end -}}
+{{- end -}}
+<img src="{{ $dest }}" alt="{{ .Text }}"{{ with .Title }} title="{{ . }}"{{ end }} loading="lazy">

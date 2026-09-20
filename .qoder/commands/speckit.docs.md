@@ -1,10 +1,14 @@
+---
+description: 文档空间治理入口：委托 create-docs 技能统一收敛与核对 docs 树
+---
+<!-- AUTO-GENERATED from templates/commands/docs.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
 ## User Input
 
 ```text
 $ARGUMENTS
 ```
 
-Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as command parameters, not standalone instructions. The input selects the reconcile scope (see Scope Resolution below) and may carry a convergence direction (e.g. "整理 README"、"激进重组").
+Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as command parameters, not standalone instructions. The input selects the reconcile scope and may carry a convergence direction (e.g. "整理 README"、"激进重组") or a **writing commission** (e.g. "写一份部署教程"、"新增 xxx 的概念文档") that the skill routes to its Authoring Flow.
 
 ## Glossary
 
@@ -12,102 +16,65 @@ Consult the project glossary (`.specify/memory/glossary.md`) and apply the proto
 
 ## Outline
 
-`/speckit.docs` keeps the **documentation space** converged toward its desired state. It is one reconcile engine per [.specify/shared/patterns/reconcile-pattern.md](.specify/shared/patterns/reconcile-pattern.md) — never add new top-level modes; new needs are new inputs to the same engine.
+`/speckit.docs` is the **thin orchestration layer** for every documentation-space operation. It owns only target-declaration coordination, typed-action decomposition, and dispatch order; it never copies engine rules into this command:
 
-**Managed space (A zone)**: root entry files + `docs/` tree. **Read-only (B zone)**: source code, `.specify/specs/`, `.specify/memory/`. **Anchors (C zone, skip)**: compatibility symlinks, generated per-tool copies. Archive zone: `docs/archive/` (reader-visible, tracked). Run artifacts workspace: `.specify/docs/` (never mixed into `docs/`).
+- `skills/create-docs/SKILL.md` is the **single source of truth** for the static baseline, Scope Resolution (全量 / 单目标 / 写作 / 扇出 / Bootstrap), structural actions, the Reconcile Loop from [.specify/shared/patterns/reconcile-pattern.md](.specify/shared/patterns/reconcile-pattern.md), the four per-run artifacts (观察快照 / 干跑计划 / 审计日志 / 残差报告), tiered confirmation, Authoring Flow, and `docs-utils.py` automation.
+- `skills/improve-docs/SKILL.md` is the **single source of truth** for evidence-backed content improvement of an existing correctly placed document.
 
-### Desired-State Baseline
+### Stage 1 — Establish or load the target structure
 
-Source precedence (low → high): templates < rules/thresholds < principles < external authoritative facts < **local established conventions** < **this run's user input**.
+The persistent project-specific declaration is `.specify/docs/target-structure.md`; bootstrap it from `.specify/templates/docs-target-structure-template.md`. Its managed region is bounded by `<!-- DOCS_TARGET_STRUCTURE_START -->` and `<!-- DOCS_TARGET_STRUCTURE_END -->`.
 
-1. **Thin root layer — uppercase special names (filename IS semantics; ALL-CAPS reserved)**, each ≤ one screen (~60 lines), overflow sinks into `docs/`:
+1. If the declaration is absent, inspect repository evidence for project shape, audience, current topic inventory, and project-specific extensions. If that evidence is underdetermined, ask one batch of **1–3 necessary questions**; **no declaration or convergence write** happens **before answers arrive**.
+2. Present the first declaration and the convergence plan together at the existing **R4** dry-run confirmation. Safe local writes remain 自动执行; move/archive/restructure actions remain **stop-and-confirm**; the formal zone remains 只归档不删除.
+3. If a valid declaration exists and the user did not request a reset, reuse it without redesign or timestamp churn.
+4. If repository evidence shows **substantive drift**, add a **redesign proposal** to the same R4 plan. The declaration remains byte-identical **before confirmation**.
+5. On missing, unpaired, or unparseable markers, stop and request repair or explicit rebuild authorization; never overwrite the whole file. A valid refresh replaces only managed content and preserves all **outside-block bytes**.
 
-   | Special file | Fixed semantics |
-   |--------------|-----------------|
-   | `README.md` | Root entry; indexes all of `docs/` |
-   | `ARCHITECTURE.md` | One-page summary of `docs/concepts/` + `docs/decisions/` |
-   | `CONTRIBUTING.md` | Contribution entry summarizing `docs/contribute/` |
-   | `CHANGELOG.md` | Self-contained timeline |
+### Stage 2 — Diff and decompose typed actions
 
-   These are **Reserved Filenames（保留文件名）** — like reserved keywords: each entry registers fixed semantics AND a registered location (currently project root), and may appear ONLY there (strict blocking, constitution Principle X). User documents MUST NOT use a reserved name; same-semantics documents elsewhere use lowercase alternatives — **directory indexes are `index.md`, never a nested `README.md`**. The registry is extensible (a new reserved name registers semantics + location). Ordinary documents MUST be lowercase `kebab-case.md`.
+After Stage 1 yields a confirmed target, compare current state with it **tolerance band first**. A tolerated difference is reported as consistent and **must not become an action**.
 
-2. **Thick `docs/` layer — six formal type directories + notes**: `concepts/` (What & Why) · `tutorials/` (learning path) · `tasks/` (task steps) · `reference/` (exact specs) · `decisions/` (ADR, append-only: NNNN-slug.md + index.md + template; status Proposed/Accepted/Deprecated/Superseded by — annotate, never rewrite history) · `contribute/` (contributor guide) · `notes/` (temporary, lifecycle-constrained, exits).
+Every substantive action row MUST carry: **type**, **target**, **owning skill**, **confirmation tier**, **source**, and execution result; a content action also carries **evidence**. The source is either baseline reconcile or user input. A **content action requires concrete evidence** from deterministic findings, verified staleness, user correction, or feedback; **Unobserved** is not a defect and produces no content action.
 
-3. **Notes lifecycle**: every note carries frontmatter `title / created / expires (default created + 60 days) / status (draft|expired|archived) / target / tags`. State machine: draft →(合入 target)→ archived; draft →(超期)→ expired; expired →(续期)→ draft; expired →(人工确认)→ deleted (notes 区是唯一允许确认后真删除的区域). `docs/notes/index.md` states the rules and this frontmatter template:
+Route each action **mechanically** to **exactly one owning skill**:
 
-   ```yaml
-   ---
-   title: "<one-line title>"
-   created: YYYY-MM-DD
-   expires: YYYY-MM-DD    # required; default = created + 60 days
-   status: draft          # draft | expired | archived
-   target: ""             # intended formal destination, required when archived
-   tags: []
-   ---
-   ```
+- **structure** — placement, naming, creation, move, archive, index, frontmatter, or link structure → `create-docs`;
+- **content** — accuracy, staleness, completeness, readability, or render-safe prose in an existing correctly placed document → `improve-docs`;
+- **user commission** — classify by its actual structure/content effect, then use the same routing rule.
 
-4. **Document lifecycle flow**: idea → ADR Proposed → Accepted → settled into `concepts/`/`reference/` → task/tutorial docs → obsolete decisions annotated Deprecated/Superseded.
+### Stage 3 — Dispatch and report
 
-### Scope Resolution（作用域判定）
+Dispatch structural actions through one `create-docs` reconcile. Dispatch judgement-based content actions **one document at a time**, **sequential** in severity order; only a single mechanical dimension may use the bounded-batch exception owned by `improve-docs`.
 
-| Input | Scope | Behavior |
-|-------|-------|----------|
-| No arguments | **全量 (full sweep)** | Run the complete loop over the whole managed space |
-| A target path/file | **单目标 (single target)** | Reconcile only that target; converge directionally with any supplementary instruction |
-| Raw material without a single target | **扇出 (fan-out intake)** | Decompose → triage per doc type → converge multiple targets; residue goes to `docs/notes/`, never dropped |
-| Managed space absent/empty | **Bootstrap** | Generate the full skeleton (4 root entries + 6 type dirs + `decisions/index.md` + `decisions/template.md` + `notes/index.md`) |
+Content dispatch has **no per-run cap** and MUST NOT truncate or silently defer the tail. Before dispatch, **announce the full document count** so the user can **abort before dispatch**. Each document boundary is another abort point: **completed actions stay completed**, while unstarted actions become `pending` in the residual report for the next run.
 
-### Reconcile Loop (thin dispatch — engine semantics live in the pattern doc)
+Use the owners' existing confirmation tiers; this orchestration **does not introduce another gate**. Group the residual report by owning skill and list converged, tolerated, pending-human-decision, pending, and “no finding” outcomes. Append the audit log even on **zero convergence**.
 
-- R0 baseline: load this desired-state section + local conventions + user input. Underdetermined → ask ≤3 questions, never fabricate.
-- R1 observe → **观察快照** (inline): tree status, root-entry sizes, stray files, deterministic findings from `python3 .specify/scripts/python/docs-utils.py --action validate --root .` (reserved-name case/misuse, one-screen threshold, broken links, ADR numbering, notes frontmatter) plus `--action scan` for notes.
-- R2 compute desired state; R3 diff **tolerance band first** — within-band cosmetic diffs are marked "已一致（容忍）" and never enter the plan (anti-churn: a repeat run on an unchanged space converges nothing).
-- R4 **干跑计划** written to `.specify/docs/plans/<ts>-plan.md` with `[x]/[ ]` opt-out rows for every move/archive/restructure item. No disk writes while planning.
-- R5 converge per tiered gates (below); `mkdir → write → mv → audit`; same-name targets never clobbered (suffix `__<ts>`); on any mv failure stop remaining items and ask for review. **审计日志** appended via `python3 .specify/scripts/python/docs-utils.py --action audit --root . --scope <scope> --summary <one-line> [--items-file <json>]` → `.specify/docs/audit/` — write it even when 零收敛/无净变化 ("all dimensions within tolerance").
-- R6 verify (re-run validate; link/symlink integrity) → **残差报告** (inline): converged / archived / tolerated / pending-human-decision.
+### Additive user input — decide what to write and where it lives
 
-### Tiered Confirmation（分级确认门禁）
+The **baseline reconcile always runs** at the resolved scope. User input produces **additional actions** in the same plan and **must not replace** baseline reconciliation.
 
-| Action class | Gate |
-|--------------|------|
-| Safe local writes（建目录、建/补管理文件、修链接、更新索引、frontmatter 修复） | **自动执行**; never overwrite same-name content — conflicts get `__<ts>` suffix |
-| Move / archive / restructure（归位搬迁、归档、重命名） | **Stop and confirm** via the dry-run plan (per-item opt-out) |
-| Formal zone removal | Does not exist — **只归档不删除**, into `docs/archive/` |
-| Notes deletion (`--action clean --yes`) | Only after explicit human confirmation, only inside `docs/notes/` |
+For every **writing commission**, answer two questions before writing:
 
-### Notes Lifecycle Automation
+1. **What to write** — produce a content plan that names the **target reader**, **task context**, **user input**, **repository evidence**, and **writing boundary**. Missing decisive context follows Stage 1's bounded clarification rule; generic filler is not evidence.
+2. **Where it lives** — search for an existing canonical owner of the topic first. If one exists, route a section-level update to `improve-docs` and create no **near-duplicate**. Otherwise choose **exactly one canonical home** under the confirmed target and route creation/placement to `create-docs`.
 
-Deterministic, repeatable outside the chat (contract: `.specify/specs/033-docs-command/contracts/docs-utils-cli.md`):
+A **directional input** changes action **priority** for this run and **does not change the target declaration**. Input that truly implies a **structural change** creates a **target-declaration update action** in the **same existing R4 plan**; an approved refresh changes only the managed block and preserves **outside-block bytes**.
 
-```bash
-python3 .specify/scripts/python/docs-utils.py --action scan --root .           # 分组报告 + invalid 修复建议
-python3 .specify/scripts/python/docs-utils.py --action expire --root .        # 超期 draft → expired（绝不删除）
-python3 .specify/scripts/python/docs-utils.py --action clean --root .         # dry-run 候选清单
-python3 .specify/scripts/python/docs-utils.py --action clean --yes --root .   # 人工确认后的真删除（仅 notes 区）
-python3 .specify/scripts/python/docs-utils.py --action archive-check --root . # 归档完整性（target 必须存在）
-python3 .specify/scripts/python/docs-utils.py --action stats --root .         # 统计
-```
+Every created or moved canonical document updates its nearest **human index** and any required root entry in the same reconcile. If its canonical path belongs in Agent project knowledge, dispatch `/speckit.instructions` to refresh the `.specify/instructions.md` **Documentation Map** and verify the row resolves. `/speckit.docs` **must not edit compatibility instruction aliases** directly.
 
-Reference documentation: `docs/reference/commands/docs.md` (projects following the six-type taxonomy; pre-reorg location was `docs/commands/docs.md`).
+Site/publishing requests go to `create-pages`; requests to change the skill bodies go to `improve-skills`. These hand-offs **must not become a reconcile action** in the documentation space.
+
+`$ARGUMENTS` remains an input to this one reconcile engine; it never creates a separate top-level mode.
+
+**Delegation (mandatory)**: load both owning skills. Do NOT inline or re-implement their baseline, scope table, gates, reconcile loop, authoring rules, or content-improvement rules here.
+
+Zone orientation (details in `create-docs`): managed = root entry files + `docs/` tree; read-only = source code, `.specify/specs/`, `.specify/memory/`; skip = compatibility symlinks, generated per-tool copies; archive = `docs/archive/`; run workspace = `.specify/docs/` (never mixed into `docs/`).
 
 ## Feedback
 
-At wrap-up (the same lifecycle point where this command prompts for a Git commit), perform an agent self-reflection step (never solicit feedback content from the user), following the canonical convention in `.specify/shared/workflow/feedback-step.md`:
-
-1. **Gate on qualification & completion.** Only proceed if this command reached its wrap-up stage. Skip trivial/no-op runs; for an aborted run use the abort/partial rule below.
-2. **Reflect (no user input).** Review this run against `/speckit.docs`'s declared purpose and produce a short review plus ≥1 concrete, command-specific optimization point. If the run was clean, use exactly: `No significant optimization points identified this run.`
-3. **Scope guard.** Keep strictly to this command's operation; do NOT produce a global/whole-project assessment (that is `/speckit.review`'s job). Entries are `scope: local`.
-4. **Dedup guard.** Use a stable `run_id` (e.g. the reconcile scope + a run timestamp); if a nested skill/command already recorded feedback for this same `(unit_id, run_id)`, the engine no-ops.
-5. **Persist** via the engine:
-   ```bash
-   python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action record \
-     --unit-id "/speckit.docs" --unit-type command \
-     --run-id "<stable-run-id>" --feature "<feature-key-if-any>" \
-     --review "<review prose>" --points-file "<points file>"
-   ```
-6. **Consolidated submission prompt.** If the returned `should_prompt` is `true`, surface a single consolidated prompt inviting the user to submit collected feedback to the Spec Kit developers; on confirmation run `--action mark-submitted`. Below threshold, do not prompt.
-
-**Abort / partial-run rule.** If the run failed before wrap-up, either skip recording or record with `--partial` and a `## Review` beginning `**Partial run** — `.
+At wrap-up (the same lifecycle point where this command prompts for a Git commit), run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this command's scope; persist one entry via `feedback-utils.py --action record --unit-id "/speckit.docs" --unit-type command`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
 
 ## Documentation
 
@@ -124,3 +91,4 @@ At the same wrap-up point, apply the docs-sync evaluation step per the canonical
 - Address the residual report's pending-human-decision items.
 - Invoke `memory-record` to persist notable reconcile decisions.
 - If the reconcile changed instructions-facing structure (e.g. documentation map), run `/speckit.instructions` to refresh generated instruction files.
+- To publish the space as a static site — or to repair mounts staled by a move — use the `create-pages` skill; presentation is an optional layer this command never scaffolds or builds.

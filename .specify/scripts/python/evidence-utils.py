@@ -44,9 +44,7 @@ PLATFORM_SESSION_STORES = {
     "claude": "~/.claude/projects",
     "copilot": "~/.copilot/session-state",
     "opencode": "~/.local/share/opencode",
-    "qwen": "~/.qwen/tmp",
     "hermes": "~/.hermes/sessions",
-    "iflow": "~/.iflow/tmp",
 }
 SECRET_PATTERNS = [
     re.compile(r"AKIA[0-9A-Z]{16}"),

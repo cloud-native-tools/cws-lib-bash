@@ -68,3 +68,47 @@ Self-audit your simulation:
 - Which result still requires real execution, tests, or tool calls to confirm?
 Revise the trace if needed.
 ```
+
+---
+
+## Simulation Report Output Template
+
+The full report skeleton a `think-skills` run emits. Copy it verbatim and fill each field;
+every heading is mandatory (the Self-Audit and Verdict sections are what make a simulation
+auditable rather than a guess).
+
+```markdown
+## Simulation Scope
+- Target:
+- Scenario:
+- Forbidden real actions:
+
+## Initial State / Rules / Assumptions
+- Initial State:
+- Rules:
+- Assumptions:
+- Unknowns:
+
+## Mental Trace
+| Step | Trigger / Instruction | Mental Action | State Delta | Consistency Check | Risk / Uncertainty |
+|---|---|---|---|---|---|
+
+## Edge Cases
+1. Happy path:
+2. Missing or conflicting input:
+3. Tool/action failure or forbidden side effect:
+
+## Self-Audit
+- Real execution claims:
+- Skipped logic:
+- Hidden assumptions:
+- Needs real validation:
+- Deterministic vs Judgmental boundary:
+
+## Verdict
+- Result:
+- Likely behavior:
+- Failure modes:
+- Minimal patches:
+- Logic extraction opportunities:
+```

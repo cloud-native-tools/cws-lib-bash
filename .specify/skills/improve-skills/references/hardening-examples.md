@@ -85,15 +85,18 @@ const title = el?.getAttribute('data-testid')
 
 ## The reusable checklist (applies to any live-DOM/API/log helper)
 
+- Is the content **interaction-gated**? Options, tab bodies, popovers and menus that mount
+  only on click — e.g. a component library's `<Select>` that renders its options into a
+  **portal** outside the trigger's own subtree — cannot be read by a static-DOM scrape. The
+  fix is a bounded open → read → close pass at the driver level, not a richer static selector.
 - Is the control **stateful**? Read its state; act only on the nodes that need it.
 - Is the value from a **convenient-but-emitted label** (a "(N panels)" header, a "3 results"
-  badge)? Derive it from the underlying **elements** instead; when they disagree, the
-  elements win and you stop surfacing the label.
+  badge, a status pill)? Derive it from the underlying **elements** instead; when they
+  disagree, the elements win and you stop surfacing the label.
 - Is the text from a **container**? Re-scope to the **leaf**; verify the captured field is
-  the datum the doc claims (a selected *value* is not the variable's *name*).
+  the datum the doc claims (a selected *value* is not the variable's *name*). Post-filtering
+  a polluted string with a length cap is a backstop, never the fix.
 - Is the target **third-party/versioned**? Query old + current shapes; treat empty-on-known-present
   as drift, not absence.
 - Did the run go **green but thin**? Empty/thin output is a defect — capture *which selector
   matched 0 nodes* as the reusable fact, then re-run to confirm the fix populates.
-</content>
-</invoke>

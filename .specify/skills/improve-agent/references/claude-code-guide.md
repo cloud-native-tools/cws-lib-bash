@@ -24,7 +24,7 @@
 - **Context window limits**: Large templates (100+ lines) may cause context issues. Focus `Read` on specific line ranges when needed
 - **Placeholder drift**: Verify that `{{PLACEHOLDER}}` variables used in the template match the approved list from `/speckit.agents` command
 - **Edit precision**: `old_string` must match exactly including whitespace. Read the file first to get exact content
-- **Template vs generated agent**: This skill modifies `templates/` files, NOT `.specify/agents/` files. Confusing the two leads to lost changes
+- **Layer routing**: the declared layer decides the editable surface — `template` → `.specify/agents/templates/` or `skills/create-agent/templates/`; `instance` → `.specify/agents/instances/`; `execution` → `.specify/agents/execution/{configs,scripts}/`. Editing the wrong layer leads to lost changes
 
 ## Capability Notes
 

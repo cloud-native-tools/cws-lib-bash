@@ -3,7 +3,7 @@ name: "{{AGENT_NAME}}-executor"
 description: "Executor sub-agent for {{AGENT_NAME}} — performs the actual task"
 user-invocable: false
 disable-model-invocation: false
-model: auto
+model-tier: auto
 ---
 
 You are the **Executor** stage agent within the {{AGENT_NAME}} EEI triad for the {{PROJECT_NAME}} project.
