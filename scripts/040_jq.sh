@@ -39,6 +39,46 @@ function jq_sort_file() {
   fi
 }
 
+# Prettify a JSON array file: sort each entry's object keys alphabetically,
+# optionally deduplicate entries by a key, and optionally sort entries by a key.
+# The processed JSON array is printed to stdout.
+function jq_prettier() {
+  local json_file=${1:-}
+  local dedupe_key=${2:-}
+  local sort_key=${3:-}
+
+  if [ -z "${json_file}" ]; then
+    log error "Usage: jq_prettier <json_file> [dedupe_key] [sort_key]"
+    log info "  json_file: Path to the JSON array file to process"
+    log info "  dedupe_key: Optional object key to deduplicate entries by (e.g. region_id)"
+    log info "  sort_key: Optional object key to sort entries by (e.g. region_id)"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if [ ! -f "${json_file}" ]; then
+    log error "JSON file not found: ${json_file}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if ! have jq; then
+    log error "jq command not found. Please install jq to use this function."
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local json_type
+  json_type=$(jq -r 'type' "${json_file}" 2>/dev/null)
+  if [ "${json_type}" != "array" ]; then
+    log error "JSON input must be an array of objects. Found type: ${json_type:-invalid}"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  jq --arg dedupe_key "${dedupe_key}" --arg sort_key "${sort_key}" '
+    [.[] | to_entries | sort_by(.key) | from_entries]
+    | (if $dedupe_key == "" then . else unique_by(.[$dedupe_key]) end)
+    | (if $sort_key == "" then . else sort_by(.[$sort_key]) end)
+  ' "${json_file}"
+}
+
 function jq_otel_logs() {
   local logs_file=${1:--}
   cat ${logs_file} | jq -r '.resourceLogs[] | .scopeLogs[] | .logRecords[] |  "\(.attributes[].value.stringValue) \(.body.stringValue)"'
