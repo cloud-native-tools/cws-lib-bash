@@ -1,6 +1,146 @@
 # Executes an interactive shell in a Docker container
 function docker_exec() {
+  docker exec -i "$1" ${2:-bash}
+}
+
+function docker_login() {
   docker exec -it "$1" ${2:-bash}
+}
+
+# Resolve a host user's home directory (getent on Linux, dscl on macOS).
+function _docker_cp_host_home() {
+  local user=$1
+  if command -v getent >/dev/null 2>&1; then
+    getent passwd "${user}" 2>/dev/null | cut -d: -f6
+  elif is_macos; then
+    dscl . -read "/Users/${user}" NFSHomeDirectory 2>/dev/null | awk '{print $2}'
+  fi
+}
+
+# Expand a literal leading "~" in <path> against <home>; other paths pass through.
+function _docker_cp_expand_home() {
+  local path=$1
+  local home=$2
+  case "${path}" in
+    '~') echo "${home}" ;;
+    '~/'*) echo "${home}/${path#\~/}" ;;
+    *) echo "${path}" ;;
+  esac
+}
+
+# Copies a host directory or file into a running Docker container. --dest-dir
+# is the full target path inside the container -- not a parent directory -- so
+# `--src-dir '~/.ssh' --dest-user develop` lands the contents at develop's
+# ~/.ssh. The target is created when missing and merged when it already exists;
+# the payload travels as a base64 tar (encode_files) and the result is handed
+# to --dest-user via chown -R (the extraction runs as the exec user -- root by
+# default -- so without it the copy would stay root-owned and break e.g. sshd
+# StrictModes).
+#
+# A literal leading "~" resolves per user: against --src-user's home on the
+# host, against --dest-user's home inside the container -- so the same "~/.ssh"
+# means different homes when the two users differ. Bash only leaves "~" literal
+# when the value is quoted; an unquoted ~user/... is expanded by the caller's
+# shell before the function sees it.
+#
+# Usage: docker_cp <container> --src-dir DIR [--src-user USER]
+#                  [--dest-dir DIR] [--dest-user USER]
+#   --src-dir   host path to copy (required); ~ / ~/... resolves for --src-user
+#   --src-user  host user (default: root)
+#   --dest-dir  full target path in the container (default: the --src-dir
+#               value, with ~ re-resolved for --dest-user)
+#   --dest-user container user that owns the result (default: root)
+#
+# Example - copy the host agent user's ~/.ssh to develop's ~/.ssh:
+#   docker_cp xuanji-ai-sre-dev-xuanji-skills-1 \
+#     --src-user agent --dest-user develop --src-dir '~/.ssh'
+function docker_cp() {
+  local container=${1:-}
+  local src_user=root src_dir="" dest_user=root dest_dir=""
+  local src_home dest_home src_name dest_parent dest_name
+
+  if [ $# -gt 0 ]; then shift; fi
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --src-dir) shift; src_dir=${1:-} ;;
+      --src-user) shift; src_user=${1:-root} ;;
+      --dest-dir) shift; dest_dir=${1:-} ;;
+      --dest-user) shift; dest_user=${1:-root} ;;
+      -h | --help)
+        log error "Usage: docker_cp <container> --src-dir DIR [--src-user USER] [--dest-dir DIR] [--dest-user USER]"
+        return ${RETURN_FAILURE}
+        ;;
+      *)
+        log error "docker_cp: unknown option: $1"
+        return ${RETURN_FAILURE}
+        ;;
+    esac
+    if [ $# -gt 0 ]; then shift; fi
+  done
+
+  if [ -z "${container}" ] || [ -z "${src_dir}" ]; then
+    log error "Usage: docker_cp <container> --src-dir DIR [--src-user USER] [--dest-dir DIR] [--dest-user USER]"
+    return ${RETURN_FAILURE}
+  fi
+
+  # --dest-dir defaults to the same literal value as --src-dir, so a "~" in it
+  # re-resolves against --dest-user's home instead of --src-user's.
+  dest_dir=${dest_dir:-${src_dir}}
+
+  case "${src_dir}" in
+    '~' | '~/'*)
+      src_home=$(_docker_cp_host_home "${src_user}")
+      if [ -z "${src_home}" ]; then
+        log error "docker_cp: host user not found: ${src_user}"
+        return ${RETURN_FAILURE}
+      fi
+      src_dir=$(_docker_cp_expand_home "${src_dir}" "${src_home}")
+      ;;
+  esac
+  if [ ! -e "${src_dir}" ]; then
+    log error "docker_cp: source does not exist: ${src_dir}"
+    return ${RETURN_FAILURE}
+  fi
+
+  # dest_user must exist in the container: it resolves "~" in --dest-dir and
+  # owns the result. This call also fails early on a wrong container name.
+  dest_home=$(docker exec "${container}" getent passwd "${dest_user}" 2>/dev/null | cut -d: -f6)
+  if [ -z "${dest_home}" ]; then
+    log error "docker_cp: cannot resolve dest user '${dest_user}' in container '${container}' (unknown user or container not running)"
+    return ${RETURN_FAILURE}
+  fi
+  dest_dir=$(_docker_cp_expand_home "${dest_dir}" "${dest_home}")
+
+  src_name=$(basename "${src_dir}")
+  if [ -d "${src_dir}" ]; then
+    # directory: stream its contents into dest_dir
+    {
+      echo "set -e; mkdir -p ${dest_dir}; cd ${dest_dir}"
+      (cd "${src_dir}" && encode_files .)
+      echo "chown -R ${dest_user}:${dest_user} . 2>/dev/null || chown -R ${dest_user} ."
+    } | docker_exec "${container}" bash
+  else
+    # single file: land it at dest_dir, renaming when the basenames differ
+    dest_parent=$(dirname "${dest_dir}")
+    dest_name=$(basename "${dest_dir}")
+    {
+      echo "set -e; mkdir -p ${dest_parent}; cd ${dest_parent}"
+      (cd "$(dirname "${src_dir}")" && encode_files "${src_name}")
+      if [ "${src_name}" != "${dest_name}" ]; then
+        echo "mv ${src_name} ${dest_name}"
+      fi
+      echo "chown -R ${dest_user}:${dest_user} ${dest_name} 2>/dev/null || chown -R ${dest_user} ${dest_name}"
+    } | docker_exec "${container}" bash
+  fi
+
+  local rc=$?
+  if [ ${rc} -ne 0 ]; then
+    log error "docker_cp: failed (rc=${rc}): ${src_dir} -> ${container}:${dest_dir}"
+    return ${RETURN_FAILURE}
+  fi
+
+  log notice "docker_cp: ${src_dir} (${src_user}) -> ${container}:${dest_dir} (${dest_user})"
+  return ${RETURN_SUCCESS}
 }
 
 # Runs a Docker container with privileged access and host network
@@ -50,32 +190,6 @@ function docker_generate_dockerfile() {
 # Lists non-dangling Docker images
 function docker_images() {
   docker images --filter "dangling=false"
-}
-
-# Shorthand function for docker-compose
-function dp() {
-  if command -v docker-compose >/dev/null 2>&1; then
-    docker-compose $@
-  fi
-
-  if docker compose version >/dev/null 2>&1; then
-    docker compose $@
-  fi
-}
-
-# Starts Docker Compose services in detached mode
-function dp_up() {
-  dp up -d --compatibility --remove-orphans $@
-}
-
-# Recreates Docker Compose services
-function dp_recreate() {
-  dp up -d --force-recreate --no-deps $@
-}
-
-# Lists Docker Compose services
-function dp_svc() {
-  dp ps --services
 }
 
 # Extracts files from a Docker image to a destination directory
