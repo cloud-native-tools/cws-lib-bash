@@ -62,7 +62,7 @@ All valid (tool, model, provider_url, provider_key) combinations.
 
 | Model | Provider | Protocol |
 |---|---|---|
-| `qwen3-coder-plus` | bailian | OpenAI |
+| `Qwen3.8-Max` | bailian | OpenAI |
 
 ## Full Supported Tuple List
 
@@ -90,21 +90,21 @@ All five tools share the same model list and use the same URL/Key variables:
 
 | # | Tool | Model |
 |---|---|---|
-| 8 | codex | qwen3-coder-plus |
+| 8 | codex | Qwen3.8-Max |
 | 9 | codex | qwen3.7-max |
 | 10 | codex | qwen3.7-plus |
 | 11 | codex | deepseek-v4-pro |
 | 12 | codex | deepseek-v4-flash |
 | 13 | codex | glm-5.2 |
 | 14 | codex | kimi-k2.7-code |
-| 22 | qoder | qwen3-coder-plus |
+| 22 | qoder | Qwen3.8-Max |
 | 23 | qoder | qwen3.7-max |
 | 24 | qoder | qwen3.7-plus |
 | 25 | qoder | deepseek-v4-pro |
 | 26 | qoder | deepseek-v4-flash |
 | 27 | qoder | glm-5.2 |
 | 28 | qoder | kimi-k2.7-code |
-| 36 | opencode | qwen3-coder-plus |
+| 36 | opencode | Qwen3.8-Max |
 | 37 | opencode | qwen3.7-max |
 | 38 | opencode | qwen3.7-plus |
 | 39 | opencode | deepseek-v4-pro |

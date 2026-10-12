@@ -26,7 +26,7 @@ CONFIG_AGENT_TUPLES=(
   "claude|glm-5.2|bailian|ALIYUN_ANTHROPIC_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|anthropic"
   "claude|kimi-k2.7-code|bailian|ALIYUN_ANTHROPIC_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|anthropic"
   # --- codex (OpenAI protocol) ---
-  "codex|qwen3-coder-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
+  "codex|Qwen3.8-Max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "codex|qwen3.7-max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "codex|qwen3.7-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "codex|deepseek-v4-pro|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
@@ -34,7 +34,7 @@ CONFIG_AGENT_TUPLES=(
   "codex|glm-5.2|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "codex|kimi-k2.7-code|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   # --- qoder (OpenAI protocol) ---
-  "qoder|qwen3-coder-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
+  "qoder|Qwen3.8-Max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "qoder|qwen3.7-max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "qoder|qwen3.7-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "qoder|deepseek-v4-pro|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
@@ -42,7 +42,7 @@ CONFIG_AGENT_TUPLES=(
   "qoder|glm-5.2|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "qoder|kimi-k2.7-code|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   # --- opencode (OpenAI protocol) ---
-  "opencode|qwen3-coder-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
+  "opencode|Qwen3.8-Max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "opencode|qwen3.7-max|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "opencode|qwen3.7-plus|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"
   "opencode|deepseek-v4-pro|bailian|ALIYUN_OPENAI_COMPATIBLE_URL|ALIYUN_BAILIAN_API_KEY|openai"

@@ -16,9 +16,10 @@ QODER_CLI_BIN="${QODER_CLI_BIN:-qodercli}"
 QODER_CLI_OPTION="${QODER_CLI_OPTION:-}"
 
 # 后台模式默认模型 / 推理强度 / 上下文窗口；可用同名环境变量或函数选项覆盖
-QODER_CLI_MODEL="${QODER_CLI_MODEL:-}"
-QODER_CLI_EFFORT="${QODER_CLI_EFFORT:-}"
-QODER_CLI_CONTEXT_WINDOW="${QODER_CLI_CONTEXT_WINDOW:-}"
+# 默认值取自 xuanji-images 当前 session 配置（~/.qoder/settings.json: model=qmodel_38max/Qwen3.8-Max, effort=xhigh, contextWindow=1000000）
+QODER_CLI_MODEL="${QODER_CLI_MODEL:-Qwen3.8-Max}"
+QODER_CLI_EFFORT="${QODER_CLI_EFFORT:-xhigh}"
+QODER_CLI_CONTEXT_WINDOW="${QODER_CLI_CONTEXT_WINDOW:-1000000}"
 
 # 后台模式日志目录；可导出 QODER_CLI_LOG_DIR 覆盖
 QODER_CLI_LOG_DIR="${QODER_CLI_LOG_DIR:-${TMPDIR:-/tmp}/qoder-cli}"
