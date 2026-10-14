@@ -14,7 +14,7 @@ function cws_py_uninstall() {
   fi
 }
 
-function cws_python_is_installed() {
+function cws_py_is_installed() {
   # Check if python3 is available
   if ! have python3; then
     return "${RETURN_FAILURE:-1}"
@@ -33,7 +33,7 @@ function cws_python_is_installed() {
   return "${RETURN_FAILURE:-1}"
 }
 
-function cws_python_install() {
+function cws_py_install() {
   # Prefer local source installation when inside the cws-lib-python project directory.
   # Check CWS_LIB_PYTHON_HOME first, then fall back to detecting the project root from PWD.
   local local_install=""
