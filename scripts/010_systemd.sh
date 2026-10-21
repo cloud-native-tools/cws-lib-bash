@@ -1,7 +1,7 @@
 # Checks if the current environment is running under systemd
 function systemd_available() {
   # Check if systemctl command exists
-  if ! command -v systemctl >/dev/null 2>&1; then
+  if ! has_cmd systemctl; then
     return ${RETURN_FAILURE:-1}
   fi
 

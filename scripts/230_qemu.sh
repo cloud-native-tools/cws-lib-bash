@@ -1,8 +1,8 @@
 function qemu_get_bin() {
-  if command -v qemu-system-aarch64 &>/dev/null; then
-    export QEMU_BIN=$(command -v qemu-system-aarch64 &>/dev/null)
-  elif command -v qemu-system-x86_64 &>/dev/null; then
-    export QEMU_BIN=$(command -v qemu-system-x86_64 &>/dev/null)
+  if has_cmd qemu-system-aarch64; then
+    export QEMU_BIN=$(cmd_path qemu-system-aarch64)
+  elif has_cmd qemu-system-x86_64; then
+    export QEMU_BIN=$(cmd_path qemu-system-x86_64)
   elif [ -x /usr/libexec/qemu-kvm ]; then
     export QEMU_BIN=/usr/libexec/qemu-kvm
   else

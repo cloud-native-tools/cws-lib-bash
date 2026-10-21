@@ -1,28 +1,37 @@
+# Prompt (提示符) —— 探测结果只从 02_probe.sh 取，本文件不重复实现探测逻辑
+
+# 当前 conda/mamba 活动环境标记（优先 mamba），无环境或工具缺失时输出空串
+function bash_prompt_conda_env() {
+  local env_name=""
+  if has_mamba; then
+    env_name=$(mamba info --envs 2>/dev/null | awk '$2=="*"{print "[mamba",$1"]"}')
+  elif has_conda; then
+    env_name=$(conda info --envs 2>/dev/null | awk '$2=="*"{print "[conda",$1"]"}')
+  fi
+
+  if [ -n "${env_name}" ]; then
+    echo "${BOLD_CYAN}${env_name}${CLEAR}"
+  fi
+}
+
 function bash_prompt() {
-  if [[ $? != "0" ]]; then
-    local last_exit=$(log plain ${SYMBOL_FAILURE})
+  # 注意：必须先取 $?，任何命令（含 local 声明）都会覆盖它
+  local exit_code=${?}
+  local last_exit
+  if [[ ${exit_code} != "0" ]]; then
+    last_exit=$(log plain ${SYMBOL_FAILURE})
   else
-    local last_exit=$(log plain ${SYMBOL_SUCCESS})
+    last_exit=$(log plain ${SYMBOL_SUCCESS})
   fi
 
-  if [ $(id -u) = 0 ]; then
-    local user_indicator="#"
-  else
-    local user_indicator='$'
+  local user_indicator='$'
+  if is_root; then
+    user_indicator="#"
   fi
 
-  if command -v mamba &>/dev/null; then
-    local conda_env="${BOLD_CYAN}$(mamba info --envs | awk '$2=="*"{print "[mamba",$1"]"}')${CLEAR}"
-  elif command -v conda &>/dev/null; then
-    local conda_env="${BOLD_CYAN}$(conda info --envs | awk '$2=="*"{print "[conda",$1"]"}')${CLEAR}"
-  else
-    local conda_env=""
-  fi
-
-  if command -v systemd-detect-virt &>/dev/null; then
-    local BASH_OS="${BASH_OS}: $(systemd-detect-virt 2>/dev/null || echo '')"
-  fi
-  local env_info="[${BASH_ARCH}][${BASH_OS}]"
+  # 形如 [amd64][linux: none|docker|kvm]
+  local env_info="[${BASH_ARCH}][${BASH_OS}: $(virt_type)]"
+  local conda_env=$(bash_prompt_conda_env)
 
   log plain "[${last_exit}]${env_info}${conda_env}[\D{%Y-%m-%d} \t][\u@\h \w]$(git_info)${user_indicator}\n "
 }

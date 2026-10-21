@@ -3,7 +3,7 @@
 if is_macos; then
   # macOS: prefer GNU coreutils gbase64 only if it is actually GNU (supports -w0)
   # Some systems ship a non-GNU gbase64 (fourmilab) with different flags
-  if command -v gbase64 >/dev/null 2>&1 && gbase64 --version 2>/dev/null | grep -q 'GNU coreutils'; then
+  if has_cmd gbase64 && gbase64 --version 2>/dev/null | grep -q 'GNU coreutils'; then
     BASE64_BIN=gbase64
     BASE64_WRAP_OPT="-w0"
   else
@@ -45,9 +45,9 @@ function _b64_encode_file() {
 # Cross-platform SHA-256 checksum (output format: "<hash>  <file>")
 # Usage: _sha256 <file>   |   _sha256 -c < checksum_file
 function _sha256() {
-  if command -v sha256sum >/dev/null 2>&1; then
+  if has_cmd sha256sum; then
     sha256sum "$@"
-  elif command -v shasum >/dev/null 2>&1; then
+  elif has_cmd shasum; then
     shasum -a 256 "$@"
   else
     log error "no sha256sum or shasum found"
@@ -65,9 +65,9 @@ function _sha256_hash() {
 # Usage: _sha256_check "<hash>  <file>"
 function _sha256_check() {
   local checksum_line="$1"
-  if command -v sha256sum >/dev/null 2>&1; then
+  if has_cmd sha256sum; then
     echo "${checksum_line}" | sha256sum -c --status 2>/dev/null
-  elif command -v shasum >/dev/null 2>&1; then
+  elif has_cmd shasum; then
     echo "${checksum_line}" | shasum -a 256 -c >/dev/null 2>&1
   else
     return ${RETURN_FAILURE}

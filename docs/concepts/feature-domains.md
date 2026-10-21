@@ -6,6 +6,7 @@ the root [README.md](../../README.md).
 ## Functional Features
 
 - **Core Framework**: Core environment initialization, logging, and utility functions.
+- **Environment & Capability Probing**: One probe layer (`profile.d/02_probe.sh`) classifies what the system is (`is_root`, `is_container`, `is_vm`, `is_baremetal`, `probe_env`/`virt_type`) and what it can do (`has_cmd`/`cmd_path` plus thin `has_*` wrappers such as `has_mamba`). Python environments are split into shell state (`is_venv`) and project capability (`has_venv`, resolved by `venv_python`), so detection is never re-implemented inline.
 - **Docker Support**: Utilities for Docker container and image management.
 - **Kubernetes Operations**: Helpers for kubectl, Helm, and cluster management.
 - **Package Management**: Unified interface for system package managers (apt, yum, rpm).

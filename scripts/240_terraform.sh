@@ -7,11 +7,8 @@ TF_RC_FILE="tf.rc"
 
 # Determines which Terraform binary to use, preferring tofu over terraform if available
 function tf_bin() {
-  if ! command -v tofu 2>&1; then
-    if ! command -v terraform 2>&1; then
-      command -v false
-    fi
-  fi
+  # 两者都不存在时返回 false，使 tf 别名成为空操作
+  cmd_path tofu 2>/dev/null || cmd_path terraform 2>/dev/null || cmd_path false
 }
 
 alias tf="$(tf_bin)"

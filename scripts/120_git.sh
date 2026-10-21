@@ -1754,9 +1754,14 @@ function git_current_branch() {
   echo "main" # Final fallback
 }
 
-# Check if we have git available
-function has_git() {
+# Check if the current directory is inside a git work tree
+function is_git_repo() {
   git rev-parse --show-toplevel >/dev/null 2>&1
+}
+
+# Check if the git command is available
+function has_git() {
+  has_cmd git
 }
 
 # --- Gitignore Helpers ---

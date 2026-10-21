@@ -52,7 +52,7 @@ function opencode_config() {
 
 function opencode_yolo() {
   # 拒绝 root：yolo 跳过全部权限检查，root 下风险不可控
-  if [[ "$(id -u)" -eq 0 ]]; then
+  if is_root; then
     echo "opencode_yolo: refused to run as root user" >&2
     return 1
   fi

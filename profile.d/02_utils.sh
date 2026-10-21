@@ -308,7 +308,7 @@ function urlencode() {
 
 function have() {
   local cmd=${1}
-  if ! command -v ${cmd} >/dev/null 2>&1; then
+  if ! has_cmd "${cmd}"; then
     log error "command [${cmd}] not found"
     return ${RETURN_FAILURE}
   fi
@@ -387,9 +387,9 @@ function random_string() {
 
 # Define core count function for cross-platform compatibility
 function get_core_count() {
-  if command -v nproc >/dev/null 2>&1; then
+  if has_cmd nproc; then
     nproc
-  elif command -v sysctl >/dev/null 2>&1 && [[ "$(uname)" == "Darwin" ]]; then
+  elif has_cmd sysctl && is_macos; then
     sysctl -n hw.ncpu
   else
     echo "1" # Default to 1 if can't determine

@@ -10,7 +10,7 @@ function docker_login() {
 # Resolve a host user's home directory (getent on Linux, dscl on macOS).
 function _docker_cp_host_home() {
   local user=$1
-  if command -v getent >/dev/null 2>&1; then
+  if has_cmd getent; then
     getent passwd "${user}" 2>/dev/null | cut -d: -f6
   elif is_macos; then
     dscl . -read "/Users/${user}" NFSHomeDirectory 2>/dev/null | awk '{print $2}'

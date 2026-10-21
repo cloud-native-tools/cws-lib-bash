@@ -1,6 +1,6 @@
 # Check if expect is available
 function expect_check_available() {
-  if ! command -v expect &>/dev/null; then
+  if ! has_cmd expect; then
     log error "expect command not found. Please install expect package."
     return ${RETURN_FAILURE}
   fi

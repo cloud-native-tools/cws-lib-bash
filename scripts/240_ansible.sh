@@ -350,19 +350,19 @@ function ansible_check() {
   fi
 
   # Check if ansible command is available
-  if ! command -v ansible >/dev/null 2>&1; then
+  if ! has_cmd ansible; then
     log error "ansible command not found. Please install ansible first."
     return ${RETURN_FAILURE:-1}
   fi
 
   # Check if ansible-playbook command is available
-  if ! command -v ansible-playbook >/dev/null 2>&1; then
+  if ! has_cmd ansible-playbook; then
     log error "ansible-playbook command not found. Please install ansible first."
     return ${RETURN_FAILURE:-1}
   fi
 
   # Check if ansible-vault command is available
-  if ! command -v ansible-vault >/dev/null 2>&1; then
+  if ! has_cmd ansible-vault; then
     log error "ansible-vault command not found. Please install ansible first."
     return ${RETURN_FAILURE:-1}
   fi

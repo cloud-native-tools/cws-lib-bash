@@ -117,7 +117,7 @@ get_feature_paths() {
   local current_branch=$(git_current_branch)
   local has_git_repo="false"
 
-  if has_git; then
+  if is_git_repo; then
     has_git_repo="true"
   fi
 

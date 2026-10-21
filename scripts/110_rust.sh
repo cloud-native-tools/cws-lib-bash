@@ -1,7 +1,7 @@
 function rust_install() {
   local rust_version=${1:-stable}
 
-  if ! command -v rustup >/dev/null 2>&1; then
+  if ! has_cmd rustup; then
     log info "Installing rustup..."
     if ! curl \
       --proto '=https' \

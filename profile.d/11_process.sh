@@ -38,12 +38,12 @@ _ps_resolve_container_name() {
   local name=""
 
   # 尝试 docker
-  if command -v docker &>/dev/null; then
+  if has_cmd docker; then
     name=$(docker inspect --format '{{.Name}}' "$container_id" 2>/dev/null | sed 's|^/||')
   fi
 
   # 尝试 crictl (containerd/k8s)
-  if [[ -z "$name" ]] && command -v crictl &>/dev/null; then
+  if [[ -z "$name" ]] && has_cmd crictl; then
     name=$(crictl inspect --output go-template --template '{{.status.metadata.name}}' "$container_id" 2>/dev/null)
     if [[ -n "$name" ]]; then
       local pod_id
@@ -57,7 +57,7 @@ _ps_resolve_container_name() {
   fi
 
   # 尝试 nerdctl
-  if [[ -z "$name" ]] && command -v nerdctl &>/dev/null; then
+  if [[ -z "$name" ]] && has_cmd nerdctl; then
     name=$(nerdctl inspect --format '{{.Name}}' "$container_id" 2>/dev/null | sed 's|^/||')
   fi
 
