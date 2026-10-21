@@ -1,7 +1,19 @@
 #!/bin/bash
 
+# User:group that owns agent-CLI (qodercli et al.) login state for the current
+# runtime. The host operator account and the container run account are different
+# identities, so the target follows the runtime form rather than the host user:
+#   - container (image run account): CWS_DEVELOP_USER, default develop
+#   - docker host (physical/VM):     agent
+# is_container comes from profile.d/02_probe.sh, which is loaded before scripts/.
 function specify_user() {
-  echo "agent:agent"
+  local user="agent"
+  local group="agent"
+  if is_container; then
+    user="${CWS_DEVELOP_USER:-develop}"
+    group="${CWS_DEVELOP_GROUP:-${user}}"
+  fi
+  echo "${user}:${group}"
 }
 
 # Ensure Specify kit is installed and available
