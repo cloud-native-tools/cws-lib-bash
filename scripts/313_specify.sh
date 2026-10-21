@@ -1,5 +1,9 @@
 #!/bin/bash
 
+function specify_user() {
+  echo "agent:agent"
+}
+
 # Ensure Specify kit is installed and available
 function specify_ensure() {
   if ! have specify; then
@@ -12,60 +16,122 @@ function specify_ensure() {
   return "${RETURN_SUCCESS:-0}"
 }
 
-# Install Specify kit from GitHub repository
+# Install or upgrade Specify kit by delegating to spec-kit's own install.sh
+#
+# DUAL DUTY: specify has no self-update subcommand, so this function is both
+# the cold-start INSTALL path and the UPGRADE path — install.sh performs a
+# clean reinstall, and its python ladder prefers the existing installation's
+# python (upgrade-in-place) when no --python / cwd .venv pins the destination.
+#
+# Ownership contract: the install.sh at the spec-kit repo root is the SINGLE
+# owner of cold-start install logic — python resolution ladder, source
+# ordering, pip index pairing, uv opt-in, and post-install verification all
+# live there. This wrapper only LOCATES or FETCHES that script and delegates;
+# it must not re-implement any of that logic. The source list below is a
+# fetch-only copy used to obtain a checkout (and thus install.sh) — the
+# authoritative install order lives in install.sh.
+#
+# Usage: specify_install [install.sh args...]
+#   e.g. specify_install --python /path/to/python
+#        specify_install --intranet-only
+#   forwarded verbatim to install.sh (see `bash install.sh --help` there)
+#
+# Locate order:
+#   1. ${SPECIFY_INSTALL_SH} — explicit path to an install.sh (any local
+#      spec-kit checkout); use this to avoid the network entirely
+#   2. shallow clone of the first reachable source below into a temp dir
+#
+# Exit codes: install.sh exit codes propagate (0 ok | 2 missing prerequisite
+# | 3 no viable source x index | 5 verification failed); failure to even
+# obtain the script returns RETURN_FAILURE.
 function specify_install() {
-  log info "Installing Specify kit from multiple sources..."
-  if ! have pip3; then
-    log error "pip3 command not found. Please install pip3 first."
-    return "${RETURN_FAILURE:-1}"
+  log info "Installing Specify kit (delegating to spec-kit install.sh)..."
+
+  local script=""
+
+  # 1. Explicit override: any local spec-kit checkout's install.sh
+  if [[ -n "${SPECIFY_INSTALL_SH:-}" ]]; then
+    if [[ -f "${SPECIFY_INSTALL_SH}" ]]; then
+      script="${SPECIFY_INSTALL_SH}"
+      log info "Using installer from SPECIFY_INSTALL_SH: ${script}"
+    else
+      log warn "SPECIFY_INSTALL_SH set but not found: ${SPECIFY_INSTALL_SH}; falling back to clone"
+    fi
   fi
 
-  # Uninstall any existing Specify kit first
-  log info "Uninstalling existing Specify kit (if any)..."
-  specify_uninstall
-
-  # Define installation sources in order of preference
-  local sources=(
-    "git+https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git@master"
-    "git+https://gitee.com/cloud-native-ai/spec-kit.git@master"
-    "git+https://github.com/cloud-native-ai/spec-kit.git@master"
-  )
-
-  # Test and try each source in order
-  for source in "${sources[@]}"; do
-    log info "Trying to install from: ${source}"
-
-    # Extract hostname from the source URL for network testing
-    local hostname=""
-    if [[ ${source} == *"gitlab.alibaba-inc.com"* ]]; then
-      hostname="gitlab.alibaba-inc.com"
-    elif [[ ${source} == *"gitee.com"* ]]; then
-      hostname="gitee.com"
-    elif [[ ${source} == *"github.com"* ]]; then
-      hostname="github.com"
+  # 2. Fetch-only fallback: shallow-clone the first reachable repo and use
+  #    its install.sh. The intranet-first order mirrors install.sh's
+  #    authoritative order, but this list exists ONLY to obtain the script.
+  local tmp_dir=""
+  if [[ -z "${script}" ]]; then
+    if ! have git; then
+      log error "git command not found. Install git first, or set SPECIFY_INSTALL_SH to a local install.sh."
+      return "${RETURN_FAILURE:-1}"
     fi
 
-    # Test network connectivity if we can extract a hostname
-    if [ -n "${hostname}" ]; then
-      log info "Testing network connectivity to ${hostname}..."
+    # Entry format: "<repo url>|<branch>|<hostname>"
+    local sources=(
+      "https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git|master|gitlab.alibaba-inc.com"
+      "https://gitee.com/cloud-native-ai/spec-kit.git|master|gitee.com"
+      "https://github.com/cloud-native-ai/spec-kit.git|master|github.com"
+    )
+
+    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/specify-install.XXXXXX")" || {
+      log error "Failed to create temp directory"
+      return "${RETURN_FAILURE:-1}"
+    }
+
+    local entry url branch hostname cloned=false
+    for entry in "${sources[@]}"; do
+      url="${entry%%|*}"
+      branch="${entry#*|}"
+      branch="${branch%%|*}"
+      hostname="${entry##*|}"
+
+      log info "Trying to fetch install.sh from: ${hostname}"
       if ! net_ping "${hostname}"; then
         log warn "Network connectivity to ${hostname} failed, skipping this source"
         continue
       fi
-      log info "Network connectivity to ${hostname} successful"
+      if git clone --depth 1 --branch "${branch}" "${url}" "${tmp_dir}/spec-kit" >/dev/null 2>&1; then
+        cloned=true
+        log notice "Fetched spec-kit checkout from ${hostname}"
+        break
+      fi
+      log warn "Clone from ${hostname} failed, trying next source..."
+    done
+
+    if [[ "${cloned}" != true ]]; then
+      rm -rf "${tmp_dir}"
+      log error "Failed to fetch install.sh from all available sources (set SPECIFY_INSTALL_SH to use a local copy)"
+      return "${RETURN_FAILURE:-1}"
     fi
 
-    # Try to install from this source with timeout
-    if pip3 install --timeout 20 "${source}"; then
-      log notice "Specify kit installed successfully from ${source}"
-      return "${RETURN_SUCCESS:-0}"
-    else
-      log warn "Failed to install from ${source}, trying next source..."
+    script="${tmp_dir}/spec-kit/install.sh"
+    if [[ ! -f "${script}" ]]; then
+      rm -rf "${tmp_dir}"
+      log error "Fetched checkout has no install.sh at repo root (too old spec-kit?)"
+      return "${RETURN_FAILURE:-1}"
     fi
-  done
+  fi
 
-  log error "Failed to install Specify kit from all available sources"
-  return "${RETURN_FAILURE:-1}"
+  # Delegate: all install logic (python ladder, index pairing, source
+  # fallback, verification) runs inside install.sh, in the CURRENT working
+  # directory so its $PWD/.venv detection applies.
+  log info "Delegating to installer: bash ${script} $*"
+  local rc=0
+  bash "${script}" "$@" || rc=$?
+
+  if [[ -n "${tmp_dir}" ]]; then
+    rm -rf "${tmp_dir}"
+  fi
+
+  if [[ ${rc} -eq 0 ]]; then
+    log notice "Specify kit installed successfully (via ${script})"
+    return "${RETURN_SUCCESS:-0}"
+  fi
+  log error "Specify installer failed with exit code ${rc}"
+  return "${rc}"
 }
 
 # Uninstall Specify kit
