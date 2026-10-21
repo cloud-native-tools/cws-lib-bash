@@ -1,0 +1,360 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: tmp/merge-draw/drawio
+# frozen: 2026-10-12T07:12:03Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline drawio.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+"0"
+"1"
+"2"
+"abc123"
+"horizontal"
+"image": true
+"node-1"
+"vertical"
+`## Evaluation Form`
+`## Feedback`
+`#RRGGBB`
+`#RRGGBBAA`
+`#create`
+${SKILL_WORKDIR}/.specify/
+%name%
+&amp
+&gt
+&lt
+&quot
+(0,0
+--action
+--contains
+--disposition
+--feature
+--help
+--layout
+--lifecycle-point
+--points-file
+--review-file
+--run-id
+--schema
+--unit-id
+--unit-type
+-1.0
+/Applications/draw.io.app/Contents/MacOS/draw.io
+/LDM
+/PNG/PDF
+/SVG/PDF
+/UserObject
+/app.diagrams.net/
+/box/anchor
+/deflate
+/diagram
+/document/
+/draw-diagram/references/delivery-contract.md
+/draw-diagram/references/semantic-model.md # cross-layer link re-relativized for the new depth (../../../semantic-model.md); verified resolving
+/edge
+/elkjs/graphlib
+/elkjs/networkx
+/external/draw-diagram
+/external/draw-diagram/SKILL.md
+/external/draw-diagram/references/routing-matrix.md
+/external/draw-diagram/references/semantic-model.md
+/external/draw-drawio/ # path rewritten to .specify/skills/draw-diagram/references/types/drawio/; destination verified present
+/false
+/github.com/jgraph/drawio-mcp/blob/main/shared/mxfile.xsd
+/github.com/jgraph/drawio-mcp/blob/main/shared/style-reference.md
+/github.com/jgraph/drawio-mcp/blob/main/shared/xml-reference.md
+/guide/
+/howto/
+/layer
+/mcp
+/memory/feedback/
+/mxCell
+/mxGraphModel
+/mxfile
+/mxgraph-format.md
+/pygraphviz/graphviz
+/references/mxgraph-format.md
+/references/render-and-export.md
+/render-and-export.md
+/root
+/scripts/python/feedback-utils.py
+/sds-realization.md
+/shared/workflow/feedback-step.md
+/skills/draw-drawio/ # path rewritten to .specify/skills/draw-diagram/references/types/drawio/; destination verified present
+/skills/draw-drawio/SKILL.md # retired skill_id/path of source drawio; the engine layer is a reference doc, not a skill
+/tooltips/connect/arrows/fold/page
+/value
+/www.drawio.com/docs/reference/diagram-generation/
+/y/width/height
+1.0
+100
+100×70
+120
+120×80
+123
+140
+140×60
+140×80
+160
+180
+200
+220
+280
+300
+400
+60×60
+<!--
+<!-- -->
+<Array as="points">
+<details>
+<diagram>
+<html lang>
+<img src="<name>.svg">
+<in>
+<mxCell id="0"/>
+<mxCell id="1" parent="0"/>
+<mxGeometry relative="1" as="geometry"/>
+<mxGeometry x= y= width= height= as="geometry"/>
+<mxGeometry x="0" y="0" width="120" height="60"/>
+<mxGraphModel>
+<mxPoint as="offset">
+<mxPoint x= y= as="sourcePoint"/>
+<mxRectangle as="alternateBounds">
+<mxfile>
+<mxfile><diagram>…</diagram></mxfile>
+<name>.drawio
+<name>.html
+<name>.svg
+<out>
+<root>
+@drawio/mcp
+Arrange > Layout
+BASE64_DEFLATED_XML
+C:\Program Files\draw.io\draw.io.exe
+CSV
+DEFLATE
+DRAWIO_DISABLE_UPDATE
+DRAWIO_DISABLE_UPDATE=true
+ELK
+ENCODED_JSON
+GREEN
+GUI
+LDM
+MCP
+No matching global declaration available for the validation root
+PNG
+Page-N
+RED
+RRGGBB
+RRGGBBAA
+SDS
+SKILL.md
+SKILL_WORKDIR
+SVG
+UserObject
+XSD
+acOS
+action
+action: load \| export \| save
+agent
+alternateBounds
+anyAttribute
+app.diagrams.net
+applyLayouts
+applyLayouts: true
+as="geometry"
+as="targetPoint"
+childLayout
+childLayout=flowLayout;flowOrientation=west
+col_index
+collapsible
+compressed="true"
+container
+container=1
+create_diagram
+dashed=1
+default
+direction
+direction: "horizontal"
+disposition_reason
+div
+drawio
+drawio --help
+drawio -x -f svg|png|pdf -o <out> <in>
+edge
+edge="1"
+edgeStyle
+edgeStyle=orthogonalEdgeStyle
+elk
+ellipse
+ellipse;whiteSpace=wrap;html=1
+ellipsePerimeter
+encodeURIComponent
+endArrow
+endArrow=classic
+etag
+excalidraw
+export
+feedback-utils.py --action record --unit-id "skill:draw-drawio" --unit-type skill # per-skill feedback unit retired; wrap-up records once against skill:draw-diagram (its ## Feedback)
+fillColor
+fixed="geometry"
+flowLayout
+flowOrientation
+font
+fontColor
+fontSize
+grid=1
+gridSize
+gridSize=10
+guides/tooltips/connect/arrows/fold/page=1
+height
+horizontalFlow
+horizontalTree
+host
+html=1
+https://app.diagrams.net/?grid=0&pv=0#create=ENCODED_JSON
+https://github.com/jgraph/drawio-mcp/blob/main/shared/mxfile.xsd
+https://github.com/jgraph/drawio-mcp/blob/main/shared/style-reference.md
+https://github.com/jgraph/drawio-mcp/blob/main/shared/xml-reference.md
+https://www.drawio.com/docs/reference/diagram-generation/
+id="0"
+ignored
+improve-skills
+itHub
+key=value
+label
+layered
+layout
+libavoid
+link
+load
+macOS
+math=0
+mcp.draw.io/mcp
+modified
+mxCell
+mxGeometry
+mxGeometry as="geometry"
+mxGraph
+mxGraphModel
+mxGraphModel > root > mxCell…
+mxPoint
+mxRectangle
+mxfile
+mxfile > diagram > mxGraphModel > root
+mxfile > diagram > mxGraphModel > root > mxCell…
+mxfile.xsd
+name
+nodeInA
+none
+npx @drawio/mcp
+object
+organic
+orthogonalEdgeStyle
+pageHeight
+pageHeight=1100
+pageScale
+pageScale=1
+pageWidth
+pageWidth=850
+pages
+parent
+parent="0"
+parent="1"
+pdf
+perimeter
+perimeter=
+perimeter=ellipsePerimeter
+placeholders
+placeholders="1"
+png
+postLayout
+postLayout: "elk"
+postLayout=elk
+postMessage
+processed
+radialTree
+record→threshold→package→manual→mark-submitted
+rectanglePerimeter
+recursiveResize
+references/
+references/document/*
+references/guide/*
+references/howto/*
+references/sds-realization.md
+relative="1"
+rounded
+routing
+routing-matrix.md
+routing: "libavoid"
+routing=libavoid
+row_index
+run_id
+save
+semantic-model.md
+serObject
+shadow=0
+sketch=1
+skill-draw-drawio-evaluation-form # per-engine evaluation-form probe retired; skill-draw-diagram-evaluation-form carries `engine: <name>` in the review's first line
+skill_id
+skills/external/draw-diagram
+.specify/skills/draw-diagram/SKILL.md
+.specify/skills/draw-diagram/references/routing-matrix.md
+.specify/skills/draw-diagram/references/semantic-model.md
+.specify/skills/draw-drawio/ # path rewritten to .specify/skills/draw-diagram/references/types/drawio/; destination verified present
+source
+source=
+sourcePoint
+span
+specify/memory/feedback/
+specify/shared/workflow/feedback-step.md
+specify/skills/draw-drawio/ # path rewritten to .specify/skills/draw-diagram/references/types/drawio/; destination verified present
+startSize
+strokeColor
+strokeWidth
+style-reference.md
+style_intent
+svg
+swimlane
+table
+tags
+target
+target=
+targetPoint
+tooltip
+type
+type=mermaid
+validates
+value
+value=
+value="<标签文本>"
+vars
+version
+vertex
+vertex="1"
+verticalFlow
+verticalTree
+viewer-static.min.js
+weight_plan
+whiteSpace
+whiteSpace=wrap
+width
+wrap-up
+x = col_index * 180 + 40
+x/y/width/height
+x=100 y=60
+xml-reference.md
+xmllint
+xmllint --schema mxfile.xsd
+xvfb-run -a
+y = row_index * 120 + 40
+zoneA
+{"type":"xml"\|"csv"\|"mermaid","compressed":true,"data":"BASE64_DEFLATED_XML"}
+已交付 draw.io 图；如愿意，请评价它是否准确、清晰且适合用途，或说明希望调整之处。 # absorbed into draw-diagram's unified Evaluation Form; the engine noun became the parameterized （引擎:<engine>）, artifact forms owned by delivery-contract.md

@@ -1,0 +1,227 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: .specify/teams/.work/command-logic-as-classified-skills/merge-scratch/git-fleet
+# frozen: 2026-10-11T13:40:45Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline git-fleet.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+"repository": { "url": "git@git.example.com:org/repo.git" }
+$GIT_FLEET_INVENTORY
+$GIT_FLEET_STATE
+$ROOTS
+${SKILL_HOME}/<relative-path>
+${SKILL_HOME}/references/
+${SKILL_HOME}/scripts/
+${SKILL_WORKDIR}/.specify/
+${SKILL_WORKDIR}/<relative-path>
+(severity, code, detail
+--action
+--all
+--apply
+--cross-reference
+--diff
+--docs
+--envs
+--ff-only
+--inventory
+--no-optional-locks
+--out
+--prune
+--repo
+--show-superproject-working-tree
+--state-dir
+--unit-id
+--unit-type
+-oProxyCommand=
+/../shared/patterns/reconcile-pattern.md
+/../{group}/relations.md
+/Users/me/project
+/behind
+/coordination-playbook.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/cws_work/
+/cws_work/<repo>
+/data/work
+/deny
+/dependency-graph.json
+/dependency-model.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/hazard-taxonomy.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/home/me/project
+/inventory-schema.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/org/repo
+/path
+/projects/
+/references/
+/relations.md
+/repo
+/repo-extended
+/repo.git
+/scripts/
+/scripts/git_fleet.py
+/shared/guidelines/confirmation-gates.md
+/shared/patterns/reconcile-pattern.md
+/shared/workflow/feedback-step.md
+/skills/git-fleet/SKILL.md # retired source path; git-fleet no longer exists
+/snapshots/
+/srv/project
+/storage/project/
+/storage/project/<org>/<repo>
+/user-facing
+0/0
+<SKILL:.specify/skills/git-fleet/SKILL.md> # retired source skill_id; target carries its own
+<root>/<org>/<repo>/<submodule>
+<root>/<org>/<repo>/<submodule>/.git
+<state>/dependency-graph.json
+<state>/projects/<repo>.md
+<state>/snapshots/<YYYY-MM-DDTHHMM>.json
+BEHIND_DIRTY
+BOTH # frontmatter-only tokens: form discarded per merge discipline; the facts (both dependency directions; many machines) are covered in fleet-dependency-model.md / fleet-workflow.md bodies
+Cargo.toml
+DDTHHMM
+DETACHED
+DIVERGENT_UNPUSHED
+FETCH_HEAD
+GATED
+GIT_FLEET_INVENTORY
+GIT_FLEET_STATE
+HEAD_DIVERGED
+MANY # frontmatter-only tokens: form discarded per merge discipline; the facts (both dependency directions; many machines) are covered in fleet-dependency-model.md / fleet-workflow.md bodies
+MULTI_DIRTY
+NEVER_FETCHED
+NO_UPSTREAM
+ONE
+PARALLEL_UNPUSHED
+ROOTS
+SAFE
+SAME_ENV_CLONES
+SKILL_HOME
+SKILL_WORKDIR
+STALE_REFS
+STASH
+SUBMODULE_DRIFT
+YYYY
+[A-Za-z0-9._-
+[A-Za-z0-9._-]+
+[A-Za-z0-9._/+-
+[A-Za-z0-9._/+-]+
+[A-Za-z0-9._/@:-]+
+ahead == 0
+ahead > 0
+ahead/behind
+ahead>0 && behind>0
+apply
+availability
+behind > 0
+branch -d|-D
+branch <backup>
+checkout
+cherry-pick
+clean
+code-review
+config-error
+coordination-playbook.md
+cws_work
+depended_on_by
+dependency-model.md
+depends_on
+deps
+depth
+depth: 4
+envs
+false
+feedback-utils.py --action record --unit-id "skill:git-fleet" --unit-type skill # unit id renamed to skill:git-workspace
+fetch
+filter-branch
+find -maxdepth
+from
+git rev-parse --show-superproject-working-tree
+git submodule status
+git-submodule-edit
+git-workflow
+git_fleet
+git_fleet.py
+gitexcludes
+gitignore
+gitmodules
+go.mod
+hazard-taxonomy.md
+host/path
+host:path
+internal_origin_patterns
+inventory-schema.md
+kind
+local
+manifest
+manifests
+merge
+module
+module git.example.com/org/repo
+mount_path
+oProxyCommand
+observed_in
+org/repo
+org/repo-extended
+package.json
+pinned_branch
+pinned_sha
+plan
+pom.xml
+pop
+prune
+pull --ff-only
+push
+pyproject.toml
+rebase
+references/coordination-playbook.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+references/dependency-model.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+references/hazard-taxonomy.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+references/inventory-schema.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+remote remove|set-url
+report
+repository.url
+reset
+revert
+roots_verified
+run_git
+scan
+skill_id
+specify/shared/guidelines/confirmation-gates.md
+specify/shared/workflow/feedback-step.md
+specify/skills/git-fleet/SKILL.md # retired source path fragment
+ssh
+stash drop
+stash drop|clear|pop|apply
+stash list
+stash push
+stash push -u
+state
+status: config-error
+submodule
+submodule update|deinit
+submodule.<name>.branch
+switch
+sync
+target
+to: null
+transport
+transport: ssh
+true
+unreachable
+untracked
+url
+user@
+version
+{group}
+⊂<parent>
+⊂<父仓名>
+半实测
+未解析
+环境 × 检出
+直接依赖
+被组内依赖

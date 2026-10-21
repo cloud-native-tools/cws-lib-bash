@@ -1,0 +1,84 @@
+---
+name: improve-team
+description: Adjust and optimize an existing agent team — add/remove members, change the collaboration pattern, tune thresholds/parallelism/quality dimensions, or operate a continuous loop (promote/demote maturity L1→L2→L3, tune budget/constraints/cadence/verifier) — with targeted, evidence-based, structure-preserving edits. Use when the user mentions ["调整团队", "优化团队", "优化 team", "修改团队", "升级成熟度", "降级成熟度", "调预算", "improve team", "adjust team", "refine team", "tune team", "promote maturity", "给团队增加", "给团队减少"]
+skill_id: "<SKILL:.specify/skills/internal/improve-team/SKILL.md>"
+classification: internal
+---
+
+# improve-team
+
+## Goal
+
+Adjust and optimize an **existing** agent team. `improve-team` is the team-domain analogue of `improve-agent`, completing the create → improve lifecycle for teams. It loads a persisted team, makes **targeted, evidence-based, structure-preserving** edits (never a broad rewrite), re-persists the team, and reports what changed and why. The multi-agent Conceptual Model it operates against is defined once in `../create-team/references/conceptual-model.md`; the team **goal** concept in `../create-team/references/goal.md`.
+
+Editing a team's **goal** is a first-class modify that **cascades into structure realignment** — follow `references/goal-editing.md`. For a **`continuous`** team, the operating discipline you tune (maturity level, cadence, budget/circuit-breaker, constraints file, independent verifier, state spine) is defined in `../create-team/references/operating-loops.md`.
+
+Goal anchor (Constitution Principle XIII): this skill is a Better-Harness instrument — improving a team strengthens the **Controlled Execution** and **Reliable Delivery** dimensions (sound orchestration, independent verification, bounded autonomy) and closes the **Learning Capture** loop; goal model in `.specify/shared/guidelines/better-harness.md`.
+
+## Inputs
+
+| Input | Required | Description |
+|-------|----------|-------------|
+| target team | yes | Slug/name resolving to `.specify/teams/<slug>/team.md`. |
+| improvement direction | yes | What to change: **redefine the goal** (cascades into structure realignment — see `references/goal-editing.md`), add/remove member, change pattern, tune thresholds/parallelism/dimensions, tune the **summary refresh** (`config.summary`: enable/disable, cadence `every`, delivery directory, interactivity — see `../create-team/references/summary-mapping.md`) or bind the team to a **goal** (`goal_slug`), or — for a `continuous` team — **promote/demote maturity** (L1→L2→L3), tune budget/constraints/cadence, or fix verifier independence. |
+| evidence | recommended | Normalized findings evidence from the **runs lane** (team run reports, Post-Run Critique notes, cycle logs — all consumed via `evidence-utils.py`, per `.specify/shared/workflow/evidence-step.md`): non-convergence, oscillating scores, territory conflicts, stale member references, budget overruns, false-positive rate, runaway token spend. |
+
+## Behavior
+
+1. **Resolve target** — load `team.md` from `.specify/teams/<slug>/team.md`. If none exists → report **"team not found"** and offer to **create** one (hand off to `create-team` via `/speckit.team create`). Never silently create a team.
+2. **Gather evidence (evidence-step A/B)** — execute Step A/B per `.specify/shared/workflow/evidence-step.md`: reuse or collect findings via `evidence-utils.py --action latest|collect --target project --lanes runs,feedback`, then use the **runs-lane** evidence items (per-team run-report counts, critique notes, cycle/escalation signals) to identify convergence/oscillation, territory conflicts, and stale/broken member references before proposing changes. Triage by `evidenceState` and freeze the candidate list; `Unobserved` items are recorded only, never fixed.
+3. **Attribute root cause** — map each issue to the responsible part (roster, pattern, config/thresholds, member territories/DAG). 归因量化 MUST **可复算** —— 附命令与输出片段,让读者重跑得到同一数字;**产物条目数不是覆盖度**(条目多不代表目标范围被覆盖),对照 `../create-team/references/operating-loops.md` §1 的「不可自标绿」条款:散文自评的达标声明不构成证据。
+4. **Apply targeted edits** — make the **minimal, evidence-based** change that fixes the issue while **preserving the parts of the team that already work** (SC-005). Do not touch unaffected fields — they must remain byte-identical.
+5. **Re-persist** — write the updated `team.md` and **bump the `updated` date**; leave `created` and all unaffected frontmatter/members untouched. Run intermediates stay in the git-ignored workspace `.specify/teams/.work/<slug>/`; if editing a legacy team, repoint any stale `progress_file` there.
+6. **Seat backfill (席位回填, opt-in)** — for the modify-target team **only** (never auto-scan other teams): resolve each `agent:` member reference; a seat with no definition under `.specify/agents/{templates,instances}/` is backfilled per the seat-instantiation clauses in `../create-team/references/create-mode.md` step 4 (create-agent delegation, kind instance; ALL frame placeholders resolved; `team-scope: <team-slug>` set; same-slug collision disclosed, never silently overwritten). Backfilled instances are structurally identical to create-time instances (shared clauses, no variant). After backfilling, run `specify render-agents --ai <当前宿主工具>` so the seats reach the host registration surface; render failure MUST be disclosed, not skipped. 存量团队经一次 modify 即可让席位上注册面。
+7. **Report** — list each change and the evidence that motivated it, distinguish: directly-referenced existing seats, seats backfilled this round, and the render stats summary (rendered/backups/unmapped), and recommend a `run` to validate.
+
+## Refinement Map (examples)
+
+| Symptom | Likely cause | Team edit |
+|---------|--------------|-----------|
+| Iteration never converges | Threshold too high or conflicting dimensions | Lower threshold / rebalance `quality_dimensions` weights |
+| Score oscillates | Ambiguous evaluator criteria | Tighten the evaluator rubric (via the moved stage templates in `.specify/skills/internal/create-team/templates/`) |
+| Parallel file conflicts | Overlapping territories | Repartition `territories`; move shared files to forbidden-write |
+| Serial stage stalls | Broken/missing handoff dependency | Fix `blockedBy` edges / handoff file path |
+| Serial stage 反复撞派发轮次上限,产物只覆盖目标的一小部分 | **交付粒度超预算** — stage 的 `outputs` 规模超过单次派发可承载量 | 按目录规模拆 stage,或降为目录级 + 例外清单;粒度纪律见 `../create-team/references/patterns.md` § Serial Chain |
+| Stale member | Agent renamed/deleted | Repoint or remove the member; surface the broken reference |
+| Missing a role (e.g. no QA gate) | Roster gap | Add a member (e.g. a `qa-engineer`) without altering existing members |
+| Goal drifted / team doing off-target work | Goal stale or never made explicit | Redefine the `goal` (verifiable form) and **realign** roster + pattern to it — see `references/goal-editing.md` |
+| Goal changed from one-time to continuous | Requirement shifted to "keep improving" / recurring work | Switch the pattern from `iteration` to `continuous`; add `maturity` (start L1), `cadence`, `budget`, `constraints_file`, independent verifier — see `../create-team/references/operating-loops.md` |
+| Continuous loop burns too many tokens / runs away | No budget or circuit-breaker | Add/tighten `budget` (daily cap, `on_80pct: report-only`, `on_100pct: halt`) + `kill_switch` |
+| Continuous loop makes bad auto-changes | Jumped past L1, or verifier not independent | Demote `maturity` to L1 (report-only); make the verifier a **separate** sub-agent with a default-REJECT stance |
+| Continuous loop ready for more autonomy | ≥2 L1 cycles, <20% false positives, verifier proven, constraints authored | Promote `maturity` L1→L2 (or L2→L3) per operating-loops.md graduation gates |
+| Summary refresh too costly on a fast cadence | `config.summary.every` too low for the team's cycle rate | Raise `every` (continuous defaults to 5); never set it to 1 for a `continuous` team — full charting per cycle is the cost profile the mechanism exists to avoid |
+| Goal progress invisible across sibling teams | Teams pursuing one goal have not declared a shared `goal_slug`, so each resolves to its own inferred goal | Declare the same `goal_slug` on every team serving that goal; their histories then aggregate into one goal summary (prior contributions are preserved on migration) |
+| Summary never appears for a team | `config.summary.enabled` was explicitly set to false, or every run is gated | Re-enable it, or check the run report's `Summary:` status line — it distinguishes cadence skips, budget skips and no-material declines |
+| Continuous `STATE.md` grows unbounded | Resolved items never pruned | Enforce per-cycle pruning of resolved/closed items in the state spine |
+
+## MUST / MUST NOT
+
+- MUST operate only on an **existing** persisted team; MUST NOT silently create one (on miss, report "team not found" and offer to create).
+- MAY **redefine the team's `goal`** as a first-class edit, but only on an explicit goal-change request; MUST NOT change the goal as a side effect of restructuring. When the goal changes, MUST **realign** the roster + pattern to the new goal (see `references/goal-editing.md`).
+- MUST make **targeted, evidence-based, structure-preserving** edits — no broad rewrites; unaffected fields stay byte-identical.
+- MUST bump the `updated` date on every successful edit.
+- MUST NOT modify single agents (that is `improve-agent`'s domain) beyond team-membership references.
+
+## Outputs
+
+- An updated `.specify/teams/<slug>/team.md` (with a bumped `updated` date) and a change report listing each edit and its motivating evidence.
+
+## Self-Improvement Routing
+
+Start every run with SI-0 from `.specify/shared/workflow/self-improvement-workflow.md`. This skill is Assisted Improvement by default; a persisted Team’s own run report/Post-Run Critique may preserve origin=`self` while `improve-team` acts as delegated improver. Behavior, maturity, budget, territory, or autonomy changes keep the continuous-loop gates and independent verifier. Reuse Behavior step 2 as SI-2, write the Step-E intervention ledger, report outcome pending, and wait for a comparable team run before claiming improvement.
+
+## Wrap-up
+
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
+
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "skill:improve-team" --unit-type skill --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "skill:improve-team" --unit-type skill`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:improve-team" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"

@@ -2,7 +2,7 @@
 
 **Canonical convention.** When the artifacts a command analyzes were written by the agent now analyzing them, detection MUST be delegated to fresh-context read-only subagents. This file is the single source of truth for that gate; commands link here rather than restating it.
 
-The evidence-state vocabulary this gate borrows (`Unobserved`, configured ≠ used) is owned by `shared/guidelines/better-harness.md` § 证据纪律. Read that for evidence discipline generally; this file is the staffing rule for one specific audit shape.
+The evidence-state vocabulary this gate borrows (`Unobserved`, configured ≠ used) is owned by `.specify/shared/guidelines/better-harness.md` § 证据纪律. Read that for evidence discipline generally; this file is the staffing rule for one specific audit shape.
 
 ## Why the gate exists
 
@@ -20,11 +20,12 @@ Delegating only the *validation* of findings does not compensate. A validator ma
 
 1. **Split by disjoint artifact scope** — one subagent per scope, so no two agents audit the same file pair and none needs the whole artifact set in context. Overlapping scopes produce duplicate findings and hide the gaps that fall between them.
 2. **Name the same-author condition in the brief** — a subagent that does not know the artifacts are self-authored will not hunt the defect class that dominates them. State the condition and the multi-pass editing history, and instruct the agent to assume defects exist and locate them, not to report that the artifacts are sound.
-3. **Require a propagation-surface answer before any severity** — for every finding the detector MUST list which downstream artifacts inherit it. When the answer is none, severity is capped at the command's own mid tier. This is the cheapest available correction: it moves work upstream and shrinks the validation wave. *(Dated measurement, never a threshold: in the 2026-09-18 run that established this rule, 12 findings reached validation at the top two tiers and 10 were downgraded — every downgrade reason was a propagation fact the detector had not checked.)*
+3. **Require a propagation-surface answer before any severity** — for every finding the detector MUST list which downstream artifacts inherit it. When the answer is none, severity is capped at the command's own mid tier. This is the cheapest available correction: it moves work upstream and shrinks the validation wave. **Output form**: the emitted finding row carries the propagation surface as its FIRST field — a named downstream artifact, or the literal `none` — and the severity is DERIVED from that field, never assigned first and justified afterwards; a row whose severity outranks what its propagation surface allows is mis-derived, not strong. *(Dated measurement, never a threshold: in the 2026-09-18 run that established this rule, 12 findings reached validation at the top two tiers and 10 were downgraded — every downgrade reason was a propagation fact the detector had not checked.)*
 4. **Treat every mapping table as an assertion, never as evidence** — an ID → ID table can be fully self-consistent, both identifiers resolving and the counts agreeing, while the referenced target says something else entirely. Checking that a target *exists* is not checking that it *expresses* the source. Quote the referenced body and judge whether it carries the mapped obligation; this defect class is invisible to any ID-level cross-check.
 5. **Keep detection and validation disjoint** — no agent validates a finding it produced. Where a command runs both passes, they are separate agent sets.
 6. **Report the condition and the downgrade rate** — state in the report that the same-author condition held, how detection was split, and how many findings validation downgraded. A downgrade rate near zero on a self-authored set is itself a signal worth reading: either the artifacts are unusually clean or detection asked for too little.
 7. **Subagent-unavailable fallback** — if dispatch fails twice in a row (upstream error), degrade to a direct bounded read and mark every resulting row (for example `(detected: direct read, subagent unavailable)`) so the weaker evidence path stays visible to the reader. Never let the fallback pass silently as the delegated path.
+8. **Derive every briefing premise mechanically before dispatch** — every count and every structural premise the orchestrator places in a detector's brief MUST be machine-derived before dispatch (a program reads the artifact set and emits the number or the shape); whatever cannot be derived is written into the brief as an open question to verify, never as an assertion. A detector trusts a briefed premise precisely because it arrived as a given, so a wrong one aims the whole pass at the wrong target and the misdirection is invisible from inside the pass.
 
 ## Severity vocabulary is owned locally
 
@@ -32,10 +33,10 @@ Rule 3 states the cap as "the command's own mid tier" and deliberately carries n
 
 ## Binding set is owned by the test
 
-The authoritative roster of commands carrying this gate is `tests/contract/test_objective_analysis_gate.py`, not a list restated here — per the owner-selection order in `shared/guidelines/one-source-of-truth.md`, code outranks an authored document for a fact a program can derive. Discover the live set with:
+The authoritative roster of commands carrying this gate is `tests/contract/test_objective_analysis_gate.py`, not a list restated here — per the owner-selection order in `.specify/shared/guidelines/one-source-of-truth.md`, code outranks an authored document for a fact a program can derive. Discover the live set with:
 
 ```bash
-grep -rl 'objective-analysis-gate.md' templates/commands/
+grep -rl 'objective-analysis-gate.md' .specify/templates/commands/
 ```
 
 ## Scope limits
@@ -45,4 +46,4 @@ Keep the gate cheap — it is a staffing decision, not a subsystem (Principle IX
 - **Applies to**: commands that produce findings, severities, or verdicts about artifacts.
 - **Does NOT apply to**: deterministic program validators (`validate-tasks.py`, `scan-confirmation-gates.py`, mirror `--check`) — a program has no authorship bias, and this is why the house prefers program-first for fixed rules; measurement steps that RUN a command and READ its output (`/speckit.implement`'s gate function); explicit self-reflection (`/speckit.feedback` Mode 5 自省), where the same-author condition is the point rather than an obstacle; verification of external sources (`/speckit.research`, `/speckit.derive`), whose subject was not authored here.
 - **A trivial or no-op run skips it.** Do not dispatch subagents to audit a run that produced nothing.
-- **Reach of the ambient pointer**: the Documentation Map row for this file is added to `templates/instructions-template.md`, and `generate-instructions.sh` reconciles only at top-level `## ` section granularity — so that row reaches freshly-initialized projects and this repo's live instructions file, but is NOT injected into an already-initialized downstream project. The command pointers are the surface that actually reaches every project, because a command template is read in full at invocation.
+- **Reach of the ambient pointer**: the Documentation Map row for this file is added to `.specify/templates/instructions-template.md`, and `generate-instructions.sh` reconciles only at top-level `## ` section granularity — so that row reaches freshly-initialized projects and this repo's live instructions file, but is NOT injected into an already-initialized downstream project. The command pointers are the surface that actually reaches every project, because a command template is read in full at invocation.

@@ -26,8 +26,9 @@ Input that arrives **after** the command has already started — a new directive
 2. **Batch, do not interleave**: when several addenda arrive across one run, integrate them together at the next artifact-write point. Never alternate partial artifact edits with new-input intake — the batch is integrated once, and any validation gate it triggers is re-run once.
 3. **Upstream artifact first**: an addendum that changes requirement scope MUST land in the upstream artifact it belongs to, and that artifact's validation gate MUST be re-run, before downstream work continues. Downstream artifacts built against a stale upstream are untrustworthy by construction.
 4. **Record verbatim**: each addendum is recorded append-only under the artifact's `## Clarifications` > `### Session YYYY-MM-DD` heading, so the run stays auditable.
+5. **Arriving after wrap-up**: input that reaches the agent *after* the command has already reported completion is still an addendum to that run — not a licence to open a second one. A second invocation re-does setup, re-derives branch/spec numbering, and leaves two artifacts claiming to be the same run. Instead: re-open the upstream artifact the addendum belongs to and land it there (rule 3), re-run that artifact's validation gate **once**, then re-run each of the three wrap-up side effects **incrementally** — only over what the addendum changed, each per its own owner (`.specify/shared/workflow/artifact-commit-step.md`, `.specify/shared/workflow/feedback-step.md`, `.specify/shared/workflow/docs-step.md`) — and report the delta against the first wrap-up rather than issuing a second full report.
 
-Per-command steps name *which* artifact an addendum lands in and what restructuring it needs; the batching, ordering, and recording rules are owned here.
+Per-command steps name *which* artifact an addendum lands in and what restructuring it needs; the batching, ordering, recording, and post-wrap-up rules are owned here.
 
 ## Empty Arguments Handling
 

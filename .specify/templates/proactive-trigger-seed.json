@@ -356,10 +356,10 @@
       "origin": "seed",
       "priority": 130,
       "provenance": {
-        "file": "templates/commands/feedback.md",
+        "file": "skills/internal/manage-feedback/SKILL.md",
         "anchorKind": "owning-section",
-        "anchor": "Outline",
-        "quote": "Run § Introspection over the open `internal` entries"
+        "anchor": "Workflow",
+        "quote": "Run § Introspection (A3 in [`./references/path-a-digest.md`](./references/path-a-digest.md)) over the open `internal` entries"
       }
     },
     {

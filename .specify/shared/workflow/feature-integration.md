@@ -4,7 +4,7 @@ This document defines the standard feature tracking integration used by SDD life
 
 ## Core Protocol
 
-Every SDD lifecycle command (`/speckit.requirements`, `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`, `/speckit.checklist`) automatically integrates with the feature tracking system:
+Every SDD lifecycle command (`/speckit.requirements`, `/speckit.plan`, `/speckit.tasks`, `/speckit.implement`, `/speckit.checklist`, `/speckit.review`) automatically integrates with the feature tracking system:
 
 1. **Detect feature context**:
    - If `.specify/memory/features.md` exists, detect the current feature directory (format: `.specify/specs/[REQUIREMENTS_KEY]/`)
@@ -34,7 +34,8 @@ Each command owns exactly one transition:
 | `/speckit.plan` | `Draft → Planned` | MUST NOT land `Implemented` |
 | `/speckit.tasks` | Maintain `Planned` | Status unchanged |
 | `/speckit.implement` | `Planned → Implemented` | Requires Pre-Status-Flip Gate |
-| `/speckit.checklist` | `Implemented → Ready for Review` | If applicable |
+| `/speckit.checklist` | `Implemented → Ready for Review` | If applicable; applies only when the checklist runs after implement |
+| `/speckit.review` | `Implemented → Ready for Review` | review.md committed AND every deferred item resolved or waived |
 
 ## Pre-Status-Flip Gate (implement phase only)
 
@@ -45,17 +46,18 @@ Before advancing to `Implemented`:
 3. Verification log completeness: every `SC-NNN` has a status row
 4. Deferred task registry: `deferred_tasks=` in `verification.md` lists all `[~]` IDs
 5. Only if ALL checks pass: advance status
-6. Void DoD rows: a DoD row whose premise is measurably false is **void**, not unmet. It does not block the flip, but
-   it MUST carry cited measurement, an inline annotation on the `DoD Status` line, and prominent surfacing in the
-   wrap-up report. Record the correction where the false premise lives (see `templates/tasks-template.md` DoD Status).
-   Never report the Definition of Done as plainly "met" while a void row is folded silently into it
+6. Void DoD rows and Completion Gate items: a DoD row OR a `## Completion Gate` item whose premise is measurably
+   false is **void**, not unmet. It does not block the flip, but it MUST carry cited measurement, an inline annotation
+   on the `DoD Status` line (or on the gate item), and prominent surfacing in the wrap-up report. Record the correction
+   where the false premise lives (see `.specify/templates/tasks-template.md` DoD Status). Never report the Definition of Done as
+   plainly "met" while a void row is folded silently into it
 
 ## Feature Binding Rules (requirements phase)
 
 When `/speckit.requirements` creates a new spec:
 
 1. **Scan for existing Feature**:
-   - Search by context: Scan `memory/features/*.md` and `memory/feature-index.md`
+   - Search by context: Scan `.specify/memory/features/*.md` and `.specify/memory/features.md`
    - Search by ID: Check `SPECIFY_FEATURE` env, git branch name, numeric prefix in BRANCH_NAME
    - **Binding-precedent heuristic**: for each candidate Feature, check its sibling specs (prior spec directories already bound to it, e.g. via its detail file's Related Files/history). A Feature whose siblings repeatedly absorbed similar work is strong evidence for **bind**; a candidate with no topical siblings is evidence for **create**. Surface the precedent when recommending bind-vs-create.
 
@@ -65,7 +67,8 @@ When `/speckit.requirements` creates a new spec:
 
 3. **Integration responsibilities**:
    - Ensure corresponding Feature entry exists
-   - Update `memory/feature-index.md`: keep Status at least `Planned`, update Spec Path, refresh date
+   - Update `.specify/memory/features.md`: set Status to the transition this command owns (§ Status State Machine — the requirements phase lands `Draft`, never `Planned`), update Spec Path, refresh date
+   - The index is **hand-maintained**: no script regenerates it, so the `Total Features` header and the rows MUST be edited together in the same pass — a header edited alone, or rows edited without it, leaves the file self-inconsistent while still looking well-formed
    - Never create duplicate Feature IDs
 
 ## Feature Continuous Evolution

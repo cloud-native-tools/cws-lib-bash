@@ -7,13 +7,13 @@ import { createCodexCliJsonModelClient } from "./codex-json-model.mjs";
 //   const result = await analyzer.analyze({ workspace: "/path/to/repo", command: "facets" });
 //   // result => { scope, sources, sessions, facets, warnings }
 // CLI workflow for AI agents:
-//   node scripts/session-analysis.mjs sources --platform qoder --workspace /path/to/repo
-//   node scripts/session-analysis.mjs facets --platform qoder --workspace /path/to/repo --limit 5
-//   node scripts/session-analysis.mjs insights --platform qoder --workspace /path/to/repo --limit 5
-//   node scripts/session-analysis.mjs facts --platform qoder --workspace /path/to/repo --limit 3
-//   node scripts/session-analysis.mjs claude-facets --platform qoder --workspace /path/to/repo --limit 5
-//   node scripts/session-analysis.mjs file-reads --platform qoder --workspace /path/to/repo --limit 5
-//   node scripts/session-analysis.mjs show --platform qoder --workspace /path/to/repo --session-id <id> --include-events
+//   node .specify/scripts/session-analysis.mjs sources --platform qoder --workspace /path/to/repo
+//   node .specify/scripts/session-analysis.mjs facets --platform qoder --workspace /path/to/repo --limit 5
+//   node .specify/scripts/session-analysis.mjs insights --platform qoder --workspace /path/to/repo --limit 5
+//   node .specify/scripts/session-analysis.mjs facts --platform qoder --workspace /path/to/repo --limit 3
+//   node .specify/scripts/session-analysis.mjs claude-facets --platform qoder --workspace /path/to/repo --limit 5
+//   node .specify/scripts/session-analysis.mjs file-reads --platform qoder --workspace /path/to/repo --limit 5
+//   node .specify/scripts/session-analysis.mjs show --platform qoder --workspace /path/to/repo --session-id <id> --include-events
 // This module returns evidence and compact insight packs; the caller synthesizes
 // any final narrative/report.
 

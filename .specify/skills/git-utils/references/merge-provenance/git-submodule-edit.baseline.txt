@@ -1,0 +1,118 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: .specify/teams/.work/command-logic-as-classified-skills/merge-scratch/git-submodule-edit
+# frozen: 2026-10-11T13:40:46Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline git-submodule-edit.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+${SKILL_HOME}
+${SKILL_HOME}/<relative-path>
+${SKILL_HOME}/assets/
+${SKILL_HOME}/assets/ledger-template.md
+${SKILL_HOME}/references/
+${SKILL_HOME}/references/command-recipes.md # converted SKILL.md paths (three source SKILL.mds became references/*-workflow.md; skill_id dropped as form)
+${SKILL_HOME}/scripts/
+${SKILL_WORKDIR}
+${SKILL_WORKDIR}/.specify/
+${SKILL_WORKDIR}/<relative-path>
+${SKILL_WORKDIR}/submodule-edits.md
+--abbrev-ref
+--action
+--force-with-lease
+--init
+--onto
+--quiet
+--remote
+--short
+--show-toplevel
+--status
+--status <pass|fail>
+--unit-id
+--unit-type
+--verify
+/APIs
+/MR
+/assets/
+/assets/ledger-template.md
+/branch
+/checkout
+/commit
+/fix-null-deref
+/foo
+/heads/
+/new
+/record-bump.sh
+/references/
+/references/command-recipes.md # renamed submodule-command-recipes.md in the target
+/releases
+/scripts/
+/scripts/record-bump.sh
+/shared/workflow/feedback-step.md
+/skills/git-submodule-edit/SKILL.md # retired source path
+/submodule-edits.md
+/tests/app
+/topic
+/updated
+/user-facing
+<SKILL:.specify/skills/git-submodule-edit/SKILL.md> # retired source skill_id
+<path>
+<topic>
+<项目名>
+BASH_SOURCE
+BRANCH
+CURRENT
+HEAD
+PARENT_SLUG
+SHA
+SKILL.md
+SKILL_HOME
+SKILL_WORKDIR
+TOPIC
+[<PARENT_SLUG>] <what changed and why>
+basename "$(git rev-parse --show-toplevel)"
+cd <submodule>
+command-recipes.md
+fail
+feedback-utils.py --action record --unit-id "skill:git-submodule-edit" --unit-type skill # unit id renamed to skill:git-workspace
+git -C <path> branch project-<PARENT_SLUG>/<topic> <the-commit-sha>
+git -C <path> checkout -b project-<PARENT_SLUG>/<topic>
+git -C <path> checkout project-<PARENT_SLUG>/<topic>
+git -C <path> push -u origin project-<PARENT_SLUG>/<topic>
+git -C <path> rebase --onto <gitlink-sha> <upstream-base> project-<PARENT_SLUG>/<topic>
+git -C <path> reflog
+git -C <path> symbolic-ref --short HEAD
+git add <path>
+git commit -m
+git commit -m "chore(submodule): bump <path> to <short-sha> (validating <topic>)"
+git ls-tree HEAD <path>
+git submodule status
+git submodule status <path>
+git submodule update --init <path>
+git submodule update --remote
+git submodule update <path>
+git-submodule-edit
+gitmodules
+ledger-template.md
+libs/foo
+main
+master
+pass
+pending
+project-<PARENT_SLUG>/*
+project-<PARENT_SLUG>/<topic>
+project-<name>/*
+project-<this-project>/<topic>
+project-<项目名>/*
+record-bump.sh
+record-bump.sh --status pass <path>
+skill_id
+specify/shared/workflow/feedback-step.md
+specify/skills/git-submodule-edit/SKILL.md # retired source path fragment
+submodule-edits.md

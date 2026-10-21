@@ -1,0 +1,393 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: tmp/merge-draw/d3js
+# frozen: 2026-10-12T07:12:02Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline d3js.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+`## Evaluation Form`
+`## Feedback`
+`#37474F`
+`#607D8B`
+`#90A4AE`
+`#A3B1BA`
+${SKILL_WORKDIR}/.specify/
+${e.id}.${k}: sds=${e.box[k]} got=${r.box[k]}
+--action
+--contains
+--disposition
+--feature
+--lifecycle-point
+--points-file
+--review-file
+--run-id
+--unit-id
+--unit-type
+/../draw-diagram/references/semantic-model.md
+// 依据: docs/architecture.md v2.3 (2026-08-01
+/2}
+/500
+/ASO
+/CRD/GCS
+/D2
+/Donut
+/JSON
+/NODES/EDGES
+/PNG
+/Pause/Resume
+/SKILL.md
+/T3
+/TSV
+/annotation
+/architecture
+/architecture.md
+/area
+/array
+/arrays
+/assets/template.html
+/best-practices.md
+/body
+/bounds
+/button
+/cdn.jsdelivr.net/npm/d3
+/cdn.jsdelivr.net/npm/d3-force
+/child
+/collapse
+/cycle3-reproduction-lessons.md
+/d3js-guide.md
+/d3js-official-docs.md
+/d3js.org/
+/d3js.org/d3-selection
+/d3js.org/d3.v7.min.js
+/dash
+/date
+/dependency
+/div
+/docs
+/domain
+/draw-diagram/references/delivery-contract.md
+/draw-diagram/references/semantic-model.md # cross-layer link re-relativized for the new depth (../../../semantic-model.md); verified resolving
+/each}
+/edge
+/embed
+/end
+/entry
+/exception
+/exportPNG
+/exported
+/folded
+/fonts
+/gallery
+/green
+/grid
+/head
+/html
+/json
+/layered
+/legend
+/line/scatter
+/lines/links
+/links/rels
+/math
+/medium
+/memory/feedback/
+/nested
+/observablehq.com/
+/observablehq.com/plot/
+/or
+/output/visualization.html
+/partition
+/paths
+/pitfalls.md
+/plantuml
+/png
+/preset
+/printed
+/rects
+/references/sds-realization.md
+/relation
+/replica/port
+/reproducible
+/script
+/scripts/python/feedback-utils.py
+/sds-realization.md
+/seeded
+/shared/workflow/feedback-step.md
+/size
+/skills/draw-d3js/SKILL.md # retired skill_id/path of source d3js; the engine layer is a reference doc, not a skill
+/states
+/states/relations
+/strong
+/style
+/svg
+/template.html
+/title
+/tooltip
+/transform
+/transitions/relations
+/update/exit
+/vendored
+/version/date
+/www.w3.org/2000/svg
+/zones
+/zones/relations
+0 0 ${sds.canvas.w} ${sds.canvas.h}
+0 0 ${totalWidth} ${totalHeight}
+0 0 ${width + margin.left + margin.right} ${height + margin.top + margin.bottom}
+0.55
+0.7
+0.85
+0=无依赖, 1=弱关联(低频/可选), 2=一般(异步/事件), 3=强(同步调用/数据流), 4=强同步依赖(核心链路
+100
+120
+150
+170
+190
+200
+202
+206
+220
+234
+250
+270
+300
+330
+333
+360
+400
+460
+500
+520
+567
+<div>
+<script type="application/json">
+<script>
+<strong>${d.name}</strong><br/>Value: ${d.value}
+<style>
+<title>
+?clean=1
+A3B1BA
+ASO
+BOOTING
+CAS
+CDN
+CHANGE
+CRD
+CSV
+DOCTYPE
+DOM
+EDGES
+ESM
+FAILED
+GCS
+HUD
+IDLE
+KEY_HUE
+LDM
+M${d.x1},${d.y1} Q${d.ctrl[0]},${d.ctrl[1]} ${d.x2},${d.y2}
+NODES
+OUTSIDE
+PANELS
+PANELS/NODES/EDGES
+PNG
+RUNNING
+SDS
+SKILL_WORKDIR
+STARTING
+SUSPENDED
+SVG
+TIER_INK
+TIER_PX
+TSV
+UMD
+addEventListener
+anchor: corner
+assets/
+auto
+avaScript
+axisBottom
+axisLeft
+baseVal
+best-practices/
+bold
+box{x,y,w,h}
+clientWidth
+cloneNode
+colorScale
+const data
+containerWidth
+createElement
+createObjectURL
+csvParse
+csvString
+currentColor
+curveMonotoneX
+curveStepAfter
+d3.drag
+d3.forceSimulation
+d3.interpolateBlues
+d3.interpolateRdBu
+d3.interpolateRdYlGn
+d3.interpolateViridis
+d3.line().curve(d3.curveStepAfter
+d3.schemeCategory10
+d3.schemeTableau10
+d3.stratify
+d3.v7.min.js
+dBu
+dYlGn
+data-*.js
+data.js
+data.json
+deviation-manifest.md
+diagram_class
+disposition_reason
+draw-diagram
+drawImage
+easeCubicOut
+edgeLabelsAlwaysOn
+edgePoint
+efinitelyTyped
+el.getBoundingClientRect(
+elements
+encodeURIComponent
+enter/update/exit
+exportPNG
+exportSVG
+feedback-utils.py --action record --unit-id "skill:draw-d3js" --unit-type skill # per-skill feedback unit retired; wrap-up records once against skill:draw-diagram (its ## Feedback)
+fidelity_intent
+fidelity_intent: reproduction
+fidelity_intent=reproduction
+flowSel
+font-weight
+font-weight: normal
+fontSize
+forEach
+forceCenter
+forceCollide
+forceLink
+forceManyBody
+forceSimulation
+forceX
+forceY
+fresh
+getBBox
+getBBox(
+getBoundingClientRect
+getBoundingClientRect(
+getComputedTextLength
+getContext
+getElementById
+html
+http://www.w3.org/2000/svg
+https://cdn.jsdelivr.net/npm/d3-force@3/+esm
+https://cdn.jsdelivr.net/npm/d3@7
+https://cdn.jsdelivr.net/npm/d3@7/+esm
+https://d3js.org/
+https://d3js.org/d3-selection（各模块链接类似
+https://d3js.org/d3.v7.min.js
+https://observablehq.com/@d3/gallery
+https://observablehq.com/plot/
+ignored
+inePlot
+innerRadius
+interpolateBlues
+interpolateRdBu
+interpolateRdYlGn
+interpolateViridis
+jsDelivr
+keyPath
+linkHorizontal
+linkLabel
+margin.bottom
+marginBottom
+marginLeft
+marginRight
+marginTop
+markerHeight
+markerWidth
+minGap
+missing: ${e.id}
+mouseover
+node-07 label 超宽 6px，字号 13→12
+node.getComputedTextLength(
+normal
+out-of-bounds: ${nodes[i].id}
+outerRadius
+overlap: ${nodes[i].id} ↔ ${nodes[j].id}
+parentId
+preserveAspectRatio
+processed
+querySelector
+rScale
+record→threshold→package→manual→mark-submitted
+references/
+relations.anchor
+revokeObjectURL
+rotate(-32
+rotate(-45
+run_id
+scaleBand
+scaleDiverging
+scaleExtent
+scaleLinear
+scaleLog
+scaleOrdinal
+scalePoint
+scaleSequential
+scaleSqrt
+scaleTime
+scaleUtc
+schemeCategory10
+schemeTableau10
+selectAll
+serializeToString
+setAttribute
+skill-draw-d3js-evaluation-form # per-engine evaluation-form probe retired; skill-draw-diagram-evaluation-form carries `engine: <name>` in the review's first line
+skill_id
+specify/memory/feedback/
+specify/shared/workflow/feedback-step.md
+stroke-opacity: 1.0
+stroke-width
+strokeWidth
+style_intent
+svgNode
+tickFormat
+tier
+timeFormat
+timeParse
+toDataURL
+tol
+totalHeight
+totalWidth
+translate(${d.box.x},${d.box.y}
+translate(${d.y},${d.x}
+translate(${margin.left},${margin.top}
+translate(${marginLeft},0
+translate(${width/2},${height/2}
+translate(0,${height - marginBottom}
+translate(0,${height}
+translate(margin.left, margin.top
+typeColor
+uncertain
+useEffect
+useRef
+validateAgainstSDS
+validateCoords
+viewBox
+weight_plan
+wrap-up
+xMidYMid
+xScale
+yScale
+ypeScript
+zoneSel
+zones
+已交付 D3.js 图表；如愿意，请评价它是否准确、清晰且适合用途，或说明希望调整之处。 # absorbed into draw-diagram's unified Evaluation Form; the engine noun became the parameterized （引擎:<engine>）, artifact forms owned by delivery-contract.md

@@ -3,9 +3,9 @@
 
   This report is SELF-CONTAINED. It is intended to be sent to spec-kit framework maintainers who do not have access to the source repository on their own machine. Therefore:
 
-  - Every file path is absolute, OR written as `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...` so it is resolvable from outside the project.
+  - For a `REC-…` target, the **repo-relative path is the PRIMARY form** (it resolves on any checkout); an absolute path is allowed only as a parenthetical supplement.
   - Every finding includes an inline quoted excerpt of the offending text — readers must be able to judge the issue without opening the source file.
-  - No bare ".specify/..." or other relative paths may appear without absolute or URL context.
+  - A target with no repo-relative form MUST be marked `external` with its reason.
 
   This report is PROBLEM-FIRST. It is NOT a status summary of what the feature does or what each artifact contains. Sections that describe the feature instead of identifying a process gap MUST be deleted.
 -->
@@ -97,26 +97,28 @@ Reconstruct what actually happened during this feature's SDD lifecycle. Capture 
 ## 5. spec-kit / SDD Improvement Recommendations
 
 > Group by target subsystem. Each recommendation MUST name the exact file or section in the spec-kit repo to change and cross-reference the source finding ID(s).
+>
+> **Target path form**: the **repo-relative path is the PRIMARY form** (`templates/...`, `skills/...`, `scripts/...` — it resolves on any checkout). An absolute path MAY follow only as a parenthetical supplement, e.g. `templates/tasks-template.md (absolute: [SPECKIT_REPO_ROOT]/templates/tasks-template.md)`. A target with no repo-relative form MUST be marked `external` with its reason.
 
 ### 5.1 Template Improvements
 
-- **[REC_T1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/templates/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+- **[REC_T1_TITLE]** — Target: `templates/[FILE].md` (absolute supplement: `[SPECKIT_REPO_ROOT]/templates/[FILE].md`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
 ### 5.2 Command Prompt Improvements
 
-- **[REC_C1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/templates/commands/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+- **[REC_C1_TITLE]** — Target: `templates/commands/[FILE].md` (absolute supplement: `[SPECKIT_REPO_ROOT]/templates/commands/[FILE].md`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
 ### 5.3 Automation / Script Improvements
 
-- **[REC_A1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/scripts/bash/[FILE].sh (or `scripts/python/[FILE].py`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+- **[REC_A1_TITLE]** — Target: `scripts/bash/[FILE].sh` (or `scripts/python/[FILE].py`; absolute supplement: `[SPECKIT_REPO_ROOT]/scripts/...`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
 ### 5.4 Workflow Improvements
 
-- **[REC_W1_TITLE]** — Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+- **[REC_W1_TITLE]** — Target: `shared/workflow/[FILE].md` (absolute supplement: `[SPECKIT_REPO_ROOT]/shared/workflow/[FILE].md`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
 ### 5.5 Documentation Improvements
 
-- **[REC_D1_TITLE]** — Target: [SPECKIT_REPO_URL]/blob/[SPECKIT_COMMIT_OR_VERSION]/docs/[FILE].md. Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
+- **[REC_D1_TITLE]** — Target: `docs/[FILE].md` (absolute supplement: `[SPECKIT_REPO_ROOT]/docs/[FILE].md`). Change: [CONCRETE_CHANGE]. Source: F[N]. Expected impact: [IMPACT].
 
 (Drop any sub-section that has no recommendations — do not leave empty headers.)
 
@@ -132,7 +134,7 @@ Reconstruct what actually happened during this feature's SDD lifecycle. Capture 
 
 The generator MUST tick every box below before submitting the report. If any box would remain unchecked, fix the report first.
 
-- [ ] Every file path in the report is absolute, or written as `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...`.
+- [ ] Every `REC-…` target is repo-relative (primary), with an absolute path only as a parenthetical supplement; targets with no repo-relative form are marked `external` with a reason.
 - [ ] Every finding in Section 3 has a quoted excerpt that lets the reader judge the problem without opening the source file.
 - [ ] No bullet says "see attached", "as discussed earlier", or otherwise references context outside this document.
 - [ ] No placeholder tokens (`[...]`) remain anywhere in the report.
@@ -178,7 +180,7 @@ Please share the contents of this document with the spec-kit framework developer
 
 1. No placeholder token may remain in a committed review report.
 2. Dates must be valid ISO format (YYYY-MM-DD).
-3. **Do not include bare relative paths** that only resolve inside the project repo. Every path is either absolute, or `[REPO_URL]/blob/[COMMIT_SHA_FULL]/...`.
+3. **REC targets are repo-relative first.** The repo-relative path is the PRIMARY form (it resolves on any checkout); an absolute path is allowed only as a parenthetical supplement. A target with no repo-relative form MUST be marked `external` with its reason. This supersedes 061's machine-local absolute-only form.
 4. Findings without a quoted excerpt MUST be dropped — vague complaints are not actionable.
 5. Section 4 stays short and bullet-only. The report is for maintainers who want to know what to change, not a status report for project stakeholders.
 6. Section 5 recommendations each cite an exact target file in the spec-kit repo and at least one source finding ID from Section 3.

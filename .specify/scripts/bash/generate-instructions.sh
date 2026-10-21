@@ -65,53 +65,99 @@ render_template() {
     "$input_file"
 }
 
-# Report the generated file's size against INSTRUCTIONS_BUDGET_BYTES, with a
-# per-section breakdown when it has reached the budget. Advisory by design and
-# always exit 0: this script runs inside `specify init` for every downstream
-# project, so failing here would leave an over-budget project unable to
-# initialize or refresh its instructions at all. Converging the file is
-# /speckit.instructions Action 5's job (two routes: compress a framework
-# section back to the template's own shape; promote an over-thick
+# Report the generated file's size against INSTRUCTIONS_BUDGET_BYTES, plus a
+# per-section table comparing the live file against the rendered template.
+# Advisory by design and always exit 0: this script runs inside `specify init`
+# for every downstream project, so failing here would leave an over-budget
+# project unable to initialize or refresh its instructions at all. Converging
+# the file is /speckit.instructions Action 5's job (two routes: compress a
+# framework section back to the template's own shape; promote an over-thick
 # project-specific section to a docs/ owner document).
+#
+# The table is always emitted, not only over budget: Action 2 consumes it as
+# the run's observation snapshot and Routes R1/R2 take their candidates from
+# it, so measuring here is what keeps both routes from re-deriving sizes and
+# classifications by eye. Its columns are the facts the routes branch on —
+# `placeholder` (the template version still carries a `[...]` / `{{VAR}}`
+# token, i.e. a scaffold the project is meant to fill) and `project-owned`
+# (the template has no such heading at all).
 report_instructions_budget() {
   local target="$1"
+  local template="$2"
+  local rendered
+  rendered="$(mktemp)"
+  render_template "$template" > "$rendered"
   local budget_out
-  budget_out="$(python3 - "$target" "$INSTRUCTIONS_BUDGET_BYTES" <<'PYEOF'
+  budget_out="$(python3 - "$target" "$rendered" "$INSTRUCTIONS_BUDGET_BYTES" <<'PYEOF'
 import re
 import sys
 
-path, budget = sys.argv[1], int(sys.argv[2])
-text = open(path, encoding="utf-8").read()
-size = len(text.encode("utf-8"))
+live_path, template_path, budget = sys.argv[1], sys.argv[2], int(sys.argv[3])
+live_text = open(live_path, encoding="utf-8").read()
+size = len(live_text.encode("utf-8"))
 print("BUDGET: {} {} {}".format(size, budget, "over" if size >= budget else "within"))
-if size < budget:
-    sys.exit(0)
+
+PREAMBLE = "(before the first ## heading)"
+# A bracket token followed by `(` is a Markdown link, not an unfilled scaffold;
+# counting it would hide a genuine Route R1 candidate behind placeholder=yes.
+PLACEHOLDER_RE = re.compile(r"\[[^\]\n]*\](?!\()|\{\{[A-Za-z0-9_]+\}\}")
+
 
 # Same section granularity as the additive reconcile below, so the measurement
 # and the injection logic cannot disagree about what counts as one section.
-parts = re.split(r"(?m)^(## .+)$", text)
-sections = []
-if len(parts) > 1:
-    preamble = len(parts[0].encode("utf-8"))
-    if preamble:
-        sections.append((preamble, "(before the first ## heading)"))
+def sections(text):
+    parts = re.split(r"(?m)^(## .+)$", text)
+    out = [(PREAMBLE, parts[0])] if parts[0].strip() else []
     for i in range(1, len(parts) - 1, 2):
-        body = parts[i] + parts[i + 1]
-        sections.append((len(body.encode("utf-8")), parts[i].lstrip("# ").strip()))
-for nbytes, name in sorted(sections, reverse=True)[:8]:
-    print("SECTION: {} {}".format(nbytes, name))
+        out.append((parts[i].lstrip("# ").strip(), parts[i] + parts[i + 1]))
+    return out
+
+
+template_sections = dict(sections(open(template_path, encoding="utf-8").read()))
+
+rows = []
+for name, body in sections(live_text):
+    live_bytes = len(body.encode("utf-8"))
+    template_body = template_sections.get(name)
+    template_bytes = len(template_body.encode("utf-8")) if template_body else 0
+    delta = live_bytes - template_bytes
+    rows.append((
+        name,
+        live_bytes,
+        template_bytes,
+        "{:+d}".format(delta) if delta else "0",
+        "yes" if template_body and PLACEHOLDER_RE.search(template_body) else "no",
+        "no" if template_body else "yes",
+    ))
+rows.sort(key=lambda row: row[1], reverse=True)
+
+header = ("section", "live B", "tmpl B", "delta", "placeholder", "project-owned")
+widths = [max([len(str(r[i])) for r in rows] + [len(header[i])]) for i in range(6)]
+
+
+def row_line(cells):
+    return "| " + " | ".join(str(c).ljust(w) for c, w in zip(cells, widths)) + " |"
+
+
+print("ROW:" + row_line(header))
+print("ROW:|" + "|".join("-" * (w + 2) for w in widths) + "|")
+for row in rows:
+    print("ROW:" + row_line(row))
 PYEOF
   )"
+  rm -f "$rendered"
   local size budget_n verdict
   size="$(printf '%s\n' "$budget_out" | sed -n 's/^BUDGET: \([0-9]*\) .*/\1/p')"
   budget_n="$(printf '%s\n' "$budget_out" | sed -n 's/^BUDGET: [0-9]* \([0-9]*\) .*/\1/p')"
   verdict="$(printf '%s\n' "$budget_out" | sed -n 's/^BUDGET: [0-9]* [0-9]* \(.*\)$/\1/p')"
   if [ "$verdict" = "over" ]; then
-    log warning "Instructions size ${size} B has reached the ${budget_n} B budget (over by $((size - budget_n)) B). Largest sections:"
-    printf '%s\n' "$budget_out" | sed -n 's/^SECTION: \([0-9]*\) \(.*\)$/    \1 B  \2/p'
-    log warning "Large instructions may impact agent performance. Run /speckit.instructions to converge the file (Action 5 owns both routes)."
+    log warning "Instructions size ${size} B has reached the ${budget_n} B budget (over by $((size - budget_n)) B). Section table, largest first:"
   else
-    log info "Instructions size: ${size} B (budget ${budget_n} B, $((budget_n - size)) B headroom)"
+    log info "Instructions size: ${size} B (budget ${budget_n} B, $((budget_n - size)) B headroom). Section table, largest first:"
+  fi
+  printf '%s\n' "$budget_out" | sed -n 's/^ROW://p'
+  if [ "$verdict" = "over" ]; then
+    log warning "Large instructions may impact agent performance. Run /speckit.instructions to converge the file (Action 5 owns both routes)."
   fi
 }
 
@@ -250,7 +296,7 @@ else
 fi
 
 # One call site after the branch, so a first-time bootstrap reports its size too.
-report_instructions_budget "$TARGET_FILE"
+report_instructions_budget "$TARGET_FILE" "$TEMPLATE_FILE"
 
 # Initialize the project glossary (non-destructive; create only if absent).
 # The glossary anchors project vocabulary and corrects voice/dictated input;
@@ -269,7 +315,7 @@ fi
 
 # Create the skills/tools explanation docs at .specify top level (create-only,
 # never overwrite — same non-destructive policy as the glossary). These carry
-# the no-registry discovery model; canonical sources live in templates/.
+# the no-registry discovery model; canonical sources live in .specify/templates/.
 for doc_name in skills tools; do
   DOC_TEMPLATE=".specify/templates/${doc_name}.md"
   DOC_TARGET="$TARGET_DIR/${doc_name}.md"

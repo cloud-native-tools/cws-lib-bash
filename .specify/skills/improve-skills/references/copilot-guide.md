@@ -9,8 +9,8 @@
 | Apply targeted fixes | Workspace edit on SKILL.md |
 | Validate frontmatter | `@terminal`: `python -c "import yaml; ..."` |
 | Check line count | `@terminal`: `wc -l <skill-path>/SKILL.md` |
-| Run skill_id refresh | `@terminal`: `scripts/bash/create-new-skill.sh --refresh-only --name <name> --json` |
-| Verify discoverability | `@terminal`: `ls .specify/skills/<name>/SKILL.md` |
+| Run skill_id refresh | `@terminal`: `.specify/scripts/bash/create-new-skill.sh --refresh-only --name <name> --json` |
+| Verify discoverability | `@terminal`: `ls <resolved-root>/<name>/SKILL.md` (Spec Kit root: `.specify/skills/`) |
 | Move content to references | Workspace edit to create new reference file and update SKILL.md pointer |
 
 ## Best Practices

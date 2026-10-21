@@ -9,8 +9,8 @@
 | Apply targeted fixes | `Edit` tool with precise `old_string` matching |
 | Validate frontmatter | `Bash`: `python -c "import yaml; yaml.safe_load(open('SKILL.md').read().split('---')[1])"` |
 | Check line count | `Bash`: `wc -l ${SKILL_HOME}/SKILL.md` (must stay under 500) |
-| Run skill_id refresh | `Bash`: `scripts/bash/create-new-skill.sh --refresh-only --name <name> --json` |
-| Verify discoverability | `Bash`: `ls .specify/skills/<name>/SKILL.md` and grep the frontmatter `name` field across `.specify/skills/*/SKILL.md` for duplicates |
+| Run skill_id refresh | `Bash`: `.specify/scripts/bash/create-new-skill.sh --refresh-only --name <name> --json` |
+| Verify discoverability | `Bash`: `ls <resolved-root>/<name>/SKILL.md` and grep the frontmatter `name` field across `<resolved-root>/*/SKILL.md` for duplicates (Spec Kit root: `.specify/skills/`) |
 | Move content to references | `Write` to create `${SKILL_HOME}/references/<topic>.md`, then `Edit` to replace inline content with pointer |
 
 ## Best Practices

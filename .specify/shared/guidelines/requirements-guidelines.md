@@ -49,6 +49,8 @@ Generate a checklist file at `FEATURE_DIR/checklists/requirements.md`:
 
 ### Validation Process
 
+**Run the deterministic checker first.** `python3 .specify/scripts/python/validate-requirements.py <spec>` judges the structural propositions mechanically: id contiguity per prefix, definition-row document order (anchored on definition rows, with the `## Clarifications` history excluded), reference resolvability including the bidirectional Shared-Strings check and the `Consumed by` reverse check, the active-marker count, and duplicate ids. Its verdicts are the authority for those propositions — **every count and every reference resolution recorded in the checklist derives from a checker run, never hand-typed**. Re-run it after any clarification write-back and stamp the checklist pass/fail **after** that re-run: a checklist stamped beforehand records a state the write-back has already replaced. This section claims no owner for any pre-existing count set, and where another document asserts such an owner, that assertion is not inherited here.
+
 1. Review the spec against each checklist item
 2. Document specific issues found (quote relevant spec sections)
 3. Treat `Feature ID: Need clarification` as pending (requires `/speckit.clarify`)

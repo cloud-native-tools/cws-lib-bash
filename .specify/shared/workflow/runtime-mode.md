@@ -43,7 +43,7 @@ fi
 | Mirror/dual-copy discipline (`skills/` ↔ `.specify/skills/`) | Enforced | **Not applicable** — edit only the single host copy, matching the host directory's existing skill format |
 
 Steps that are not Spec-Kit-specific (the skill's core capability, its own
-`${SKILL_HOME}` scripts/references/assets) run identically in both modes.
+`${SKILL_HOME}` .specify/scripts/references/assets) run identically in both modes.
 
 ## Canonical gate line for `## Feedback` sections
 

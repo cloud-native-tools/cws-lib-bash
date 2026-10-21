@@ -1,6 +1,6 @@
 # Token 效率纪律(Token-Efficiency Discipline)
 
-> **Single Source of Truth**: 本文档是框架 Token 使用效率纪律的唯一定义处。任何命令、技能、代理或共享工作流引用本纪律时 MUST 以路径引用本文件,MUST NOT 复制规则文本。经 `.specify/instructions.md`(由 `templates/instructions-template.md` 生成)ambient 生效于全部 `/speckit.*` 流程。
+> **Single Source of Truth**: 本文档是框架 Token 使用效率纪律的唯一定义处。任何命令、技能、代理或共享工作流引用本纪律时 MUST 以路径引用本文件,MUST NOT 复制规则文本。经 `.specify/instructions.md`(由 `.specify/templates/instructions-template.md` 生成)ambient 生效于全部 `/speckit.*` 流程。
 
 随着框架流程增多,每次运行注入大模型上下文的内容量(Token 消耗 + 上下文污染)是框架级质量属性。三条纪律:**程序优先**、**摘要优先**、**消耗观察**。
 

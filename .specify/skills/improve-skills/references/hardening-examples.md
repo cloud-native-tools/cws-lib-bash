@@ -1,7 +1,7 @@
 # Worked Examples: Hardening a Reference Helper
 
 Two before/after cases distilled from a real multi-round optimization loop of the
-`browser-utils` skill. Each shows the **brittle version**, the **runtime symptom the
+`browser-utils` skill (now maintained in the xuanji-extension browser core). Each shows the **brittle version**, the **runtime symptom the
 executor actually observed**, the **hardened version**, and the **general lesson**.
 Use these as the template when Workflow Step 4 says "harden reference helpers that read
 a live third-party/framework DOM". The pattern generalizes to any helper that scrapes a

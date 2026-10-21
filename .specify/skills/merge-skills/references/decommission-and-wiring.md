@@ -78,14 +78,18 @@ the host's confirmation-gate convention:
 
 ## Mirror sync
 
-Applies only when the host keeps a canonical↔mirror pair for skills (spec-kit: `skills/` is
-canonical, `.specify/skills/` is the mirror). Sync with the host's own tool — **never** hand-copy,
-which is how the two trees silently diverge:
+Applies only when the host keeps a canonical↔mirror pair for skills (spec-kit: `skills/external/`
+and `skills/internal/` are canonical, mirroring to `.specify/skills/<name>/` and
+`.specify/skills/internal/<name>/` respectively). Sync with the host's own tool — **never**
+hand-copy, which is how the two trees silently diverge:
 
 ```bash
-python3 scripts/python/sync-mirrors.py --write  --only skills/<target>
-python3 scripts/python/sync-mirrors.py --check  --only skills/<target>   # must report no drift
+python3 .specify/scripts/python/sync-mirrors.py --write  --only skills/<layer>/<target>
+python3 .specify/scripts/python/sync-mirrors.py --check  --only skills/<layer>/<target>   # must report no drift
 ```
+
+`<layer>` is the layer the **target** lives in — `external` or `internal`. `--only` matches mirror
+pairs by source prefix, so an unqualified `skills/<target>` matches no pair and exits 2.
 
 Two host gotchas worth expecting: the sync is additive and never deletes, so a mirror directory
 left behind by the decommission must be removed explicitly; and pre-existing root-owned files

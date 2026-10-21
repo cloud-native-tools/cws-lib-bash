@@ -1,0 +1,18 @@
+# Defaults layer for subagent CLI dispatch.
+#
+# Content owner: this file. `specify init` seeds it to
+# .specify/agents/execution/configs/_defaults.yaml only when that file is absent;
+# an existing file is never overwritten. Edit the seeded copy to change a
+# project's defaults.
+#
+# Layer precedence: defaults < configs/<slug>.yaml < inline dispatch parameters.
+# Clear sentinels ("" or auto) remove a lower-layer value for the five value
+# fields. `cli` here is a default value, not a declaration: when an agent/inline
+# layer selects another CLI, this whole layer is skipped (no value leaks).
+# Schema authority: skills/internal/create-agent/references/execution-config.md.
+cli: qodercli
+model: DeepSeek-Flash
+reasoning_effort: max
+context_window: 1000000
+quantification:
+  method: auto

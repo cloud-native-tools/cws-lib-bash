@@ -1,0 +1,862 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: tmp/merge-draw/mermaid
+# frozen: 2026-10-12T07:12:03Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline mermaid.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+![](
+"1" --> "*"
+"标签": 数值
+`# highlight`
+`## Evaluation Form`
+`## Feedback`
+`#highlight`
+${SKILL_WORKDIR}/.specify/
+%%{init: {'theme': 'default', 'themeVariables': {'fontFamily': 'Arial, Helvetica, sans-serif'}}}%%
+%%{init: {...}}%%
+%%{init: {class: {}}}
+%%{init: {er: {layout: "leftRight"}}}%%
+%%{init: {flowchart: {curve: 'linear'}}}%%
+%%{init: {flowchart: {nodeSpacing, rankSpacing}}}%%
+%%{init: {flowchart: {nodeSpacing: 50, rankSpacing: 60}}}%%
+%%{init: {flowchart: {wrappingWidth: 1000}}}%%
+%%{init: {gantt: ...}}%%
+%%{init: {gantt: {barHeight, barGap, leftPadding, topPadding}}}%%
+%%{init: {gantt: {barHeight: 24, barGap: 6, leftPadding: 60}}}%%
+%%{init: {sequence: {mirrorActors: false, actorMargin: 60}}}%%
+%%{init: {sequence: {mirrorActors: false, showSequenceNumbers: true}}}%%
+%%{init: {theme: "default", themeVariables: {primaryColor: ...}}}%%
+%%{init: {themeVariables: {fontSize, ...}}}%%
+%%{init: {themeVariables: {fontSize: "14px"}}}%%
+%%{init: {themeVariables: {fontSize: ...}}}%%
+%%{init: {themeVariables}}%%
+%%{init}%%
+%H:%M
+%Y-%m-%d
+%m-%d
+&amp
+( ) 选项
+((M1 名称
+((fork
+((join
+((圆形
+((用例
+((节点
+([开始
+([结束
+([角色名
+(✓) 已选
+(圆角
+*--
++ 说明见文字
++$实例数 int
+-- 否 -->
+-- 是 -->
+-- 重试 -->
+-- 金额>=10000 -->
+--*
+---
+---\ntitle: ...\nconfig:\n  theme: ...\n---
+-->
+-->>
+-->|
+--action
+--cap-add
+--compare
+--contains
+--cpus
+--display-width
+--disposition
+--feature
+--from
+--lifecycle-point
+--memory
+--name
+--o
+--points-file
+--restart
+--review-file
+--run-id
+--scale
+--scale 2
+--unit-id
+--unit-type
+--width
+--width 3200
+--x
+--yes
+--|>
+--|> : 标签
+--|>|标签|
+-.->
+-.->|include|
+->>
+-p 9696:9696
+/00-mermaid-overview.md
+/00-semantic-analysis.md
+/01
+/01-choose-diagram-type.md
+/01-uml-overview.md
+/02
+/02-class-diagram.md
+/03-component-diagram.md
+/03-sequence-diagram.md
+/04-deployment-diagram.md
+/04-usecase-diagram.md
+/05
+/05-activity-diagram.md
+/05-sequence-diagram.md
+/06
+/06-package-diagram.md
+/06-state-machine-diagram.md
+/07
+/07-mermaid-guide.md
+/07-usecase-diagram.md
+/08
+/08-activity-diagram.md
+/08-modeling-methodology.md
+/09
+/09-grasp-principles.md
+/09-state-machine-diagram.md
+/10
+/10-architecture-diagram.md
+/10-layout-planning.md
+/11-code-generation.md
+/11-wbs-diagram.md
+/12-gantt-diagram.md
+/12-rendering-and-output.md
+/127.0.0.1
+/13
+/13-mindmap-diagram.md
+/13-wbs-diagram.md
+/14-gantt-diagram.md
+/14-json-diagram.md
+/15-mindmap-diagram.md
+/15-yaml-diagram.md
+/16-er-diagram.md
+/16-json-diagram.md
+/17-yaml-diagram.md
+/18-er-diagram.md
+/19-salt-diagram.md
+/2.0/1.5/1.0
+/20-c4-diagram.md
+/5/7
+/API
+/ASO
+/C4
+/C4Container/C4Component/C4Dynamic/C4Deployment
+/CJK
+/CLI/
+/Chromium
+/Container/Component/Deployment
+/D2
+/Deployment/Package # frontmatter description stripped; UML component/deployment/package survive as folded trigger keywords and in the engine layer's document/01-uml-overview.md + 10-architecture-diagram.md
+/Dockerfile
+/ER
+/FK
+/GitLab/CI
+/HTML
+/HTTP
+/JSON
+/JSON/YAML/ER/C4/Salt
+/JSON/YAML/Salt
+/LB
+/LR
+/M2
+/M2/M3
+/MindMap/ER/C4
+/PAID/
+/PNG
+/PNG/PDF
+/Pod
+/Profile/Archimate/Ditaa/EBNF/Regex
+/SKILL.md
+/SOLID
+/SVG
+/Service
+/Spring
+/Suspend/CAS
+/T2/T3
+/TD
+/URL
+/actor
+/alt
+/and
+/array
+/best-practices.md
+/classDef
+/classDiagram
+/cloud/bang
+/code
+/component/deployment/package/object
+/content.md
+/cws-images/images-mermaid-server
+/deactivate
+/details
+/diagram-principles.md
+/draw-diagram/SKILL.md
+/draw-diagram/references/delivery-contract.md
+/draw-diagram/references/semantic-model.md # cross-layer link re-relativized for the new depth (../../../semantic-model.md); verified resolving
+/else
+/etc/cert.pem
+/extend
+/extend/generalization
+/external/draw-mermaid/scripts/measure-svg-layout.py # path rewritten to .specify/skills/draw-diagram/references/types/mermaid/scripts/measure-svg-layout.py; destination verified present
+/external/draw-mermaid/scripts/render-mermaid.sh # path rewritten to .specify/skills/draw-diagram/references/types/mermaid/scripts/render-mermaid.sh; destination verified present
+/external/draw-mermaid/server # path rewritten to .specify/skills/draw-diagram/references/types/mermaid/server; destination verified present
+/external/draw-mermaid/server/docker-run.sh # path rewritten to .specify/skills/draw-diagram/references/types/mermaid/server/docker-run.sh; destination verified present
+/flowchart
+/fontFamily/fontSize
+/gRPC/MQ
+/grid
+/guide/content.md
+/guide/diagram-principles.md
+/guide/large-diagram-playbook.md
+/guide/layout.md
+/guide/style.md
+/guide/syntax-reference.md
+/h3
+/healthz
+/howto/
+/howto/00-semantic-analysis.md
+/howto/01-choose-diagram-type.md
+/howto/07-usecase-diagram.md
+/howto/10-layout-planning.md
+/howto/11-code-generation.md
+/howto/12-rendering-and-output.md
+/howto/13-wbs-diagram.md
+/howto/14-gantt-diagram.md
+/howto/15-mindmap-diagram.md
+/howto/16-json-diagram.md
+/howto/17-yaml-diagram.md
+/howto/18-er-diagram.md
+/howto/19-salt-diagram.md
+/howto/20-c4-diagram.md
+/img/
+/img/pako
+/img/pako:{b64}?type=png
+/index.md
+/jihchi/mermaid.ink
+/join
+/large-diagram-playbook.md
+/layout.md
+/left
+/legend
+/legend/
+/link
+/loop/par
+/loop/par/opt
+/loop/par/opt/break
+/loose
+/measure-svg-layout.py
+/memory/feedback/
+/mermaid
+/mermaid-cli
+/mermaid-cli/
+/mermaid.ink
+/mermaid/
+/namespace
+/neutral/dark/forest/base
+/note
+/note/
+/note/legend
+/offsets
+/order
+/orders
+/path/to/chrome
+/pitfalls.md
+/plantuml-server
+/plantuml/
+/polyline
+/pre
+/profile/archimate/ditaa/ebnf/regex
+/rank
+/rankSpacing
+/render-mermaid.sh
+/requirement-fit
+/right
+/right/over
+/scripts/measure-svg-layout.py
+/scripts/python/feedback-utils.py
+/sds-realization.md
+/server/
+/server/README.md
+/shared/project
+/shared/workflow/feedback-step.md
+/skills/draw-mermaid/SKILL.md # retired skill_id/path of source mermaid; the engine layer is a reference doc, not a skill
+/spacer
+/style.md
+/summary
+/svg-to-png-cjk.cjs
+/svg/
+/svg/pako
+/svg/pako:{b64}
+/syntax-reference.md
+/tab
+/动作
+/通知用户
+0..*
+0..1
+1..*
+100
+120
+127
+174
+199
+200
+201
+240
+256
+300
+333
+342
+443
+<<abstract>>
+<<choice>>
+<<entity>>
+<<enumeration>>
+<<fork>>
+<<interface>>
+<<join>>
+<<service>>
+<a href=x.svg target=_blank rel=noopener><img src=x.png></a>
+<a href=x.svg><img src=x.png></a>
+<a>
+<details>
+<img src="x.svg" width="1400">
+<li>
+<name>
+<pre><code>
+<style>
+<|--
+= font-size × 显示宽度 ÷ viewBox 宽
+==>
+>不对称
+@startgantt
+@startjson
+@startmindmap
+@startsalt
+@startuml
+@startuml timing
+@startwbs
+@startyaml
+A *-- B
+A -- 标签 --> B
+A --> B
+A --> B: 事件[守卫]/动作
+A -->|标签| B
+A -->|说明| B
+A --|{ B
+A ..> B
+A ..|> B
+A <|-- B
+A o-- B
+A ||--o{ B
+A }|-- B
+A ~~~ B
+A->>A
+A1001
+A3B1BA
+A:::note
+API网关 ×8
+ASO
+AskUserQuestion
+BOTTOM
+BiRel
+C -- 重试 --> A
+C4Component
+C4Container
+C4Context
+C4Deployment
+C4Dynamic
+C4_Context
+CAS
+CDN
+CHANGE
+COPY
+COPY --from=fetcher ... mermaid-server
+CRASHED
+CRD
+CREATED
+CRITICAL
+Component
+ContainerDb
+Container_Boundary
+C≈round(sqrt(N×1.3
+DB1
+DB2
+DIP
+DSL
+Deployment_Node
+EBNF
+EOF
+ERD
+ERROR
+Enterprise_Boundary
+FIX
+FROM
+GET
+GET /healthz
+GET /img/pako:{base64}?type=png\|jpeg\|webp
+GET /svg/pako:{base64}
+GRASP
+Go/HTTP
+HEALTHCHECK
+INSERT
+ISP
+JDBC
+LB1
+LB2
+LSP
+M1/M2
+MAX_STATE_BYTES
+MERMAID_BACKEND
+MERMAID_BACKEND=local
+MERMAID_BACKEND=server
+MERMAID_SERVER
+MERMAID_SERVER=
+MERMAID_SERVER=http://内网地址
+MVC
+Node_Ext
+Note
+Note left/right/over of 参与者: 文本
+Note over A: ▶ 见图N（XX 时序
+Note over X: [阶段 1] 初始化
+OCL
+OCP
+ONE
+OrderService
+PAID
+PK FK
+PK, FK
+PNG_SCALE
+POST
+POST /orders
+PUPPETEER_EXECUTABLE_PATH
+PUPPETEER_EXECUTABLE_PATH=
+Person_Ext
+RDS
+RENDER_TIMEOUT
+REST
+Rel(路由, 隧道代理, "mTLS 隧道", ":443"
+RelIndex
+Rel_Back
+Rel_D
+Rel_L
+Rel_R
+Rel_U
+SDS
+SKILL_WORKDIR
+SOLID
+SPA
+SRP
+SUSPENDED
+SVG_SCALE
+SYS_ADMIN
+System_Boundary
+System_Ext
+TCP
+THIS
+THREE
+TOP
+TTY
+UML
+UpdateLayoutConfig($c4ShapeInRow="3"
+UpdateLayoutConfig($c4ShapeInRow="3", $c4ShapeInRowWrap="2"
+VPN
+WAF
+WBS
+YYYY
+YYYY-MM-DD
+YYYY-MM-DD HH:mm
+[![alt](x.png)](x.svg
+[(圆柱
+[(表头 \| 行1 \| 行2
+[*]→SUSPENDED→…→[*
+[/平行四边形/
+[/梯形/
+[/节点/
+[[子程序
+[\节点\
+[a, b
+[动作
+[守卫
+[提交
+[无边框
+[条件
+[条件]/动作
+[状态: ▾
+[用户名: ____
+[矩形
+[节点
+[金额<10000
+[金额>=10000
+[阶段 1] 初始化
+\n【姓名】
+\n【责任人】
+aHei
+activate
+active
+actor
+actorFontSize
+actorFontWeight
+actorMargin
+after
+after <id>
+after a1
+after a1, b1
+alinux-3/Dockerfile
+alt
+alt ... else ... end
+alt 库存充足
+alt 池未饱和
+alt/else
+and
+autonumber
+avaScript
+axisFormat
+axisFormat %m-%d
+background
+bar
+barGap
+barHeight
+base
+base64 = zlib(JSON {"code": "<图表源码>", "mermaid": {"theme": ..., "themeVariables": ...}}
+block
+block-beta
+bool
+branch 名
+break
+break ... end
+cert: ****
+checkout 名
+checks
+cherry-pick id
+chromium
+class
+class <id...> <name>
+class <id[,id2...]> <name>
+class 类名 { +属性 方法() }
+class 订单 { ... }
+classDef
+classDef <name> fill:...,stroke
+classDef <name> fill:...,stroke:...,color
+classDef module stroke-width:2px
+classDef note stroke-width:1px
+classDiagram
+click
+click id "url"
+collections
+column
+comment
+commit
+contains
+crit
+critical
+critical ... end
+critical 必须成功
+curve: linear
+dark
+date
+dateFormat
+dateFormat YYYY-MM-DD
+datetime
+deactivate
+default
+derives
+direction
+direction LR
+direction TD/LR
+disposition_reason
+docker run --cap-add=SYS_ADMIN -p 3000:3000 ghcr.io/jihchi/mermaid.ink
+document/
+done
+elIndex
+element 元素
+else 池饱和
+end
+entityPadding
+equal-height
+erDiagram
+excludes
+excludes 2026-10-01, 2026-10-02
+export MERMAID_SERVER=http://<host>:3000
+export MERMAID_SERVER=http://<内网主机>:9696
+export MERMAID_SERVER=http://<内网地址>:9696
+feedback-utils.py --action record --unit-id "skill:draw-mermaid" --unit-type skill # per-skill feedback unit retired; wrap-up records once against skill:draw-diagram (its ## Feedback)
+fidelity_intent
+figure-01-order-flow.mmd
+figure-01-order-flow.svg
+figure-<NN>-<slug>.mmd
+float
+flowchart
+flowchart LR
+flowchart TD
+flowchart.wrappingWidth
+fontFamily
+fontFamily: "Noto Sans CJK SC, PingFang SC, Microsoft YaHei"
+fontSize
+fonts-noto-cjk
+forest
+gRPC
+gantt
+gap
+gitGraph
+guide/
+hapeInRow
+hapeInRowHeight
+hapeInRowWrap
+howto/
+href
+http://127.0.0.1:9696/
+http://内网地址
+https://mermaid.ink
+iRel
+id["..."
+id["中文标题"
+id["带引号文字"
+id["文字"
+id["文字:()"
+igDecimal
+ignored
+indMap
+ingFang
+int
+int 行号 PK
+int 订单号 PK
+ireGuard
+itHub
+itLab
+items: array ×12
+journey
+jsonDiagram
+kanban
+key_paths
+lantUML
+layout: "leftRight"
+leftPadding
+leftRight
+legend
+legendLeft
+legendRight
+line
+lineColor
+linkStyle
+linkStyle ... stroke:#bbb
+linkStyle 0,1,2
+linkStyle <i> stroke:<语义色相>,stroke-width:2px
+linkStyle <id> stroke
+linkStyle <idx|default> stroke-width:1.5px
+linkStyle default stroke-width:1.5px
+loop
+loop ... end
+mTLS
+mTLS :443
+measure-svg-layout.py --compare
+measure-svg-layout.py <x.svg> --display-width <目标显示宽>
+merge 名
+mermaid_state_encode
+mermaid_state_encode(
+messageFontSize
+messageFontWeight
+messageMargin
+milestone
+minEntityWidth
+mindmap
+mirrorActors
+mirrorActors: false
+mmd
+namespace
+namespace A → namespace B
+namespace 名 { ... }
+neutral
+node svg-to-png-cjk.cjs x.svg x.png 2
+node:20-slim
+nodeSpacing
+note
+note for
+note for 类名 "..."
+note for 类名 "说明"
+note for 类名 left/right of
+note right/left of
+note right/left of 参与者: 说明
+note right/left of 状态
+noteBkgColor
+noteFontSize
+noteFontWeight
+noteTextColor
+o--
+off
+ontainerDb
+opt
+opt ... end
+order.items[0].sku
+over
+packet-beta
+pako
+par
+par ... and ... end
+par/and
+participant
+participant A as 显示名
+participant OS as 订单服务
+participant P as 显示名
+pdateLayoutConfig
+period
+pie
+pie showData
+plantuml-server
+png
+primaryBorderColor
+primaryColor
+primaryTextColor
+processed
+progress
+progress 50
+proxy_pass
+proxy_read_timeout
+quadrantChart
+rankSpacing
+rderItem
+rderRepositoryImpl
+rderService
+record→threshold→package→manual→mark-submitted
+ref
+render-mermaid.sh
+render-mermaid.sh <图>.mmd <输出目录> <前缀>
+requirement 需求 { id, text, risk, verifymethod }
+requirementDiagram
+right of
+rightPadding
+root
+root((
+root((标题
+root([
+root[/ /
+root{{ }}
+run_id
+sankey
+sankey-beta
+scheduleChanged
+.specify/scripts/measure-svg-layout.py
+.specify/scripts/render-mermaid.sh
+.specify/scripts/svg-to-png-cjk.cjs
+secondaryColor
+section
+sectionFontSize
+securityLevel
+securityLevel: loose
+selector
+sequenceDiagram
+showData
+showSequenceNumbers
+skUserQuestion
+skill-draw-mermaid-evaluation-form # per-engine evaluation-form probe retired; skill-draw-diagram-evaluation-form carries `engine: <name>` in the review's first line
+skill_id
+specify/memory/feedback/
+specify/shared/workflow/feedback-step.md
+state 名 { ... }
+stateDiagram
+stateDiagram-v2
+string
+string 名称 "说明"
+string 状态 "枚举说明"
+stroke-width
+stroke: #000, stroke-width: 2px
+style
+style <id>
+style <id> fill:...,stroke
+style <zoneId> stroke-width:3px
+style <zoneSubgraphId> stroke:#333,stroke-width:3px
+subgraph
+subgraph <id>[标题
+subgraph id["标题"
+subgraph ns-worker[namespace: worker
+subgraph 支付网关 ... end
+subgraph 标题 { ... }
+svg-to-png-cjk.cjs
+tertiaryColor
+theme: "default"
+theme: "neutral"
+themeVariables
+themeVariables.fontSize
+themeVariables.noteBkgColor
+timeline
+timestamp
+title
+tls.cert
+todayMarker
+todayMarker off
+todayMarker stroke-width:0
+topPadding
+traces
+verifies
+viewBox
+weekends
+weight_plan
+wrap-up
+wrappingWidth
+x-axis
+xuanji-images/.../plantuml-server
+xychart-beta
+y-axis
+yBatis
+ySQL
+yamlDiagram
+za_bot
+za_top
+zoneId
+zoneSubgraphId
+{ }
+{{ }}
+{{六边形}}
+{{节点}}
+{条件}
+{菱形}
+|HTTP|
+|TCP 3306|
+|gRPC|
+|mTLS :443|
+|o--o{
+||--o{
+||--||
+}o--o{
+}o--||
+}|--|{
+~~~
+«×N»
+▶ 见 图N
+▶ 见图N
+▶ 见文字
+事件/动作
+事件[守卫]/动作
+事件[条件
+交易_订单
+任务 : id, 开始, 工期, progress 50
+任务 : id, 开始, 工期, progress 60
+名称 : id, 开始, 工期
+名称 : 属性..., id, 开始, 工期
+实体 { 类型 名 键 }
+实体A 基数--基数 实体B : 关系名
+已交付 Mermaid 图；如愿意，请评价它是否准确、清晰且适合用途，或说明希望调整之处。 # absorbed into draw-diagram's unified Evaluation Form; the engine noun became the parameterized （引擎:<engine>）, artifact forms owned by delivery-contract.md
+已支付
+支付成功
+服务 -->|HTTP/API| 外部系统
+注释节点
+源 目标 权重
+状态A --> 状态B: 事件[守卫]/动作
+状态名
+类型 名 "说明"
+类型 名称 [键
+键: map
+键: 值
+键: 类型
+需求 - satisfies -> 元素

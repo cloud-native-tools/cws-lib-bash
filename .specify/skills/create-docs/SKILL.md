@@ -3,6 +3,7 @@ name: create-docs
 description: |
   This skill can standardize, create, and manage the **basic structure** of the project documentation space (root entry files + docs/ tree) as a single reconcile engine — observe, diff through a tolerance band, dry-run plan, converge with archive-not-delete, verify — and author new baseline-compliant documents from a writing commission. Structure only: content quality of an existing document belongs to improve-docs, and site presentation/publishing is an optional higher-order capability owned by create-pages. Use this when the user mentions ["create docs", "new document", "write documentation", "documentation structure", "docs skeleton", "写文档", "新增文档", "文档写作", "整理文档", "文档结构", "文档空间", "ADR", "决策记录", "notes lifecycle", "笔记生命周期", "docs reconcile", "文档调谐", "authoring flow", "documentation taxonomy", "六类文档"]
 skill_id: "<SKILL:.specify/skills/create-docs/SKILL.md>"
+classification: external
 ---
 
 # create-docs
@@ -11,7 +12,7 @@ skill_id: "<SKILL:.specify/skills/create-docs/SKILL.md>"
 
 Keep the **documentation space** converged toward its desired state, and create new compliant documents on commission. There is **only one run mode — reconcile** — following [`.specify/shared/patterns/reconcile-pattern.md`](../../shared/patterns/reconcile-pattern.md): never add new top-level modes; new needs are new inputs to the same engine.
 
-**Managed space (A zone)**: root entry files + `docs/` tree. **Read-only (B zone)**: source code, `.specify/specs/`, `.specify/memory/`. **Anchors (C zone, skip)**: compatibility symlinks, generated per-tool copies, and any site-tooling directory that a presentation layer placed inside `docs/` (`layouts/`, `static/`, `public/`, `resources/`, `themes/`, `archetypes/`) — those are **not documentation**: never triage them as content, never archive them. Archive zone: `docs/archive/` (reader-visible, tracked). Run artifacts workspace: `${SKILL_WORKDIR}/.specify/docs/` (never mixed into `docs/`).
+**Managed space (A zone)**: root entry files + `docs/` tree. **Read-only (B zone)**: source code, `.specify/specs/`, `.specify/memory/`. **Anchors (C zone, skip)**: compatibility symlinks, generated per-tool copies, the `docs/.speckit/` machine area (target-structure declaration + run artifacts — never triaged as content), machine-maintained state files at the docs root (e.g. `docs/git-workflow.md`), and any site-tooling directory that a presentation layer placed inside `docs/` (`layouts/`, `static/`, `public/`, `resources/`, `themes/`, `archetypes/`, dot-directories) — those are **not documentation**: never triage them as content, never archive them. Archive zone: `docs/archive/` (reader-visible, tracked). Run artifacts workspace: `${SKILL_WORKDIR}/docs/.speckit/` (never mixed into `docs/` as content).
 
 **Scope is the basic structure only.** Capabilities layered *on top of* a converged structure are other skills' — hand off, never absorb:
 
@@ -26,7 +27,7 @@ This section is the **single source of truth** for the static documentation base
 
 Source precedence (low → high): templates < rules/thresholds < principles < external authoritative facts < **local established conventions** < **a confirmed project target declaration supplied by `/speckit.docs`** < **this run's user input**.
 
-When `/speckit.docs` supplies `.specify/docs/target-structure.md`, treat only its confirmed managed block as the project-specific layer above this static baseline. The command owns declaration lifecycle and validation; this skill consumes the result without rewriting the declaration. When invoked standalone or when no confirmed declaration exists, behavior remains unchanged and this static baseline plus local conventions define the desired state.
+When `/speckit.docs` supplies `docs/.speckit/target-structure.md`, treat only its confirmed managed block as the project-specific layer above this static baseline. The command owns declaration lifecycle and validation; this skill consumes the result without rewriting the declaration. When invoked standalone or when no confirmed declaration exists, behavior remains unchanged and this static baseline plus local conventions define the desired state.
 
 1. **Thin root layer — uppercase special names (filename IS semantics; ALL-CAPS reserved)**, each ≤ one screen (~60 lines), overflow sinks into `docs/`:
 
@@ -77,10 +78,10 @@ When `/speckit.docs` supplies `.specify/docs/target-structure.md`, treat only it
 ### Reconcile Loop (thin dispatch — engine semantics live in the pattern doc)
 
 - R0 baseline: load the Desired-State Baseline + local conventions + user input. Underdetermined → ask ≤3 questions, never fabricate.
-- R1 observe → **观察快照** (inline): tree status, root-entry sizes, stray files, deterministic findings from `python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action validate --root . [--allow-special <NAME>]…` (reserved-name case/misuse, one-screen threshold, broken links, ADR numbering, notes frontmatter; the `--allow-special` set comes from R0 local conventions — Desired-State Baseline item 1) plus `--action scan` for notes.
+- R1 observe → **观察快照** (inline): tree status, root-entry sizes, stray files, deterministic findings from `python3 ${SKILL_HOME}/scripts/docs-utils.py --action validate --root . [--allow-special <NAME>]…` (reserved-name case/misuse, one-screen threshold, broken links, ADR numbering, notes frontmatter; the `--allow-special` set comes from R0 local conventions — Desired-State Baseline item 1) plus `--action scan` for notes.
 - R2 compute desired state; R3 diff **tolerance band first** — within-band cosmetic diffs are marked "已一致（容忍）" and never enter the plan (anti-churn: a repeat run on an unchanged space converges nothing).
-- R4 **干跑计划** written to `${SKILL_WORKDIR}/.specify/docs/plans/<ts>-plan.md` with `[x]/[ ]` opt-out rows for every move/archive/restructure item. No disk writes while planning.
-- R5 converge per the tiered gates below; `mkdir → write → mv → fix-links → audit`; same-name targets never clobbered (suffix `__<ts>`); on any mv failure stop remaining items and ask for review. After moves, repair links mechanically with `--action fix-links --moves <json>` over the move mappings — never hand-edit each link site. **审计日志** appended via `python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action audit --root . --scope <scope> --summary <one-line> [--items-file <json>]` → `${SKILL_WORKDIR}/.specify/docs/audit/` — write it even when 零收敛/无净变化 ("all dimensions within tolerance"). The `--items-file` payload is a **flat JSON list** of objects `[{"action": "...", "source": "...", "target": "...", "result": "..."}, ...]` — do NOT pass a grouped/nested object (the engine iterates the list directly and a grouped shape crashes with a raw `AttributeError`).
+- R4 **干跑计划** written to `${SKILL_WORKDIR}/docs/.speckit/plans/<ts>-plan.md` with `[x]/[ ]` opt-out rows for every move/archive/restructure item. No disk writes while planning.
+- R5 converge per the tiered gates below; `mkdir → write → mv → fix-links → audit`; same-name targets never clobbered (suffix `__<ts>`); on any mv failure stop remaining items and ask for review. After moves, repair links mechanically with `--action fix-links --moves <json>` over the move mappings — never hand-edit each link site. **审计日志** appended via `python3 ${SKILL_HOME}/scripts/docs-utils.py --action audit --root . --scope <scope> --summary <one-line> [--items-file <json>]` → `${SKILL_WORKDIR}/docs/.speckit/audit/` — write it even when 零收敛/无净变化 ("all dimensions within tolerance"). The `--items-file` payload is a **flat JSON list** of objects `[{"action": "...", "source": "...", "target": "...", "result": "..."}, ...]` — do NOT pass a grouped/nested object (the engine iterates the list directly and a grouped shape crashes with a raw `AttributeError`).
 - R6 verify (re-run validate; link/symlink integrity) → **残差报告** (inline): converged / archived / tolerated / pending-human-decision. A move that adds or removes a documentation directory can stale a site layer's mounts — report it as a `create-pages` follow-up, never repair it here.
 
 ### Tiered Confirmation（分级确认门禁）
@@ -110,19 +111,19 @@ Same engine, authoring semantics: the desired state **gains new documents** from
   - **Root entries**: ≤ one screen; overflow sinks into `docs/` and the root entry links to it.
   - **Style**: follow the local conventions of existing docs in the same directory (language, heading structure, link style) — local conventions outrank templates.
   - **Never clobber**: same-name conflicts get the `__<ts>` suffix, never an overwrite.
-- **R6 验证 + 收尾**: run `python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action validate --root .` with the same `--allow-special` set as R1; append the **审计日志** (`--action audit --scope authoring --summary "<one-line>"`) even when nothing was written; end with the inline **残差报告**: written / updated / tolerated / pending-human-decision.
+- **R6 验证 + 收尾**: run `python3 ${SKILL_HOME}/scripts/docs-utils.py --action validate --root .` with the same `--allow-special` set as R1; append the **审计日志** (`--action audit --scope authoring --summary "<one-line>"`) even when nothing was written; end with the inline **残差报告**: written / updated / tolerated / pending-human-decision.
 
 ### Notes Lifecycle Automation
 
 Deterministic, repeatable outside the chat (engine: `docs-utils.py`; actions audit/plan/converge/validate; JSON I/O; the full CLI contract lives in the framework repo, spec 033):
 
 ```bash
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action scan --root .           # 分组报告 + invalid 修复建议
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action expire --root .        # 超期 draft → expired（绝不删除）
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action clean --root .         # dry-run 候选清单
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action clean --yes --root .   # 人工确认后的真删除（仅 notes 区）
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action archive-check --root . # 归档完整性（target 必须存在）
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action stats --root .         # 统计
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action scan --root .           # 分组报告 + invalid 修复建议
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action expire --root .        # 超期 draft → expired（绝不删除）
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action clean --root .         # dry-run 候选清单
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action clean --yes --root .   # 人工确认后的真删除（仅 notes 区）
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action archive-check --root . # 归档完整性（target 必须存在）
+python3 ${SKILL_HOME}/scripts/docs-utils.py --action stats --root .         # 统计
 ```
 
 Reference documentation: `docs/reference/commands/docs.md`.
@@ -142,11 +143,12 @@ This Skill follows the canonical `${SKILL_HOME}` / `${SKILL_WORKDIR}` path conve
 
 ## Resources
 
-This skill owns no scripts, references, or assets of its own — it drives project engines.
+This skill is self-contained for structure work: it owns its deterministic engine and the target-structure bootstrap asset; the shared pattern docs below are design guidance, not run-time dependencies.
 
 | Path | Contents |
 |------|----------|
-| `${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py` | Notes/validation engine: `validate`, `scan`, `expire`, `clean`, `archive-check`, `stats`, `audit`, `fix-links` (contract: `--help`; spec 033) |
+| `${SKILL_HOME}/scripts/docs-utils.py` | Notes/validation engine: `validate`, `scan`, `expire`, `clean`, `archive-check`, `stats`, `audit`, `fix-links` (contract: `--help`; spec 033) |
+| `${SKILL_HOME}/assets/docs-target-structure-template.md` | Target-structure bootstrap template — the command seeds `docs/.speckit/target-structure.md` from it |
 | `.specify/shared/patterns/reconcile-pattern.md` | Reconcile engine semantics: tolerance band, anti-churn, dry-run plan |
 | `.specify/shared/patterns/explicit-implicit-pattern.md` | Scope-resolution semantics: explicit-first precedence, confidence gate, promotion loop |
 | `.specify/skills/improve-docs/SKILL.md` | Content-quality half of the pair — hand off document rewrites there |
@@ -156,10 +158,15 @@ This skill owns no scripts, references, or assets of its own — it drives proje
 
 Documents and documentation spaces created here are Harness assets, not Execution Subjects by default; do not inject a self-improvement contract into them. Their content/structure changes remain Assisted Improvement through `improve-docs` or `create-docs`. This `create-docs` Skill is itself an Execution Subject: qualified evidence from its own runs may enter `.specify/shared/workflow/self-improvement-workflow.md` and route to `improve-skills`.
 
-## Feedback
+## Wrap-up
 
-**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is
-running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
-directory) — skip this entire Feedback step: no engine call, no feedback entry.
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
 
-At wrap-up, run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this skill's scope; persist one entry via `feedback-utils.py --action record --unit-id "skill:create-docs" --unit-type skill`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
+
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "skill:create-docs" --unit-type skill --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "skill:create-docs" --unit-type skill`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:create-docs" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"

@@ -56,7 +56,7 @@ reflection about it:
   lifecycle status; that remains gated by `.specify/shared/workflow/feature-integration.md`.
 - **Not a substitute for pushing.** This step commits locally. Pushing is a
   shared-state action governed by the host project's git workflow state file
-  (`.specify/git-workflow.md`) and requires its own authorization.
+  (`docs/git-workflow.md`) and requires its own authorization.
 - **Read-only commands** that produce no artifact (a pure analysis with no
   authorized remediation) skip this step and say so in one line, rather than
   creating an empty commit.

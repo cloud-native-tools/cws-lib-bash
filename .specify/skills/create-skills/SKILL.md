@@ -2,22 +2,23 @@
 name: create-skills
 description: This skill can create new Spec Kit Skills from user input or conversation history. Use this when the user mentions ["create a skill", "new skill", "make a skill", "skill creation", "添加技能", "创建skill", "新建skill"]
 skill_id: "<SKILL:.specify/skills/create-skills/SKILL.md>"
+classification: external
 ---
 
 # create-skills
 
 ## Goal
 
-Create a high-quality Spec Kit Skill from explicit user input or by distilling reusable workflows from the current conversation. The expected result is a well-structured `SKILL.md` with valid frontmatter, clear trigger descriptions, appropriate resource organization, and a deterministic `skill_id`.
+Create a high-quality Skill (for a Spec Kit project or any host application) from explicit user input or by distilling reusable workflows from the current conversation. The expected result is a well-structured `SKILL.md` with valid frontmatter, clear trigger descriptions, appropriate resource organization, and a deterministic `skill_id`.
 
 ## Workflow
 
 ### 0. Detect the runtime mode (Spec Kit project vs standalone)
 
-Spec Kit skills serve both code projects and non-code agent applications (e.g. QoderWork, Wukong, OpenClaw global skill directories). Before anything else, apply the canonical detection rule from `.specify/shared/workflow/runtime-mode.md`:
+Skills serve both code projects and non-code agent applications (e.g. QoderWork, Wukong, OpenClaw global skill directories). Detect the runtime mode first — the rule below is self-contained; in a Spec Kit project the reference doc `.specify/shared/workflow/runtime-mode.md`, **when present**, carries the same rule (optional integration, never required):
 
 - `${SKILL_WORKDIR}/.specify/` **exists** → **Spec Kit project mode**: run the full workflow below (scaffolding, identity finalization, agent propagation, engine-backed Feedback).
-- `${SKILL_WORKDIR}/.specify/` **does not exist** → **standalone mode**: the target is a plain skills directory owned by the host application. In this mode:
+- `${SKILL_WORKDIR}/.specify/` **does not exist** → **standalone mode** (first-class, not a degraded path): the target is a plain skills directory owned by the host application — or a generic project's own `skills/` root. In this mode:
   - `SKILL_HOME` is a sibling directory in the host skills directory; **align the new Skill's format with the existing skills there** (inspect one or two siblings first).
   - **Skip** Step 7 (propagation to built-in role agents) — that surface does not exist. Step 5 (identity finalization) applies in both modes; use the host skills directory paths, not `.specify/**`.
   - In Step 3, emit a **self-contained** `## Feedback` section (gated reflection, no `feedback-utils.py` invocation) instead of the engine-backed reference form.
@@ -34,9 +35,9 @@ Parse `skill name` and `description` from the user input:
 - **skill name**: A concise command-like identifier matching the project script validator: letters, digits, hyphens (`-`), and underscores (`_`) only. When inventing a name, prefer lowercase kebab-case (for example, `api-testing`) unless the user explicitly needs another valid form.
 - **description**: A capability summary plus trigger keyword list. Format: `This skill can <capability>. Use this when the user mentions [ "keyword1", "keyword2", ... ]`. **No-workflow-summary rule**: the description MUST NOT summarize the workflow steps or body content — an agent that sees a workflow summary in the description will skip loading the body and execute a degraded version. Capability + triggers only.
 
-If the input contains only a valid name and the Skill already exists (`.specify/skills/<name>/SKILL.md`), redirect to `improve-skills` rather than creating a duplicate.
+If the input contains only a valid name and the Skill already exists at the detected mode's skills root (`.specify/skills/<name>/SKILL.md` in a Spec Kit project; `<skills-root>/<name>/SKILL.md` otherwise), redirect to `improve-skills` rather than creating a duplicate.
 
-**Cross-SSOT collision check**: an absent `.specify/skills/<name>` does not mean the name is free — scan the other locations that can own or load a Skill of that name (other projects' `.specify/skills/`, a global skills library, agent load directories, registries). On a hit, report *entity location + who references it* and choose a documented path (improve in place / adopt via link / split into layers / rename) — MUST NOT create a second entity with the same name silently. Scan targets and decision table: [name-collision-and-layering.md](./references/name-collision-and-layering.md) §1; when the chosen path is a split, the front-door / lower-layer authoring rules are §2.
+**Cross-SSOT collision check**: an absent skill at the detected root does not mean the name is free — scan the other locations that can own or load a Skill of that name (other projects' skills roots — including `.specify/skills/` locations in code projects when present — a global skills library, agent load directories, registries). On a hit, report *entity location + who references it* and choose a documented path (improve in place / adopt via link / split into layers / rename) — MUST NOT create a second entity with the same name silently. Scan targets and decision table: [name-collision-and-layering.md](./references/name-collision-and-layering.md) §1; when the chosen path is a split, the front-door / lower-layer authoring rules are §2.
 
 If the description is missing, derive it from the current conversation or ask one targeted clarification question.
 
@@ -52,15 +53,16 @@ Distill a reusable Skill from the current conversation history:
 
 ### 2. Determine SKILL_HOME and metadata
 
-- **skill name** determines `SKILL_HOME`. Example: `name = "testing"` → `SKILL_HOME = .specify/skills/testing/` (project-level).
+- **skill name** determines `SKILL_HOME`. Example: `name = "testing"` → `SKILL_HOME = <skills-root>/testing/` (root resolved per Step 0: `.specify/skills/` in a Spec Kit project; the project `skills/` root or the host skills directory otherwise).
 - **description** must include keywords and trigger scenarios; avoid vague descriptions.
 - **Writability pre-flight (fail fast)**: before drafting any content, touch-test the parent directory of `SKILL_HOME` (e.g. `mkdir -p "$SKILL_HOME" && touch "$SKILL_HOME/.wtest" && rm "$SKILL_HOME/.wtest"`). The host skills directory may be root-owned in some environments (container-created leftovers); report an unwritable target up front with the `sudo chown -R $USER <dir>` remedy instead of discovering it at the first write.
 
-Storage location options (`SKILL_HOME`):
-- `.specify/skills/<name>/` — project-level primary (preferred in Spec Kit project mode)
+Storage location options (`SKILL_HOME`) — the root is an **input resolved per Step 0**, never a hard dependency:
+- `.specify/skills/<name>/` — project-level primary **in Spec Kit project mode** (optional integration; when present it is the natural root for a Spec Kit project)
+- project `skills/<name>/` — the generic project-level root (framework-source or standalone code projects)
+- host skills directory `<skills-dir>/<name>/` — standalone mode (the directory the host agent application loads skills from)
 - `.github/skills/<name>/` — compatibility entry (symlink, not primary)
 - `${HOME}/.copilot/skills/<name>/` — personal-level
-- host skills directory `<skills-dir>/<name>/` — standalone mode (the directory the host agent application loads skills from)
 
 When authoring the new Skill, follow the canonical `${SKILL_HOME}` / `${SKILL_WORKDIR}` path conventions:
 
@@ -90,8 +92,8 @@ Optional frontmatter (on demand):
 - Result goal
 - Key steps (executable, checkable)
 - Resource references (use relative paths: `./scripts/x.py`, `./references/details.md`)
-- A `## Self-Improvement Contract` immediately before Feedback, following `.specify/shared/workflow/self-improvement-workflow.md` Create-Flow Integration without copying its steps
-- A `## Feedback` section as the final workflow section (mandatory). In Spec Kit project mode, copy the **skill reference form** from `.specify/shared/workflow/feedback-step.md` § *Embedded reference forms* (it begins with the runtime-mode gate), substituting only `skill:<name>`. That form is a pointer plus the unit id, so the section MUST NOT restate the owner's reflection rules, submission-prompt semantics or red lines — a restated copy is what drifts. In standalone mode, write a self-contained variant — keep the runtime-mode gate and the reflection steps, drop the `feedback-utils.py` invocation and threshold prompt. A new Skill lacking a `## Feedback` section is **non-conformant** and MUST fail validation.
+- A `## Self-Improvement Contract` immediately before Feedback. In a Spec Kit project the form is owned by `.specify/shared/workflow/self-improvement-workflow.md` Create-Flow Integration (reference it, never copy its steps); standalone deployments carry an equivalent embedded contract.
+- A `## Feedback` section as the final workflow section (mandatory). In Spec Kit project mode, copy the **skill reference form** from `.specify/shared/workflow/feedback-step.md` § *Embedded reference forms* **when those shared docs are present** (it begins with the runtime-mode gate), substituting only `skill:<name>`. That form is a pointer plus the unit id, so the section MUST NOT restate the owner's reflection rules, submission-prompt semantics or red lines — a restated copy is what drifts. In standalone mode, write a self-contained variant — keep the runtime-mode gate and the reflection steps, drop the `feedback-utils.py` invocation and threshold prompt. A new Skill lacking a `## Feedback` section is **non-conformant** and MUST fail validation.
 
 **Size control**: Keep `SKILL.md` under 500 lines. Move large details into `./references/`.
 
@@ -100,7 +102,7 @@ Optional frontmatter (on demand):
 ```
 ${SKILL_HOME}/
 ├── SKILL.md            # Required, Skill main body
-├── scripts/            # Executable scripts (optional)
+├── .specify/scripts/            # Executable scripts (optional)
 ├── references/         # Reference materials loaded on demand (optional)
 └── assets/             # Static assets for outputs (optional)
 ```
@@ -111,7 +113,7 @@ The project creation script may create standard empty resource directories durin
 
 1. Discovery: Read `name` + `description`
 2. After match: Read `SKILL.md` body
-3. When needed: Read `scripts/`, `references/`, `assets/`
+3. When needed: Read `.specify/scripts/`, `references/`, `assets/`
 
 Constraints:
 - `SKILL.md` recommended < 500 lines
@@ -137,12 +139,12 @@ Iterate until:
 
 ### 5. Finalize the Skill Identity (no registration)
 
-There is no registry file in any mode — agents discover skills by scanning the skills directory (see `.specify/skills.md`); Spec Kit project mode and standalone mode are the same here.
+There is no registry file in any mode — agents discover skills by scanning the skills directory (the Spec Kit project guide at `.specify/skills.md`, when present, describes the same model); Spec Kit project mode and standalone mode are the same here.
 
 Finalize the identity inside `SKILL.md` itself:
 
-- **skill_id**: `<SKILL:.specify/skills/<name>/SKILL.md>`
-- **Canonical Path**: `.specify/skills/<name>/SKILL.md`
+- **skill_id**: `<SKILL:<resolved-path>/SKILL.md>` — Spec Kit installs record `.specify/skills/<name>/SKILL.md`; other roots record their own resolved path.
+- **Canonical Path**: the same resolved path.
 
 Discoverability is guaranteed by the directory plus valid frontmatter — do not write any registry row anywhere.
 
@@ -154,7 +156,7 @@ Minimum checks:
 - [ ] Frontmatter: `name` matches directory, `description` has triggers
 - [ ] Body: clear steps, no vague placeholders
 - [ ] Resources: relative paths, no broken links; standard generated resource directories are acceptable
-- [ ] Discoverability: `.specify/skills/<name>/SKILL.md` exists with valid frontmatter `name`/`description` — no registry to update
+- [ ] Discoverability: the Skill exists at its **resolved** root path with valid frontmatter `name`/`description` — no registry to update
 - [ ] Size: `SKILL.md` < 500 lines
 - [ ] No unrelated documentation files
 - [ ] Topology & links (when the host keeps a skill-topology registry or fans Skills out to several agent load directories): registry updated, dangling-symlink scan returns zero, each load directory resolves to the new content, and description-caching host registries refreshed — see [name-collision-and-layering.md](./references/name-collision-and-layering.md) §3
@@ -162,6 +164,7 @@ Minimum checks:
 - [ ] Feedback: a `## Feedback` section is present as the final workflow section, beginning with the runtime-mode gate. Spec Kit project mode requires the skill reference form from `.specify/shared/workflow/feedback-step.md` § *Embedded reference forms* — a pointer plus `--unit-id "skill:<name>"`, not a restatement of the owner's rules; standalone mode requires the self-contained variant (no engine call). A Skill without the section is non-conformant — fix before reporting completion.
 - [ ] Standalone mode only: format is consistent with sibling skills in the host directory, and no `.specify/**` path is referenced
 - [ ] Spec Kit project mode: **run the existing skill-conformance contract suite** (`pytest tests/contract/ -q -k "skill or runtime_mode"`) before reporting completion — new skills are subject to ALL pre-existing conformance contracts (runtime-mode gate, feedback-section shape); a later full-suite regression is the wrong place to discover a miss. **Fallback**: if the project has no `tests/` or `tests/contract/` directory, the suite is not applicable — verify conformance via the manual checklist items above (frontmatter / Feedback section / registry / size) and state "contract suite not applicable" explicitly in the completion report; do not spin on the missing suite or report it as a failure
+- [ ] Spec Kit project mode: **attribute every red before reporting it** — when that suite is red, re-run it with `--tb=line` (`pytest tests/contract/ --tb=line -k "skill or runtime_mode"`) and read, per failing assertion, **which skill it names**; then split the failures into **pre-existing debt** (skills this run never touched — an unsynced `.specify/skills/**` mirror is the common case) and **this new Skill's regression**. Quote the attribution command and that split in the completion report. A bare pass/fail count attributes nothing: while several skills of one family are edited in parallel, an unattributed red cannot be routed back to its author
 
 ### 6.5 Pressure Test (RED-GREEN)
 
@@ -227,14 +230,19 @@ Skill behavior in the `/` menu is controlled by frontmatter:
 
 ## Self-Improvement Integration
 
-A created Skill is an Execution Subject. Before validation, add a compact `## Self-Improvement Contract` immediately before `## Feedback`; it MUST identify the canonical Skill directory, own-run observation sources, `improve-skills` as the mutation route, validation/pressure-test route, later comparison signal, and escalation boundary. Follow `.specify/shared/workflow/self-improvement-workflow.md` Create-Flow Integration and `.specify/shared/guidelines/self-improvement.md`; do not copy their workflow or evidence-state definitions into the generated Skill. The current creation run establishes capability only—it is not evidence that the new Skill has improved.
+A created Skill is an Execution Subject. Before validation, add a compact `## Self-Improvement Contract` immediately before `## Feedback`; it MUST identify the canonical Skill directory, own-run observation sources, `improve-skills` as the mutation route, validation/pressure-test route, later comparison signal, and escalation boundary. Follow the framework's Create-Flow Integration (`.specify/shared/workflow/self-improvement-workflow.md` and `.specify/shared/guidelines/self-improvement.md`, when present; standalone deployments keep an equivalent embedded contract); do not copy their workflow or evidence-state definitions into the generated Skill. The current creation run establishes capability only—it is not evidence that the new Skill has improved.
 
 This `create-skills` Skill is itself an Execution Subject: its own qualified run evidence routes through `improve-skills`, with the same canonical-owner and outcome-pending rules.
 
-## Feedback
+## Wrap-up
 
-**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is
-running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
-directory) — skip this entire Feedback step: no engine call, no feedback entry.
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
 
-At wrap-up, run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this skill's scope; persist one entry via `feedback-utils.py --action record --unit-id "skill:create-skills" --unit-type skill`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
+
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "skill:create-skills" --unit-type skill --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "skill:create-skills" --unit-type skill`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:create-skills" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"

@@ -151,7 +151,7 @@ An `applies_when` without an over-application guard is incomplete: an unguarded 
 
 An accumulating store that runs also *read* invites a run to snapshot moves into its own `derive.md`, producing a stale copy the next run trusts. Three mechanisms close that:
 
-1. **Read path** — the engine's `moves-list` action emits a summary projection; the run consumes the projection. A bounded full read of `moves.md` is legitimate only while the file stays within the small-file threshold whose sole definition point is `shared/guidelines/token-efficiency.md`; past that, the projection is mandatory.
+1. **Read path** — the engine's `moves-list` action emits a summary projection; the run consumes the projection. A bounded full read of `moves.md` is legitimate only while the file stays within the small-file threshold whose sole definition point is `.specify/shared/guidelines/token-efficiency.md`; past that, the projection is mandatory.
 2. **Write path** — the engine's `moves-add` action is the **only** writer. It dedups on normalized `inference_form`; on a near-duplicate it **refuses** and returns the existing `move_id`, so the run reinforces the recorded move instead of forking a variant.
 3. **Citation in the artifact** — a run's `## Reasoning Moves Applied` section cites `M-<nnn>`. Where inline readability needs the form spelled out, it is marked as a projection (`<!-- projection of moves.md#M-012 -->`). Engine check A9 rejects any `derive.md` carrying a full move row whose `inference_form` differs from the library's row for that id.
 
@@ -359,7 +359,7 @@ If no online capability is available this run, the run MUST NOT fabricate ground
 
 ## Script / Prompt Boundary
 
-Which parts are deterministic (engine) and which are judgment (agent). The boundary follows the project's token-efficiency discipline (`shared/guidelines/token-efficiency.md`), cited here rather than restated.
+Which parts are deterministic (engine) and which are judgment (agent). The boundary follows the project's token-efficiency discipline (`.specify/shared/guidelines/token-efficiency.md`), cited here rather than restated.
 
 **Engine-owned** — pattern matching, structural validation, counting, dedup, comparison, identity issuance:
 

@@ -3,14 +3,14 @@
 
 Measurement & anti-backflow tool for Feature 046 (Confirmation Gate
 Governance, requirement 044). Deterministic Program-First classification per
-shared/guidelines/confirmation-gates.md: destructive keywords and
+.specify/shared/guidelines/confirmation-gates.md: destructive keywords and
 governance-kept path patterns -> keep_gate; everything else -> reversible /
 auto_execute; doubtful cases default to destructive (存疑从严).
 
 Contract: .specify/specs/044-reduce-confirmation-flows/contracts/gate-scanner-contract.md
 
 Usage:
-  python3 scripts/python/scan-confirmation-gates.py [--root <repo-root>]
+  python3 .specify/scripts/python/scan-confirmation-gates.py [--root <repo-root>]
       [--baseline <baseline.json>] [--json | --summary]
 
 Exit codes: 0 = scan complete; 1 = argument/environment error;
@@ -32,15 +32,15 @@ REPO_ROOT = _HERE.parents[2]
 if REPO_ROOT.name == ".specify":
     REPO_ROOT = REPO_ROOT.parent
 
-SCAN_DIRS = ("templates/commands", "skills", "shared")
-SCAN_ROOT_FILES = ("templates",)  # templates/*.md (non-directory entries)
+SCAN_DIRS = (".specify/templates/commands", "skills", "shared")
+SCAN_ROOT_FILES = ("templates",)  # .specify/templates/*.md (non-directory entries)
 SKIP_DIR_PARTS = {".specify", ".claude", ".qoder", ".github", ".opencode", "__pycache__", ".archive"}
-SELF_REL = Path("shared/guidelines/confirmation-gates.md")
+SELF_REL = Path(".specify/shared/guidelines/confirmation-gates.md")
 # Policy anchors that DEFINE the confirmation discipline cite gate patterns
 # prescriptively — excluded from counting for the same reason as SELF_REL.
 POLICY_DOCS = (
-    Path("shared/patterns/reconcile-pattern.md"),
-    Path("shared/patterns/interview-pattern.md"),
+    Path(".specify/shared/patterns/reconcile-pattern.md"),
+    Path(".specify/shared/patterns/interview-pattern.md"),
 )
 
 BLOCKING_PATTERNS = (

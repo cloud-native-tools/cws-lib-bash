@@ -75,7 +75,7 @@ human-facing index; keep ids in sync.
 
 | id | trigger attribute | invariant (absolute) | mandatory remediation |
 |----|-------------------|----------------------|-----------------------|
-| `RL-FOCUS-01` | `automation` (drives a GUI/browser/desktop surface that maps real windows) | No automation method may steal the user's system focus or pop a window/tab in front of their work. | Route every launch/attach through a focus-safe path: background `open -g` (macOS) or headless / virtual display; attach to a running instance instead of relaunching; reuse background tabs; never `bringToFront()`; any genuinely-headed window is announced, small and fixed. Foreground/direct-binary launch only as an announced human-in-the-loop exception, gated + documented. See browser-utils `focus-safe-launch.md`, profiles-browsers SKILL.md § 焦点红线. |
+| `RL-FOCUS-01` | `automation` (drives a GUI/browser/desktop surface that maps real windows) | No automation method may steal the user's system focus or pop a window/tab in front of their work. | Route every launch/attach through a focus-safe path: background `open -g` (macOS) or headless / virtual display; attach to a running instance instead of relaunching; reuse background tabs; never `bringToFront()`; any genuinely-headed window is announced, small and fixed. Foreground/direct-binary launch only as an announced human-in-the-loop exception, gated + documented. See the xuanji-extension browser core: `browser-utils/references/focus-safe-launch.md` and `profiles-browsers/SKILL.md` § 焦点红线. |
 
 Collected attributes with **no** red line bound yet (framework is extensible; binding one
 requires passing admission below): `sensitive-info` (handles credentials/tokens/cookies/PII).

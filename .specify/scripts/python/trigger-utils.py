@@ -8,10 +8,10 @@ proposal, which flow a missed situation belongs to) stays with the agent and is
 handed back through `semanticJudgmentPending`.
 
 Contract: .specify/specs/050-proactive-flow-trigger/contracts/trigger-engine.md
-Discipline: shared/guidelines/proactive-trigger.md (the single source of truth)
-Paradigm source: scripts/python/derive-utils.py (camelCase envelope, atomic
+Discipline: .specify/shared/guidelines/proactive-trigger.md (the single source of truth)
+Paradigm source: .specify/scripts/python/derive-utils.py (camelCase envelope, atomic
 write, graded exit codes). Threshold semantics are isomorphic to
-feedback-utils.py's, re-implemented locally rather than imported: scripts/ is
+feedback-utils.py's, re-implemented locally rather than imported: .specify/scripts/ is
 mirrored as independent STRICT copies, so a cross-engine import would couple two
 separately mirrored files.
 

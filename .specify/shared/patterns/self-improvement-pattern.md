@@ -2,9 +2,9 @@
 
 A reusable architecture for an Execution Subject that learns from its own completed runs
 without becoming a self-authorizing or self-certifying mutation loop. Concept ownership:
-`shared/definitions/self-improvement-definitions.md`. Normative gates:
-`shared/guidelines/self-improvement.md`. Canonical execution order:
-`shared/workflow/self-improvement-workflow.md`.
+`.specify/shared/definitions/self-improvement-definitions.md`. Normative gates:
+`.specify/shared/guidelines/self-improvement.md`. Canonical execution order:
+`.specify/shared/workflow/self-improvement-workflow.md`.
 
 ## When to Apply
 
@@ -57,7 +57,7 @@ The pattern introduces no new global store. Reuse existing artifacts:
 | Normalized observations | evidence `findings.json` |
 | Baseline and expected direction | evidence-run `intervention.json` |
 | Run outcome | agent logs, team run report, tool invocation record, Skill execution evidence |
-| Durable lesson | memory/history when reusable beyond the intervention |
+| Durable lesson | .specify/memory/history when reusable beyond the intervention |
 | Global Harness finding | `/better-harness` or `/speckit.review` assisted review |
 
 ## Subject Adapters
@@ -75,7 +75,7 @@ The pattern introduces no new global store. Reuse existing artifacts:
 - Subject identity: canonical Skill directory.
 - Own-run evidence: feedback entry, session trace, artifact/result mismatch, pressure-test result.
 - Improver: `improve-skills`.
-- Mutation boundary: `SKILL.md` and owned `references/`, `scripts/`, `assets/`; mirrors regenerate.
+- Mutation boundary: `SKILL.md` and owned `references/`, `.specify/scripts/`, `assets/`; mirrors regenerate.
 - Verifier: conformance tests plus RED-GREEN for behavior-changing instructions.
 
 ### Tool Adapter

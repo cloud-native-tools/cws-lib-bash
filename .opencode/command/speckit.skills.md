@@ -1,5 +1,5 @@
 <!-- AUTO-GENERATED from templates/commands/skills.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
-> `/speckit.skills` is the orchestration entrypoint for Skill management. It delegates to `create-skills` (new) or `improve-skills` (existing, with mandatory spec-compliance modernization pass first).
+> `/speckit.skills` is the orchestration entrypoint for Skill management. It delegates to `create-skills` (new) or `improve-skills` (existing, with a mandatory spec-compliance modernization pass first); it never authors or edits a Skill inline.
 
 ## User Input
 
@@ -9,67 +9,53 @@ $ARGUMENTS
 
 Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Extract target Skill name (concise command-like identifier: letters, digits, hyphens, underscores).
 
-## Orchestration Workflow
+## Delegation
 
-### Step 1: Parse target Skill
+### Routing
 
-- If user names a Skill explicitly → use that name
-- If empty → infer from conversation or ask one targeted question
+1. **Parse the target Skill** — use the name the user gave; if empty, infer from the conversation or ask one targeted question.
+2. **Check existence** — canonical source `.specify/skills/<name>/SKILL.md`.
+3. **Route** on the result:
 
-### Step 2: Check existence
+| Condition | Skill | Runtime path |
+|-----------|-------|--------------|
+| NOT exists | `create-skills` | `.specify/skills/create-skills/SKILL.md` |
+| EXISTS(常规改优/两阶段合规) | `improve-skills` | `.specify/skills/improve-skills/SKILL.md` |
+| merge 意图(把一个技能合并进另一个) | `merge-skills` | `.specify/skills/merge-skills/SKILL.md` |
+| think / 思想演练意图(心智模拟一次执行) | `think-skills` | `.specify/skills/think-skills/SKILL.md` |
+| run 意图(运行技能,含未被宿主注册者) | `run-skills` | `.specify/skills/internal/run-skills/SKILL.md` |
 
-Check `.specify/skills/<name>/SKILL.md` exists (canonical source).
+### `create-skills` — new Skill
 
-### Step 3: Route
+- **Input**: the parsed Skill name + capability description (or empty — the skill then distills from conversation history).
+- **What it owns**: the full creation workflow — runtime-mode detection, scaffolding (start from `.specify/templates/skills-template.md`), frontmatter and `${SKILL_HOME}`/`${SKILL_WORKDIR}` path conventions, identity finalization (`skill_id`), validation, pressure test, and the built-in agent propagation (Skill Enablement) with its guard/analyze/match/apply invariants.
+- **Output**: a new `.specify/skills/<name>/SKILL.md` (+ optional `.specify/scripts/`, `references/`, `assets/`) and the skill's completion report (paths, `skill_id`, propagated agents, validation results).
 
-**If NOT exists** → delegate to `create-skills` skill:
-- Read `skills/create-skills/SKILL.md` for full workflow
-- New Skill MUST conform to current spec (directory layout, frontmatter, `${SKILL_HOME}`/`${SKILL_WORKDIR}` conventions)
-- Use `.specify/templates/skills-template.md` as starting point
+### `improve-skills` — existing Skill (two-phase pass)
 
-**If EXISTS** → delegate to `improve-skills` skill with two-phase pass:
-1. **Phase A — Spec-compliance modernization** (mandatory before any optimization):
-   - Canonical path: `.specify/skills/<name>/SKILL.md`
-   - Directory structure: `SKILL.md`, `.specify/scripts/`, `references/`, `assets/`
-   - Frontmatter: `name`, `description` (with triggers), `skill_id`
-   - Path conventions: `${SKILL_HOME}/` for Skill-owned resources, `${SKILL_WORKDIR}/` for runtime paths
-   - Legacy idiom migration: `./X` → `${SKILL_HOME}/X`, `${SKILL_ROOT}/X` → `${SKILL_HOME}/X`
-   - Discoverability: `.specify/skills/<name>/SKILL.md` present with valid frontmatter — no registration table exists (see `.specify/skills.md`)
-   - Hygiene: SKILL.md under 500 lines; oversize → `references/`
+- **Phase A — spec-compliance modernization (mandatory before any optimization)**: run the compliance pass against the rules `improve-skills` owns — canonical path, directory structure, frontmatter, path conventions, legacy idiom migration (`./X` → `${SKILL_HOME}/X`, `${SKILL_ROOT}/X` → `${SKILL_HOME}/X`), discoverability, hygiene. The rules are the skill's truth source; apply them there, do not restate them here.
+- **Phase B — user-requested refinement**: standard `improve-skills` workflow.
+- **Input**: target Skill identity (name / `skill_id` / canonical path) + optimization direction.
+- **Output**: the updated Skill package with `improve-skills`' final-check verdicts (shape gate, red-line gate, contract suite).
 
-2. **Phase B — User-requested refinement**: Standard `improve-skills` workflow.
+For detailed path conventions (`${SKILL_HOME}` / `${SKILL_WORKDIR}` semantics, computation idioms, nested invocations), see `.specify/skills/create-skills/SKILL.md`. For agent-specific operational guidance, see `.specify/shared/workflow/agent-configuration.md`.
 
-For detailed path conventions (`${SKILL_HOME}` / `${SKILL_WORKDIR}` semantics, computation idioms, nested invocations), see `skills/create-skills/SKILL.md`.
+### `run-skills` — run a Skill (including unregistered ones)
 
-### Step 4: Propagate to built-in agents (create path only)
+- **Input**: `run-skills <名称|路径>` — a skill name or canonical path; resolution, trust boundary, best-effort registration hint, and runtime-mode gating are the skill's own procedure (self-contained body).
+- **Output**: the target skill executed per its own `SKILL.md`, its outputs relayed back; a non-blocking hint when the target may be slash-invocable directly.
 
-After a **new** Skill is created (skip on the `improve-skills` path), wire it into the built-in role agents so they prefer it for role-relevant work (Skill Enablement convention: the `## Skill Enablement` section pattern carried by the built-in role agents under `.specify/agents/templates/`).
+## Wrap-up
 
-1. **Guard**: skip if the new Skill is non-declarable (reference-only/meta: `create-agent`, `improve-agent`, `create-skills`, `improve-skills`, `create-team`, `improve-team`). Normal user-created Skills proceed.
-2. **Analyze**: read the Meta Agent preset set from `.specify/agents/templates/` and the 7 Worker role capability templates from `skills/create-agent/templates/` (`requirements-analyst`, `system-designer`, `module-designer`, `test-engineer`, `qa-engineer`, `knowledge-manager`, `ux-analyst`). Judge each agent's role (Identity & Responsibilities) against the new Skill's capability + trigger keywords.
-3. **Match**: select the agents whose role operations the Skill covers and draft a one-line "when to use" per match. If none match, report "no role-relevant agents" and skip edits (no forced use).
-4. **Propose**: present a `| Agent | Skill | When to use |` table as disclosure (non-blocking).
-5. **Apply** (directly after the proposal is presented; edits are reversible via later edits): for each matched agent, edit BOTH `agents/<slug>.agent.md` and `.specify/agents/templates/<slug>.agent.md`:
-   - Append the canonical Skill slug to the `skills:` frontmatter list (dedup; preserve order and all other keys).
-   - Add a `| <skill> | <when-to-use> |` row to that agent's `## Skill Enablement` table.
-6. **Invariants**: use the canonical slug; it MUST resolve to an installed `.specify/skills/<slug>/SKILL.md`; never add a non-declarable slug; preserve all existing frontmatter. Generator templates (`agent-capacity-*-template.md`) are intentionally NOT updated (a later regeneration would drop the added Skill).
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
 
-### Step 5: Validate and report
-
-- Confirm frontmatter valid (`name`, `description`, `skill_id`)
-- Verify canonical path matches `.specify/skills/<name>/SKILL.md`
-- Verify the skill is discoverable from the filesystem (`.specify/skills/<name>/SKILL.md`, valid frontmatter)
-- Report: paths, skill_id, modernization results, and (create path) which built-in agents the Skill was propagated to
-
-For agent-specific operational guidance, see `.specify/shared/workflow/agent-configuration.md`.
-
-## Feedback
-
-At wrap-up (the same lifecycle point where this command prompts for a Git commit), run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this command's scope; persist one entry via `feedback-utils.py --action record --unit-id "/speckit.skills" --unit-type command`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
-
-## Documentation
-
-At the same wrap-up point as the Feedback step, apply the docs-sync evaluation per the canonical convention in `.specify/shared/workflow/docs-step.md`: assess whether information produced by this run (new capabilities, key decisions, structural changes) needs to be recorded into the project documentation space, and conclude with exactly one of `需记录（目标文档 + 要点）` or `无需记录`. Never block wrap-up; incremental judgment only (no full reconcile sweep); when a move/archive-level change is needed, recommend running `/speckit.docs` instead of executing it here.
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.skills" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "/speckit.skills" --unit-type command`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "/speckit.skills" --unit-type command --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Docs Sync Eval — `.specify/shared/workflow/docs-step.md` § "Evaluation procedure (the embedded step points here)"
 
 ## Handoffs
 

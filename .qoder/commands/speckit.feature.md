@@ -12,64 +12,20 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 
 ## Outline
 
-You manage feature metadata across:
-1. **Feature detail files**: `.specify/memory/features/<ID>.md` (from `.specify/templates/feature-details-template.md`)
-2. **Feature index**: `.specify/memory/features.md`
+本命令维护项目特性注册表,一次调用 = 委派 **`manage-features`** 技能执行全部注册表工作。
 
-Features are classified: **functional** (user-facing) vs **non-functional** (quality attributes), and **current** (existing) vs **future** (gap-identified, status `Draft`).
+**Delegation (mandatory)**: load `.specify/skills/internal/manage-features/SKILL.md` and execute per its Reconcile Model and Workflow (Actions 0–9)。注册表是持久制品空间,按 reconcile 模型收敛(`.specify/shared/patterns/reconcile-pattern.md`);容差带、archive-not-delete、never-regress-status(及其 gate probe)、格式要求与边界均以该技能为单一事实源,本模板不复述。
 
-**Reconcile model** (see `.specify/shared/patterns/reconcile-pattern.md`): the registry is a durable artifact space. **Desired state** = what the repo actually delivers (current features) + credible gaps (future features) + registry format rules; **current state** = the existing index + detail files. Each run observes, diffs through a tolerance band, and converges:
+### 技能输入(本命令解析 `$ARGUMENTS` 后传入)
 
-| Input | Scope | Behavior |
-|-------|-------|----------|
-| No args | **Full-registry reconcile** | Diff every registry row against repo reality; empty registry → bootstrap from scratch |
-| Concrete context (commit/PR/branch) | **Fan-out mining** | Extract feature-relevant facts from the context, triage each to its owning feature row (or a new one) |
-| Description | **Single-target convergence** | Locate the matching feature and converge only it |
+- Scope(同 User Input 三分):无参 → 全注册表 reconcile;commit/PR/branch 上下文 → fan-out mining;特性描述 → 单目标收敛。
+- 可读的 repo context(README / docs / build config)——期望状态由此计算,无上下文则无法 diff。
 
-- **Tolerance band**: rows whose Name/Description/Status still match repo reality are left untouched — do not rewrite descriptions for cosmetic wording, do not touch `Last Updated` on unchanged rows.
-- **Archive-not-delete**: never remove a feature row or detail file because the capability disappeared from the code — keep the row and mark its status/description accordingly (history is part of the registry's value).
-- **Never regress status**: registry convergence must not move a feature's status backward (e.g. Implemented → Draft) without explicit user confirmation.
-  > Gate probe: gate-feature-status-regression — after the user decision, record firing evidence per confirmation-gates.md §门控观察协议 (non-blocking).
+### 技能产出
 
-## Actions
-
-0. **Determine PROJECT_TYPE and DELIVERY_MODEL** (MUST do first):
-   - Infer from repo structure, README/docs, build config
-   - DELIVERY_MODEL: `runtime code` | `document/prompt artifacts` | `hybrid`
-   - This constrains which DFX categories and future features are relevant
-
-1. **Determine scope**: No args → full-registry reconcile. Concrete context → fan-out mining. Description → single-target convergence.
-
-2. **Generate/refresh current features** (functional + non-functional):
-   - Functional: tailor to PROJECT_TYPE (CLI: commands/IO/config; Library: APIs/extension; Framework: abstractions/scaffolding; Microservice: domain/interfaces/workflows)
-   - Non-functional: derive from repo's current state
-
-3. **Discover future features** via gap analysis:
-   - Prioritize project-intrinsic features first (what improves core value delivery)
-   - For document artifacts: content quality, cross-consumer compatibility, lifecycle, authoring experience
-   - For runtime code: apply DFX Catalog from `.specify/shared/constants/dfx-catalog.md`
-   - Avoid over-design: don't propose runtime DFX for document-only projects
-   - Future features: status `Draft`, max 8–12 per run
-
-4. **Apply updates** per scope, honoring the tolerance band (unchanged rows stay byte-identical) and never-regress-status rule.
-
-5. **Allocate IDs**: Sequential three-digit FEATURE_ID from scanning `.specify/memory/features/*.md`.
-
-6. **Instantiate/update detail files**: From template, replace all placeholders, remove unused ones. Dates ISO format.
-
-7. **Update `.specify/memory/features.md`**: Table with `ID | Name | Description | Status | Feature Details | Last Updated`. Auto-derive FEATURE_COUNT from table row count.
-
-8. **Sync README**: Generate/replace "Feature List" section split into Functional and Non-functional.
-
-9. **Validate & report residuals**: No leftover placeholders, unique sequential IDs, valid dates, correct markdown tables. Close with a brief residual report: rows converged / rows tolerated (unchanged) / new rows added / items needing user decision. If nothing changed, say so plainly.
-
-### Formatting Requirements
-
-- Feature names: 2–5 words
-- Index table: single header row, all columns, aligned pipes
-- Status: Draft | Planned | Implemented | Ready for Review | Completed
-- Feature detail links: `.specify/memory/features/[FEATURE_ID].md`
-- Do NOT modify templates; only instantiate copies
+- `.specify/memory/features/<ID>.md` 详情文件(从 `.specify/templates/feature-details-template.md` 实例化)与 `.specify/memory/features.md` 索引表(`FEATURE_COUNT` 自动派生)。
+- README "Feature List" 段同步(Functional / Non-functional)。
+- 残差报告:收敛行 / 容差行 / 新增行 / 需用户决策项;无变更时如实说明。
 
 ## Handoffs
 

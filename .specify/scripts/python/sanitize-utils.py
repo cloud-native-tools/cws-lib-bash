@@ -63,6 +63,9 @@ MATERIAL_ROOTS = [
     ("mirror-agents", ".specify/agents"),
     ("mirror-shared", ".specify/shared"),
     ("mirror-scripts", ".specify/scripts"),
+    ("legacy-gitworkflow-state", ".specify/git-workflow.md"),
+    ("legacy-memory-gitworkflow-state", ".specify/memory/git-workflow.md"),
+    ("legacy-tools-registry", ".specify/tools"),
     ("docs", "docs"),
 ]
 MATERIAL_TARGET_PREFIXES = tuple(sorted({path for _, path in MATERIAL_ROOTS}))
@@ -72,6 +75,7 @@ SELF_EXEMPT_PREFIX = ".specify/memory/sanitize"
 COMPAT_SYMLINKS = [
     "CLAUDE.md", "QODER.md", "AGENTS.md",
     ".github/copilot-instructions.md", ".github/skills",
+    ".qoder/skills", ".claude/skills",
 ]
 # A compat link is EXPECTED only when its owning tool surface exists; a client
 # workspace initialized for one CLI must not be flagged for another CLI's link.
@@ -81,6 +85,8 @@ COMPAT_SYMLINK_EXPECTATIONS = {
     "AGENTS.md": ".specify/instructions.md",
     ".github/copilot-instructions.md": ".github",
     ".github/skills": ".github",
+    ".qoder/skills": ".qoder",
+    ".claude/skills": ".claude",
 }
 
 DELEGATE_COMMAND_RE = re.compile(r"speckit\.[a-z][a-z-]*|sync-mirrors|regen-command-copies")
@@ -391,7 +397,7 @@ def check_dead_references(root: Path) -> list:
             except ValueError:
                 continue
             repo_root_resolved = root / target if _has_prefix(
-                target, MATERIAL_TARGET_PREFIXES + ("scripts/", "shared/", "templates/",
+                target, MATERIAL_TARGET_PREFIXES + (".specify/scripts/", ".specify/shared/", ".specify/templates/",
                                                     "skills/", "agents/", "src/", "tests/")) else None
             if resolved.exists() or (repo_root_resolved and repo_root_resolved.exists()):
                 continue
@@ -426,7 +432,6 @@ def check_dead_references(root: Path) -> list:
 
 
 FEATURES_ROW_RE = re.compile(r"^\| (\d{3}) \|")
-FEEDBACK_ENTRY_RE = re.compile(r"^\d{8}T\d{6}Z-")
 
 
 def check_index_consistency(root: Path) -> list:
@@ -458,11 +463,25 @@ def check_index_consistency(root: Path) -> list:
                         "index-inconsistency", path.relative_to(root).as_posix(),
                         f"features/{fid}.md 存在而索引无对应行(反向缺项)"))
 
-    # feedback + evidence families (C-7/C-8)
-    for store_name, key_field in (("feedback", "file"), ("evidence", "runId")):
-        index_path = memory / store_name / "index.json"
-        if not index_path.is_file():
-            continue
+    # feedback/session/knowledge families (C-7, req 055): these stores are
+    # scan-on-read — a legacy index.json is transitional residue (old-engine
+    # machines may legitimately recreate it during mixed-version windows).
+    # Its presence is one repair-suggestion finding per file pointing at the
+    # owning engine's reindex; sanitize never deletes it.
+    for rel in ("feedback", "session", "knowledge"):
+        idx = memory / rel / "index.json"
+        if idx.is_file():
+            engine = ("feedback-utils.py" if rel == "feedback"
+                      else "memory-utils.py")
+            findings.append(_finding(
+                "index-inconsistency", idx.relative_to(root).as_posix(),
+                f"legacy index 过期残留(req 055):{rel} 存储已扫描派生,旧索引为过渡期残"
+                f"留 —— 修复:python3 .specify/scripts/python/{engine} --action reindex"
+                f"(落 state 后退役旧文件)"))
+
+    # evidence family (C-8): maintained-index store, bidirectional
+    index_path = memory / "evidence" / "index.json"
+    if index_path.is_file():
         rel_index = index_path.relative_to(root).as_posix()
         try:
             index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -470,37 +489,19 @@ def check_index_consistency(root: Path) -> list:
         except (ValueError, OSError):
             findings.append(_finding(
                 "index-inconsistency", rel_index,
-                f"{store_name} 索引不可解析(单条发现,不逐条展开)"))
-            continue
-        indexed = set()
-        for entry in entries:
-            value = entry.get(key_field) if isinstance(entry, dict) else None
-            if not value:
-                continue
-            indexed.add(value)
-            if key_field == "file":
-                target_path = memory / store_name / value
-                if not target_path.is_file():
-                    findings.append(_finding(
-                        "index-inconsistency", f"{rel_index}#{value}",
-                        f"feedback 索引条目 {entry.get('id', value)} 指向不存在的 {value}"))
-            else:
-                if not (memory / store_name / value).is_dir():
+                "evidence 索引不可解析(单条发现,不逐条展开)"))
+        else:
+            indexed = set()
+            for entry in entries:
+                value = entry.get("runId") if isinstance(entry, dict) else None
+                if not value:
+                    continue
+                indexed.add(value)
+                if not (memory / "evidence" / value).is_dir():
                     findings.append(_finding(
                         "index-inconsistency", f"{rel_index}#{value}",
                         f"evidence 索引条目 {value} 指向不存在的运行目录"))
-        store_dir = memory / store_name
-        if key_field == "file":
-            # only timestamp-named entry files count on disk; bookkeeping files
-            # (cleanup-log / consume-log / migration-log / probe-map / ...) are
-            # store scaffolding, not feedback entries
-            for path in sorted(store_dir.glob("*.md")):
-                if path.name not in indexed and FEEDBACK_ENTRY_RE.match(path.name):
-                    findings.append(_finding(
-                        "index-inconsistency", path.relative_to(root).as_posix(),
-                        f"feedback 条目文件 {path.name} 存在而索引无登记(反向缺项)"))
-        else:
-            for path in sorted(store_dir.glob("ev-*")):
+            for path in sorted((memory / "evidence").glob("ev-*")):
                 if path.is_dir() and path.name not in indexed:
                     findings.append(_finding(
                         "index-inconsistency", path.relative_to(root).as_posix(),
@@ -560,11 +561,21 @@ def parse_mirror_drift_lines(text: str) -> list:
     return items
 
 
-# Orphan-dir detection is scoped to the skills pair: `agents/` mirrors only
+# Orphan-dir detection is scoped to the skills pairs: `agents/` mirrors only
 # *.agent.md files while `.specify/agents/` additionally carries legitimate
-# runtime structure (templates/instances/execution per agent-definitions),
-# so source-less dirs there are not rename residue.
-MIRROR_DIR_PAIRS = [("skills", ".specify/skills")]
+# runtime structure (.specify/templates/instances/execution per agent-definitions),
+# so source-less dirs there are not rename residue. Two source layers map to
+# two runtime shapes (external flat, internal nested) — keep in step with
+# sync-mirrors.py MIRROR_PAIRS.
+MIRROR_DIR_PAIRS = [
+    ("skills/external", ".specify/skills"),
+    ("skills/internal", ".specify/skills/internal"),
+]
+
+# `internal` is the internal layer's RESERVED runtime namespace, nested inside
+# the external mirror root; that subtree is sibling-pair-owned, so it is never
+# rename residue (same release as sync-mirrors' exclude_parts).
+RESERVED_MIRROR_DIR_NAMES = {"internal"}
 
 
 def find_orphan_mirror_dirs(root: Path, registry: set) -> list:
@@ -575,6 +586,8 @@ def find_orphan_mirror_dirs(root: Path, registry: set) -> list:
             continue  # client projects have no source root — pair not applicable
         for child in sorted(mirror.iterdir()):
             if not child.is_dir() or (src / child.name).exists():
+                continue
+            if child.name in RESERVED_MIRROR_DIR_NAMES:
                 continue
             if child.name in registry:
                 findings.append(_finding(
@@ -606,6 +619,122 @@ def load_obsolete_registry(root: Path) -> set:
     return set(QUOTED_RE.findall(match.group(1)))
 
 
+# Legacy skill names for CLIENT workspaces (no src/ tree): the pre-layering
+# generations' retired framework skill directories that init's obsolete sweep
+# removes when it runs. Mirror of the CLI's _OBSOLETE_SKILLS — drift-guarded by
+# tests/unit/test_sanitize_checks_migration.py; here it is the fallback when
+# load_obsolete_registry() finds no framework source tree.
+# OBSOLETE-ASSET-REGISTRY:START (removal manifest, not a live reference —
+# same sanctioned exception as the CLI registry; zero-sdd scan strips this)
+LEGACY_SKILL_NAMES = (
+    "agent-cli-setup", "agent-setup", "cli-setup", "docx-utils",
+    "draw-d3js", "draw-drawio", "draw-echarts", "draw-excalidraw",
+    "draw-mermaid", "draw-plantuml", "export-session", "extension-e2e-test",
+    "git-fleet", "git-server-init", "git-submodule-edit", "git-workflow",
+    "manage-project", "mcp-creator", "mysql-utils", "notebooklm-utils",
+    "organize-agents", "pdf-utils", "playwright-utils", "postgres-utils",
+    "pptx-utils", "refresh-mcp-tools", "sdd-workflow", "skill-creator",
+    "theme-creator", "thought-experiment-verifier", "visualize-project",
+    "web-test", "xlsx-utils",
+)
+
+# Supersession hints for residue summaries (informational only).
+_SUCCESSOR_HINTS = {
+    "draw-d3js": "draw-diagram", "draw-drawio": "draw-diagram",
+    "draw-echarts": "draw-diagram", "draw-excalidraw": "draw-diagram",
+    "draw-mermaid": "draw-diagram", "draw-plantuml": "draw-diagram",
+    "git-fleet": "git-utils", "git-server-init": "git-utils",
+    "git-submodule-edit": "git-utils", "git-workflow": "git-utils",
+    "manage-project": "summarize-project", "visualize-project": "summarize-project",
+    "sdd-workflow": ".specify/shared/workflow",
+}
+# OBSOLETE-ASSET-REGISTRY:END
+
+
+def _legacy_names(root: Path) -> set:
+    registry = load_obsolete_registry(root)
+    return registry if registry else set(LEGACY_SKILL_NAMES)
+
+
+def check_legacy_install_residue(root: Path) -> list:
+    """Pre-layering install residue after a cross-generation `specify init`.
+
+    Detection-rules §4a C-22: legacy flat skill directories, the pre-B2a
+    git-workflow state files, and the old tools-registry directory. Disposition
+    is archive throughout — apply's delete refuses non-empty directories, and
+    content-bearing residue follows archive-not-delete; the summaries point at
+    the migration owner for each class.
+    """
+    findings = []
+    skills_dir = root / ".specify" / "skills"
+    # Client-workspace guard: when the two-layer skills SOURCE tree exists
+    # (framework repo), a flat legacy-named directory under .specify/skills/ is
+    # a MIRROR orphan — find_orphan_mirror_dirs (C-12) owns that surface;
+    # double-reporting the same target under stale-residue would publish
+    # conflicting dispositions (delegate vs archive). Install residue is the
+    # no-source (client) case only.
+    framework_source_present = (root / "skills" / "external").is_dir()
+    if skills_dir.is_dir() and not framework_source_present:
+        for name in sorted(_legacy_names(root)):
+            target = skills_dir / name
+            if target.is_symlink() or not target.is_dir():
+                continue
+            successor = _SUCCESSOR_HINTS.get(name)
+            summary = (
+                f"init 前代技能目录仍平铺残留(能力已由 {successor} 承载)——归档本目录,并确认引用面已迁移至后继技能"
+                if successor else
+                "init 前代技能目录仍平铺残留(框架已退役该技能)——归档清理"
+            )
+            findings.append(_finding(
+                "stale-residue", f".specify/skills/{name}", summary,
+                disposition="archive"))
+    docs_state = root / "docs" / "git-workflow.md"
+    if docs_state.is_file():
+        for rel in (".specify/git-workflow.md", ".specify/memory/git-workflow.md"):
+            if (root / rel).is_file():
+                findings.append(_finding(
+                    "stale-residue", rel,
+                    "旧代 git-workflow 状态文件:新模型状态面在 docs/git-workflow.md——"
+                    "归档本文件,并经 git-utils 技能 bootstrap 核对分支状态已迁移",
+                    disposition="archive"))
+    legacy_tools = root / ".specify" / "tools"
+    if legacy_tools.is_dir() and (root / ".specify" / "memory" / "tools").is_dir():
+        findings.append(_finding(
+            "stale-residue", ".specify/tools",
+            "旧代工具记录目录:记录新址为 .specify/memory/tools/"
+            "(术语消歧见 .specify/shared/definitions/tool-definitions.md § Terminology)——"
+            "归档本目录前核对记录已迁移",
+            disposition="archive"))
+    return findings
+
+
+def check_flat_internal_duplicates(root: Path) -> list:
+    """Flat leftovers of the nested internal layer (detection-rules §4a C-23).
+
+    A flat `.specify/skills/<name>/` directory whose name is nested at
+    `.specify/skills/internal/<name>/` is a stale duplicate of a
+    framework-owned internal skill (the state init's flat-internal migration
+    degrades to when interrupted). Fully derivable — no name list involved.
+    """
+    findings = []
+    skills_dir = root / ".specify" / "skills"
+    internal_dir = skills_dir / "internal"
+    if not internal_dir.is_dir():
+        return findings
+    for child in sorted(internal_dir.iterdir()):
+        if not child.is_dir():
+            continue
+        flat = skills_dir / child.name
+        if flat.is_symlink() or not flat.is_dir():
+            continue
+        findings.append(_finding(
+            "redundant", f".specify/skills/{child.name}",
+            "分层运行时的平铺残留:同名技能已嵌套于 .specify/skills/internal/,"
+            "平铺副本为过期重复(归档前抽查其内容无本地独有修改)",
+            disposition="archive", severity="medium"))
+    return findings
+
+
 def check_mirror_drift(root: Path) -> list:
     findings = []
     try:
@@ -624,8 +753,16 @@ def check_mirror_drift(root: Path) -> list:
 def check_docs_lane(root: Path):
     """Docs-tree dead references reuse docs-utils (Tool Reuse, contract C-4)."""
     try:
-        spec = importlib.util.spec_from_file_location(
-            "sanitize_docs_utils", Path(__file__).with_name("docs-utils.py"))
+        # docs-utils ships with the create-docs skill; resolve in source, mirror, or client layout.
+        candidates = [
+            Path(__file__).with_name("docs-utils.py"),
+            root / "skills" / "external" / "create-docs" / "scripts" / "docs-utils.py",
+            root / ".specify" / "skills" / "create-docs" / "scripts" / "docs-utils.py",
+        ]
+        engine_path = next((p for p in candidates if p.is_file()), None)
+        if engine_path is None:
+            return None
+        spec = importlib.util.spec_from_file_location("sanitize_docs_utils", engine_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module.broken_links(root)
@@ -638,6 +775,8 @@ CHECKERS = [
     ("index-inconsistency", check_index_consistency),
     ("broken-symlink", check_broken_symlinks),
     ("mirror-drift", check_mirror_drift),
+    ("stale-residue", check_legacy_install_residue),
+    ("redundant", check_flat_internal_duplicates),
 ]
 
 
@@ -723,7 +862,7 @@ def collect_semantic_candidates(root: Path):
         paths = extract_repo_paths(text)
         # file-like fragments without a rooted prefix still carry locating
         # power as glob pathspecs ("*platforms/opencode.mjs" matches
-        # scripts/js/.../platforms/opencode.mjs) — absence-of-work claims are
+        # .specify/scripts/js/.../platforms/opencode.mjs) — absence-of-work claims are
         # often contradicted by commits that PREDATE the claim date, so the
         # pack carries the latest bounded history instead of a since-window
         fragments = [f for f in FILE_FRAGMENT_RE.findall(text) if f not in paths]

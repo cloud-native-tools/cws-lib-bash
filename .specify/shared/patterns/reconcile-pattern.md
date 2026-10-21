@@ -16,7 +16,7 @@ Do **not** apply to: one-shot pipelines (generate a report, render a diagram), r
 
 ## Boundary: Reconcile vs Continuous Operating Loop (概念消歧)
 
-This pattern is easily confused with the **continuous operating loop** defined in [`skills/create-team/references/operating-loops.md`](../../skills/create-team/references/operating-loops.md) — both are "repeated runs + LLM judgment + state files". The root difference is **what is processed + when it terminates (处理对象 + 终止语义)**:
+This pattern is easily confused with the **continuous operating loop** defined in [`.specify/skills/internal/create-team/references/operating-loops.md`](../../skills/internal/create-team/references/operating-loops.md) — both are "repeated runs + LLM judgment + state files". The root difference is **what is processed + when it terminates (处理对象 + 终止语义)**:
 
 | Dimension | Reconcile (this pattern) | Continuous operating loop |
 |-----------|--------------------------|---------------------------|

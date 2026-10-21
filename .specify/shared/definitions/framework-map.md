@@ -9,13 +9,13 @@ This is a **map, not a manual**: it tells you *what* exists and *where* it lives
 | Project memory | `.specify/memory/` | constitution, features index + `features/<ID>.md`, glossary, `tools/` records, feedback store |
 | Artifact templates | `.specify/templates/` | requirements/plan/tasks templates rendered by `/speckit.*` |
 | Automation scripts | `.specify/scripts/` | bash/python engines invoked by commands and skills |
-| Installed skills | `.specify/skills/` | one directory per skill (`SKILL.md` + references/ + scripts/) |
+| Installed skills | `.specify/skills/` | one directory per skill (`SKILL.md` + references/ + .specify/scripts/) |
 | Skills system guide | `.specify/skills.md` | how skills are discovered and created — no registry |
 | Tools system guide | `.specify/tools.md` | how tools are recorded and discovered — no registry |
-| Git workflow state | `.specify/git-workflow.md` | branch-role managed block, machine-maintained by the `git-workflow` skill |
+| Git workflow state | `docs/git-workflow.md` | branch-role managed block, machine-maintained by the `git-utils` skill |
 | **Agent Templates** | `.specify/agents/templates/` | capability descriptions — shipped role set installed by `specify init`; each `.agent.md` is self-contained |
 | **Agent Instances** | `.specify/agents/instances/` | responsibility-bound agents authored in this project; reference a Template |
-| **Agent Execution** | `.specify/agents/execution/` | dispatch `configs/` + `scripts/` (tracked); runtime `logs/` (gitignored, never committed) |
+| **Agent Execution** | `.specify/agents/execution/` | dispatch `configs/` + `.specify/scripts/` (tracked); runtime `logs/` (gitignored, never committed) |
 | Teams | `.specify/teams/<slug>/` | team definitions + `runs/` reports; run intermediates in git-ignored `.work/` |
 | Derivations | `.specify/derive/` | one derivation archive per topic (`<topic-slug>/derive.md`) plus the project-level reasoning-move library `moves.md` (engine-written, accumulating); record semantics in `definitions/derivation-definitions.md` |
 | Shared definitions & conventions | `.specify/shared/` | canonical concept docs — e.g. agent taxonomy (`definitions/agent-definitions.md`), subagent modes (`definitions/subagent-definitions.md`), tool definitions, workflow conventions |

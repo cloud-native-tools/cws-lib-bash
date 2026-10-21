@@ -11,16 +11,9 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 
 `/speckit.tools` is the **single entry point** for every **tool** operation — the tool-domain analogue of `/speckit.agents` and `/speckit.team`. It recognizes intent, then routes to the owning tool skill. It delegates to skills and does **NOT** render templates inline.
 
-A **tool** is a named, pre-verified, reusable **definition of one concrete capability** — persisted at `.specify/memory/tools/<name>.md` — that an agent invokes *instead of* working out how to perform that action on the fly. It is an **abstraction layer between an agent's intent and the environment's reality**, and it removes two failure modes of the unmediated default:
-
-- **Environment variance** — the same logical capability is not the same command everywhere: the binary may be named differently, be a different version, need different flags per version, or differ by CPU architecture or OS. An agent reasoning from training knowledge picks one plausible invocation and gets it wrong on the machine actually present. A record pins what is **verified here** and states the known variance explicitly.
-- **Throwaway generated scripts** — for anything non-trivial an LLM otherwise writes ad-hoc script code in the moment, varying in quality and correctness and differing **between runs**, so behavior is not reproducible. A record replaces per-run improvisation with something verified once and reused thereafter.
-
-That buys **stability** (same behavior across runs, sessions, and agents), **efficiency** (no re-deriving or re-validating the invocation, so less inference overhead), and **authority** (the record's behavioral rules **override the agent's built-in training knowledge**). Hence **definition is the primary action** and discovery only bootstraps a `Draft` for the user to complete — a record auto-filled from model knowledge would defeat its own purpose. The operating rule for every other skill/command is **reuse before generating**: check for an existing tool before writing script code for a complex action (`.specify/shared/workflow/tool-reuse-gate.md`; Constitution Principle XII).
+A **tool** is a named, pre-verified, reusable **definition of one concrete capability** — persisted at `.specify/memory/tools/<name>.md` — that an agent invokes *instead of* improvising the action per run (it absorbs environment variance and replaces throwaway generated scripts). The full concept, its rationale (stability / efficiency / authority), the definition-first discipline, the four canonical types, type semantics, the RFC 2119 behavioral-rules format, the optional `## Environment Applicability` block, the two-state lifecycle (`Draft` → `Verified`; only `Verified` records may be invoked), the edge cases, and the invocation preview contract are defined once in `.specify/shared/definitions/tool-definitions.md` — reference it, do not restate it. The reuse-before-generating operating rule for every other skill/command is `.specify/shared/workflow/tool-reuse-gate.md` (Constitution Principle XII). The authoring templates live inside the owning skill at `.specify/skills/internal/create-tools/templates/`.
 
 > **Terminology**: unqualified "tool" here means the record above. A supported coding agent (Claude Code, Codex CLI, …) is an **AI agent CLI**; the `tools:` frontmatter key on an agent is its **tool-call list**.
-
-Every record has four canonical types (`project-script`, `system-binary`, `shell-function`, `webhook`), an optional `## Environment Applicability` block (verified version, version differences, platform, architecture, fallback, preflight check), and a two-state lifecycle (`Draft` → `Verified`); only `Verified` records may be invoked. Type semantics, the RFC 2119 behavioral-rules format, environment applicability, the reuse gate, edge cases, and the invocation preview contract are defined once in `.specify/shared/definitions/tool-definitions.md`. The authoring templates live inside the owning skill at `skills/create-tools/templates/`.
 
 ### Modes → Capability Routing
 
@@ -88,53 +81,19 @@ Invocation is gated. The command MUST NOT execute a tool before explicit user co
 
 ### Persistence
 
-- Definition records: `.specify/memory/tools/<name>.md`; `tool_id` is the canonical form `<TOOL:.specify/memory/tools/<name>.md>`. The record file is the single source of truth — there is no registration table (see `.specify/tools.md`).
-- The regenerated **discovery inventories** are `.specify/tools/{system,shell,project}.json`. `.specify/memory/tools.md` is a separate hand-maintained MCP-server index — it is not a definition record, not the tools inventory, and MUST NOT be hand-edited by these modes. Ownership: `.specify/shared/definitions/tool-definitions.md`.
+Definition records: `.specify/memory/tools/<name>.md`; `tool_id` is the canonical form `<TOOL:.specify/memory/tools/<name>.md>`; the record file is the single source of truth — no registry. Discovery inventories, the `.specify/memory/tools.md` index trap, and store ownership: `.specify/shared/definitions/tool-definitions.md`. Agent-specific detection, guidance, and execution-feedback capture follow the routed skill's own Agent-Specific Configuration section (`create-tools` / `improve-tools`); for shared operational guidance, see `.specify/shared/workflow/agent-configuration.md`.
 
-## Agent-Specific Configuration
+## Wrap-up
 
-### Step 1: Identify Executing Agent
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
 
-Identify which AI agent is executing this command:
-
-| Agent | Detection Signals |
-|-------|-------------------|
-| **Claude Code** | Tools include `Agent`, `Edit`, `Bash`, `Read`; `.claude/` directory exists |
-| **Qoder CLI** | `.qoder/` directory exists; `AGENTS.md` instructions loaded |
-| **opencode** | `.opencode/` directory exists |
-| **Codex CLI** | `.codex/` directory exists |
-| **Hermes Agent** | `.hermes/` directory exists |
-| **GitHub Copilot** | Running in VS Code Copilot Chat context; `.github/copilot-instructions.md` loaded |
-
-If you cannot identify your agent, skip Step 2 and proceed with the standard flow.
-
-### Step 2: Load Agent-Specific Guidance
-
-Check whether a guide exists for the routed skill at:
-
-```
-.specify/skills/<create-tools|improve-tools>/references/<agent-slug>-guide.md
-```
-
-If it exists, apply its tool mappings and pitfall avoidances during execution. Otherwise proceed with the standard flow. For shared operational guidance, see `.specify/shared/workflow/agent-configuration.md`.
-
-### Step 3: Capture Execution Feedback
-
-If you hit a genuine agent-specific obstacle (an unavailable tool call, an output format mismatch, a needed workaround), write a feedback document to:
-
-```
-.specify/memory/feedback/tools-<agent-slug>-<YYYY-MM-DDTHH-MM-SS>.md
-```
-
-Include: **Source** (`/speckit.tools`), **Agent**, **Timestamp**, **Outcome**, then `## Obstacle`, `## Workaround Applied`, and `## Suggested Improvement`. Only generate feedback when a genuine agent-specific obstacle was encountered.
-
-## Feedback
-
-At wrap-up (the same lifecycle point where this command prompts for a Git commit), run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this command's scope; persist one entry via `feedback-utils.py --action record --unit-id "/speckit.tools" --unit-type command`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
-
-## Documentation
-
-At the same wrap-up point as the Feedback step, apply the docs-sync evaluation per the canonical convention in `.specify/shared/workflow/docs-step.md`: assess whether information produced by this run (new capabilities, key decisions, structural changes) needs to be recorded into the project documentation space, and conclude with exactly one of `需记录（目标文档 + 要点）` or `无需记录`. Never block wrap-up; incremental judgment only (no full reconcile sweep); when a move/archive-level change is needed, recommend running `/speckit.docs` instead of executing it here.
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.tools" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "/speckit.tools" --unit-type command`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "/speckit.tools" --unit-type command --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Docs Sync Eval — `.specify/shared/workflow/docs-step.md` § "Evaluation procedure (the embedded step points here)"
 
 ## Handoffs
 

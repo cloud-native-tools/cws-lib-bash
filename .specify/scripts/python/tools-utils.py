@@ -269,8 +269,8 @@ def _self_improvement_contract() -> str:
     if repo_root.name == ".specify":
         repo_root = repo_root.parent
     for candidate in (
-        repo_root / ".specify/skills/create-tools/templates/tool-self-improvement.md",
-        repo_root / "skills/create-tools/templates/tool-self-improvement.md",
+        repo_root / ".specify/skills/internal/create-tools/templates/tool-self-improvement.md",
+        repo_root / ".specify/skills/internal/create-tools/templates/tool-self-improvement.md",
     ):
         if candidate.is_file():
             return candidate.read_text(encoding="utf-8").strip()

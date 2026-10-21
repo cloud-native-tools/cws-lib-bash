@@ -29,12 +29,12 @@ HTML 是**入口**，不是唯一产物。同一次交付 MUST 在**同一目录
 
 | 引擎 | 源文件（可再编辑） | 渲染图 | 说明 |
 |------|-------------------|--------|------|
-| `draw-plantuml` | `.puml` | `.svg` + `.png` | 二者都必须产出（PNG 供速览，SVG 供无损放大） |
-| `draw-mermaid` | `.mmd` | `.svg` + `.png` | 同上 |
-| `draw-excalidraw` | `.excalidraw` | `.svg` + `.png` | 场景 JSON 是可拖回继续编辑的白板源文件 |
-| `draw-drawio` | `.drawio` | `.svg` / `.png` / `.pdf` | 未压缩 mxGraph XML；导出图与源文件同目录 |
-| `draw-d3js` | `.html`（源即产物） | 图内联于 HTML | split 模式下另留 `data.js`/`data.json` 与本地 `vendor/d3.v7.min.js` |
-| `draw-echarts` | `.html`（源即产物） | 图内联于 HTML | 另留 `config.json`/`config.js` 与本地 `vendor/echarts.min.js` |
+| `plantuml` | `.puml` | `.svg` + `.png` | 二者都必须产出（PNG 供速览，SVG 供无损放大） |
+| `mermaid` | `.mmd` | `.svg` + `.png` | 同上 |
+| `excalidraw` | `.excalidraw` | `.svg` + `.png` | 场景 JSON 是可拖回继续编辑的白板源文件 |
+| `drawio` | `.drawio` | `.svg` / `.png` / `.pdf` | 未压缩 mxGraph XML；导出图与源文件同目录 |
+| `d3js` | `.html`（源即产物） | 图内联于 HTML | split 模式下另留 `data.js`/`data.json` 与本地 `vendor/d3.v7.min.js` |
+| `echarts` | `.html`（源即产物） | 图内联于 HTML | 另留 `config.json`/`config.js` 与本地 `vendor/echarts.min.js` |
 
 **通用要求**：
 
@@ -89,6 +89,40 @@ HTML 说明文字讲的是**系统本身**，不是**这张图**：
 | 9 | 说明文字讲的是架构/流程，用的是用户原始术语（D5） |
 | 10 | 说明文字与用户给的上下文一致、无臆造成分（D5） |
 | 11 | 页面 `<style>` 与磁盘上的 `assets/delivery.css` **逐字节一致**（内联，非 `<link>` 外链、无在线字体/CDN 样式）（D1） |
+| 12 | **渲染证据几何**：无头截图的窗口高 = 内容高 + **≥100px 余量**，或先读回绘制 bbox 再判裁切。理由：无头 Chrome 的布局视口比 `--window-size` 的声明值矮 ~87–88px（两个引擎各自实测 88px / 87px），窗口高只等于内容高时底部被**静默裁掉**，而「截图存在且非空白」这一关照样通过 —— 故非空白**不构成**渲染证据 |
+| 13 | **仅交互交付**（`interactivity_intent.level ≠ none`）：JS 资产策略与声明一致——声明内联则无外部 JS 引用、声明本地 vendor 则库文件在盘且非空、声明 CDN 则为含版本号的固定 URL；交互逻辑（事件处理 + 状态更新）内联在 HTML 内（D7.1） |
+| 14 | **仅交互交付**：逐声明 form 复现一次「输入 → 可见变化」通过，或注明以代码证据口径替代（判据 owner：`semantic-model.md` § 交互语义与验收；交付侧义务见 D7.3） |
+
+## D7 交互式网页交付（`interactivity_intent.level ≠ none` 时适用）
+
+**定位**：D1「自足 HTML」在交互交付上的延伸——图不再只是「看得见」，还要「随输入变」。本节拥有交互交付的**交付形态**：JS 资产策略、与共享渲染后端的解耦关系、浏览器验收。交互的**形式分类、档位与逐 form 验收判据** owner 是 [`semantic-model.md`](semantic-model.md) § 交互语义与验收，本节不复写；各 form 在引擎内的实现 owner 是各引擎层「交互实现」小节。D1–D6 在交互交付上**照常适用**，本节只做增量。
+
+### D7.1 JS 资产自足策略（三选一并声明）
+
+交互需要 JS 运行时（渲染库 + 交互逻辑）。交付 MUST 三选一，并在 HTML 复现性附录（D2）中**声明所选项**（离线口径随声明走，见下）：
+
+| 策略 | 做法 | 代价 | 适用 |
+|------|------|------|------|
+| 内联（inline） | 库与代码全部内联进 HTML 单文件 | 文件体积大；库体积过大（MB 级）时慎用 | 绝对离线、单文件分发 |
+| 本地 vendor | 库文件放交付目录 `vendor/`，相对路径引用 | 交付从单文件变为「HTML + `vendor/`」目录 | 离线可靠 + 可维护（推荐默认） |
+| CDN | `<script src>` 指向**含版本号**的固定 URL | 首开需联网；存在版本漂移风险 | 快速在线查看 |
+
+- 无论选哪种，**交互逻辑本身（事件处理、状态更新）MUST 内联在 HTML 内**——不得外置成第二个 JS 文件让 HTML 依赖它；交付的最小分发单元是单个 HTML，或「HTML + `vendor/` + 数据文件」的完整目录，不得出现「HTML 引用一个既不在盘也未声明的 JS」。
+- CDN 策略 MUST 用固定版本 URL（如 `d3.v7`、`echarts@5.6.0`），MUST NOT 用浮动 tag（各引擎既有的版本固定与 vendor 校验规则仍是引擎层的机械细节，本条只约束交付形态）。
+- **离线口径随声明走**：声明内联 / 本地 vendor = 断网可打开可交互；声明 CDN = 首开需联网。按声明口径验收，声明与实际不符 = D6 自检不过。D1 的「无需联网」红线对**样式**不变（仍禁在线字体/CDN 样式外链）；本条是 JS 运行库在交互交付下的细化，二者不冲突。
+- 引擎层既有实践与本表的对应关系由引擎层自述（如 vendored-first loader 属「本地 vendor」策略的实现），本节不点名引擎文件。
+
+### D7.2 与共享渲染后端解耦（交互交付不依赖渲染服务）
+
+- 交互式网页交付是**浏览器客户端行为**：图由交付目录内的 HTML + JS 在用户浏览器中渲染并响应用户输入，**不经过**前门的共享渲染后端（Step 2.5 preflight 管辖的那个服务），也不依赖任何服务端渲染服务。交付物一旦在盘，浏览器打开即完整成立。
+- 因此对**纯 HTML 交互交付**（无需后端把源文件转成图片/静态图的委派路径），Step 2.5 的 preflight **不适用**：不得因渲染后端不可达而中断一次本可纯浏览器完成的交互交付。preflight 只约束「需要后端渲染产物」的路径。
+- 引擎层若选择「静态快照 + 交互 HTML」双轨交付（快照作渲染证据），**快照部分**才回到后端/preflight 管辖；交互 HTML 部分始终走本节。
+
+### D7.3 浏览器验收（渲染 + 交互双过）
+
+- **渲染无错**：浏览器打开无脚本错误、无空白画布；无头截图的裁切判定沿用 D6 #12 渲染证据几何，非空白不构成渲染证据。
+- **交互生效**：逐声明 form 复现一次「输入 → 可见变化」（判据 owner：`semantic-model.md` § 交互语义与验收）；无法逐项操作时以代码证据口径替代并注明。
+- **交互说明义务**：交付的说明文字须列出实际具备的交互与触发方式。这是使用说明，不属于 D4 禁止的「图例式解说」（D4 禁的是解释视觉编码，不是告知用户能点什么）；其余文字规则 D3–D5 照常适用。
 
 ## 与其它 owner 的边界
 
@@ -96,6 +130,8 @@ HTML 说明文字讲的是**系统本身**，不是**这张图**：
 |------|-------|
 | 图内标签长度、注释策略、标识符规范 | 各引擎 `references/guide/content.md`（mermaid / plantuml 各一份，**已分化**） |
 | 几何、`weight_plan` 档位、偏离声明 | `semantic-model.md` + 各引擎「SDS 实现与强弱落地」小节与 `references/sds-realization.md` |
+| 交互形式分类、档位/默认值、逐 form 验收判据 | `semantic-model.md` § 交互语义与验收 |
+| 各交互形式在引擎内的实现（事件/组件/产物形态） | 各引擎层「交互实现」小节（当前 d3js / echarts 设有） |
 | HTML 模板、渲染脚本、嵌入 Markdown 的具体写法、有效字号量测 | 各引擎 SKILL.md「输出要求 / Output Requirements」与其 `references/howto/*rendering-and-output*.md` |
 | 引擎选择、图类选择 | `routing-matrix.md`；图类专章见各引擎 `references/{howto,document}/` |
 | 大图拆分、legend 画法 | 各引擎 `references/guide/large-diagram-playbook.md` |

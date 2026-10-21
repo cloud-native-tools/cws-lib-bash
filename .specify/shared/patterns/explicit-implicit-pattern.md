@@ -1,6 +1,6 @@
 # Explicit–Implicit Rule Pattern (显隐规则模式) — A Design Pattern for Routing & Rule Systems
 
-A reusable design pattern for any unit that must **resolve an ambiguous-at-authoring-time mapping at run time** — which project/target an instruction belongs to, which behavior a rule triggers, which handler an intent routes to — under one structural law: **explicit rules are primary and hard; implicit rules are auxiliary and soft; and every successful implicit resolution gets a chance to become explicit** (`shared/patterns/explicit-implicit-pattern.md`).
+A reusable design pattern for any unit that must **resolve an ambiguous-at-authoring-time mapping at run time** — which project/target an instruction belongs to, which behavior a rule triggers, which handler an intent routes to — under one structural law: **explicit rules are primary and hard; implicit rules are auxiliary and soft; and every successful implicit resolution gets a chance to become explicit** (`.specify/shared/patterns/explicit-implicit-pattern.md`).
 
 ## When to Apply (适用判据)
 

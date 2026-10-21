@@ -19,7 +19,7 @@ Slimming has two directions, and the authoring direction is the one that gets sk
 
 - **Cleanup** — relocate manual content that is already in the body (Principles 1–7 below).
 - **Authoring** — new detail written *during this loop* defaults to `references/` (explanations,
-  worked examples, checklists) or `scripts/` (deterministic logic). `SKILL.md` gains only
+  worked examples, checklists) or `.specify/scripts/` (deterministic logic). `SKILL.md` gains only
   contract lines: a step heading + one-sentence goal, a hard rule, a decision branch, a
   resource-index row, a pointer with an anchor.
 
@@ -40,7 +40,7 @@ compounding causes, all now closed:
    a consolidated `## Hard Constraints` block placed late in `SKILL.md`).
 3. **No objective condition** — the quantitative facts lived only here in L2, so a loop that
    never opened this file never saw a number and "slim enough?" had no verdict (fixed by
-   `scripts/skill-shape.py` plus a mandatory gate in the validation step).
+   `.specify/scripts/skill-shape.py` plus a mandatory gate in the validation step).
 
 The general lesson: *a discipline that depends on the agent voluntarily reading a reference
 is not enforced.* Give it a number, a script, and a late-positioned rule.
@@ -204,7 +204,7 @@ A slim `SKILL.md` makes the agent's behavior **predictable and auditable**:
 - Triggers (frontmatter description) stay aligned with what the body actually delivers.
 - The Skill stops accumulating environment-recovery code that no other Skill needs.
 
-Slimming also has a **measured compliance payoff**. Skill loading is progressive across four levels: **L0** frontmatter `description` (always in context), **L1** `SKILL.md` body (loaded on trigger; keep ≤ ~5K tokens), **L2** `references/` (read on demand), **L3** `scripts/` (executed, near-zero token cost). Hard constraints buried mid-way through a bloated L1 body sit in the attention low-zone and get violated at a measurably higher rate (~72–80% vs ~100% when kept compact and well-placed — see [constraint-placement.md](./constraint-placement.md)). Every manual paragraph left in L1 dilutes the rules that must survive there; moving it to L2/L3 is compliance protection, not just tidiness.
+Slimming also has a **measured compliance payoff**. Skill loading is progressive across four levels: **L0** frontmatter `description` (always in context), **L1** `SKILL.md` body (loaded on trigger; keep ≤ ~5K tokens), **L2** `references/` (read on demand), **L3** `.specify/scripts/` (executed, near-zero token cost). Hard constraints buried mid-way through a bloated L1 body sit in the attention low-zone and get violated at a measurably higher rate (~72–80% vs ~100% when kept compact and well-placed — see [constraint-placement.md](./constraint-placement.md)). Every manual paragraph left in L1 dilutes the rules that must survive there; moving it to L2/L3 is compliance protection, not just tidiness.
 
 Slimming is not a one-time refactor; it is a steady-state discipline applied every time the Skill changes.
 

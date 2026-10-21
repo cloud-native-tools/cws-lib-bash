@@ -9,7 +9,15 @@ Layout (relative to workspace root):
 
     .specify/memory/session/     # short-term / working memory (append-only)
     .specify/memory/knowledge/   # long-term / distilled memory (upsert by slug)
-    .specify/memory/<scope>/index.json
+    .specify/memory/<scope>/<slug>.md
+
+Conflict-free store discipline (req 055): information that multiple flows
+may update concurrently never lives in one shared file. Each entry is its
+own Markdown file; the per-scope entry list is derived on demand by
+scanning ``*.md`` frontmatter — never persisted. A legacy per-scope
+``index.json`` is read as a read-only fallback and retired (deleted) on
+the first mutating action; the return value discloses ``"migrated"`` when
+that happened.
 
 Only conversations driven by a `/speckit.<command>` or a `skill:<name>` source
 are recorded; the `record` action rejects any other `--source`.
@@ -19,6 +27,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -27,6 +36,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 SCOPES = ("session", "knowledge")
 MEMORY_SUBDIR = Path(".specify") / "memory"
+# Legacy per-scope index (pre-055): read-only fallback, retired on first
+# mutating action.
 INDEX_NAME = "index.json"
 
 # A source is valid only when it names a Spec Kit command or skill.
@@ -209,26 +220,51 @@ def index_path(workspace_root: Path, scope: str) -> Path:
     return scope_dir(workspace_root, scope) / INDEX_NAME
 
 
-def load_index(workspace_root: Path, scope: str) -> Dict[str, Any]:
-    path = index_path(workspace_root, scope)
-    if not path.exists():
-        return {"scope": scope, "updated": None, "entries": []}
+def write_text_atomic(path: Path, text: str) -> None:
+    part = path.with_name(path.name + ".part")
+    part.write_text(text, encoding="utf-8")
     try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (ValueError, OSError):
-        return {"scope": scope, "updated": None, "entries": []}
-    if not isinstance(data, dict) or not isinstance(data.get("entries"), list):
-        return {"scope": scope, "updated": None, "entries": []}
-    return data
+        os.replace(part, path)
+    except OSError:
+        part.unlink(missing_ok=True)
+        raise
 
 
-def save_index(workspace_root: Path, scope: str, entries: List[Dict[str, Any]]) -> None:
-    entries = sorted(entries, key=lambda e: e.get("created", ""), reverse=True)
-    payload = {"scope": scope, "updated": now_iso(), "entries": entries}
-    ensure_scope_dir(workspace_root, scope)
-    index_path(workspace_root, scope).write_text(
-        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+def migrate_legacy_index(workspace_root: Path, scope: str) -> bool:
+    """Retire a legacy per-scope ``index.json`` (req 055).
+
+    The memory index carried only frontmatter mirrors — nothing to
+    materialize — so migration is the delete itself. Idempotent; returns
+    True when a legacy index was retired by this call.
+    """
+    path = index_path(workspace_root, scope)
+    if not path.is_file():
+        return False
+    try:
+        path.unlink()
+    except OSError:
+        pass
+    return True
+
+
+def load_index(workspace_root: Path, scope: str) -> Dict[str, Any]:
+    """Scan-derived per-scope entry list (legacy shape preserved).
+
+    Entries are derived from the ``*.md`` files themselves; ``updated`` is
+    never persisted. In-process callers (run-determination, tests) depend
+    on this name and return shape.
+    """
+    target = scope_dir(workspace_root, scope)
+    entries: List[Dict[str, Any]] = []
+    if target.is_dir():
+        for path in sorted(target.glob("*.md")):
+            meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
+            if not meta:
+                continue
+            meta.setdefault("scope", scope)
+            entries.append(entry_meta(meta, path.name))
+    entries.sort(key=lambda e: e.get("created", ""), reverse=True)
+    return {"scope": scope, "updated": None, "entries": entries}
 
 
 def entry_meta(meta: Dict[str, Any], filename: str) -> Dict[str, Any]:
@@ -269,8 +305,7 @@ def action_record(args: argparse.Namespace) -> Dict[str, Any]:
     slug = stable_slug(title or first_line)
 
     target_dir = ensure_scope_dir(workspace_root, scope)
-    index = load_index(workspace_root, scope)
-    entries = index["entries"]
+    entries = load_index(workspace_root, scope)["entries"]
 
     if scope == "knowledge":
         filename = f"{slug}.md"
@@ -302,14 +337,12 @@ def action_record(args: argparse.Namespace) -> Dict[str, Any]:
         "session_id": (args.session_id or "").strip(),
         "summary": make_summary(content, title),
     }
-    (target_dir / filename).write_text(compose_entry(meta, content), encoding="utf-8")
+    write_text_atomic(target_dir / filename, compose_entry(meta, content))
 
-    entries = [e for e in entries if e.get("file") != filename]
-    entries.append(entry_meta(meta, filename))
-    save_index(workspace_root, scope, entries)
+    migrated = migrate_legacy_index(workspace_root, scope)
 
     rel = (target_dir / filename).resolve().relative_to(workspace_root).as_posix()
-    return {"id": entry_id, "scope": scope, "path": rel}
+    return {"id": entry_id, "scope": scope, "path": rel, "migrated": migrated}
 
 
 def _score_entry(entry: Dict[str, Any], query_tokens: List[str]) -> int:
@@ -429,26 +462,28 @@ def action_prune(args: argparse.Namespace) -> Dict[str, Any]:
         else:
             keep.append(entry)
 
-    save_index(workspace_root, scope, keep)
-    return {"scope": scope, "removed": removed, "remaining": len(keep)}
+    migrated = migrate_legacy_index(workspace_root, scope)
+    remaining = len(load_index(workspace_root, scope)["entries"])
+    return {"scope": scope, "removed": removed, "remaining": remaining,
+            "migrated": migrated}
 
 
 def action_reindex(args: argparse.Namespace) -> Dict[str, Any]:
+    """Explicit store reconciliation and migration entry point (req 055).
+
+    The entry list is always derived from the ``*.md`` files, so reindex is
+    a no-op for entries; what it does is retire a legacy per-scope
+    ``index.json``. Idempotent — a second run reports nothing migrated.
+    """
     workspace_root = resolve_workspace_root(args.workspace_root)
     result: Dict[str, Any] = {}
+    migrated: List[str] = []
     for scope in _collect_scopes(args.scope):
-        target = scope_dir(workspace_root, scope)
-        entries: List[Dict[str, Any]] = []
-        if target.exists():
-            for path in sorted(target.glob("*.md")):
-                meta, _ = parse_frontmatter(path.read_text(encoding="utf-8"))
-                if not meta:
-                    continue
-                meta.setdefault("scope", scope)
-                entries.append(entry_meta(meta, path.name))
-        save_index(workspace_root, scope, entries)
+        entries = load_index(workspace_root, scope)["entries"]
+        if migrate_legacy_index(workspace_root, scope):
+            migrated.append(scope)
         result[scope] = len(entries)
-    return {"reindexed": result}
+    return {"reindexed": result, "migrated": migrated}
 
 
 # --------------------------------------------------------------------------- #

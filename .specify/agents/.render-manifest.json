@@ -1,39 +1,55 @@
 {
   "version": 1,
   "tool": "qoder",
-  "rendered_at": "20260920T113301Z",
+  "rendered_at": "20261021T034918Z",
   "entries": {
+    ".claude/agents/sdd-executor.md": {
+      "source": "templates/sdd-executor.agent.md",
+      "sha256": "b6e3b8c02aa82cc6296219f0ca264d66d144a5285d0c1cfd88fe9ea0a74378df"
+    },
     ".claude/agents/skill-verifier.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "7c8c9a5e2fa4f50643c156af2698668528d7d5a0beb514d18c7cdb7871fc9705"
+      "sha256": "3969ea56c44d0ea6023a9aedc20201c80399f59555f421ed9387b3edf6d67d9c"
     },
     ".claude/agents/structure-adjuster.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "ae9092f533844eaa410a86f6c9a0019901e1a3e8999dfcfb216a763a78584276"
+      "sha256": "2cea357cd65248db2a06730122ed702977e044f6408b13141e550daa5e0d0164"
+    },
+    ".github/agents/sdd-executor.agent.md": {
+      "source": "templates/sdd-executor.agent.md",
+      "sha256": "86da7dfe08ee8c0544d643ce1f03ad8934161a8beffd878f7aafe0ba460dcde3"
     },
     ".github/agents/skill-verifier.agent.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "5d353e7caffb59cc056c88549a1f2e67ff4bea1f2b3569157ca372ace3b4b746"
+      "sha256": "1b6d75964ecfaea28558185a2ff483e88377a4da6c44ba819c7dc7604cd57425"
     },
     ".github/agents/structure-adjuster.agent.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "63d6e2302736a133b856f758b02e7082dc6207246e5fd546c1d9d36834bd887b"
+      "sha256": "faf5f5cb5e075ede24920646ce340c9c368d9acb63697801d5099cc14ac9b594"
+    },
+    ".opencode/agents/sdd-executor.md": {
+      "source": "templates/sdd-executor.agent.md",
+      "sha256": "7882d665d7bd4c668b3160c3334c92fa5a90b55518e0d2dc6601318ed4ecb118"
     },
     ".opencode/agents/skill-verifier.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "48c85264bdebe51a2850e61a9194191f5343b8c13cecc7330b8ab4cf3b49bba8"
+      "sha256": "597ec62637e32d8ae4a50b47a04e15c9c785975396256b4c775bc1ef2b646c83"
     },
     ".opencode/agents/structure-adjuster.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "79f97c1e0459b6334fa4298a2848e816f492d4175b127b81fdae3991fcad159f"
+      "sha256": "d9179c3525a84520c795fc6041d887297e88ebcfc3e78327f54371cc08bc334c"
+    },
+    ".qoder/agents/sdd-executor.agent.md": {
+      "source": "templates/sdd-executor.agent.md",
+      "sha256": "6c8238316c9ebecd526b23304a8f2ce0e29dd5145a5d0245232f7b7776d84cf2"
     },
     ".qoder/agents/skill-verifier.agent.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "e237bfc69d33a67e2a4249943d5cc4524b825e352558c2e33de6b435e2af4b92"
+      "sha256": "56d0cb2dffef1272ee6943f0f91df5a2bf27586fb1b9655f6242bb3b8ff0f0fb"
     },
     ".qoder/agents/structure-adjuster.agent.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "54696125b20f4bcab45c0757bf6bc746511a8e2b2a1872ac7b9b213d2d53e551"
+      "sha256": "034ba320d8fe145e95b1853424dbe11160a9c74eb80becdf5615213512396040"
     }
   }
 }

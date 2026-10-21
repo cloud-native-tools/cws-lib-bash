@@ -1,5 +1,5 @@
 // Public import surface for the session-analysis capability.
-// Other scripts/<capability>/ modules must import from this file instead of
+// Other .specify/scripts/<capability>/ modules must import from this file instead of
 // reaching into capability-private modules (see docs/ARCHITECTURE.md).
 
 export { createAnalyzer, main, SessionAnalyzer, SESSION_ANALYSIS_HELP } from "./analyzer.mjs";

@@ -23,7 +23,7 @@ This pattern is easily confused with four neighbours that also involve "repeated
 |------|--------------------|-----------------|----------------|
 | **Interview** (this pattern) | The **user's tacit knowledge** | The frontier is empty **and** the user confirms the understanding is stable | Answers every round; the loop cannot advance without them |
 | **Reconcile** ([`reconcile-pattern.md`](reconcile-pattern.md)) | A durable **artifact space** with a describable ideal form | Current state matches desired state within the tolerance band | Present per invocation, gating destructive actions |
-| **Iteration loop** ([`operating-loops.md`](../../skills/create-team/references/operating-loops.md)) | The **agents' own output** scored against quality dimensions | A quality threshold is reached, or `max_iterations` is hit | Sets the threshold, then largely observes |
+| **Iteration loop** ([`operating-loops.md`](../../skills/internal/create-team/references/operating-loops.md)) | The **agents' own output** scored against quality dimensions | A quality threshold is reached, or `max_iterations` is hit | Sets the threshold, then largely observes |
 | **Continuous loop** (same reference) | An unbounded **stream of incoming work** | Never — it operates on a cadence | May be absent at L3 (kill-switch/budget instead) |
 | **Confirmation gate** | Already-computed agent output | One preview→confirm exchange | Approves or rejects once |
 
@@ -199,7 +199,7 @@ Rows are **structured columns**, not free text — and they are what makes confl
 
 #### Engine (程序优先)
 
-Graph reachability, ordering, and cycle detection are **fixed-rule computations**, so they belong to a program — never re-derived in prose by the model (Principle XII / token-efficiency Program-First). The engine is `scripts/python/interview-utils.py` (`<TOOL:.specify/memory/tools/interview-utils.py.md>`), backed by a JSON sidecar beside the markdown ledger (`interview-log.md` → `interview-log.dag.json`):
+Graph reachability, ordering, and cycle detection are **fixed-rule computations**, so they belong to a program — never re-derived in prose by the model (Principle XII / token-efficiency Program-First). The engine is `.specify/scripts/python/interview-utils.py` (`<TOOL:.specify/memory/tools/interview-utils.py.md>`), backed by a JSON sidecar beside the markdown ledger (`interview-log.md` → `interview-log.dag.json`):
 
 ```bash
 E=.specify/scripts/python/interview-utils.py; L=<ledger>.md

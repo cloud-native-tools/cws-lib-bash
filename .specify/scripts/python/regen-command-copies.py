@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Regenerate per-tool /speckit.* command copies from templates/commands/*.md.
+"""Regenerate per-tool /speckit.* command copies from .specify/templates/commands/*.md.
 
-Single-source fan-out: ``templates/commands/<stem>.md`` is the source of truth.
+Single-source fan-out: ``.specify/templates/commands/<stem>.md`` is the source of truth.
 This script regenerates every per-tool runtime copy (.claude/commands/,
 .github/prompts/, .qoder/commands/, .opencode/command/, ...)
 using the canonical generator in ``src/specify_cli`` — the same code path as
@@ -9,8 +9,8 @@ using the canonical generator in ``src/specify_cli`` — the same code path as
 command directory already exists in the repo are regenerated.
 
 Usage:
-  python3 scripts/python/regen-command-copies.py           # regenerate in place
-  python3 scripts/python/regen-command-copies.py --check   # report drift, write nothing, exit 1 on drift
+  python3 .specify/scripts/python/regen-command-copies.py           # regenerate in place
+  python3 .specify/scripts/python/regen-command-copies.py --check   # report drift, write nothing, exit 1 on drift
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ from specify_cli import (  # noqa: E402
 
 # Repo-anchor: in a dev checkout the package resource dir does not exist, and
 # get_resource_path() returns None (generate_commands then no-ops). Point it at
-# the repo root so templates/commands/ resolves to the working tree.
+# the repo root so .specify/templates/commands/ resolves to the working tree.
 specify_cli.get_resource_path = lambda: REPO_ROOT
 
 

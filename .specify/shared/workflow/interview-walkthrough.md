@@ -2,7 +2,7 @@
 
 This document is the authoritative detailed reference for the Requirements Analyst's **interview mode**. The agent definition (`.specify/agents/templates/requirements-analyst.agent.md`) declares the mode and its phases; everything here is the operational detail.
 
-**Relationship to the generic pattern**: this is the **requirements-domain instance** of [`shared/patterns/interview-pattern.md`](../patterns/interview-pattern.md), which owns the generic semantics — design tree, frontier, rounds, question format, fact-vs-decision split, write-through, and the user-confirmation exit gate. Read the pattern for those; read this document for what the requirements domain adds on top: interview units, decision cards, verification levels, and delivery-loop coupling. Where the two speak to the same rule, the pattern is the authority.
+**Relationship to the generic pattern**: this is the **requirements-domain instance** of [`.specify/shared/patterns/interview-pattern.md`](../patterns/interview-pattern.md), which owns the generic semantics — design tree, frontier, rounds, question format, fact-vs-decision split, write-through, and the user-confirmation exit gate. Read the pattern for those; read this document for what the requirements domain adds on top: interview units, decision cards, verification levels, and delivery-loop coupling. Where the two speak to the same rule, the pattern is the authority.
 
 Use it when requirement details live in the stakeholder's head rather than in a written document. Do not ask the user to "write a spec" — decompose the requirement into interview units, show the user the real artifact for each unit, ask open questions, and land every decision on the spot. A full walkthrough can span dozens of units and multiple days; the walkthrough ledger file is the durable state that makes this possible.
 
@@ -32,7 +32,7 @@ One unit at a time. Never batch two units into one interview.
 
 ### Stage 1 — Interview (访谈)
 
-- **Show the real artifact**: open the real running page via browser-utils (screenshot/snapshot), or present the actual file / diagram / data — let the user "look at it while deciding" instead of describing from memory.
+- **Show the real artifact**: open the real running page via the project's browser-automation skill (screenshot/snapshot), or present the actual file / diagram / data — let the user "look at it while deciding" instead of describing from memory.
 - **Open main question first**: "What changes does this unit need?" — then targeted follow-ups on specific elements (navigation, controls, fields, flows). Never preset the answer space.
 - **Strict granularity**: discuss only the currently open unit; if the user drifts to another unit, note it in that unit's ledger row and return.
 - **Drift check first**: before showing the artifact, verify the environment baseline has not drifted (branch switched, generated artifacts reset by an external process, dependency rolled back). If drifted: restore first, record the incident as a follow-up with a root-cause owner, then interview — never interview against a corrupted artifact.

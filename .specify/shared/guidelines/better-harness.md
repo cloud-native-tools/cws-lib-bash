@@ -47,7 +47,7 @@ Spec Kit 全部改进机制共同服务的目标的**单一事实源**：feedbac
 改进断言必须诚实于证据边界——这是本目标模型自带的纪律，与 `workflow/evidence-step.md` 的红线同源：
 
 1. **配置 ≠ 使用**：配置好的资产（一个技能、一条规则、一个 hook）最多证明**机制存在**（`Present` / `Wired`）；只有关联到实际任务的证据才能证明它**被使用**（`Exercised`）或**改善了结果**（`Outcome-supported`）。
-2. **七态 evidenceState 不可重定义**：`Present / Wired / Exercised / Outcome-supported / Missing / Unobserved / Not applicable`（定义见 `.specify/skills/collect-evidence/references/evidence-discipline.md`）。
+2. **七态 evidenceState 不可重定义**：`Present / Wired / Exercised / Outcome-supported / Missing / Unobserved / Not applicable`（定义见 `.specify/skills/internal/collect-evidence/references/evidence-discipline.md`）。
 3. **Unobserved 红线**：未观察 ≠ 不存在，也 ≠ 存在；只可记录，禁止当缺陷修、禁止推断为结论。
 4. **"已改进"须有前后对比**：通过一次当前检查只证明干预被执行过；只有可比的后续结果才能证明循环变好了（对应 `evidence-step.md` Step E 的 `intervention.json` + `--action compare` 机制）。
 

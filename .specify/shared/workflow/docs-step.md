@@ -1,10 +1,12 @@
 # Canonical `## Documentation` Step (Docs-Sync Evaluation)
 
-This file is the single source of truth for the
-`## Documentation` docs-sync evaluation step that every **complex** command template
-embeds at its wrap-up stage — the same lifecycle point as the `## Feedback` step.
-Simple commands MUST NOT embed it. Embedding templates reference this file and keep
-their own section to a short pointer; they MUST NOT copy these rules.
+This file is the single source of truth for the docs-sync evaluation step that every
+subscribed command unit's compiled `## Wrap-up` section wires to at its wrap-up stage —
+the same lifecycle point as the feedback step (056: the call line is rendered by
+`probe-utils.py --action compile-embeds` from the registry's HandlerBinding rows; no
+manual `## Documentation` section exists). Simple commands carry no wrap-up face. The
+compiled line references this file; agents execute the evaluation here. These rules
+MUST NOT be copied into any unit.
 
 ## Positioning & Red Lines
 

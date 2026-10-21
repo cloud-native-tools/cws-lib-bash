@@ -2,13 +2,13 @@
 
 > **Single source of truth** for the normative eligibility, evidence, authority,
 > safety, and claim rules of Self-Improvement in Spec Kit. Terms are owned by
-> `shared/definitions/self-improvement-definitions.md`; this file does not redefine them.
+> `.specify/shared/definitions/self-improvement-definitions.md`; this file does not redefine them.
 > All normative language follows RFC 2119.
 
 ## Eligibility Gate
 
 A durable artifact MAY declare Self-Improvement capability only when it qualifies as an
-Execution Subject under `shared/definitions/self-improvement-definitions.md`.
+Execution Subject under `.specify/shared/definitions/self-improvement-definitions.md`.
 
 - Agent Templates/Instances, Skills, Tool records, and persisted Teams MAY qualify.
 - One live Agent Execution, a run report, a generated document, a static site, and other
@@ -36,7 +36,7 @@ copy the workflow steps, evidence-state meanings, or confirmation policy.
 
 - A subject MUST observe completed executions; it MUST NOT rewrite its governing definition
   mid-run and then evaluate the remainder as if the contract were unchanged.
-- Candidate qualification MUST follow `shared/workflow/evidence-step.md` Step A/B. Negative
+- Candidate qualification MUST follow `.specify/shared/workflow/evidence-step.md` Step A/B. Negative
   `Exercised`/`Outcome-supported` evidence and `Missing` mechanisms may become candidates;
   `Unobserved` MUST NOT.
 - Direct user correction is valid assisted evidence. It does not need repeated occurrence,
@@ -48,7 +48,7 @@ copy the workflow steps, evidence-state meanings, or confirmation policy.
 ## Authority and Mutation Rules
 
 - Self-Improvement MUST edit only the canonical owner defined by the One Source of Truth
-  discipline (`shared/guidelines/one-source-of-truth.md`). Mirrors are regenerated.
+  discipline (`.specify/shared/guidelines/one-source-of-truth.md`). Mirrors are regenerated.
 - A subject MAY initiate its own loop but SHOULD delegate mutation to the matching
   `improve-agent`, `improve-skills`, `improve-tools`, or `improve-team` executor. Delegation
   preserves self-originated classification because the subject still owns the initiating signal.
@@ -61,7 +61,7 @@ copy the workflow steps, evidence-state meanings, or confirmation policy.
 
 ## Confirmation and Independence
 
-All actions follow `shared/guidelines/confirmation-gates.md`:
+All actions follow `.specify/shared/guidelines/confirmation-gates.md`:
 
 - reversible local edits may execute and then be reported;
 - destructive actions, external writes, authority expansion, and uncertain actions stop for
@@ -77,7 +77,7 @@ boundaries, permission changes, and promotion to a higher autonomy/maturity tier
 - **Change validation** MUST run in the intervention cycle: structural contracts, relevant
   tests, reference integrity, and a pressure test for behavior-changing instructions.
 - Every evidence-driven intervention MUST write `intervention.json` per
-  `shared/workflow/evidence-step.md` Step E.
+  `.specify/shared/workflow/evidence-step.md` Step E.
 - **Outcome validation** occurs only on a later comparable run through `--action compare` or
   an equivalent documented comparison.
 - Before comparison, report “intervention applied; outcome pending”, never “self-improved”,
@@ -87,9 +87,9 @@ boundaries, permission changes, and promotion to a higher autonomy/maturity tier
 
 ## Feedback and Better-Harness Integration
 
-- Better Harness (`shared/guidelines/better-harness.md`) owns the improvement goal and dimension
+- Better Harness (`.specify/shared/guidelines/better-harness.md`) owns the improvement goal and dimension
   vocabulary. Every intervention names the affected dimension(s) by reference.
-- Feedback (`shared/workflow/feedback-step.md`) remains optional user data targeting the Spec
+- Feedback (`.specify/shared/workflow/feedback-step.md`) remains optional user data targeting the Spec
   Kit framework. It may supply a signal when the subject is a matching framework unit, but
   MUST NOT become a general artifact-mutation bus.
 - Memory/history may preserve reusable learning; they MUST NOT replace evidence or create a
@@ -101,7 +101,7 @@ boundaries, permission changes, and promotion to a higher autonomy/maturity tier
 
 - Repeated clean runs do not justify edits. No candidate means no mutation.
 - Deterministic detection, deduplication, schema checks, mirror checks, and comparisons MUST
-  be scripted per `shared/guidelines/token-efficiency.md`.
+  be scripted per `.specify/shared/guidelines/token-efficiency.md`.
 - Evidence consumption is summary-first. Raw logs and stores are loaded only through the
   escalation rules in that guideline.
 - A subject MUST impose a bounded attempt/cycle limit; on exhaustion it reports residual risk

@@ -18,6 +18,17 @@ observation — both arms would reach the same outcome for unrelated environment
 prove anything: declare it **inconclusive**, and redesign the scenario or the stressor until
 the arms diverge observably. An inconclusive result is never recorded as a pass.
 
+**Front-door / routing-layer skills select the scenario before anything else.** When the
+skill under test is a front door or a router — it holds no detail of its own and delegates to
+lower-layer skills (the split is defined in
+[name-collision-and-layering.md](name-collision-and-layering.md) §2) — the scenario **MUST** be
+a request whose **lower-layer `description` clues point the wrong way**: wording that would
+match some lower layer if the agent never opened the front door, or that matches none of them.
+A request every lower layer matches equally, or one that carries no routing signal at all,
+cannot separate "the front door routed this" from "the host picked a delegate on its own" —
+both arms land on the same outcome, so the run is **inconclusive** by the rule above and the
+scenario is redesigned before dispatch, not after the two arms agree.
+
 ### 1. RED — run the scenario WITHOUT the skill
 
 - Construct one realistic **pressure scenario**: a task the skill should govern, plus a stressor (time pressure, a plausible shortcut, an instruction that tempts rule-bending).

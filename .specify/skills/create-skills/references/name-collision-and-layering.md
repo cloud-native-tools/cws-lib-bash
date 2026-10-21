@@ -6,7 +6,7 @@ often resolves into.
 
 ## 1. Cross-SSOT name collision
 
-`.specify/skills/<name>/SKILL.md` being absent does **not** mean the name is free.
+The Skill name being absent **at the detected root** does **not** mean the name is free.
 The same name may already be an entity in another single-source-of-truth (SSOT),
 with live wiring pointing at it. Creating a second entity silently produces two
 Skills with the same `name` and overlapping triggers — the agent then picks
@@ -19,10 +19,10 @@ project:
 
 | Where | What to look for |
 |-------|------------------|
-| `<project>/.specify/skills/<name>` | entity **or** symlink — resolve it (`readlink`) and note the real owner |
+| the detected project roots — `<project>/skills/<name>` (generic) and `<project>/.specify/skills/<name>` (Spec Kit, when present) | entity **or** symlink — resolve it (`readlink`) and note the real owner |
 | global/user skills library (e.g. a `config/skills/<name>` managed tree) | entity owned by a config repo rather than a code project |
 | agent load directories (`~/.<agent>/skills`, host app skill dirs) | links named `<name>` pointing at any of the above |
-| other code projects' `.specify/skills/<name>` | the same capability vendored per project |
+| other projects' skills roots (incl. their `.specify/skills/<name>` when present) | the same capability vendored per project |
 | name-field scan (every discovered `SKILL.md` frontmatter `name`, host app skill DBs/JSON) | a `name` value already claiming the word (directories are the registry — scan them) |
 
 Report the finding as **entity location + who references it**. That pair decides
@@ -71,6 +71,10 @@ commands, internal service names) that must not be published.
   which one to edit.
 - Keep the counting/coverage numbers that differ between layers (public vs
   local surface) in the front door, with the command that reproduces them.
+- Pressure-testing a front door has its own scenario rule — the request must be
+  one whose **lower-layer `description` clues point the wrong way**, or the RED
+  and GREEN arms cannot diverge. The rule and its inconclusive verdict are owned
+  by [pressure-testing.md](pressure-testing.md) §0; not restated here.
 
 **Wiring rule**: point every load directory at the **front door only**. Linking
 both layers into the same agent restores the ambiguity the split was meant to

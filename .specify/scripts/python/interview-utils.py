@@ -7,7 +7,7 @@ conflict lookup, and retraction propagation. Graph reachability and topological
 ordering are fixed-rule computations, so they belong in a program rather than in a
 model (Constitution Principle XII / token-efficiency Program-First).
 
-Pattern authority: shared/patterns/interview-pattern.md (read-only for this engine).
+Pattern authority: .specify/shared/patterns/interview-pattern.md (read-only for this engine).
 
 The store is a JSON sidecar next to the human-readable ledger, so the markdown
 ledger stays the thing a human reads while the graph stays machine-queryable.

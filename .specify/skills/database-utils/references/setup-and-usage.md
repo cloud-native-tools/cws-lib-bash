@@ -80,20 +80,20 @@ This installs `mysql-connector-python` and `psycopg2-binary`.
 
 ```bash
 # List all configured databases (shows protocol for each)
-python3 scripts/query.py --list
+python3 .specify/scripts/query.py --list
 
 # List tables in a database
-python3 scripts/query.py --db mysql-prod --tables
+python3 .specify/scripts/query.py --db mysql-prod --tables
 
 # Show schema
-python3 scripts/query.py --db postgres-analytics --schema
+python3 .specify/scripts/query.py --db postgres-analytics --schema
 
 # Run a query
-python3 scripts/query.py --db mysql-prod --query "SELECT * FROM users" --limit 100
+python3 .specify/scripts/query.py --db mysql-prod --query "SELECT * FROM users" --limit 100
 
 # You can also call protocol-specific scripts directly
-python3 scripts/query_mysql.py --db mysql-prod --tables
-python3 scripts/query_postgres.py --db postgres-analytics --tables
+python3 .specify/scripts/query_mysql.py --db mysql-prod --tables
+python3 .specify/scripts/query_postgres.py --db postgres-analytics --tables
 ```
 
 ## Config Fields

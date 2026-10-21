@@ -3,16 +3,20 @@
 
 Canonical sources fan out to their runtime mirrors in one command:
 
-  templates/            -> .specify/templates/   (excluding commands/, see below)
-  skills/<name>/        -> .specify/skills/<name>/   (repo skills/ may be empty placeholder)
+  .specify/templates/            -> .specify/templates/   (excluding commands/, see below)
+  skills/external/<name>/ -> .specify/skills/<name>/           (flat runtime layer;
+                           discoverable by host agents via the one-level scan)
+  skills/internal/<name>/ -> .specify/skills/internal/<name>/  (nested runtime layer;
+                           never registered for discovery, consumed by /speckit.*
+                           workflows via explicit paths)
   agents/               -> .specify/agents/templates/  (Agent Template layer; instances/
                            and execution/ are project-local, never mirrored)
-  scripts/              -> .specify/scripts/
-  shared/               -> .specify/shared/
-  templates/commands/*  -> per-tool copies (delegated to regen-command-copies.py)
+  .specify/scripts/              -> .specify/scripts/
+  .specify/shared/               -> .specify/shared/
+  .specify/templates/commands/*  -> per-tool copies (delegated to regen-command-copies.py)
 
 The .specify/templates/commands/ mirror is intentionally NO LONGER maintained:
-per-tool command copies are generated directly from templates/commands/ by
+per-tool command copies are generated directly from .specify/templates/commands/ by
 regen-command-copies.py, so the subtree is excluded from the templates pair on
 both sides.
 
@@ -20,10 +24,10 @@ Modes:
   --check   report drift, exit 2 if any (CI gate); never writes
   --write   sync all mirrors from canonical sources (default)
   --only PATH  (repeatable) restrict the run to the given repo-relative path
-            prefix (e.g. --only scripts/python/feedback-utils.py), so a
+            prefix (e.g. --only .specify/scripts/python/feedback-utils.py), so a
             feature-scoped sync never drags unrelated mirror drift into the
             change surface; the regen-command-copies delegation is skipped
-            unless a prefix targets templates/commands/.
+            unless a prefix targets .specify/templates/commands/.
 
 Write-mode failures are collected per file, never fatal mid-pass: an unwritable
 mirror file (e.g. a root-owned leftover) is reported as FAIL, the remaining
@@ -64,14 +68,21 @@ if REPO_ROOT.name == ".specify":
 # (source, mirror, strict_extras, exclude_parts) pairs; source is canonical.
 # strict_extras=True means a mirror-only file is an ERROR under --check: the tree
 # is entirely framework-owned, so an unsourced file can never reach downstream
-# projects via `specify init`. skills/ is intentionally lenient because a project
-# may legitimately keep its own local skills in the mirror. exclude_parts are
-# path components skipped on BOTH sides of the pair; the templates pair excludes
-# commands/ because the .specify/templates/commands mirror is retired (per-tool
-# copies come straight from templates/commands/ via regen-command-copies.py).
+# projects via `specify init`. Both skills pairs are intentionally lenient
+# because a project may legitimately keep its own local skills in the mirror.
+# The skills source is two layers with DIFFERENT runtime shapes: external
+# mirrors flat into .specify/skills/<name>/ (host discovery surface), internal
+# mirrors nested into .specify/skills/internal/<name>/ (path-referenced only).
+# exclude_parts are path components skipped on BOTH sides of the pair; the
+# templates pair excludes commands/ because the .specify/templates/commands
+# mirror is retired (per-tool copies come straight from .specify/templates/commands/
+# via regen-command-copies.py). The external pair additionally releases
+# `internal`: that name is the internal layer's RESERVED runtime namespace, so
+# .specify/skills/internal/** is sibling-pair-owned, never an unsourced extra.
 MIRROR_PAIRS = [
     ("templates", ".specify/templates", False, {"commands"}),
-    ("skills", ".specify/skills", False, {"site"}),
+    ("skills/external", ".specify/skills", False, {"site", "internal"}),
+    ("skills/internal", ".specify/skills/internal", False, {"site"}),
     ("agents", ".specify/agents/templates", False, set()),
     ("scripts", ".specify/scripts", True, set()),
     ("shared", ".specify/shared", False, set()),
@@ -116,7 +127,7 @@ def main() -> int:
     parser.add_argument("--only", action="append", default=None, metavar="PATH",
                         help="restrict the run to this repo-relative path prefix "
                              "(repeatable); skips the regen-command-copies "
-                             "delegation unless a prefix targets templates/commands/")
+                             "delegation unless a prefix targets .specify/templates/commands/")
     args = parser.parse_args()
     check_only = args.check
     only = [p.strip().strip("/") for p in (args.only or []) if p.strip()]
@@ -140,8 +151,8 @@ def main() -> int:
 
     if only:
         matched = any(pair_subprefixes(src) for src, _d, _s, _e in MIRROR_PAIRS)
-        regen_targeted = any(p == "templates/commands"
-                             or p.startswith("templates/commands/") for p in only)
+        regen_targeted = any(p == ".specify/templates/commands"
+                             or p.startswith(".specify/templates/commands/") for p in only)
         if not matched and not regen_targeted:
             print(f"error: --only prefix matches no mirror pair or regen surface: "
                   f"{', '.join(only)}")
@@ -162,7 +173,8 @@ def main() -> int:
         src_files = [f for f in iter_files(src, exclude_parts)
                      if in_scope(f, subs)]
         if not src_files:
-            # placeholder-only source (e.g. empty skills/): mirror is canonical, skip
+            # placeholder-only source (e.g. an empty skills/external/): mirror is
+            # canonical, skip
             print(f"skip  {src_name}/ (placeholder-only source; {dst_name}/ is canonical)")
             continue
         missing, differing, extra = compare_pair(src, dst, exclude_parts)
@@ -200,9 +212,9 @@ def main() -> int:
                 print(f"note  extra file only in mirror: {dst_name}/{rel}")
 
     # Per-tool command copies: delegate to the existing canonical generator.
-    regen = REPO_ROOT / "scripts/python/regen-command-copies.py"
+    regen = REPO_ROOT / ".specify/scripts/python/regen-command-copies.py"
     run_regen = not only or any(
-        p == "templates/commands" or p.startswith("templates/commands/")
+        p == ".specify/templates/commands" or p.startswith(".specify/templates/commands/")
         for p in only)
     if run_regen:
         regen_args = [sys.executable, str(regen)] + (["--check"] if check_only else [])
@@ -218,7 +230,7 @@ def main() -> int:
             print(f"  FAIL {rel}: {err}")
         print(
             "  Remedy for root-owned mirrors: `sudo chown -R $USER <dir>`, then "
-            "re-run `python3 scripts/python/sync-mirrors.py --write`"
+            "re-run `python3 .specify/scripts/python/sync-mirrors.py --write`"
         )
         return 1
     if check_only and orphans:
@@ -226,12 +238,12 @@ def main() -> int:
             "ORPHANS detected — a mirror-only file cannot be distributed by "
             "`specify init`, which only copies canonical source -> mirror.\n"
             "  Fix by either: (a) adding the canonical source (e.g. "
-            "scripts/bash/<name>.sh) if the file should ship to downstream "
+            ".specify/scripts/bash/<name>.sh) if the file should ship to downstream "
             "projects, or (b) deleting the mirror copy if it is a superseded "
             "leftover."
         )
     if check_only and drift:
-        print("DRIFT detected — run: python3 scripts/python/sync-mirrors.py --write")
+        print("DRIFT detected — run: python3 .specify/scripts/python/sync-mirrors.py --write")
     if check_only and (drift or orphans):
         return 2
     return 0

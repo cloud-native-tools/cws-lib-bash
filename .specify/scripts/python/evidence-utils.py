@@ -53,6 +53,7 @@ SECRET_PATTERNS = [
     re.compile(r"sk-[A-Za-z0-9]{20,}"),
 ]
 HOME_PATH_RE = re.compile(r"(/home/[^\s\"']+|/Users/[^\s\"']+|[A-Z]:\\\\[^\s\"']+)")
+_FEEDBACK_ENTRY_RE = re.compile(r"^\d{8}T\d{6}Z-")
 
 
 # --- workspace & storage helpers ---------------------------------------------
@@ -69,10 +70,6 @@ def resolve_workspace_root(explicit):
 
 def evidence_dir(root: Path) -> Path:
     return root / EVIDENCE_SUBDIR
-
-
-def index_path(root: Path) -> Path:
-    return evidence_dir(root) / "index.json"
 
 
 def utc_now() -> datetime:
@@ -114,14 +111,12 @@ def make_run_id(target: str, now: datetime, store: Path = None) -> str:
 
 
 def load_index(root: Path) -> dict:
-    path = index_path(root)
-    if path.is_file():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-            if isinstance(data, dict) and isinstance(data.get("entries"), list):
-                return data
-        except (json.JSONDecodeError, OSError):
-            pass
+    """Derive the index from the immutable run directories on every read.
+
+    No aggregate is persisted: concurrent flows add separate ``ev-*``
+    directories, so a shared index file would be the one write target they
+    all collide on (and a git merge-conflict hotspot).
+    """
     return rebuild_index(root)
 
 
@@ -152,13 +147,6 @@ def rebuild_index(root: Path) -> dict:
                 "file": str(Path(run_dir.name) / "findings.json"),
             })
     return {"store": "evidence", "updated": iso(utc_now()), "entries": entries}
-
-
-def save_index(root: Path, index: dict) -> None:
-    index["updated"] = iso(utc_now())
-    evidence_dir(root).mkdir(parents=True, exist_ok=True)
-    index_path(root).write_text(
-        json.dumps(index, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
 # --- redaction ----------------------------------------------------------------
@@ -464,20 +452,15 @@ def collect_feedback_lane(root: Path) -> tuple:
     store = root / ".specify" / "memory" / "feedback"
     if not store.is_dir():
         raise LaneUnavailable("no .specify/memory/feedback directory")
-    index_file = store / "index.json"
-    status = LANE_AVAILABLE
-    entries = []
-    if index_file.is_file():
-        try:
-            entries = json.loads(index_file.read_text(encoding="utf-8")).get("entries", [])
-        except (json.JSONDecodeError, OSError):
-            entries = []
-    if not entries:
-        status = LANE_PARTIAL if index_file.is_file() else LANE_PARTIAL
-        entries = [{"file": p.name, "unit_id": "", "created": ""}
-                   for p in sorted(store.glob("*.md"))]
+    # req 055: the feedback store carries no maintained index — entries are
+    # the timestamp-named *.md files themselves (bookkeeping files such as
+    # cleanup-log / backlog / probe-map are store scaffolding, not entries).
+    entries = [{"file": p.name, "unit_id": "", "created": ""}
+               for p in sorted(store.glob("*.md"))
+               if _FEEDBACK_ENTRY_RE.match(p.name)]
     if not entries:
         raise LaneUnavailable("feedback store empty")
+    status = LANE_AVAILABLE
 
     point_topics = {}
     for entry in entries:
@@ -511,7 +494,8 @@ def collect_feedback_lane(root: Path) -> tuple:
         "evidenceState": "Present",
         "summary": f"Feedback store scanned: {len(entries)} entr(y/ies), "
                    f"{len(recurring)} recurring optimization theme(s).",
-        "evidenceRefs": [str(EVIDENCE_FEEDBACK_REL / "index.json")],
+        "evidenceRefs": [str(EVIDENCE_FEEDBACK_REL / e["file"])
+                         for e in entries[-2:]],
         "signals": {"entries": len(entries), "recurringThemes": len(recurring)},
     })
     envelope = {"entries": len(entries), "recurringThemes": {k: len(v) for k, v in recurring.items()}}
@@ -639,16 +623,6 @@ def action_collect(args) -> dict:
         lanes_dir.mkdir(parents=True, exist_ok=True)
         write_text_atomic(lanes_dir / f"{lane}.json",
             json.dumps(redact_deep(envelope, root), ensure_ascii=False, indent=2) + "\n")
-
-    index = load_index(root)
-    index["entries"].append({
-        "runId": run_id,
-        "target": args.target,
-        "created": iso(now),
-        "lanesSummary": {k: v.get("status", "") for k, v in lane_status.items()},
-        "file": str(Path(run_id) / "findings.json"),
-    })
-    save_index(root, index)
 
     return {
         "runId": run_id,

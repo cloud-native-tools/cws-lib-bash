@@ -34,7 +34,7 @@ Usage
     redline-check.py <path/to/SKILL.md> [--scan-all] [--file-only] [--json] [--quiet]
 
     <SKILL.md>   target Skill. Default scope is the Skill's own behavior contract:
-                 SKILL.md + scripts/ (+ root-level *.sh/*.py). Encyclopedic L2
+                 SKILL.md + .specify/scripts/ (+ root-level *.sh/*.py). Encyclopedic L2
                  references (API listings, "rejected mechanism" tables) are excluded
                  from the gate because they *document* capabilities rather than
                  *perform* them, and grepping them produces noise.
@@ -146,7 +146,7 @@ RED_LINES = [
                         "bringToFront(); keep any genuinely-headed window announced, small and "
                         "fixed. Foreground/direct-binary launch is allowed ONLY as an announced "
                         "human-in-the-loop exception and must be gated + documented as such."),
-        "refs": ["browser-utils references/focus-safe-launch.md",
+        "refs": ["xuanji-extension .specify/skills/browser-utils/references/focus-safe-launch.md",
                  "profiles-browsers SKILL.md § 焦点红线"],
     },
 ]

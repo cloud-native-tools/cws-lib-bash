@@ -1,6 +1,6 @@
 # Confirmation Gates(确认门控治理判据)
 
-框架级确认门控的唯一判据真源。原则:**与其等待用户确认,不如先按设定执行,执行完允许用户修改;只有不可撤销、具备破坏性的动作才保留前置用户确认。** 概念基础为 `shared/patterns/reconcile-pattern.md` § Tiered confirmation(安全本地写自动、外部权威源停等、破坏性停等),本文档将其推广为全框架统一约定。
+框架级确认门控的唯一判据真源。原则:**与其等待用户确认,不如先按设定执行,执行完允许用户修改;只有不可撤销、具备破坏性的动作才保留前置用户确认。** 概念基础为 `.specify/shared/patterns/reconcile-pattern.md` § Tiered confirmation(安全本地写自动、外部权威源停等、破坏性停等),本文档将其推广为全框架统一约定。
 
 命令模板与技能 MUST 以单行引用接入本文档,MUST NOT 在模板内复制判据正文。
 
@@ -20,7 +20,7 @@
 - 删除文件或数据(delete / 清空存储)
 - 移动/归档既有工件(move / archive / restructure)
 - 远程推送(push / force-push / 远程分支操作)与写入外部权威源(issue 跟踪、平台注册表等本空间之外的系统)
-- 覆盖用户既有内容(含覆盖用户既有权威条目,如 glossary 用户条目冲突写入、同名目录覆盖清空)
+- 覆盖用户既有内容(含覆盖用户既有权威条目,如 glossary 用户条目冲突写入、同名目录覆盖清空、以空值覆盖既有 goal 判据集——后者 MUST 由引擎拒绝缺参形态,清空只经显式旗标进入)
 
 ## 治理保留清单
 
@@ -32,14 +32,14 @@
 | 宪章不可撤销动作确认 | constitution-template.md | 宪章自身要求(intrinsic) |
 | git commit 显式批准 | todo.md / implement.md 收尾 | 与宿主安全规范对齐(governance-kept) |
 | implement gate.yaml CONFIRM 判定 | implement.md | 机械安全门禁(governance-kept) |
-| git-workflow 远程操作门控 | skills/git-workflow | 远程推送属破坏性桶 |
+| git-workflow 远程操作门控 | skills/external/git-utils | 远程推送属破坏性桶 |
 | tools invoke 预览门控 | tools.md / tool-definitions.md | 任意脚本执行,存疑从严(governance-kept) |
 | feedback consume 删除前确认 | feedback.md | 前置原子删除,破坏性桶 |
 | docs 移动/归档/删除分级 | docs.md | 破坏性桶(reconcile R4/R5) |
 | session 导出同名覆盖确认 | session.md | 同名覆盖清空,破坏性桶 |
 | feature 状态回退确认 | feature.md | 治理状态保护(governance-kept) |
 | analyze 补救批准 | analyze.md | 严格只读命令的例外写批准(governance-kept) |
-| glossary 冲突/覆盖用户条目确认 | shared/workflow/glossary.md | 覆盖用户权威数据,破坏性桶 |
+| glossary 冲突/覆盖用户条目确认 | .specify/shared/workflow/glossary.md | 覆盖用户权威数据,破坏性桶 |
 | continuous 循环分级门控 | create-team references(operating-loops / project-cluster) | 长时运行资源占用,既有分级门控保留 |
 
 ## 存疑从严
@@ -51,7 +51,7 @@
 新增或修订命令/技能 MUST NOT 引入非破坏性阻塞确认门控。该约束由两道机械检查执行:
 
 1. 结构契约测试(`tests/contract/test_confirmation_gates_*.py`);
-2. 门控扫描脚本 `scripts/python/scan-confirmation-gates.py`——治理后复扫若检出仍以阻塞形态存在的可逆门控(`violations` 非空且提供基线时),退出码 2。
+2. 门控扫描脚本 `.specify/scripts/python/scan-confirmation-gates.py`——治理后复扫若检出仍以阻塞形态存在的可逆门控(`violations` 非空且提供基线时),退出码 2。
 
 ## 执行报告
 
@@ -71,7 +71,7 @@
 
 ## 门控观察协议 (Gate Observation Protocol)
 
-每个保留门控(intrinsic 除外:访谈问答/退出门、宪章不可撤销动作确认)挂一个必要性 probe(注册表 `shared/definitions/probe-definitions.md` 的 command-gate / skill-gate 类)。门控触发且用户作出决定后,执行 agent MUST 自动记录观察事实,为框架层确认设计积累证据。
+每个保留门控(intrinsic 除外:访谈问答/退出门、宪章不可撤销动作确认)挂一个必要性 probe(注册表 `.specify/shared/definitions/probe-definitions.md` 的 command-gate / skill-gate 类)。门控触发且用户作出决定后,执行 agent MUST 自动记录观察事实,为框架层确认设计积累证据。
 
 **时机**:门控解除后(用户已作出决定)立即记录;MUST NOT 在决定前记录,MUST NOT 替用户作答。
 

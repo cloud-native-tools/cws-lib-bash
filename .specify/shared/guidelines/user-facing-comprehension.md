@@ -1,6 +1,6 @@
 # 面向用户可理解性纪律(User-Facing Comprehension Discipline)
 
-> **Single Source of Truth**: 本文档是框架「面向用户可理解性」纪律的**唯一真源**(唯一定义处)。任何命令、技能、代理或共享工作流引用本纪律时 MUST 以路径引用本文件,MUST NOT 复制其条件集、判据或阈值。ambient 指针位于 `templates/instructions-template.md` 的 `## User-Facing Comprehension` 章节,经 `.specify/instructions.md` 生效于全部流程。
+> **Single Source of Truth**: 本文档是框架「面向用户可理解性」纪律的**唯一真源**(唯一定义处)。任何命令、技能、代理或共享工作流引用本纪律时 MUST 以路径引用本文件,MUST NOT 复制其条件集、判据或阈值。ambient 指针位于 `.specify/templates/instructions-template.md` 的 `## User-Facing Comprehension` 章节,经 `.specify/instructions.md` 生效于全部流程。
 
 框架的每条面向用户的输出,都要被一个**没有参与本次运行**的人读懂。本纪律防两种失效:一是读者被迫**解码术语**——他猜出一个意思并据此行动,于是拿到的是一个**自信的错答**;二是读者被迫**翻页找上下文**——决定所依赖的事实不在眼前,于是他回答了另一个问题。两者都不抛错,都表现为「流程走完了,用户却做错了决定」。
 
@@ -23,13 +23,13 @@
 同为**封闭条件集**:命中下列任一条即违规,无「视情况」档。
 
 1. **存在用户视角途径时的引擎/脚本/函数内部调用形态**——同一件事有面向用户的入口(命令、菜单项、编辑入口)却写出内部调用形式。依据:读者无法照做,且内部形态会随重构失效。
-2. **内部标识**渗入面向读者的正文——内部代号、分级码、字段名、库表列名、脚本名、章节编号等只对本仓维护者有意义的标识符。本条的**实例来源**为 `.specify/skills/summarize-project/references/reporting-playbook.md` §1.7:该处已在真实报告中沉淀出一份可判定的内部标识清单与「读者向改写映射」(把内部值翻译成读者能据以行动的散文)。该清单 MUST 被提升进本节作为实例,提升后原处 MUST 收敛为指针,MUST NOT 保留第二份独立黑名单。
+2. **内部标识**渗入面向读者的正文——内部代号、分级码、字段名、库表列名、脚本名、章节编号等只对本仓维护者有意义的标识符。本条的**实例来源**为 `.specify/skills/internal/summarize-project/references/reporting-playbook.md` §1.7:该处已在真实报告中沉淀出一份可判定的内部标识清单与「读者向改写映射」(把内部值翻译成读者能据以行动的散文)。该清单 MUST 被提升进本节作为实例,提升后原处 MUST 收敛为指针,MUST NOT 保留第二份独立黑名单。
 3. **在该消费单元内首次出现却无就地注解的缩写**——注解义务按消费单元计,MUST NOT 按会话计(定义见 § 基准读者与覆盖协议)。
 4. **以代码符号名充当行为概念名**——用函数名、类名或配置键指代一个行为概念来提问或陈述。依据:读者要读代码才知道这个概念是什么,而本纪律的前提是他不读代码。
 
 改写方向一律是「读者能据以行动的散文」,MUST NOT 是「更短的内部词」。
 
-**条目 ② 的实例来源**(由 `skills/summarize-project/references/reporting-playbook.md` §1.7 提升而来):该处已在真实报告运行中沉淀出一份可判定的类别枚举与读者向改写映射,提升后原处 MUST 以指针接入本节、MUST NOT 保留第二份独立黑名单。类别枚举:
+**条目 ② 的实例来源**(由 `.specify/skills/internal/summarize-project/references/reporting-playbook.md` §1.7 提升而来):该处已在真实报告运行中沉淀出一份可判定的类别枚举与读者向改写映射,提升后原处 MUST 以指针接入本节、MUST NOT 保留第二份独立黑名单。类别枚举:
 
 - **分级代号**:`T1`–`T5`(信息源 tier)、`E1`–`E5`(构建/CI 证据分级)
 - **处理与门禁编号**:`RC-1`~`RC-5`(诚实处理编号)、`CG-COVERAGE`、`CG-1`~`CG-11`(覆盖/自洽门禁名)、规则文档的 `§编号`
@@ -89,21 +89,21 @@
 
 本纪律约束的界面类为**封闭集**(closed set):扩展 MUST **只经修订**本文档,MUST NOT 分散到各命令模板自行增类。每类的措辞规则由其**规则真源文件**拥有,本文档只登记映射、MUST NOT 复述规则正文。
 
-下表两列路径是**框架源路径**(`shared/`、`templates/`、`skills/`),即维护者编辑的那一份;读者在运行时看到的同名文件是其 `.specify/` 下的镜像副本。本文档其余处的散文引用一律写镜像路径,因为那是消费者的解析入口。
+下表两列路径是**框架源路径**(`.specify/shared/`、`.specify/templates/`、`skills/`),即维护者编辑的那一份;读者在运行时看到的同名文件是其 `.specify/` 下的镜像副本。本文档其余处的散文引用一律写镜像路径,因为那是消费者的解析入口。
 
 | 类 | 界面类名 | 规则真源文件 | reader_baseline_override |
 |---|---|---|---|
-| ① | 门控确认提示 | `shared/guidelines/confirmation-gates.md` | — |
-| ② | 门控执行报告 | `shared/guidelines/confirmation-gates.md` | — |
-| ③ | 反馈阈值/提交通知 | `shared/workflow/feedback-step.md` | — |
-| ④ | 访谈提问 | `shared/patterns/interview-pattern.md` | — |
-| ⑤ | 澄清提问与选项表 | `templates/commands/clarify.md`、`shared/guidelines/requirements-guidelines.md` | — |
-| ⑥ | 主动流程建议行 | `shared/guidelines/proactive-trigger.md` | — |
-| ⑦ | 面向干系人的需求/规划/任务工件 | `shared/guidelines/requirements-guidelines.md` | `shared/guidelines/requirements-guidelines.md` |
-| ⑧ | 面向外部读者的项目总结报告 | `skills/summarize-project/references/reporting-playbook.md` | `skills/summarize-project/references/project-overview.md` |
-| ⑨ | 词汇表校正的对外呈现 | `shared/workflow/glossary.md` | — |
-| ⑩ | 流程收尾报告 | `shared/guidelines/confirmation-gates.md` | — |
-| ⑪ | 失败如实报告 | `shared/guidelines/confirmation-gates.md` | — |
+| ① | 门控确认提示 | `.specify/shared/guidelines/confirmation-gates.md` | — |
+| ② | 门控执行报告 | `.specify/shared/guidelines/confirmation-gates.md` | — |
+| ③ | 反馈阈值/提交通知 | `.specify/shared/workflow/feedback-step.md` | — |
+| ④ | 访谈提问 | `.specify/shared/patterns/interview-pattern.md` | — |
+| ⑤ | 澄清提问与选项表 | `.specify/templates/commands/clarify.md`、`.specify/shared/guidelines/requirements-guidelines.md` | — |
+| ⑥ | 主动流程建议行 | `.specify/shared/guidelines/proactive-trigger.md` | — |
+| ⑦ | 面向干系人的需求/规划/任务工件 | `.specify/shared/guidelines/requirements-guidelines.md` | `.specify/shared/guidelines/requirements-guidelines.md` |
+| ⑧ | 面向外部读者的项目总结报告 | `.specify/skills/internal/summarize-project/references/reporting-playbook.md` | `.specify/skills/internal/summarize-project/references/project-overview.md` |
+| ⑨ | 词汇表校正的对外呈现 | `.specify/shared/workflow/glossary.md` | — |
+| ⑩ | 流程收尾报告 | `.specify/shared/guidelines/confirmation-gates.md` | — |
+| ⑪ | 失败如实报告 | `.specify/shared/guidelines/confirmation-gates.md`, `.specify/shared/guidelines/fast-fail.md` | — |
 
 `reader_baseline_override` 列非空即表示该类**登记**了一处更严的读者基准覆盖站点;缺省(—)即适用 § 基准读者与覆盖协议 的全局基准。登记项按**类**计:同一类的多处命中算一个登记项。**该列是覆盖处数的唯一计数来源**,本文档不另写数字。
 

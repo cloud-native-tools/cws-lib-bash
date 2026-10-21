@@ -3,6 +3,7 @@ name: improve-docs
 description: |
   This skill can improve an existing document in the project documentation space — correct inaccurate or stale content, close a completeness gap, restructure an unreadable page, repair broken links and anchors, fix content that breaks the site build, promote a matured note, or annotate a superseded decision — driven by reader feedback, review findings, and deterministic engine findings rather than taste. Use this when the user mentions ["improve docs", "improve documentation", "fix the doc", "update the doc", "doc is wrong", "doc is outdated", "documentation feedback", "doc quality", "rewrite this doc", "split this doc", "supersede decision", "annotate ADR", "改进文档", "优化文档", "修正文档", "文档过时", "文档不准确", "文档看不懂", "文档反馈", "文档质量", "补充文档", "拆分文档", "废弃决策", "笔记转正"]
 skill_id: "<SKILL:.specify/skills/improve-docs/SKILL.md>"
+classification: external
 ---
 
 # improve-docs
@@ -45,10 +46,10 @@ Read the document in full before editing, and restate which single file you reso
 Prefer machine findings and quoted reader failures over impressions:
 
 ```bash
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action validate --root .   # broken links, oversize root entry, ADR gaps, notes frontmatter
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action scan --root .       # notes lifecycle state
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/feedback-utils.py --action list --contains "<topic>"
-python3 ${SKILL_WORKDIR}/.specify/skills/create-pages/scripts/scaffold-hugo.py --action build --root .   # only if a site layer exists — content that breaks rendering
+python3 ${SKILL_HOME}/../create-docs/scripts/docs-utils.py --action validate --root .   # broken links, oversize root entry, ADR gaps, notes frontmatter
+python3 ${SKILL_HOME}/../create-docs/scripts/docs-utils.py --action scan --root .       # notes lifecycle state
+python3 ${SKILL_WORKDIR}/.specify/scripts/python/feedback-utils.py --action list --contains "<topic>"   # Spec Kit 项目模式专用（${SKILL_WORKDIR}/.specify/ 存在时）；standalone 部署跳过本行，用其余机器源与 Other admissible evidence 补位
+python3 ${SKILL_HOME}/../create-pages/scripts/scaffold-hugo.py --action build --root .   # only if a site layer exists — content that breaks rendering
 ```
 
 Other admissible evidence: a `/speckit.review` finding, a `memory-recall` hit, a distilled `.specify/history/` lesson, a user correction in this session, or a **verified** staleness signal — a path, command, flag, count, or version the document asserts that no longer holds. Verify each such claim against the repository (does the path exist? does `--help` still list the flag?) and record what you checked.
@@ -86,7 +87,7 @@ Change only what the evidence supports; preserve every untouched section verbati
 Append the audit entry so the change is traceable next to the space's other convergence records:
 
 ```bash
-python3 ${SKILL_WORKDIR}/.specify/scripts/python/docs-utils.py --action audit --root . \
+python3 ${SKILL_HOME}/../create-docs/scripts/docs-utils.py --action audit --root . \
   --scope improve-docs --summary "<one-line>"
 ```
 
@@ -99,8 +100,8 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 - **Never rewrite decision history.** Obsolete decisions are annotated (`Deprecated` / `Superseded by`), never edited into a different decision or deleted.
 - **Never delete content as an improvement.** Superseded prose is corrected or annotated; removal at file scope goes through `create-docs` (archive-not-delete).
 - **Never assert what you did not verify.** An unverifiable claim is either dropped with a note or marked as needing confirmation — do not launder a guess into documentation.
-- **Never edit a generated file or a mirror.** Files carrying an `AUTO-GENERATED` header, `.specify/**` mirrors, and per-tool command copies are outputs: fix the canonical source, then run `python3 scripts/python/sync-mirrors.py --write`.
-- **Never touch non-document managed state as documentation.** `.specify/docs/target-structure.md` is a **cross-run non-document contract**: read only when context requires it and **never edit** it. `.specify/docs/plans/` and `.specify/docs/audit/` are run artifacts; `.specify/memory/**` is machine-managed data; `docs/public/` is generated presentation output.
+- **Never edit a generated file or a mirror.** Files carrying an `AUTO-GENERATED` header, `.specify/**` mirrors, and per-tool command copies are outputs: fix the canonical source, then run `python3 .specify/scripts/python/sync-mirrors.py --write`.
+- **Never touch non-document managed state as documentation.** `docs/.speckit/target-structure.md` is a **cross-run non-document contract**: read only when context requires it and **never edit** it. `docs/.speckit/plans/` and `docs/.speckit/audit/` are run artifacts; `docs/git-workflow.md` is machine-maintained branch state; `.specify/memory/**` is machine-managed data; `docs/public/` is generated presentation output.
 - **Never restyle without a finding.** Cosmetic churn on an unfaulted document is a violation of the anti-churn discipline, not an improvement.
 - **Reserved filenames stay reserved** (`README.md` / `ARCHITECTURE.md` / `CONTRIBUTING.md` / `CHANGELOG.md` at the root only; directory indexes are `index.md`).
 - **Do not improve this skill or `create-docs` here** → `improve-skills`.
@@ -112,7 +113,7 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 
 ## Path Conventions
 
-- `${SKILL_HOME}/<relative-path>` — Skill-owned resources (none currently; this skill drives project engines).
+- `${SKILL_HOME}/<relative-path>` — Skill-owned resources. This skill owns none of its own; it consumes the pair-skill engines via **sibling-skill references** (`${SKILL_HOME}/../create-docs/scripts/docs-utils.py`, `${SKILL_HOME}/../create-pages/scripts/scaffold-hugo.py`) — sibling-relative so resolution holds identically in the source tree, the mirror, and client installs.
 - `${SKILL_WORKDIR}/<relative-path>` — runtime/user-facing paths (the documents being improved, the engines invoked).
 
 ## Resources
@@ -120,8 +121,8 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 | Path | Contents |
 |------|----------|
 | `.specify/skills/create-docs/SKILL.md` | Desired-state baseline (taxonomy, reserved names, notes lifecycle) — the structural authority this skill must not violate |
-| `.specify/scripts/python/docs-utils.py` | Deterministic findings: `validate`, `scan`, `fix-links`, `audit` |
-| `.specify/skills/create-pages/scripts/scaffold-hugo.py` | Site build check (`--action build`) for render defects — only when the optional site layer is installed |
+| `${SKILL_HOME}/../create-docs/scripts/docs-utils.py` | Deterministic findings: `validate`, `scan`, `fix-links`, `audit` |
+| `${SKILL_HOME}/../create-pages/scripts/scaffold-hugo.py` | Site build check (`--action build`) for render defects — only when the optional site layer is installed |
 | `.specify/scripts/python/feedback-utils.py` | Recorded feedback digest (`--action list --contains`) |
 | `.specify/shared/patterns/reconcile-pattern.md` | Tolerance-band and anti-churn semantics shared with `create-docs` |
 
@@ -129,10 +130,15 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 
 The document being edited is not an Execution Subject by default, so this flow is Assisted Improvement of a Harness asset, even when the document reports its own validation results. Do not install self-modifying behavior in the document. This `improve-docs` Skill is itself an Execution Subject: qualified evidence from its own completed runs may enter `.specify/shared/workflow/self-improvement-workflow.md` and route to `improve-skills`.
 
-## Feedback
+## Wrap-up
 
-**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is
-running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills
-directory) — skip this entire Feedback step: no engine call, no feedback entry.
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
 
-At wrap-up, run the feedback self-reflection step per the canonical convention in `.specify/shared/workflow/feedback-step.md`: agent self-reflection only — **never** solicit feedback content from the user; skip trivial or no-op runs; keep strictly to this skill's scope; persist one entry via `feedback-utils.py --action record --unit-id "skill:improve-docs" --unit-type skill`. Non-blocking (非阻塞) and never any 自动传输 — delivery stays manual. That file owns every rule of this step — reflection, scope, dedup, persistence, the submission prompt, the abort and nesting clauses; do not restate any of them here.
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
+
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "skill:improve-docs" --unit-type skill --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "skill:improve-docs" --unit-type skill`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:improve-docs" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"

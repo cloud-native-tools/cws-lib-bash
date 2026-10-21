@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""search-todo.sh — SPECKIT TODO block scanner
+"""search-todo.py — SPECKIT TODO block scanner
 
-Scans workspace text files for fenced SPECKIT TODO blocks and emits
+Scans workspace text files for SPECKIT TODO blocks — fenced form (Markdown
+files) and comment form (line-comment runs in source files) — and emits
 structured JSON (--json) or human-readable key:value output.
 
 Contract: .specify/specs/020-speckit-todo-command/contracts/search-todo-cli.md
@@ -38,6 +39,44 @@ DEFAULT_EXCLUDES = [
 ]
 
 MAX_FILE_SIZE = 16 * 1024 * 1024  # 16 MB
+
+# Comment-form detection (contract D-9..D-12): enabled only in non-Markdown
+# files; line-comment tokens are a closed set; the opening line needs the
+# token, at least one whitespace, then the exact marker payload.
+MARKDOWN_EXTENSIONS = {".md", ".markdown", ".mdown", ".mkd", ".mdx"}
+COMMENT_TOKENS = ("#", "//", "--")
+COMMENT_OPEN_RE = re.compile(r"^(\s*)(#|//|--)\s+SPECKIT TODO")
+
+
+def _comment_payload(stripped: str, token: str) -> Optional[str]:
+    """Payload of a continuation comment line, or None if not same-token."""
+    lstripped = stripped.lstrip()
+    if not lstripped.startswith(token):
+        return None
+    return lstripped[len(token):].lstrip()
+
+
+def _comment_context(
+    lines: List[str], opening: int, closing: int, context_depth: int, headings_only: bool
+) -> Tuple[str, str]:
+    """C-5/C-6: blank-line-bounded prologue/epilogue; heading is always null."""
+    prologue_lines: List[str] = []
+    for j in range(opening - 2, -1, -1):
+        if len(prologue_lines) >= context_depth:
+            break
+        pl = lines[j].rstrip("\n\r")
+        if pl == "":
+            break
+        prologue_lines.insert(0, pl)
+    epilogue_lines: List[str] = []
+    for j in range(closing, min(len(lines), closing + context_depth)):
+        el = lines[j].rstrip("\n\r")
+        if el == "":
+            break
+        epilogue_lines.append(el)
+    if headings_only:
+        return "", ""
+    return "\n".join(prologue_lines), "\n".join(epilogue_lines)
 
 # F8b: capped warning sinks (print summarized, never 300-line floods)
 warnings_encoding: List[str] = []
@@ -114,6 +153,9 @@ def scan_file(filepath: str, rel_path: str, context_depth: int, headings_only: b
     except Exception:
         return blocks, malformed
 
+    is_markdown = os.path.splitext(rel_path)[1].lower() in MARKDOWN_EXTENSIONS
+    comment_enabled = not is_markdown
+
     in_fence = False
     is_todo = False
     fence_start = 0
@@ -121,16 +163,58 @@ def scan_file(filepath: str, rel_path: str, context_depth: int, headings_only: b
     block_idx = 0
     nearest_heading: Optional[str] = None
 
+    comment_open = False
+    comment_token = ""
+    comment_start = 0
+    comment_payloads: List[str] = []
+
+    def finalize_comment(closing_line: int) -> None:
+        nonlocal comment_open, block_idx
+        prologue, epilogue = _comment_context(
+            lines, comment_start, closing_line, context_depth, headings_only
+        )
+        blocks.append({
+            "block_id": f"{rel_path}:{comment_start}:{block_idx}",
+            "source_file": rel_path,
+            "opening_line": comment_start,
+            "closing_line": closing_line,
+            "content": "\n".join(comment_payloads),
+            "form": "comment",
+            "context_heading": None,
+            "prologue": prologue,
+            "epilogue": epilogue,
+        })
+        block_idx += 1
+        comment_open = False
+
     for i, line in enumerate(lines):
         ln = i + 1  # 1-based
 
-        # Track nearest heading (C-1)
-        heading_match = re.match(r"^(#{1,6})\s+(.+?)(?:\s*\{#[^}]*\})?\s*$", line)
-        if heading_match:
-            nearest_heading = heading_match.group(2).strip()
+        # Track nearest heading (C-1) — Markdown-family files only (C-6)
+        if is_markdown:
+            heading_match = re.match(r"^(#{1,6})\s+(.+?)(?:\s*\{#[^}]*\})?\s*$", line)
+            if heading_match:
+                nearest_heading = heading_match.group(2).strip()
 
         stripped = line.rstrip("\n\r")
         is_fence = stripped.startswith("```") or re.match(r"^~~~[~]*$", stripped)
+
+        # Comment-form state machine (D-9..D-12): non-Markdown files, outside fences
+        if comment_enabled and not in_fence:
+            if comment_open:
+                payload = _comment_payload(stripped, comment_token)
+                if payload is not None and not is_fence:
+                    comment_payloads.append(payload)
+                    continue
+                finalize_comment(ln - 1)
+            if not comment_open and not is_fence and "SPECKIT" in stripped:
+                m = COMMENT_OPEN_RE.match(stripped)
+                if m:
+                    comment_open = True
+                    comment_token = m.group(2)
+                    comment_start = ln
+                    comment_payloads = [stripped.lstrip()[len(comment_token):].lstrip()]
+                    continue
 
         if is_fence and not in_fence:
             # Opening fence
@@ -201,6 +285,7 @@ def scan_file(filepath: str, rel_path: str, context_depth: int, headings_only: b
                     "opening_line": fence_start,
                     "closing_line": closing_line,
                     "content": content,
+                    "form": "fence",
                     "context_heading": nearest_heading,
                     "prologue": prologue,
                     "epilogue": epilogue,
@@ -214,6 +299,10 @@ def scan_file(filepath: str, rel_path: str, context_depth: int, headings_only: b
         if in_fence and is_todo:
             block_lines.append(line)
 
+    # Open comment block at EOF: closed by end of file, never malformed (D-11)
+    if comment_open:
+        finalize_comment(len(lines))
+
     # Unclosed fence at EOF (D-3)
     if in_fence and is_todo:
         content = "".join(block_lines)
@@ -225,6 +314,7 @@ def scan_file(filepath: str, rel_path: str, context_depth: int, headings_only: b
             "line_after_eof": True,
         })
 
+    blocks.sort(key=lambda b: b["opening_line"])
     return blocks, malformed
 
 
@@ -249,7 +339,7 @@ def output_keyvalue(
         hd = "null"
         if b["context_heading"]:
             hd = f'"{b["context_heading"]}"'
-        print(f"BLOCK[{idx}]:        {b['source_file']}:{b['opening_line']}:{b['closing_line']}:heading {hd}")
+        print(f"BLOCK[{idx}]:        {b['source_file']}:{b['opening_line']}:{b['closing_line']}:heading {hd}:form {b['form']}")
 
     for idx, m in enumerate(malformed):
         print(f"MALFORMED[{idx}]:    {m['source_file']}:{m['opening_line']}:{m['reason']}")

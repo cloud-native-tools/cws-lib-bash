@@ -10,19 +10,27 @@ A Goal is composed of exactly three parts: objective narrative, zero-or-more
 verifiable success criteria, and lifecycle state. Identity is the directory name;
 timestamps are change-traceability metadata, never a fourth part.
 
-Concept authority: shared/definitions/goal-definitions.md (read-only).
+Concept authority: .specify/shared/definitions/goal-definitions.md (read-only).
 File contract:  .specify/specs/037-goal-registry/contracts/goal-definition.contract.md
 
-Actions:
-  create   <slug> --objective TEXT [--criterion TEXT ...]
-  validate <path|slug>
-  list
-  status   <slug> --set STATE
-  criteria <slug> --criterion TEXT ...
-  migrate  <team-slug> [--keep-inline/--drop-inline]
-  targets  <slug> --add TEXT | --list | --set STATE --id T-nnn
+Actions, grouped by whether they write:
 
-Exit codes: 0 ok | 2 input error | 3 not found | 4 validation failed
+Read group (zero writes):
+  list
+  validate        <path|slug>
+  check-statement <statement>
+  targets         <slug> --list | --check STATEMENT
+  run-checks      <team-slug> [--target T-nnn | <goal-slug>.T-nnn]
+
+Write group (mutates one definition file):
+  create    <slug> --objective TEXT [--title TEXT] [--criterion TEXT ...] [--boundary TEXT ...]
+  status    <slug> --set STATE
+  objective <slug> --set TEXT
+  criteria  <slug> --criterion TEXT ... | --clear
+  targets   <slug> --add TEXT | --set STATE --id T-nnn
+  migrate   <team-slug> [--keep-inline/--drop-inline]
+
+Exit codes: 0 ok | 2 input error | 3 not found | 4 validation failed | 5 blocked
 """
 
 from __future__ import annotations
@@ -38,6 +46,11 @@ EXIT_OK = 0
 EXIT_INPUT_ERROR = 2
 EXIT_NOT_FOUND = 3
 EXIT_INVALID = 4
+#: 053 FR-033 — a run-precondition check judged the run blocked. The next free code: the
+#: four above keep their existing meanings byte for byte, so one code never carries two
+#: meanings across actions, and the 0/2 branches `.specify/templates/commands/team.md` already has
+#: keep working unchanged.
+EXIT_BLOCKED = 5
 
 ARCHIVE_DIRNAME = ".specify/goal"
 DEFINITION_FILENAME = "goal.md"
@@ -54,8 +67,11 @@ NO_CRITERIA_MARKER = "None provided."
 
 _SECTION_OBJECTIVE = "## Objective"
 _SECTION_CRITERIA = "## Success Criteria"
+_SECTION_BOUNDARIES = "## Boundaries"
 _SECTION_HISTORY = "## History"
 _SECTION_TARGETS = "## Targets"
+
+_TITLE_LINE = re.compile(r"^#\s+Goal:\s*(.+?)\s*$", re.M)
 
 #: Target (038): run-assignable scope slices under a goal. [[STR-002]] three states.
 TARGET_STATES = ("open", "done", "dropped")
@@ -76,6 +92,19 @@ TARGET_LEGAL_TRANSITIONS = {
 _TASKLIST = re.compile(r"(?m)^\s*(?:\d+[.)]\s+|[-*+]\s+)")
 _STEP_VERBS = ("首先", "然后", "接着", "step 1", "then ", "next, ")
 
+#: GD-2 — phased wording is a plan's timeline wearing an outcome's clothes. Ordinal-
+#: qualified on purpose: a bare 阶段/phase is ordinary domain vocabulary, so matching
+#: it would reject legitimate objectives (and every `migrate` of an inline goal).
+_PHASED = re.compile(
+    r"分阶段|阶段\s*[一二三四五六七八九十\d]|第\s*[一二三四五六七八九十\d]+\s*(?:阶段|步)"
+    r"|phase\s*\d|stage\s*\d",
+    re.IGNORECASE,
+)
+
+#: What `targets <slug> --check` judges. Declared on every verdict so a green is never
+#: read as broader than it is; `check-statement`'s narrower "shape-only" is the sibling.
+TARGET_CHECK_SCOPE = "shape+criteria-restatement"
+
 #: GD-3 — one goal, one objective. Conjunctions joining independent clauses.
 _COMPOSITE = re.compile(
     r"\b(?:and also|and additionally|as well as|;\s*also)\b|并且还|同时还|以及另外",
@@ -89,6 +118,41 @@ class GoalError(Exception):
 
 class GoalNotFound(GoalError):
     """Raised when a referenced target identity does not exist (exit code 3)."""
+
+
+class GoalInvalid(GoalError):
+    """Raised when a definition exists but cannot be interpreted (exit code 4).
+
+    Kept distinct from GoalNotFound and from a bad argument so that the three tiers 053's
+    run-checks contract requires — blocked / input error / definition unusable — stay
+    mutually distinguishable instead of collapsing onto one code.
+    """
+
+
+#: STR-004 (053 FR-032) — a check whose precondition does not hold, or which raised, is
+#: reported as NOT evaluated. Never `ok`: a check that did not run must not report green,
+#: which is the exact shape this feature exists to remove. Single definition point.
+NOT_EVALUATED = "not-evaluated"
+
+#: The five run-precondition checks, in reporting order (053 FR-029). `name` says which
+#: check ran; `verdict` says what it concluded. Four of these five names are ALSO verdict
+#: literals below in preview_target_check — an accident of vocabulary, not an invariant, so
+#: nothing may rely on the two fields being interchangeable (053 C-10).
+RUN_CHECK_NAMES = (
+    "goal-binding", "dangling", "target-terminal", "cross-goal", "goal-terminal",
+)
+
+#: Verdicts that stop a run. `input-error` is deliberately absent: a malformed argument is
+#: the input tier (exit 2), not a block (exit 5).
+BLOCKING_VERDICTS = frozenset({
+    "no-goal-definition", "dangling", "target-terminal", "cross-goal", "goal-terminal",
+})
+
+#: preview_target_check's own evaluation order, as check ids: binding, then the reference
+#: grammar, then cross-goal, goal-terminal, dangling, target-terminal. The top-level verdict
+#: is the first non-ok in THIS order, which is what makes the five-check array a faithful
+#: projection of the authoritative gate rather than a second opinion beside it.
+_TOP_VERDICT_ORDER = (1, 4, 5, 2, 3)
 
 
 # --------------------------------------------------------------------------
@@ -142,7 +206,8 @@ def target_transition_allowed(current: str, target: str) -> bool:
 
 def _bad_shape(text: str) -> str | None:
     """Shared GD-2/GD-3 detection — one grammar for objectives and target slices."""
-    if _TASKLIST.search(text) or any(v in text.lower() for v in _STEP_VERBS):
+    if (_TASKLIST.search(text) or _PHASED.search(text)
+            or any(v in text.lower() for v in _STEP_VERBS)):
         return "GD-2"
     if _COMPOSITE.search(text):
         return "GD-3"
@@ -232,13 +297,18 @@ def _today() -> str:
 
 def _render(objective: str, criteria: list[str], status: str, created: str,
             updated: str, history: list[str], title: str,
-            targets: list[dict] | None = None) -> str:
+            targets: list[dict] | None = None,
+            boundaries: list[str] | None = None) -> str:
     if criteria:
         body = "\n".join(f"{i}. {c}" for i, c in enumerate(criteria, 1))
     else:
         body = NO_CRITERIA_MARKER
     hist = "\n".join(history)
-    # Section absent entirely when the goal has no targets (SC-002: byte-identical).
+    # Section absent entirely when the goal has no boundaries / no targets
+    # (SC-002: byte-identical to the pre-annex rendering).
+    boundaries_block = (f"{_SECTION_BOUNDARIES}\n\n"
+                        + "\n".join(f"- {b}" for b in boundaries) + "\n\n"
+                        if boundaries else "")
     targets_block = (f"{_SECTION_TARGETS}\n\n{_render_targets_table(targets)}\n\n"
                      if targets else "")
     return (
@@ -246,6 +316,7 @@ def _render(objective: str, criteria: list[str], status: str, created: str,
         f"# Goal: {title}\n\n"
         f"{_SECTION_OBJECTIVE}\n\n{objective.strip()}\n\n"
         f"{_SECTION_CRITERIA}\n\n{body}\n\n"
+        f"{boundaries_block}"
         f"{targets_block}"
         f"{_SECTION_HISTORY}\n\n{hist}\n"
     )
@@ -280,6 +351,117 @@ def _section(body: str, heading: str) -> str:
     return "\n".join(out).strip()
 
 
+def _parse_bullets(raw: str) -> list[str]:
+    """Parse a `- ` bullet annex; blank lines carry no entry."""
+    out: list[str] = []
+    for line in (raw or "").splitlines():
+        stripped = re.sub(r"^\s*[-*+]\s*", "", line).strip()
+        if stripped:
+            out.append(stripped)
+    return out
+
+
+def _title_from_body(body: str) -> str:
+    match = _TITLE_LINE.search(body)
+    return match.group(1).strip() if match else ""
+
+
+#: 053 FR-035 — the criterion-subject reference form. Single definition point; the literal
+#: itself is owned by .specify/shared/definitions/goal-definitions.md § 判据主体指代形 (Criterion
+#: Subject Reference), which also states the two failure tiers and the conflict rule below.
+SUBJECT_REF = re.compile(r"\[subjects:\s*([^\]]+)\]")
+#: The only machine-decidable member-enumeration marker: a brace expansion holding a comma.
+#: A PROSE enumeration ("所有绘图技能") carries no marker at all and is therefore NOT
+#: detected — the owner document states that boundary explicitly instead of claiming
+#: coverage it does not have, which is what the artifact/behavior clause split forbids.
+BRACE_ENUM = re.compile(r"\{[^}]*,[^}]*\}")
+
+#: STR-010 and its two siblings. Distinct prefixes, because "the path is not there" and
+#: "the path is there and matches nothing" have opposite remedies; both exit 4, so the
+#: prefix is what tells them apart.
+SUBJECT_PROBLEM_PREFIXES = {
+    "missing": "SUBJECT MISSING:",
+    "empty": "SUBJECT EMPTY:",
+    "conflict": "SUBJECT CONFLICT:",
+}
+#: Closed state vocabulary of derive_subjects. `absent` is the state every pre-existing
+#: pure-enumeration criterion stays in, which is what keeps their parse byte-identical.
+SUBJECT_STATES = ("absent", "ok", "missing", "empty", "conflict")
+
+_WILDCARD_CHARS = "*?["
+
+
+def _repo_root_for(path: Path) -> Path:
+    """The repository root a definition path lives under, or the cwd if none does."""
+    for parent in Path(path).resolve().parents:
+        if (parent / ".specify").is_dir():
+            return parent
+    return Path.cwd()
+
+
+def _glob_literal_prefix(pattern: str, repo_root: Path) -> Path:
+    """The leading wildcard-free part of a glob — what "the path does not exist" means."""
+    segments = []
+    for segment in pattern.replace("\\", "/").split("/"):
+        if any(ch in segment for ch in _WILDCARD_CHARS):
+            break
+        segments.append(segment)
+    return repo_root.joinpath(*segments) if segments else repo_root
+
+
+def derive_subjects(criterion: str, repo_root: Path) -> dict:
+    """The subject set one criterion's reference form derives to, at parse time.
+
+    Returns {"glob", "paths", "state"} with state in SUBJECT_STATES. Deriving the set here
+    rather than trusting members retyped into the criterion text is the whole point: a
+    derived set cannot go stale, which is the churn this repository's own goal History shows
+    (the same criterion rewritten from six skills to seven and back as the directory moved).
+
+    An empty derivation is NOT a pass — "every one of zero subjects satisfies this" is
+    vacuously true — so it is reported, and separately from a glob whose literal prefix does
+    not exist, because the two have opposite remedies.
+    """
+    repo_root = Path(repo_root)
+    matches = SUBJECT_REF.findall(criterion)
+    if not matches:
+        return {"glob": None, "paths": [], "state": "absent"}
+    pattern = matches[0].strip()
+    if len(matches) > 1 or BRACE_ENUM.search(criterion):
+        return {"glob": pattern, "paths": [], "state": "conflict"}
+    if not _glob_literal_prefix(pattern, repo_root).exists():
+        return {"glob": pattern, "paths": [], "state": "missing"}
+    paths = sorted({p.relative_to(repo_root).as_posix() for p in repo_root.glob(pattern)})
+    return {"glob": pattern, "paths": paths, "state": "ok" if paths else "empty"}
+
+
+def _subject_problems(criteria: list, repo_root: Path) -> list:
+    problems = []
+    for index, criterion in enumerate(criteria, start=1):
+        derived = derive_subjects(criterion, repo_root)
+        state = derived["state"]
+        if state == "absent" or state == "ok":
+            continue
+        glob = f"[subjects: {derived['glob']}]"
+        if state == "conflict":
+            problems.append(
+                f"{SUBJECT_PROBLEM_PREFIXES['conflict']} criterion {index} carries both the "
+                f"reference form {glob} and a brace-expanded member list — one subject set "
+                "must have one source, so drop the retyped members or drop the reference")
+        elif state == "missing":
+            problems.append(
+                f"{SUBJECT_PROBLEM_PREFIXES['missing']} criterion {index} references {glob}, "
+                "whose literal prefix does not exist in the repository — a reference that "
+                "denotes nothing is not the same fact as one denoting an empty set; fix the "
+                "glob or restore the directory")
+        elif state == "empty":
+            problems.append(
+                f"{SUBJECT_PROBLEM_PREFIXES['empty']} criterion {index} references {glob}, "
+                "which exists but matches nothing — an empty subject set would make 'every "
+                "subject satisfies this' vacuously true; widen the glob or populate the "
+                "directory")
+    return problems
+
+
 def parse_goal(path: Path) -> dict:
     text = Path(path).read_text(encoding="utf-8")
     meta, body = _split_frontmatter(text)
@@ -292,6 +474,8 @@ def parse_goal(path: Path) -> dict:
                 criteria.append(stripped)
     return {
         "slug": Path(path).parent.name,
+        # Parsed back so an unrelated write never downgrades a --title to the slug.
+        "title": _title_from_body(body) or Path(path).parent.name,
         "status": meta.get("status", ""),
         "created": meta.get("created", ""),
         "updated": meta.get("updated", ""),
@@ -299,11 +483,20 @@ def parse_goal(path: Path) -> dict:
         "criteria": criteria,
         "history": _section(body, _SECTION_HISTORY),
         "criteria_count": len(criteria),
+        "boundaries": _parse_bullets(_section(body, _SECTION_BOUNDARIES)),
         "targets": _parse_targets_text(_section(body, _SECTION_TARGETS)),
+        # 053 FR-035: subject sets derived at parse time, one entry per criterion that
+        # carries a reference form. A pure-enumeration criterion derives nothing, so this
+        # list is empty for every definition that predates the form.
+        "subjects": [
+            derived for derived in
+            (derive_subjects(c, _repo_root_for(path)) for c in criteria)
+            if derived["state"] != "absent"
+        ],
     }
 
 
-def validate_goal(path: Path) -> tuple[bool, list[str]]:
+def validate_goal(path: Path, repo_root: Path | None = None) -> tuple[bool, list[str]]:
     path = Path(path)
     problems: list[str] = []
     if not path.is_file():
@@ -341,6 +534,12 @@ def validate_goal(path: Path) -> tuple[bool, list[str]]:
 
     if _SECTION_TARGETS in body:
         problems.extend(_validate_targets_section(_section(body, _SECTION_TARGETS)))
+
+    # 053 FR-035/FR-036: the criterion-subject reference form. The criteria list comes from
+    # parse_goal rather than a second extraction here, so validation and parsing can never
+    # disagree about which criteria exist.
+    root = Path(repo_root) if repo_root is not None else _repo_root_for(path)
+    problems.extend(_subject_problems(parse_goal(path)["criteria"], root))
     return (not problems), problems
 
 
@@ -395,7 +594,9 @@ def _validate_targets_section(raw: str) -> list[str]:
 # --------------------------------------------------------------------------
 
 def create_goal(repo_root: Path, slug: str, objective: str,
-                criteria: list[str] | None = None) -> Path:
+                criteria: list[str] | None = None, *,
+                title: str | None = None,
+                boundaries: list[str] | None = None) -> Path:
     if not is_valid_identity(slug):
         raise GoalError(
             f"identity {slug!r} is invalid: the first character must be alphanumeric, "
@@ -406,13 +607,17 @@ def create_goal(repo_root: Path, slug: str, objective: str,
     if path.exists():
         raise GoalError(
             f"goal {slug!r} already exists at {path}; use the modify path "
-            "(`status` / `criteria`) — the existing definition is never overwritten"
+            "(`objective` / `status` / `criteria`) — the existing definition is never "
+            "overwritten"
         )
     today = _today()
+    # Identity stays the slug; the title is presentation and collapses to one line.
+    heading = " ".join((title or "").split()) or slug
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
         _render(objective, list(criteria or []), "active", today, today,
-                [f"- {today} — created."], slug),
+                [f"- {today} — created."], heading,
+                boundaries=[b.strip() for b in (boundaries or []) if b.strip()] or None),
         encoding="utf-8",
     )
     return path
@@ -432,7 +637,26 @@ def set_status(path: Path, target: str) -> Path:
     history.append(f"- {today} — status {current} -> {target}.")
     path.write_text(
         _render(data["objective"], data["criteria"], target, data["created"],
-                today, history, data["slug"], data["targets"]),
+                today, history, data["title"], data["targets"], data["boundaries"]),
+        encoding="utf-8",
+    )
+    return path
+
+
+def set_objective(path: Path, objective: str) -> Path:
+    """Deliberate objective replacement — `set_criteria`'s change discipline:
+    the prior value stays traceable, `updated` bumps, terminal goals stay read-only."""
+    path = Path(path)
+    data = parse_goal(path)
+    _assert_goal_mutable(data, "the objective cannot be replaced")
+    _reject_bad_objective(objective)
+    today = _today()
+    history = [line for line in data["history"].splitlines() if line.strip()]
+    previous = " ".join(data["objective"].split())
+    history.append(f"- {today} — objective changed; prior value: {previous}")
+    path.write_text(
+        _render(objective, data["criteria"], data["status"], data["created"],
+                today, history, data["title"], data["targets"], data["boundaries"]),
         encoding="utf-8",
     )
     return path
@@ -450,18 +674,19 @@ def set_criteria(path: Path, criteria: list[str]) -> Path:
     )
     path.write_text(
         _render(data["objective"], list(criteria), data["status"], data["created"],
-                today, history, data["slug"], data["targets"]),
+                today, history, data["title"], data["targets"], data["boundaries"]),
         encoding="utf-8",
     )
     return path
 
 
-def _assert_goal_mutable(data: dict) -> None:
+def _assert_goal_mutable(data: dict,
+                         consequence: str = "targets cannot be added or transitioned") -> None:
     """Terminal goals are read-only — no new targets, no transitions (038)."""
     if data["status"] in TERMINAL_STATES:
         raise GoalError(
             f"goal is in terminal state {data['status']!r} and read-only "
-            "(终态 goal 只读); targets cannot be added or transitioned"
+            f"(终态 goal 只读); {consequence}"
         )
 
 
@@ -494,7 +719,7 @@ def add_target(path: Path, statement: str) -> str:
     history.append(f"- {today} target {tid} added: {statement}")
     path.write_text(
         _render(data["objective"], data["criteria"], data["status"], data["created"],
-                today, history, data["slug"], targets),
+                today, history, data["title"], targets, data["boundaries"]),
         encoding="utf-8",
     )
     return tid
@@ -524,7 +749,7 @@ def set_target_status(path: Path, tid: str, new_status: str) -> Path:
     history.append(f"- {today} target {tid} {current}→{new_status}")
     path.write_text(
         _render(data["objective"], data["criteria"], data["status"], data["created"],
-                today, history, data["slug"], targets),
+                today, history, data["title"], targets, data["boundaries"]),
         encoding="utf-8",
     )
     return path
@@ -633,6 +858,221 @@ def resolve_effective_target(team_md_path: Path, explicit_target: str | None = N
     return {"effective": None, "source": "none", "declared_focus": None}
 
 
+# --------------------------------------------------------------------------
+# 053 run-checks — the five run-precondition checks, one call, zero writes
+# --------------------------------------------------------------------------
+
+def _check(cid: int, name: str, verdict: str, message: str = "") -> dict:
+    return {"id": cid, "name": name, "verdict": verdict, "message": message}
+
+
+def _goal_binding_check(ctx: dict) -> tuple[str, str]:
+    """① Is a goal definition bound to this team, and does the file exist?"""
+    goal_slug, _kind = resolve_team_goal_identity(ctx["repo_root"], ctx["team_slug"])
+    if goal_slug is None:
+        return "no-goal-definition", (
+            "该团队没有绑定的 goal 定义;先经 /speckit.goal migrate 将内联 goal 落为定义")
+    if not definition_path(ctx["repo_root"], goal_slug).is_file():
+        return "no-goal-definition", (
+            f"绑定 goal {goal_slug!r} 无定义文件;先经 /speckit.goal migrate 落为定义")
+    return "ok", ""
+
+
+def _dangling_check(ctx: dict) -> tuple[str, str]:
+    """② Does the referenced Target exist in the bound goal's `## Targets`?"""
+    if ctx["tid"] is None:
+        return NOT_EVALUATED, "无有效 Target 引用,悬空检查无判定主体"
+    if ctx["goal_data"] is None:
+        return NOT_EVALUATED, "无 goal 定义可查,悬空检查无判定主体"
+    row = next((t for t in ctx["goal_data"]["targets"] if t["id"] == ctx["tid"]), None)
+    if row is None:
+        return "dangling", (
+            f"悬空引用 {ctx['tid']}:goal {ctx['goal_slug']!r} 无此 Target;"
+            "先经 /speckit.goal targets --add 添加")
+    return "ok", ""
+
+
+def _target_terminal_check(ctx: dict) -> tuple[str, str]:
+    """③ Is the referenced Target already in a terminal state?"""
+    if ctx["tid"] is None:
+        return NOT_EVALUATED, "无有效 Target 引用,终态引用检查无判定主体"
+    if ctx["goal_data"] is None:
+        return NOT_EVALUATED, "无 goal 定义可查,终态引用检查无判定主体"
+    row = next((t for t in ctx["goal_data"]["targets"] if t["id"] == ctx["tid"]), None)
+    if row is None:
+        return NOT_EVALUATED, f"Target {ctx['tid']} 不存在,其状态无从判定(见悬空检查)"
+    if row["status"] in ("done", "dropped"):
+        return "target-terminal", (
+            f"Target {ctx['tid']} 处于终态 {row['status']!r},run 停止——复核二分:属实则返回"
+            f"报告结束;证据不符则经 /speckit.goal targets --set open --id {ctx['tid']} 重开后"
+            "重新发起 run。不提供终态执行旁路")
+    return "ok", ""
+
+
+def _cross_goal_check(ctx: dict) -> tuple[str, str]:
+    """④ Does a QUALIFIED reference cross the binding axis?"""
+    if ctx["grammar"] != "qualified":
+        # A local-form `T-<nnn>` carries no prefix, so no cross-goal question arises. This is
+        # a check with no subject, not a check that passed — reporting `ok` here would claim
+        # a comparison ran that never did.
+        return NOT_EVALUATED, (
+            "引用不是限定形 <goal-slug>.T-<nnn>,无跨 goal 前缀可比"
+            if ctx["grammar"] == "local" else "无有效 Target 引用,跨 goal 检查无判定主体")
+    if ctx["prefix"] != ctx["goal_slug"]:
+        return "cross-goal", (
+            f"跨 goal 引用 {ctx['reference']!r}:绑定 goal 为 {ctx['goal_slug']!r},"
+            "绑定轴不可越界")
+    return "ok", ""
+
+
+def _goal_terminal_check(ctx: dict) -> tuple[str, str]:
+    """⑤ Is the bound goal itself in a terminal lifecycle state?"""
+    if ctx["goal_data"] is None:
+        return NOT_EVALUATED, "无 goal 定义可读,goal 终态检查无判定主体"
+    if ctx["goal_data"]["status"] in TERMINAL_STATES:
+        return "goal-terminal", (
+            f"goal {ctx['goal_slug']!r} 处于终态 {ctx['goal_data']['status']!r},"
+            "终态 goal 只读,拒绝指派")
+    return "ok", ""
+
+
+#: Reporting order == id order. Each entry is called under its own guard, because one check
+#: raising must leave the other four reported rather than swallowing the whole verdict.
+_RUN_CHECK_FUNCTIONS = (
+    _goal_binding_check, _dangling_check, _target_terminal_check,
+    _cross_goal_check, _goal_terminal_check,
+)
+
+
+def _compose_verdict(checks: list, grammar: str) -> str:
+    """The top-level verdict projected from the five, in the gate's own priority order.
+
+    The reference grammar is judged before any of the five, exactly as preview_target_check
+    judges it, so an unusable reference is `input-error` and not a projection of the array.
+    """
+    if grammar in ("input-error", "invalid"):
+        return "input-error"
+    by_id = {c["id"]: c for c in checks}
+    for cid in _TOP_VERDICT_ORDER:
+        verdict = by_id[cid]["verdict"]
+        if verdict not in ("ok", NOT_EVALUATED):
+            return verdict
+    return "ok"
+
+
+def run_checks(repo_root: Path, team_slug: str, explicit_target: str | None = None) -> dict:
+    """The five run-precondition checks for one team, in ONE call. Zero writes.
+
+    Every verdict comes from the engine's own code path — resolve_team_goal_identity,
+    definition_path, parse_goal, TERMINAL_STATES, _QUALIFIED_TARGET, TARGET_IDENTITY and
+    resolve_effective_target — and where a reference is in play the top-level verdict is
+    `preview_target_check`'s own, verbatim. So this action reports the gate run mode already
+    trusts; it does not re-decide it, and it defines no grammar of its own.
+
+    A check whose precondition does not hold is NOT_EVALUATED, never `ok`, and each check is
+    guarded separately so one raising leaves the other four reported.
+
+    Blocking is target-scoped for ① goal-binding and NOT for ⑤ goal-terminal, because that
+    is what the recorded rule says: team.md's check 1 states that a team with no goal
+    definition stops only when a --target was given ("不指定 --target 时一切照旧"), while
+    check 5 ("终态 goal 只读") is a property of the goal and carries no such scoping.
+
+    This binary has no EXIT_USAGE=1, so an argparse usage failure exits 2 and cannot be told
+    apart from an in-body input error. run-checks does not depend on that distinction: a
+    usage failure never reaches this function, and every input error it can itself produce
+    is the `input-error` verdict, which maps to exit 2 for either cause alike.
+    """
+    repo_root = Path(repo_root)
+    team_md = repo_root / ".specify/teams" / team_slug / "team.md"
+    if not team_md.is_file():
+        raise GoalNotFound(f"team not found: {team_slug}")
+
+    resolution = resolve_effective_target(team_md, explicit_target)
+    reference = resolution["effective"]
+
+    grammar, prefix, tid = "none", None, None
+    if resolution["source"] == "input-error":
+        grammar = "input-error"
+    elif reference is not None:
+        if TARGET_IDENTITY.match(reference):
+            grammar, tid = "local", reference
+        else:
+            qualified = _QUALIFIED_TARGET.match(reference)
+            if qualified:
+                grammar = "qualified"
+                prefix, tid = qualified.groups()
+            else:
+                # Matches neither grammar. This is a distinct state from "no reference at
+                # all": preview_target_check reports it as `input-error` and stops, so the
+                # projection must too — folding it into `none` would exit 0 on an argument
+                # the engine rejects, which is a green verdict on a run that cannot happen.
+                grammar = "invalid"
+
+    goal_slug, identity_kind = resolve_team_goal_identity(repo_root, team_slug)
+    goal_data = None
+    if goal_slug is not None:
+        path = definition_path(repo_root, goal_slug)
+        if path.is_file():
+            try:
+                goal_data = parse_goal(path)
+            except GoalError as exc:
+                raise GoalInvalid(
+                    f"goal definition {goal_slug!r} cannot be parsed: {exc}") from exc
+            if goal_data["status"] not in LIFECYCLE_STATES:
+                raise GoalInvalid(
+                    f"goal definition {goal_slug!r} declares status "
+                    f"{goal_data['status']!r}, outside the lifecycle set {LIFECYCLE_STATES} "
+                    "— the goal-terminal check has no decidable subject")
+
+    ctx = {
+        "repo_root": repo_root, "team_slug": team_slug, "team_md": team_md,
+        "resolution": resolution, "reference": reference, "grammar": grammar,
+        "prefix": prefix, "tid": tid, "goal_slug": goal_slug,
+        "identity_kind": identity_kind, "goal_data": goal_data,
+    }
+
+    checks = []
+    for index, check_fn in enumerate(_RUN_CHECK_FUNCTIONS):
+        try:
+            verdict, message = check_fn(ctx)
+        except Exception as exc:      # one check failing must not swallow the other four
+            verdict = NOT_EVALUATED
+            message = f"{RUN_CHECK_NAMES[index]} 检查自身失败,未得出判定:{exc}"
+        checks.append(_check(index + 1, RUN_CHECK_NAMES[index], verdict, message))
+
+    # The authoritative gate decides the top-level verdict whenever it can run; the
+    # projection is the fallback for the two cases it cannot (no reference at all, or a
+    # reference whose grammar failed before any check had a subject).
+    verdict = None
+    if grammar in ("local", "qualified"):
+        try:
+            verdict = preview_target_check(repo_root, team_slug, reference)["verdict"]
+        except GoalError:
+            verdict = None
+    if verdict is None:
+        verdict = _compose_verdict(checks, grammar)
+
+    blocked = False
+    for check in checks:
+        if check["verdict"] not in BLOCKING_VERDICTS:
+            continue
+        if check["id"] == 1 and grammar == "none":
+            continue        # team.md check 1: no --target, 一切照旧 — informational only
+        blocked = True
+    if verdict == "input-error":
+        blocked = False     # a bad argument is the input tier, not a block
+
+    return {
+        "team_slug": team_slug,
+        "goal_slug": goal_slug,
+        "identity_kind": identity_kind,
+        "resolution": {k: resolution.get(k) for k in ("effective", "source", "declared_focus")},
+        "checks": checks,
+        "verdict": verdict,
+        "blocked": blocked,
+    }
+
+
 def migrate_team(repo_root: Path, team_slug: str, *, keep_inline: bool = True) -> tuple[Path, str]:
     """Derive a goal definition from a team's inline goal and switch it to a reference.
 
@@ -713,8 +1153,15 @@ def _resolve(repo_root: Path, target: str) -> Path:
 
 
 def main(argv: list[str] | None = None) -> int:
-    # Shared flags are attached to BOTH the top-level parser and every subparser, so
-    # `goal-utils.py create x --json` and `goal-utils.py --json create x` both work.
+    # Shared flags are attached to BOTH the top-level parser and every subparser. That does
+    # NOT make them position-independent, and the comment here used to claim it did: argparse
+    # lets a subparser overwrite a namespace attribute the top level already set, so
+    # `goal-utils.py --json list` silently emits the human form and `--repo-root X list`
+    # silently resolves to the cwd. Measured 2026-10-04 (both orders compared through _emit).
+    # Pass these flags AFTER the action. Fixing the precedence would change behavior for all
+    # ten actions, which is outside 053's declared scope — escalated as research.md A-9 of
+    # spec 053-machine-decidable-artifacts, and pinned as measured by test_run_checks.py C-11
+    # so it cannot change silently in either direction.
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument("--repo-root", default=None, help="repository root (default: cwd)")
     common.add_argument("--json", action="store_true", help="machine-readable output")
@@ -726,41 +1173,59 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="action", required=True)
 
     p_create = sub.add_parser("create", parents=[common],
-                              help="archive a new goal definition")
+                              help="write: archive a new goal definition")
     p_create.add_argument("slug")
     p_create.add_argument("--objective", required=True)
+    p_create.add_argument("--title", default=None, metavar="TEXT",
+                          help="human-readable heading; falls back to the slug")
     p_create.add_argument("--criterion", action="append", default=[])
+    p_create.add_argument("--boundary", action="append", default=[], metavar="TEXT",
+                          help="an explicit exclusion, rendered under ## Boundaries")
 
     p_validate = sub.add_parser("validate", parents=[common],
-                                help="validate one definition")
+                                help="read: validate one definition")
     p_validate.add_argument("target", help="goal slug or path to goal.md")
 
     p_check_stmt = sub.add_parser(
         "check-statement", parents=[common],
-        help="standalone dry-run shape validation of one Target statement "
+        help="read: standalone dry-run shape validation of one Target statement "
              "(GD-2/GD-3); requires NO goal — usable before `create`")
     p_check_stmt.add_argument("statement", help="candidate Target statement")
 
-    sub.add_parser("list", parents=[common], help="enumerate the archive")
+    sub.add_parser("list", parents=[common], help="read: enumerate the archive")
 
-    p_status = sub.add_parser("status", parents=[common], help="change lifecycle state")
+    p_status = sub.add_parser("status", parents=[common],
+                              help="write: change lifecycle state")
     p_status.add_argument("slug")
     p_status.add_argument("--set", dest="target_state", required=True,
                           choices=LIFECYCLE_STATES)
 
-    p_criteria = sub.add_parser("criteria", parents=[common],
-                               help="replace criteria, recording the prior value")
+    p_objective = sub.add_parser("objective", parents=[common],
+                                 help="write: replace the objective, recording the prior value")
+    p_objective.add_argument("slug")
+    p_objective.add_argument("--set", dest="new_objective", required=True, metavar="TEXT",
+                             help="the replacement objective (outcome-shaped; GD-2/GD-3 apply)")
+
+    p_criteria = sub.add_parser(
+        "criteria", parents=[common],
+        help="write: replace criteria, recording the prior value "
+             "(destructive when emptied via --clear)")
     p_criteria.add_argument("slug")
     p_criteria.add_argument("--criterion", action="append", default=[])
+    p_criteria.add_argument("--clear", dest="clear_criteria", action="store_true",
+                            help="deliberately empty the criteria set — overwrites the "
+                                 f"existing criteria with {NO_CRITERIA_MARKER!r}")
 
     p_migrate = sub.add_parser("migrate", parents=[common],
-                               help="derive a definition from a team's inline goal and reference it")
+                               help="write: derive a definition from a team's inline goal "
+                                    "and reference it")
     p_migrate.add_argument("team_slug")
     p_migrate.add_argument("--drop-inline", action="store_true",
                            help="remove the team's inline goal after migrating (default: keep)")
 
     p_targets = sub.add_parser("targets", parents=[common],
-                               help="authorize/list/transition Targets of one goal (038)")
+                               help="read (--list/--check) | write (--add/--set): the "
+                                    "Targets of one goal (038)")
     p_targets.add_argument("slug")
     p_targets.add_argument("--add", dest="add_statement", default=None,
                            metavar="STATEMENT", help="append a new open Target")
@@ -774,16 +1239,28 @@ def main(argv: list[str] | None = None) -> int:
     p_targets.add_argument("--id", dest="target_id", default=None,
                            metavar="T-NNN", help="Target identity paired with --set")
 
+    p_run_checks = sub.add_parser(
+        "run-checks", parents=[common],
+        help="read: the five run-precondition checks for one team, in a single call "
+             "(zero writes; 053)")
+    p_run_checks.add_argument("team_slug", metavar="<team-slug>",
+                              help="team directory name under .specify/teams/")
+    p_run_checks.add_argument("--target", dest="run_target", default=None,
+                              metavar="T-NNN",
+                              help="T-<nnn> or <goal-slug>.T-<nnn>; omit to resolve via "
+                                   "team.md focus_target")
+
     args = parser.parse_args(argv)
     repo_root = Path(args.repo_root or ".").resolve()
 
     try:
         if args.action == "create":
-            path = create_goal(repo_root, args.slug, args.objective, args.criterion)
+            path = create_goal(repo_root, args.slug, args.objective, args.criterion,
+                               title=args.title, boundaries=args.boundary)
             result = {"created": str(path.relative_to(repo_root))}
         elif args.action == "validate":
             path = _resolve(repo_root, args.target)
-            ok, problems = validate_goal(path)
+            ok, problems = validate_goal(path, repo_root)
             result = {"valid": ok, "problems": problems, "path": str(path)}
             if not ok:
                 _emit(result, args.json)
@@ -797,13 +1274,31 @@ def main(argv: list[str] | None = None) -> int:
                 return EXIT_NOT_FOUND
             set_status(path, args.target_state)
             result = {"slug": args.slug, "status": args.target_state}
+        elif args.action == "objective":
+            path = _resolve(repo_root, args.slug)
+            if not path.is_file():
+                _emit({"error": f"goal not found: {args.slug}"}, args.json)
+                return EXIT_NOT_FOUND
+            set_objective(path, args.new_objective)
+            result = {"slug": args.slug,
+                      "objective": " ".join(args.new_objective.split())}
         elif args.action == "criteria":
             path = _resolve(repo_root, args.slug)
             if not path.is_file():
                 _emit({"error": f"goal not found: {args.slug}"}, args.json)
                 return EXIT_NOT_FOUND
-            set_criteria(path, args.criterion)
-            result = {"slug": args.slug, "criteria": args.criterion}
+            # Exit 2, never a read fallback: `criteria` is a write, so an argument-less
+            # call is a malformed write — silently downgrading it to a read would hide
+            # the dropped flag and leave the caller believing the criteria were shown.
+            if not args.criterion and not args.clear_criteria:
+                _emit({"error": "criteria replaces the whole set: pass --criterion at "
+                                "least once, or --clear to empty it deliberately. "
+                                "An argument-less call would overwrite the existing "
+                                "criteria with an empty set."}, args.json)
+                return EXIT_INPUT_ERROR
+            set_criteria(path, list(args.criterion))
+            result = {"slug": args.slug, "criteria": list(args.criterion),
+                      "cleared": bool(args.clear_criteria)}
         elif args.action == "migrate":
             created, identity = migrate_team(
                 repo_root, args.team_slug, keep_inline=not args.drop_inline)
@@ -854,9 +1349,11 @@ def main(argv: list[str] | None = None) -> int:
                 try:
                     _validate_target_statement(data, args.check_statement)
                 except GoalError as exc:
-                    _emit({"verdict": "rejected", "error": str(exc)}, args.json)
+                    _emit({"verdict": "rejected", "error": str(exc),
+                           "scope": TARGET_CHECK_SCOPE}, args.json)
                     return EXIT_INPUT_ERROR
-                result = {"slug": args.slug, "verdict": "ok"}
+                result = {"slug": args.slug, "verdict": "ok",
+                          "scope": TARGET_CHECK_SCOPE}
             elif args.list_targets:
                 targets = parse_goal(path)["targets"]
                 if args.json:
@@ -875,11 +1372,22 @@ def main(argv: list[str] | None = None) -> int:
                 set_target_status(path, args.target_id, args.set_state)
                 result = {"slug": args.slug, "id": args.target_id,
                           "status": args.set_state}
+        elif args.action == "run-checks":
+            payload = run_checks(repo_root, args.team_slug, args.run_target)
+            _emit(payload, args.json)
+            if payload["verdict"] == "input-error":
+                return EXIT_INPUT_ERROR
+            return EXIT_BLOCKED if payload["blocked"] else EXIT_OK
         else:  # pragma: no cover - argparse guards this
             parser.error(f"unknown action {args.action}")
     except GoalNotFound as exc:
         _emit({"error": str(exc)}, args.json)
         return EXIT_NOT_FOUND
+    except GoalInvalid as exc:
+        # The definition exists but cannot be interpreted, which is neither a bad argument
+        # (2) nor a blocked run (5): 053 C-18 requires the three tiers be distinguishable.
+        _emit({"error": str(exc)}, args.json)
+        return EXIT_INVALID
     except GoalError as exc:
         _emit({"error": str(exc)}, args.json)
         return EXIT_INPUT_ERROR
@@ -906,6 +1414,18 @@ def _emit(payload: dict, as_json: bool) -> None:
         print("valid" if payload["valid"] else "INVALID")
         for problem in payload["problems"]:
             print(f"  - {problem}")
+        return
+    if "checks" in payload and "team_slug" in payload:
+        res = payload.get("resolution") or {}
+        print(f"team: {payload['team_slug']}   goal: {payload['goal_slug']}   "
+              f"identity: {payload['identity_kind']}")
+        print(f"target: {res.get('effective')}   source: {res.get('source')}   "
+              f"declared focus: {res.get('declared_focus')}")
+        for row in payload["checks"]:
+            tail = f" — {row['message']}" if row["message"] else ""
+            print(f"  {row['id']}. {row['name']:<16} {row['verdict']}{tail}")
+        print(f"verdict: {payload['verdict']}   blocked: "
+              f"{str(payload['blocked']).lower()}")
         return
     for key, value in payload.items():
         print(f"{key}: {value}")

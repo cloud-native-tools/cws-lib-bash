@@ -13,7 +13,7 @@ Element (A-k), with Open Questions (Q-k) holding every gap the chain could not
 close. Nothing here decides what a source *means* — only whether an artifact
 claiming to derive something is structurally honest about it.
 
-Concept authority: shared/definitions/derivation-definitions.md
+Concept authority: .specify/shared/definitions/derivation-definitions.md
 Contract:  .specify/specs/048-derive-command/contracts/derive-engine.md
            .specify/specs/048-derive-command/contracts/derivation-model.md
            .specify/specs/048-derive-command/contracts/move-library.md
@@ -62,7 +62,7 @@ DEFAULT_MAX_STEPS = 12
 PROBE_TIMEOUT_SECONDS = 10
 
 # C-29 (move-library): pinned copy of the threshold owned by
-# shared/guidelines/token-efficiency.md §小文件阈值. A drift test keeps them equal.
+# .specify/shared/guidelines/token-efficiency.md §小文件阈值. A drift test keeps them equal.
 SMALL_FILE_MAX_LINES = 100
 SMALL_FILE_MAX_BYTES = 10 * 1024
 
@@ -409,7 +409,7 @@ def fail_envelope(action, root, code, message, locator=None, exit_code=EXIT_INPU
 def moves_file_text(rows) -> str:
     lines = [MOVES_TITLE, "",
              "Project-level accumulation of inference patterns extracted by `/speckit.derive`.",
-             "Concept authority: `shared/definitions/derivation-definitions.md` §Reasoning Move.",
+             "Concept authority: `.specify/shared/definitions/derivation-definitions.md` §Reasoning Move.",
              "", MOVES_MARKER, "", MOVES_HEADER, MOVES_SEPARATOR]
     for row in rows:
         lines.append("| " + " | ".join(escape_cell(str(row.get(c, ""))) for c in MOVE_COLUMNS) + " |")
@@ -853,7 +853,7 @@ def audit_skeleton() -> str:
 def archive_skeleton(slug: str, budget: int) -> str:
     template = """# Derivation: @@SLUG@@
 
-Concept authority: `shared/definitions/derivation-definitions.md` — the record schemas,
+Concept authority: `.specify/shared/definitions/derivation-definitions.md` — the record schemas,
 provenance grades, chain rules C1-C7 and audit checks A1-A16 are defined there and
 referenced here, never restated.
 

@@ -28,7 +28,10 @@ Read the target's `SKILL.md` and **1–2 representative `references/` docs**, an
 - **File inventory + form classification** (see `content-extraction.md`): Markdown / HTML /
   scripts / assets / frontmatter.
 - **Content inventory**: capability families, command groups, fact tables, enumerated values,
-  workflows. This is the checklist Phase 5 later proves survived.
+  workflows. This is the checklist Phase 5 later proves survived **and** the row set of the
+  Phase-6 inheritance record, so enumerate capability families as scenarios a user could ask
+  the source to handle — not as file titles. The record has to keep making sense after the
+  source's file layout is gone, which a row named `inventory-schema.md` never will.
 - **Trigger keywords** from the source's `description` — these must migrate into the target's
   `description` so the source's invocation scenarios now route to the target.
 
@@ -56,7 +59,7 @@ surfaced now (cheap) instead of after deletion (expensive).
   target's own (e.g. `<source-domain>-<topic>.md`), matching sibling names.
 - **Prefer absorbing into an existing target doc** when the content is a natural extension of
   one — only create a new doc when the topic is genuinely distinct.
-- **Scripts** land in the target's `scripts/`; **assets** are dropped unless referenced.
+- **Scripts** land in the target's `.specify/scripts/`; **assets** are dropped unless referenced.
 
 ### Where the triggers and self-references go
 
@@ -75,7 +78,7 @@ A simple table is enough:
 | `auth.md` (rate-limit + tokens) | `references/<domain>-openapi.md` §Auth | new |
 | `skill-api.md` (resource endpoints) | `references/<domain>-skill-api.md` | new |
 | `overview.html` intro | folded into new doc headers | new |
-| `scripts/foo.py` | `scripts/foo.py` (as-is) | moved |
+| `.specify/scripts/foo.py` | `.specify/scripts/foo.py` (as-is) | moved |
 
 This table is also the input to the Phase-5 coverage check: if the probe flags a token, trace
 it back to its source block and confirm the destination actually received it.

@@ -4,7 +4,7 @@
 **Requirement → Feature**: `[REQUIREMENTS_KEY]` → Feature [FEATURE_ID] [FEATURE_NAME]
 **Input**: Specification from `.specify/specs/[REQUIREMENTS_KEY]/requirements.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command, which **replaces** every `[PLACEHOLDER]` token in place — it MUST NOT append a second copy of this template below the filled content. See `.specify/templates/commands/plan.md` for the execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command, which **replaces** every `[PLACEHOLDER]` token in place — it MUST NOT append a second copy of this template below the filled content. See the `/speckit.plan` command for the execution workflow.
 
 ## Summary
 
@@ -169,6 +169,14 @@ reference the real directories captured above. Explicitly note any new top-level
   names, quickstart scenario count, and any drift from the Phase 0 expectation.
   Summarize after, not before: pre-written counts routinely drift from the
   actual output and force a correction pass.
+  Every derived command printed here MUST have been actually run with its real
+  output pasted, and every count taken from that output — never from memory;
+  where a count comes from a pattern match, state whether that pattern can also
+  match non-target lines. (The run-and-paste duty for EVERY emitted command
+  example, declared expected results included, is owned by the execution-verify
+  rule in `/speckit.plan`'s Post-Generation Quality Gate
+  (`templates/commands/plan.md`) — this note is only its count-taking
+  specialization.)
 -->
 
 | Artifact | Path | Count / Scope |

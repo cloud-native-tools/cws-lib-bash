@@ -12,7 +12,7 @@
 # Options:
 #   --site-name <name>   Required. Deploy site name (pages-service site identifier).
 #   --platform <name>    Hosting platform (default: aoneci). Templates live in
-#                        scripts/ci-templates/<name>/; registry: scripts/ci-templates/README.md.
+#                        .specify/scripts/ci-templates/<name>/; registry: .specify/scripts/ci-templates/README.md.
 #   --branch <branch>    Production branch (default: main).
 #   --image <image>      Hugo build image — environment-specific, override per environment
 #                        (default: the shared ci-templates/hugo-image.txt, which stage 2's
@@ -23,7 +23,7 @@
 #   --help               Show this help.
 #
 # Creates exactly one file — the platform's CI pipeline, rendered from
-# scripts/ci-templates/<platform>/deploy-pages.yaml.tpl:
+# .specify/scripts/ci-templates/<platform>/deploy-pages.yaml.tpl:
 #   aoneci -> .aoneci/deploy-pages.yaml
 #   github -> .github/workflows/deploy-pages.yaml
 # That CI file is the ONLY artifact this skill writes outside the docs directory:
@@ -74,7 +74,7 @@ done
 [ -d "$ROOT" ] || { echo "ERROR: --root directory does not exist: $ROOT" >&2; exit 2; }
 [ -d "$TEMPLATES_DIR/$PLATFORM" ] || {
   KNOWN=$(cd "$TEMPLATES_DIR" 2>/dev/null && ls -d */ 2>/dev/null | tr -d '/' | tr '\n' ' ')
-  echo "ERROR: unknown --platform '$PLATFORM' (known: ${KNOWN:-none}; see scripts/ci-templates/README.md)" >&2
+  echo "ERROR: unknown --platform '$PLATFORM' (known: ${KNOWN:-none}; see .specify/scripts/ci-templates/README.md)" >&2
   exit 2
 }
 
@@ -120,7 +120,7 @@ fi
 CI_TPL="$TEMPLATES_DIR/$PLATFORM/deploy-pages.yaml.tpl"
 CI_TARGET="$(ci_target_for_platform "$PLATFORM")"
 if [ ! -f "$CI_TPL" ]; then
-  WARNINGS+=("platform '$PLATFORM' has no template yet (see scripts/ci-templates/$PLATFORM/README.md) — nothing written; author the CI file manually")
+  WARNINGS+=("platform '$PLATFORM' has no template yet (see .specify/scripts/ci-templates/$PLATFORM/README.md) — nothing written; author the CI file manually")
 elif [ -z "$CI_TARGET" ]; then
   WARNINGS+=("platform '$PLATFORM' has a template but no registered target path in scaffold-ci.sh — CI file not written")
 elif [ -e "$CI_TARGET" ] && [ "$FORCE" -ne 1 ]; then

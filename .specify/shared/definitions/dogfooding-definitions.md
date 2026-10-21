@@ -3,7 +3,7 @@
 > **Single source of truth** for the Dogfooding concept system defined under
 > Constitution Principle XI (v1.10.0): §0 Dogfooding 本体定义(含 §0.1 语义三层)、§1 问题/机制与
 > 两种修复、§2 客户项目/框架项目与三副本拓扑。Canonical at
-> `shared/definitions/dogfooding-definitions.md`, mirrored to
+> `.specify/shared/definitions/dogfooding-definitions.md`, mirrored to
 > `.specify/shared/definitions/`. Normative language follows RFC 2119.
 > **引用约定**: 后续任何文档、流程或对话提及 "Dogfooding" 时,均按本文件定义
 > 赋予其完整含义,无需在各处重述。References: `.specify/memory/constitution.md`
@@ -90,7 +90,7 @@ Spec Kit 仓库的 Dogfooding 本质是**一人分饰两角**:既是框架的作
 
 | 副本 | 路径(本仓语境) | 角色 |
 |------|----------------|------|
-| **框架源** (Framework Sources) | `skills/`、`templates/`、`scripts/`、`shared/`、`agents/`、`src/specify_cli/` | 框架作者帽:开发与发布(git push / 打包) |
+| **框架源** (Framework Sources) | `skills/`、`.specify/templates/`、`.specify/scripts/`、`.specify/shared/`、`agents/`、`src/specify_cli/` | 框架作者帽:开发与发布(git push / 打包) |
 | **自用运行时** (Self-Dogfood Runtime) | 本仓 `.specify/` | 框架用户帽:以客户身份由 init/刷新装出来的运行副本 |
 | **已安装发行版** (Installed Distribution) | `.../site-packages/specify_cli/` | 发布产物:下游用户安装;`specify init` 由此把框架装进各客户项目的 `.specify/` |
 
@@ -105,8 +105,8 @@ Spec Kit 仓库的 Dogfooding 本质是**一人分饰两角**:既是框架的作
    活动工件(本仓 `.specify/` 文件)只应作为机制运行的输出存在。
 3. 任一时刻的修改动作 MUST 先自答:**"我现在戴的是框架作者帽(改 `skills/`
    等源)还是框架用户帽(消费 `.specify/`)?"** 修复落在与目标受众匹配的一侧。
-4. **三副本拓扑对路径解析的陷阱(规范性)**:自用仓同时含有框架源(`scripts/`、
-   `templates/`、`shared/`)与 `.specify/` 运行时,故任何"向上找最近的、含
+4. **三副本拓扑对路径解析的陷阱(规范性)**:自用仓同时含有框架源(`.specify/scripts/`、
+   `.specify/templates/`、`.specify/shared/`)与 `.specify/` 运行时,故任何"向上找最近的、含
    `.specify/` 的祖先目录"式根解析启发式都会**在本仓自匹配**——把每次调用都解析到
    框架仓,而不是调用方自己的工作区。守卫:引擎自定位 MUST 只在**自身已解析路径上
    存在字面 `.specify` 路径分量**时触发(即"我是被从镜像副本调用的"),MUST NOT
@@ -119,7 +119,7 @@ Spec Kit 仓库的 Dogfooding 本质是**一人分饰两角**:既是框架的作
    (b) **cwd 即根**——`specify init --here`(及任何以 cwd 为项目根的流转)在 cwd 位于
    `.specify/` 内时把框架树装进运行时目录。统一守卫(反向断言):**名为 `.specify` 的
    目录永远不是仓/项目根**——根推导后若 `root.name == ".specify"` 则向上纠正或直接
-   拒绝(携带守卫的引擎:`scripts/python/sync-mirrors.py`、`gate-check.py`(walk-up
+   拒绝(携带守卫的引擎:`.specify/scripts/python/sync-mirrors.py`、`gate-check.py`(walk-up
    跳过名为 `.specify` 的祖先)、`tools-utils.py`;CLI 侧 `render_agents_for_tool` 与
    `specify init` 两分支直接拒绝)。漂移守护:
    `tests/contract/test_mirror_root_guard.py`(镜像位置调用不产嵌套 + canonical/镜像

@@ -12,7 +12,7 @@ import {
   collectSessionSelectionEntries,
 } from "./selection-plan.mjs";
 
-const HELP = `Usage: node scripts/session-analysis/selection-profile.mjs --workspace <target> [options]
+const HELP = `Usage: node .specify/scripts/session-analysis/selection-profile.mjs --workspace <target> [options]
 
 Build a privacy-safe full-population fact profile that an AI can use to author
 a declarative session selection plan. Raw prompts, commands, paths, and session

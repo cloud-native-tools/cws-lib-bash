@@ -1,7 +1,7 @@
 # Hugo Presentation Layer
 
 Stage 2 of `create-pages`: how the docs directory becomes a Hugo project and renders **in
-place** (`scripts/scaffold-hugo.py`). Optional — a documentation space is complete and valid
+place** (`.specify/scripts/scaffold-hugo.py`). Optional — a documentation space is complete and valid
 without it. Loaded on demand — `SKILL.md` carries only the dispatch.
 
 ## Ownership model
@@ -182,7 +182,7 @@ The image is resolved in this order, so a project that overrode it stays consist
 1. `--hugo-image <ref>`
 2. `SPECKIT_HUGO_IMAGE` environment variable
 3. the **rendered CI pipeline** (`.aoneci/deploy-pages.yaml`, `.github/workflows/deploy-pages.yaml`) — the strongest "same as CI" signal
-4. `scripts/ci-templates/hugo-image.txt` — the shared default that `scaffold-ci.sh` also
+4. `.specify/scripts/ci-templates/hugo-image.txt` — the shared default that `scaffold-ci.sh` also
    renders into the pipeline, so stage 2 and stage 3 cannot drift apart
 
 `--action image` prints the resolved image and its source. The workspace is bind-mounted at

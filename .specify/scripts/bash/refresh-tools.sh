@@ -60,7 +60,7 @@ The canonical caller is generate-instructions.sh, which writes
 .specify/tools/{system,shell,project}.json.
 
 Note: .specify/memory/tools.md is NOT produced here — it is a hand-maintained
-index of MCP servers. See shared/definitions/tool-definitions.md.
+index of MCP servers. See .specify/shared/definitions/tool-definitions.md.
 
 Options:
   --system   Query system binaries

@@ -13,7 +13,7 @@ never inside the target's committed tree. It is deleted in Phase 8.
 |-------------|---------------------|
 | Markdown prose / reference docs | Already neutral — read directly, no conversion. Note headings so Phase 3 can remap them. |
 | HTML documentation (doc site, `open-api/*.html`, `index.html`) | Convert to Markdown with a deterministic tool (below). Strip nav/breadcrumb/TOC chrome before converting. |
-| Scripts (`scripts/*.py|*.sh`) | Do **not** re-express as prose — code is already the right form. Inventory each script's purpose; most move into the target's `scripts/` largely intact (Phase 4). |
+| Scripts (`.specify/scripts/*.py|*.sh`) | Do **not** re-express as prose — code is already the right form. Inventory each script's purpose; most move into the target's `.specify/scripts/` largely intact (Phase 4). |
 | Assets (images, CSS, templates) | Inventory only. Most are *form* carriers of the source doc site and are **discarded**, not merged — keep an asset only if the target genuinely references it. |
 | Frontmatter / registry metadata | Extract the **capability + trigger keywords** (they fold into the target's `description`); discard the source's `skill_id`, `name`, version. |
 

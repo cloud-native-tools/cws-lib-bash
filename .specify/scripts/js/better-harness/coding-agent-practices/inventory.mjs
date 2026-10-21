@@ -386,7 +386,7 @@ function makeSessionSourceHints(scope) {
     {
       platform: scope.platform,
       evidenceLevel: "source-probe-command",
-      command: `node scripts/session-analysis.mjs sources --platform ${scope.platform} --workspace ${scope.workspace} --format markdown`,
+      command: `node .specify/scripts/session-analysis.mjs sources --platform ${scope.platform} --workspace ${scope.workspace} --format markdown`,
     },
   ];
 }

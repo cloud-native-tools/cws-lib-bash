@@ -5,8 +5,8 @@ Evaluates candidate write paths against .specify/gate.yaml (deny > confirm > all
 and reports the strictest verdict via exit code. No LLM judgment involved.
 
 Usage:
-  python3 scripts/python/gate-check.py <path> [<path> ...]
-  git diff --name-only | python3 scripts/python/gate-check.py --stdin
+  python3 .specify/scripts/python/gate-check.py <path> [<path> ...]
+  git diff --name-only | python3 .specify/scripts/python/gate-check.py --stdin
 
 Exit codes:
   0  all paths allowed

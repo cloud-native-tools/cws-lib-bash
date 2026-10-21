@@ -89,10 +89,13 @@ description: "Task list template for feature implementation"
   (container runtime, image registry, live cluster, special hardware).
   This section is the SINGLE landing point for probe conclusions: /speckit.tasks
   probes at generation time (never cached across runs) and records each verdict
-  here ONCE with its probe command and date. Per-phase prerequisite notes and
-  [~] deferral notes on task rows MUST reference this section instead of
-  restating verdicts. Delete the section entirely when no external environment
-  dependency exists.
+  here ONCE with its probe command and date. Any row restating an environment
+  verdict — in ANY carrier (per-phase prerequisite notes, [~] deferral notes,
+  assumption rows, decision rows, or free prose) — MUST reference this section
+  instead of restating verdicts, and MUST carry an ISO date stamp together with
+  a `(see § Environment Prerequisites)` pointer; both together, neither alone —
+  either alone is non-compliant. Delete the section entirely when no external
+  environment dependency exists.
 -->
 
 - <dependency>: <available | partial | unavailable> — probe: `<command>` @ <date>; affected phases/tasks: <phase/task refs or none>
@@ -102,6 +105,7 @@ description: "Task list template for feature implementation"
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - **[blockedBy: T001,T002]** (optional): explicit dependency tag — this task MUST NOT start until every listed task is `[X]`. Machine-checkable alternative to prose like "depends on T012"; prefer it whenever a dependency exists. Tasks without the tag follow phase order only.
+- **[green: <contract>#<clause>]** (optional, repeatable): green-point attribution tag — this row is the one that turns that contract clause green. A row may declare zero or more; a row declaring none keeps exactly the plain form above, so the tag is purely additive. The contract path resolves relative to this tasks.md's own directory first and the repository root second. Keep the tag on the task row: the one-line-per-task rule is owned by `.specify/templates/commands/tasks.md` § "One line per task (mechanical-validation contract)" and is machine-enforced, so a tag folded onto a continuation line is a format error. `scripts/python/validate-tasks.py` parses the tag and reports: a contract path or clause id that does not resolve → `green-dangling` (**ERROR**); claims on one contract whose clause order runs backwards against the row order → `green-cross-phase` (WARN, an earlier row cannot leave that contract green at its own phase); one clause claimed by two rows → `green-clause-collision` (WARN); one test path claimed green at two different points by two rows → `green-path-divergence` (WARN). Partition a contract's clauses across the rows that own them so each clause is claimed exactly once, and never silence a WARN by deleting the tag — that removes the evidence of the conflict without removing the conflict.
 - Include exact file paths in descriptions
 - **Verification tasks**: Add explicit manual QA/verification tasks when they are separate from automated tests
 

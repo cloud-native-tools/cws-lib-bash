@@ -18,10 +18,31 @@
 该服务的「权威打包形态」是 `xuanji-images` 镜像工厂构建的 `images/service/observability/render/<dist>`
 镜像（把下述所有运行时依赖封装在一起）；但**自部署不限于 docker 容器一种形态**——见第 3 节按运行环境选型。
 
+## 0.1 权威边界与单引擎自建服务（合并后新增）
+
+**本文件是「共享多引擎渲染后端」契约的唯一真源**：端口分配（9696-9701）、endpoint 形态、
+可用性 preflight、部署形态选型都只在此处定义，引擎层文档不得复述（One Source Of Truth）。
+
+两个引擎层另各自带一份**单引擎**自建渲染服务，属引擎层自有的 L5 部署细节，本文件不复述其步骤：
+
+| 引擎层 | 单引擎服务 | 端口环境变量与默认值 |
+|--------|-----------|---------------------|
+| `mermaid` | `references/types/mermaid/server/`（mermaid.ink 兼容：`/svg/pako:`、`/img/pako:`） | `PORT`，默认 **9696** |
+| `excalidraw` | `references/types/excalidraw/scripts/server/` | `EXCALIDRAW_PORT`，默认 **8383** |
+
+⚠️ **端口冲突（实测，非推测）**：mermaid 单引擎服务的默认 `PORT=9696` 正是本文件 §1 里
+**plantuml** 的共享端口；excalidraw 的默认 8383 则完全落在 9696-9701 之外。因此：
+
+- 单引擎服务只是「跑不起多引擎镜像的环境」的回退，**不是**共享后端的等价替代；
+- 与共享服务并存、或要顶替共享服务里某个引擎时，**必须**用环境变量把它改到 §1 规定的该引擎端口
+  （mermaid → `PORT=9697`，excalidraw → `EXCALIDRAW_PORT=9698`）；
+- 否则两个程序争用 9696，Step 2.5 的 `/healthz` preflight 会把**错误的服务**读成健康——
+  这是一个静默错判，不会报错，只会让 plantuml 请求打到 mermaid 服务上。
+
 ## 1. 渲染后端契约（endpoint contract，与部署形态无关）
 
 无论用哪种形态部署，服务都必须在 `xuanji-render.aliyun-inc.com` 上按下列端口提供**同一套契约**。
-被委派的 draw-* 引擎技能按此发请求；前门只用它做**可用性 preflight** 与**部署后验收**。
+各引擎层按此发请求；前门只用它做**可用性 preflight** 与**部署后验收**。
 
 | 引擎 | 端口 | 程序 | 产物形态 | 请求 |
 |------|------|------|----------|------|

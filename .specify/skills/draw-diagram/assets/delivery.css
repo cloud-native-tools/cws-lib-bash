@@ -1,5 +1,5 @@
 /*
-  delivery.css — 交付页面的统一样式（single owner: skills/draw-diagram/assets/delivery.css）
+  delivery.css — 交付页面的统一样式（single owner: .specify/skills/draw-diagram/assets/delivery.css）
   规则与交付形态的 owner 是 ../references/delivery-contract.md（D1–D6）；本文件只负责**页面外观**。
 
   用法（D1 要求「自足 HTML」）：把本文件**逐字节内联**进页面的 <style> 块 —— 从磁盘复制，不凭记忆重写、

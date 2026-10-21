@@ -93,7 +93,9 @@ Each residual miss is one of two things — read to decide, do not blindly "fix"
    Re-run with `--allow <file>`. Allowed tokens print as `ALLOWED` and no longer fail the gate;
    entries that match no current token are reported as stale so you can prune them. **Never** edit
    the target doc into containing a stale token just to reach exit `0` — that corrupts the target
-   to satisfy the instrument. The allow file is the audit trail, and it travels with the report.
+   to satisfy the instrument. The allow file is the audit trail — and since it lives in scratch,
+   Phase 5 folds its reasons into the frozen baseline so the trail outlives the merge
+   ([`./provenance-record.md`](./provenance-record.md) `## Freezing the baseline (Phase 5)`).
 
 2. **True omission — the fact genuinely didn't make it.** Add it to the right destination doc
    (per the Phase-3 mapping table) and re-run.
@@ -109,6 +111,13 @@ dropped *behaviors*: for each capability family in the Phase-1 source inventory,
 merged target can still serve that scenario end-to-end. A capability can be "token-covered"
 (all its nouns present) yet "behavior-lost" (no doc actually tells the agent how to invoke
 it). Both checks must pass.
+
+The walk-through's output is **not a mental note** — it lands as the capability-inheritance
+rows of the target's provenance record (Phase 6): one row per family, naming where the
+capability lives now and how a later reader checks it. That is what turns a one-off judgment
+made during the merge into something repeatable afterwards, and it is the only half of the
+coverage claim a probe cannot settle. Schema and row granularity:
+[`./provenance-record.md`](./provenance-record.md).
 
 ## Why verbatim, not semantic
 

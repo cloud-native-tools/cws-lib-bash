@@ -1,0 +1,192 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: .specify/teams/.work/command-logic-as-classified-skills/merge-scratch/git-workflow
+# frozen: 2026-10-11T13:40:45Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline git-workflow.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+`# ── 前置 ──`
+`# ── 后置 ──`
+`## Git Workflow`
+${SKILL_HOME}/<relative-path>
+${SKILL_HOME}/SKILL.md
+${SKILL_HOME}/assets/
+${SKILL_HOME}/assets/git-workflow-block.md
+${SKILL_HOME}/references/
+${SKILL_WORKDIR}/.specify/
+${SKILL_WORKDIR}/<relative-path>
+${SKILL_WORKDIR}/docs/git-workflow.md
+--action
+--branch
+--cached
+--cherry-pick
+--continue
+--count
+--force-with-lease
+--format
+--hard
+--left-right
+--no-ff
+--oneline
+--ours
+--quiet
+--rebase
+--short
+--theirs
+--unit-id
+--unit-type
+/, "", $2); gsub(/[
+/END
+/MAIN
+/PRE/DEV
+/SKILL.md
+/add
+/assets/
+/assets/git-workflow-block.md
+/behind
+/dev/null
+/docs/git-workflow.md
+/git-workflow.md
+/gitexcludes-subroutine.md
+/hanzhi
+/heads/
+/instructions-lookup.md
+/instructions.md
+/master
+/memory/git-workflow.md
+/merge
+/pre-release/dev
+/prepub
+/references/
+/references/bootstrap-commands.md
+/references/execute-commands.md
+/references/gitexcludes-subroutine.md
+/references/health-check-commands.md
+/references/instructions-lookup.md
+/references/troubleshooting.md
+/shared/patterns/reconcile-pattern.md
+/shared/workflow/feedback-step.md
+/skills/git-workflow/SKILL.md
+/speckit.instructions
+/sync/.gitexcludes
+/troubleshooting.md
+/user-facing
+/xuanji/hanzhi
+/xuanji/prepub
+0 0
+0 N
+<!-- GIT_WORKFLOW_END -->
+<!-- GIT_WORKFLOW_START -->
+<*_TRACKING>
+<DATE>
+<DEV>
+<DEV> → <PRE>
+<DEV_TRACKING>
+<MAIN>
+<MAIN> -> <PRE> -> <DEV>
+<MAIN> <- <PRE> <- <DEV>
+<MAIN_TRACKING>
+<PRE>
+<PRE> → <MAIN>
+<PRE_TRACKING>
+<SKILL:.specify/skills/git-workflow/SKILL.md>
+AGENTS
+AGENTS.md
+Branch
+CLAUDE
+CLAUDE.md
+CONFLICT
+CONFLICT (add/add): .gitexcludes
+DATE
+DEV=xuanji/hanzhi
+DEV_TRACKING
+EOF
+EXCL
+EXCLUDED_FILES
+FIXED
+GIT_WORKFLOW_END
+GIT_WORKFLOW_START
+HEAD
+IFS
+Last updated
+M N
+MAIN=master
+MAIN_TRACKING
+None yet
+PRE=xuanji/prepub
+PRE_TRACKING
+QODER
+QODER.md
+REMOVED_COUNT
+RESTORED_COUNT
+SKILL_HOME
+SKILL_WORKDIR
+Tracking
+[EXCL
+[✓ FIXED
+[✓ RESTORED
+[✗ REMOVED
+_gitexcludes_pre_sync
+bootstrap-commands.md
+claude/
+dev_branch
+develop
+docs/git-workflow.md
+execute-commands.md
+feedback-utils.py --action record --unit-id "skill:git-workflow" --unit-type skill # feedback unit id renamed with the merged skill (skill:git-workflow -> skill:git-workspace)
+git checkout
+git checkout --
+git checkout --theirs -- .gitexcludes && git add .gitexcludes && git rebase --continue
+git checkout HEAD -- <path>
+git checkout _gitexcludes_pre_sync -- .gitexcludes
+git clean -f
+git log --left-right --cherry-pick
+git ls-files -- "$pattern"
+git push --force-with-lease
+git push --force-with-lease origin <PRE>
+git push -f
+git push origin <PRE>
+git reset --hard
+git restore
+git rm --cached
+git status --short
+git-workflow
+git-workflow-block.md
+gitexcludes-subroutine.md
+gitexcludes_pre_sync
+github/
+gitignore
+health-check-commands.md
+instructions-lookup.md
+last_updated
+main_branch
+master
+master -> xuanji/prepub -> xuanji/hanzhi
+master <- xuanji/prepub <- xuanji/hanzhi
+origin/master
+origin/xuanji/hanzhi
+origin/xuanji/prepub
+pre_branch
+prepub
+release
+skill_id
+skipped previously applied commit
+specify/git-workflow.md
+specify/instructions.md
+specify/memory/git-workflow.md
+specify/shared/patterns/reconcile-pattern.md
+specify/shared/workflow/feedback-step.md
+specify/skills/git-workflow/SKILL.md
+staging
+troubleshooting.md
+vscode/
+xuanji/hanzhi
+xuanji/prepub
+| None yet. | - | - | - |

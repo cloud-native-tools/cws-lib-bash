@@ -1,0 +1,379 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: tmp/merge-draw/excalidraw
+# frozen: 2026-10-12T07:12:03Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline excalidraw.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+![标题](x.png
+"arrow"
+"bar"
+"containerId": "<容器id>"
+"cross-hatch"
+"dashed"
+"dot"
+"dotted"
+"frameId":"frame-1"
+"hachure"
+"roughness": 0
+"roundness": null
+"solid"
+"transparent"
+"triangle"
+`## Evaluation Form`
+`## Feedback`
+`#1971c2`
+`#1e1e1e`
+`#2f9e44`
+`#6741d9`
+`#99e9f2`
+`#a5d8ff`
+`#b2f2bb`
+`#e03131`
+`#eebefa`
+`#f08c00`
+`#ffc9c9`
+`#ffec99`
+`#ffffff`
+${EXCALIDRAW_SERVER:-...}
+${SKILL_WORKDIR}/.specify/
+(cd dir && node server.mjs) &
+-->|标签|
+--action
+--build
+--contains
+--disposition
+--feature
+--lifecycle-point
+--name
+--points-file
+--restart
+--review-file
+--run-id
+--unit-id
+--unit-type
+/00-semantic-analysis.md
+/01-path-selection.md
+/03-scene-json-generation.md
+/04-rendering-and-output.md
+/127.0.0.1
+/2/4
+/Chromium
+/D2
+/ER/
+/LR
+/Nunito
+/PNG
+/SIGINT
+/SKILL.md
+/SVG
+/SVG/HTML
+/abs/path/server.mjs
+/best-practices.md
+/best-practices/best-practices.md
+/best-practices/pitfalls.md
+/body
+/box/anchor
+/build
+/class/er/state/mindmap
+/code
+/compose
+/details
+/dist/render.js
+/docs.excalidraw.com/docs/codebase/json-schema
+/draw-diagram/references/delivery-contract.md
+/draw-diagram/references/semantic-model.md # cross-layer link re-relativized for the new depth (../../../semantic-model.md); verified resolving
+/excalidraw
+/external/excalidraw/install.md
+/frame
+/gap
+/google-chrome
+/guide/scene-schema-reference.md
+/guide/server-deployment.md
+/h1
+/head
+/health
+/height
+/howto/00-semantic-analysis.md
+/howto/01-path-selection.md
+/howto/03-scene-json-generation.md
+/howto/04-rendering-and-output.md
+/html
+/index.md
+/json
+/memory/feedback/
+/mermaid-to-scene
+/pitfalls.md
+/png
+/pre
+/references/sds-realization.md
+/render
+/render-excalidraw.sh
+/render-mermaid
+/rotation
+/scene-schema-reference.md
+/scripts/python/feedback-utils.py
+/scripts/render-excalidraw.sh
+/scripts/server
+/scripts/server/
+/sds-realization.md
+/seed/scale
+/seed/version
+/sequence/class/er/state
+/server-deployment.md
+/server/
+/shared/workflow/feedback-step.md
+/skills/draw-excalidraw/SKILL.md # retired skill_id/path of source excalidraw; the engine layer is a reference doc, not a skill
+/summary
+/title
+/tmp/excalidraw-render.log
+/version/
+/y/w/h
+/y/width/height
+0.0.0.0
+100
+120
+122
+127
+127.0.0.1
+132
+140
+145
+150
+180
+200
+220
+244
+260
+320
+400
+560
+8383
+<a href="x.svg" target="_blank" rel="noopener"><img src="x.png"></a>
+<a href=x.svg target=_blank rel=noopener><img src=x.png></a>
+<details>
+<名称>.excalidraw
+<名称>.mmd
+@excalidraw/excalidraw
+A --> B
+A -->|标签| B
+A[矩形文本
+AskUserQuestion
+B{菱形文本}
+C(圆角
+CHANGE
+EADDRINUSE
+EDGE
+ESM
+EXCALIDRAW_BACKEND
+EXCALIDRAW_BACKEND=local
+EXCALIDRAW_BACKEND=server
+EXCALIDRAW_BG
+EXCALIDRAW_CHROMIUM_PATH
+EXCALIDRAW_HOST
+EXCALIDRAW_LOCAL_PORT
+EXCALIDRAW_PADDING
+EXCALIDRAW_PORT
+EXCALIDRAW_SCALE
+EXCALIDRAW_SERVER
+GAP_LEVEL
+GAP_SIBLING
+GET
+GET /health
+KILL
+LLM
+MARGIN
+MIDPOINTS
+NODE_H
+NODE_W
+PID
+PNG
+POST
+POST /mermaid-to-scene
+POST /render
+POST /render-mermaid
+REPRODUCTION
+SDS
+SIGINT
+SIGTERM
+SKILL_HOME
+SKILL_WORKDIR
+SVG
+TERM
+["文本"
+[0,0
+[]{}|
+angle
+appState
+arrow
+arrow-req
+artifact_intent
+artifacts/external/excalidraw/install.md
+backgroundColor
+boundElements
+box-gateway
+browser.close(
+canvas {w,h}
+classDiagram
+containerId
+containerId: null
+convertToExcalidrawElements
+convertToExcalidrawElements(
+curl ${EXCALIDRAW_SERVER}/health
+curl http://127.0.0.1:8383/health
+curl http://<host>:8383/health
+darkMode
+dashed
+dataURL
+diamond
+disposition_reason
+draw-excalidraw # retired frontmatter `name:` of the source skill
+elementId
+elements[].box {x,y,w,h}
+ellipse
+endArrowhead
+endArrowhead: "triangle"
+endBinding
+erDiagram
+excalidraw
+excalidraw-room
+excalidraw-storage-backend
+excalidraw/excalidraw
+exportBackground
+exportToBlob
+exportToSvg
+false
+feedback-utils.py --action record --unit-id "skill:draw-excalidraw" --unit-type skill # per-skill feedback unit retired; wrap-up records once against skill:draw-diagram (its ## Feedback)
+fidelity_intent
+fileId
+files
+fillStyle
+fillStyle: "solid"
+flowchart LR
+flowchart LR; A-->B
+flowchart TD
+flowchart TD/LR
+focus: 0
+fontFamily
+fontSize
+frame
+frameId
+getDimensions
+gridSize
+groupIds
+height
+http://127.0.0.1:8383
+http://127.0.0.1:8383/health
+http://127.0.0.1:8383}/mermaid-to-scene
+https://docs.excalidraw.com/docs/codebase/json-schema）。
+ignored
+image
+isDeleted
+key_paths
+kill -9
+kill <pid>
+label
+lantUML
+lastCommittedPoint
+line
+lineHeight
+link
+local
+locked
+lsof -ti :8383 \| xargs kill -9
+lsof -ti :8383,:8393
+lsof -ti :<port>
+macOS
+max|x|
+max|y|
+mimeType
+mindmap
+node /abs/path/server.mjs >logfile 2>&1 &
+null
+opacity
+originalText
+parseMermaidToExcalidraw
+points
+processed
+record→threshold→package→manual→mark-submitted
+rectangle
+references/howto/03-scene-json-generation.md
+refreshDimensions
+relations[].anchor/gap
+render-excalidraw.sh
+restore(
+restore(refreshDimensions
+roughness
+roughness: 0
+roughness: 1
+roundness
+roundness: null
+run_id
+scene
+.specify/scripts/server/
+seed
+sequenceDiagram
+server
+skUserQuestion
+skill-draw-excalidraw-evaluation-form # per-engine evaluation-form probe retired; skill-draw-diagram-evaluation-form carries `engine: <name>` in the review's first line
+skill_id
+specify/memory/feedback/
+specify/shared/workflow/feedback-step.md
+startArrowhead
+startBinding
+stateDiagram
+stateDiagram-v2
+status":"saved"
+strokeColor
+strokeStyle
+strokeStyle: "dashed"
+strokeWidth
+style_intent
+style_intent=hand-drawn
+text
+textAlign
+textAlign: "center"
+textAlign:"center"
+type
+type: "image"
+type: "line"
+updated
+version
+version: 1
+verticalAlign
+verticalAlign: "middle"
+verticalAlign:"middle"
+viewBackgroundColor
+viewBox
+weight_plan
+width
+width/height
+wrap-up
+x = MARGIN + c×(NODE_W+GAP_SIBLING
+x/y/w/h
+x/y/width/height
+y = MARGIN + r×(NODE_H+GAP_LEVEL
+zones[].box
+{ "<fileId>": {"mimeType":"image/png","dataURL":"data:...","created":1} }
+{ "type": 2 }
+{ "type": 3 }
+{"elementId":"<容器id>","focus":0,"gap":4}
+{"id":"<text id>","type":"text"}
+{"id":"<文本id>","type":"text"}
+{"id":"<箭头id>","type":"arrow"}
+{"mermaid":"...","format":"png\|svg"}
+{"mermaid":"..."}
+{"ok":true,...}
+{"ok":true}
+{mermaid, format}
+{mermaid}
+{scene, format: svg\|png, scale?, padding?, viewBackgroundColor?, darkMode?}
+为 <对象> 画一张 <类型> 图，突出 <核心点>
+已交付 Excalidraw 图；如愿意，请评价它是否准确、清晰且适合用途，或说明希望调整之处。 # absorbed into draw-diagram's unified Evaluation Form; the engine noun became the parameterized （引擎:<engine>）, artifact forms owned by delivery-contract.md

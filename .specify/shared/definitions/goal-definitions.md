@@ -1,16 +1,21 @@
 # Goal Definitions Reference
 
-Canonical definition of the **Goal** concept in Spec Kit, its boundary against **Requirement**, the criteria authority rule, the singularity rule, the **Target** decomposition, and the Goal–Team binding. This file is the single source of truth for the Goal concept; other documents (`/speckit.team`, `skills/create-team`, the glossary) link here rather than re-defining it. It sits alongside the other concept anchors: `tool-definitions.md`, `agent-definitions.md`, `subagent-definitions.md`.
+Canonical definition of the **Goal** concept in Spec Kit, its boundary against **Requirement**, the criteria authority rule, the singularity rule, the **Target** decomposition, and the Goal–Team binding. This file is the single source of truth for the Goal concept; other documents (`/speckit.team`, `skills/internal/create-team`, the glossary) link here rather than re-defining it. It sits alongside the other concept anchors: `tool-definitions.md`, `agent-definitions.md`, `subagent-definitions.md`.
 
 ## What a Goal Is
 
 A **Goal** is a **project-level, first-class concept**: an **authored fact source** (never a derived artifact) that states a desired end state and how to tell it has been reached. Its **object is unrestricted**: a Goal may describe any desired outcome in any dimension — it is not limited to what the project's code implements (see Goal Dimensions below). It is persisted under `.specify/goal/<goal-slug>/` and is composed of exactly three parts:
 
-1. **Goal narrative** — the desired end **outcome** (north star). Outcome, not steps: a Goal MUST NOT be written as a task list or an implementation plan.
+1. **Goal narrative** — the desired end **outcome** (north star). Outcome, not steps: a Goal MUST NOT be written as a task list, an implementation plan, or a sequence of phases.
 2. **Verifiable success criteria** — thresholds / satisfaction conditions that an evaluator (a program or a scoring agent) can measure progress against.
 3. **Lifecycle state** — `active` / `achieved` / `abandoned`. Terminal Goals are retained, never deleted (see Goal Archive).
 
 A Goal MAY additionally carry a **Target decomposition** (see Target Decomposition below). Like timestamps, Targets are an **annex** around the concept — never a fourth composition part.
+
+Also annexes, on the same footing as Targets and timestamps — optional, never composition parts:
+
+- **Readable title** — a presentation-layer heading. **Identity stays the directory slug**: a title is never a second identifier, never takes part in resolution, binding, or reference, and its absence simply leaves the slug as the heading.
+- **Boundaries** — the exclusions the author states as out of scope for this Goal. They narrow *interpretation*, never the objective, and never substitute for a Target: an exclusion is what the Goal is not, a Target is a slice of what it is. An absent Boundaries annex records that no exclusion was stated — not that nothing is excluded.
 
 Two operating properties follow:
 
@@ -62,6 +67,42 @@ Success-shaped statements exist in both worlds; their authority is disjoint (dec
 - **SC-xxx** (Success Criteria in a requirements spec) serve **only their own Feature** — they measure that Feature's delivery and nothing broader.
 - **Goal success criteria** are **cross-feature** — they measure the end state regardless of which Features contributed.
 - Criteria MUST NOT be copied between the two stores. Cross-feature aggregation happens at the **evaluation/summary layer** (evaluators, team summaries), with each side citing its own source — never by restating one store's criteria inside the other.
+
+## 判据主体指代形 (Criterion Subject Reference)
+
+一条 goal 成功判据常常是对**一组同类制品**的断言(「每个绘图技能都……」)。把成员逐个打进判据文本,判据就会随目录增删而失真:本仓唯一真实的枚举型判据正是这样被反复改写的——`.specify/goal/draw-two-layer-structure/goal.md` 的 `## History` 里留着「六个绘图技能」与「七个绘图技能」两个前值,改的都是同一条判据。故判据 MAY 改用**指代形**,让主体集合在**解析那一刻**由仓库现状导出,而不是取自判据文本里的成员枚举:
+
+`[subjects: <glob>]`
+
+- **相对仓根**解析,命中集 = 各命中路径相对仓根的名字,已排序去重。
+- 指代形写在判据文本内、位置不限;一条判据 MAY 含零个或一个指代形(含两个即落入下面的冲突档)。
+- **纯枚举判据的解析行为完全不变**:不含指代形的判据不导出任何集合,解析器对其返回值与引入本节前逐字段一致,既有 goal 定义无需迁移即可继续解析。
+- 导出是**解析期的只读动作**:它读仓库现状,不写任何文件,也不改判据文本。
+
+### 两档失败,互相可区分
+
+导出为空**不是**通过——「零个主体全部满足」是空真,故两档都报错;而两档报的**不是同一件事**,修法相反,所以 MUST 分档而不是合并成一个「无主体」:
+
+| 档 | 触发条件 | 报告前缀 | 通常的修法 |
+|---|---|---|---|
+| 路径不存在 | 字面前缀(第一个通配段之前的那段路径)在仓内不存在 | `SUBJECT MISSING:` | 多半是写错或目录已迁移——改指代形 |
+| 导出集为空 | 字面前缀存在,但命中 0 条 | `SUBJECT EMPTY:` | 目录真的空了,或指代形过窄——去看目录 |
+
+两档都使 `goal-utils.py validate` 判为不通过(退出码 `4`)。把它们分开的是**报告前缀**,不是退出码:退出码相同而前缀不同,作者据此知道该改指代形还是该去补目录。
+
+### 冲突,与其不可机械判定的边界
+
+一条判据同时携带指代形与**花括号展开记号**(`{a,b}` 一类)时 MUST 报 `SUBJECT CONFLICT:`——同一主体集既有导出来源又有手打副本,静默择一会让二者悄悄分叉,而分叉是不可见的。
+
+**诚实边界**:判据里的**散文枚举**(「所有绘图技能」「draw-diagram 与其余六个」)不带任何机器可辨记号,与指代形同现时**检不出**,因为自由散文里的枚举不可机械判定。故本节的冲突规则**只**覆盖花括号展开记号这一种可判定形态,MUST NOT 被读成「枚举与指代形共存已被守卫」。散文枚举与指代形同现时,以指代形导出的集合为准,散文部分只是给人读的叙述——这不是守卫,是取舍。
+
+### 第二个解析器的处置
+
+`.specify/skills/internal/create-team/scripts/build-summary-input.py` 有自己的**本地** goal 判据读取器,其 `load_goal_definition` 的注释明写:该脚本与 `.specify/scripts/python/goal-utils.py` 分属两棵镜像树(`skills/` 与 `.specify/scripts/`)且相对深度不同,跨树 import 在安装到消费项目后即断,故刻意本地解析。**处置:让它同样理解指代形**——就地做同一导出,并把指代形渲染成成员名再交给总结,使读者不会看到一个自己无从解析的裸标记;MUST NOT 靠加一个 import 来解决。**代价明示**:于是仓内并存两处导出实现,二者的一致性由 `tests/contract/test_criterion_subject.py` 对同一输入断言两侧成员一致来钉住,而不是靠人记得同步——把同步交给记忆,正是本节要消灭的失效模式。
+
+### 退出码约定在本仓并不统一
+
+同一份 `build-summary-input.py` 另有自己的退出码表(`EXIT_OK, EXIT_INPUT_ERROR, EXIT_NO_MATERIAL = 0, 2, 3` 与 `EXIT_SERIALIZED = 4`),其 `3` / `4` 与 `goal-utils.py` 的 `EXIT_NOT_FOUND` / `EXIT_INVALID` **语义相左**——即仓内并存第五套退出码约定。本节记录该分歧而**不**统一它(统一超出本概念文档的职权,且会改动一个已安装脚本的对外契约):读某一处退出码表 MUST NOT 被当作通吃全仓。
 
 ## Singularity Rule
 
@@ -126,7 +167,7 @@ Four defining properties:
 | **Requirement** | Feature-bound spec of testable clauses (FR/SC) driving plan → tasks → implement → verification | `.specify/specs/<ID>-<slug>/requirements.md`; `/speckit.requirements` |
 | **Feature** | Long-lived capability entry in the feature index | `.specify/memory/features.md` |
 | **Success Criteria (SC-xxx)** | Per-feature measurable outcomes — authority limited to their Feature | requirements spec of that Feature |
-| **Team** | Multi-agent structure organized around (exactly one) Goal | `/speckit.team`, `skills/create-team` |
+| **Team** | Multi-agent structure organized around (exactly one) Goal | `/speckit.team`, `skills/internal/create-team` |
 | **Target** (this document) | Run-assignable sub-outcome (scope slice) under exactly one Goal — an annex to the definition, unordered, authored via `/speckit.goal` | here; persisted in `.specify/goal/<goal-slug>/goal.md` (`## Targets`) |
-| **`target_ref`** | A ledger work item's attribution to a Target (`T-<nnn>`) | `items.jsonl` contract (`skills/create-team`, summary mapping) |
+| **`target_ref`** | A ledger work item's attribution to a Target (`T-<nnn>`) | `items.jsonl` contract (`skills/internal/create-team`, summary mapping) |
 | **"target" elsewhere** | `optimization_target` / `co_targets` (the artifact an iteration loop mutates), a territory entry's `target` field, the `--target` flags of the evidence/interview engines — all **unrelated** to Goal Targets | their owning docs; glossary disambiguation |

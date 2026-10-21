@@ -2,11 +2,11 @@
 
 > **Single source of truth** for the meanings and boundaries of Self-Improvement,
 > Assisted Improvement, Execution Subject, and Self-Improvement Loop in Spec Kit.
-> Canonical at `shared/definitions/self-improvement-definitions.md`, mirrored to
+> Canonical at `.specify/shared/definitions/self-improvement-definitions.md`, mirrored to
 > `.specify/shared/definitions/`. This file owns concepts only; normative gates live in
-> `shared/guidelines/self-improvement.md`, reusable structure in
-> `shared/patterns/self-improvement-pattern.md`, and execution order in
-> `shared/workflow/self-improvement-workflow.md`.
+> `.specify/shared/guidelines/self-improvement.md`, reusable structure in
+> `.specify/shared/patterns/self-improvement-pattern.md`, and execution order in
+> `.specify/shared/workflow/self-improvement-workflow.md`.
 
 ## Execution Subject（执行主体）
 
@@ -79,9 +79,9 @@ own run → observation → evidence qualification → targeted intervention
 
 The loop is not a new daemon, score store, or mutation engine. It composes:
 
-- Better Harness as the goal model (`shared/guidelines/better-harness.md`);
-- Feedback as an optional reflection sensor (`shared/workflow/feedback-step.md`);
-- Evidence as the qualification and comparison layer (`shared/workflow/evidence-step.md`);
+- Better Harness as the goal model (`.specify/shared/guidelines/better-harness.md`);
+- Feedback as an optional reflection sensor (`.specify/shared/workflow/feedback-step.md`);
+- Evidence as the qualification and comparison layer (`.specify/shared/workflow/evidence-step.md`);
 - the relevant `improve-*` skill as the change executor;
 - existing tests, review, memory, history, and run reports as evidence sources.
 

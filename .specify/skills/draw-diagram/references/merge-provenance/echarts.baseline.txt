@@ -1,0 +1,456 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: tmp/merge-draw/echarts
+# frozen: 2026-10-12T07:12:03Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline echarts.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+`## Evaluation Form`
+`## Feedback`
+${SKILL_WORKDIR}/.specify/
+${p.marker} ${p.seriesName}: ${p.value}
+'bar'
+'boxplot'
+'candlestick'
+'custom'
+'dark'
+'effectScatter'
+'float'
+'funnel'
+'gauge'
+'graph'
+'heatmap'
+'int'
+'line'
+'map'
+'number'
+'ordinal'
+'parallel'
+'pie'
+'radar'
+'sankey'
+'scatter'
+'sunburst'
+'time'
+'tree'
+'treemap'
+(0,0) (W,0) (0,H) (W,H
+*.config.js
+*.config.json
+--action
+--check
+--contains
+--disposition
+--feature
+--headless
+--lifecycle-point
+--points-file
+--review-file
+--run-id
+--screenshot
+--screenshot=render.png --window-size=<canvas w>,<canvas h + 证据余量>
+--unit-id
+--unit-type
+--window-size
+/D2
+/Height
+/JS
+/SVG
+/T2
+/T4
+/Zoom
+/arbitrations
+/best-practices.md
+/body
+/border
+/bounds
+/canvas
+/cdn.jsdelivr.net/npm/echarts
+/check-layout.mjs
+/circular
+/completed
+/correction
+/dark
+/dist/echarts.min.js
+/div
+/draw-diagram/references/delivery-contract.md
+/draw-diagram/references/semantic-model.md # cross-layer link re-relativized for the new depth (../../../semantic-model.md); verified resolving
+/echarts-guide.md
+/echarts-official-docs.md
+/echarts.apache.org/examples/zh/index.html
+/echarts.apache.org/handbook/zh/get-started/
+/echarts.apache.org/zh/api.html
+/echarts.apache.org/zh/index.html
+/echarts.apache.org/zh/option.html
+/echarts.apache.org/zh/theme-builder.html
+/echarts.js
+/echarts.min.js
+/end
+/footer
+/graph
+/green
+/grid
+/head
+/html
+/javascript
+/json
+/legend
+/legends/footnotes
+/lines/sankey
+/memory/feedback/
+/mermaid
+/nested
+/offline
+/or
+/output/chart.html
+/pitfalls.md
+/regenerable
+/script
+/scripts/python/feedback-utils.py
+/scroll
+/sds-realization.md
+/shared/workflow/feedback-step.md
+/skills/draw-echarts/SKILL.md # retired skill_id/path of source echarts; the engine layer is a reference doc, not a skill
+/state-machine
+/state-machine/component-view
+/style
+/subtext
+/sync-config.mjs
+/template.html
+/theme/background
+/title
+/tooltip
+/touch
+/transition/exception
+/vendor-echarts.sh
+/verify-deliverable.mjs
+/vintage.json
+/www.jsdelivr.com/package/npm/echarts
+/zones
+100
+101
+112
+117
+120
+132
+134
+140
+145
+150
+154
+155
+157
+159
+160
+161
+167
+182
+188
+190
+191
+198
+200
+201
+204
+220
+232
+234
+260
+272
+280
+290
+300
+301
+302
+320
+334
+373
+400
+440
+484
+500
+580
+<div>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5/...">
+<script>
+<style>
+ALONG
+CATEGORY
+CDN
+CHANGE
+CHART_CONFIG
+CRASHED
+CRD
+CSP
+CSV
+DELETE
+DESIGN_TOKENS
+DOCTYPE
+DOM
+DONE
+DPI
+FAILED
+KPI
+OHLC
+ONE
+OUT_OF_BOUNDS
+OVERLAP
+PAUSED
+PENDING
+PNG
+REAL
+RUNNING
+ResizeObserver
+SDS
+SKILL_WORKDIR
+SRI
+SSR
+SUSPENDED
+SUSPENDING
+SVG
+TRANSITION
+UML
+ZONE_OUT_OF_BOUNDS
+aHei
+addEventListener
+anchor: edge-midpoint, gap
+animation: false
+appendChild
+architecture.config.json
+areaStyle
+assets/
+ataZoom
+avaScript
+avoidLabelOverlap
+avoidLabelOverlap: true
+axisLabel
+axisLine
+axisPointer
+backgroundColor
+bar
+best-practices/
+body { background: #1a1a2e; }
+borderColor
+borderRadius
+borderWidth
+boundaryGap
+box
+box {x,y,w,h}
+boxplot
+box{x,y,w,h}
+candlestick
+canvas {w,h}
+canvasHeight
+canvasWidth
+categories
+categories[].itemStyle
+categories[].lineStyle.color
+category
+chart.getDataURL(
+chart.getDataURL({ type: 'png', pixelRatio: 2 }
+chart.resize(
+check-layout.mjs
+chromium --headless --screenshot=out.png --window-size=<w>,<h> <file>.html
+circular
+config.js
+config.json
+containLabel
+coordinateSystem
+createElement
+crossorigin
+custom
+dataMax
+dataView
+dataZoom
+dataset
+dataset.source
+datasetIndex
+desc
+disposition_reason
+dist/echarts.js
+document.write
+echarts.init
+echarts.init(dom, 'dark'
+echarts.init(null, null, { renderer: 'svg', ssr: true }
+echarts.js
+echarts.min.js
+echarts@5
+echarts@5.6.0
+echartsInstance
+echartsInstance.dispose
+echartsInstance.resize
+edgeLabel
+edgeLabel.show
+edgeLabel.show: false
+edgeLabel: { show: false }
+edgeLength
+edgeSymbol
+edgeSymbol: ['none','arrow'
+edgeSymbolSize
+effectScatter
+emphasis
+emphasis.edgeLabel
+emphasis.edgeLabel.show: true
+emphasis.edgeLabel: { show: true }
+encode
+esizeObserver
+feedback-utils.py --action record --unit-id "skill:draw-echarts" --unit-type skill # per-skill feedback unit retired; wrap-up records once against skill:draw-diagram (its ## Feedback)
+fidelity_intent
+fidelity_intent=reproduction
+file://
+fontFamily
+fontSize
+fontWeight
+funnel
+gap
+gauge
+getDataURL
+getElementById
+graph
+graph layout:'none'
+graphic
+grid-template-columns: 1fr 1fr
+heatmap
+hideLoading
+hideOverlap
+html
+https://cdn.jsdelivr.net/npm/echarts@5.6.0/dist/echarts.min.js
+https://cdn.jsdelivr.net/npm/echarts@5/
+https://echarts.apache.org/examples/zh/index.html
+https://echarts.apache.org/handbook/zh/get-started/
+https://echarts.apache.org/zh/api.html
+https://echarts.apache.org/zh/index.html
+https://echarts.apache.org/zh/option.html
+https://echarts.apache.org/zh/theme-builder.html
+https://www.jsdelivr.com/package/npm/echarts
+ignored
+index.html
+inearGradient
+ingFang
+integrity
+itemId
+itemName
+itemStyle
+itemStyle.borderWidth
+itemStyle.borderWidth: 2.0
+itemStyle.opacity: 0
+jsDelivr
+label
+label.show: false
+labelLayout
+labelLayout: { hideOverlap: true }
+layout: 'circular'
+layout: 'none'
+layout:'none'
+layout_intent
+line
+lineStyle
+lineStyle.opacity: 1
+lineStyle.width
+lineStyle.width: 1.2
+lineStyle.width: 1.6
+lineStyle: { type: 'dashed', color: '#999' }
+lineWidth
+lineWidth: 2.5
+lines
+linkMacSystemFont
+links
+links[].name
+log
+logBase
+magicType
+markArea
+meta
+meta.canvasHeight
+meta.canvasWidth
+meta.canvasWidth/Height
+myChart
+nameGap
+nameLocation
+newData
+node .specify/scripts/check-layout.mjs <config>
+node .specify/scripts/sync-config.mjs <file>.config.json
+node .specify/scripts/verify-deliverable.mjs <file>.html
+node .specify/scripts/verify-deliverable.mjs <html>
+onerror
+option
+parallel
+path://
+pie
+pixelRatio
+processed
+radar
+readOnly
+record→threshold→package→manual→mark-submitted
+references/
+registerTheme
+render.mjs
+resize
+resize(
+roundRect
+run_id
+sankey
+saveAsImage
+scatter
+.specify/scripts/
+.specify/scripts/check-layout.mjs
+.specify/scripts/sync-config.mjs
+.specify/scripts/vendor-echarts.sh
+.specify/scripts/vendor-echarts.sh <dir>
+.specify/scripts/verify-deliverable.mjs
+series.data
+series.encode
+series.seriesLayoutBy
+seriesLayoutBy
+seriesName
+setOption
+shadowBlur
+shadowColor
+shadowOffset
+showLoading
+skill-draw-echarts-evaluation-form # per-engine evaluation-form probe retired; skill-draw-diagram-evaluation-form carries `engine: <name>` in the review's first line
+skill_id
+specify/memory/feedback/
+specify/shared/workflow/feedback-step.md
+splitLine
+style_intent
+sunburst
+symbol: 'roundRect'
+symbol: ['none', 'arrow'
+symbolSize
+symbolSize: [w, h
+symbolSize: [w,h
+sync-config.mjs --check
+textStyle
+time
+title.subtext
+toolbox
+toolbox: { show: false }
+tree
+treemap
+value
+valueAnimation
+vendor/
+vendor/echarts.min.js
+verify-deliverable.mjs
+visualMap
+weight_plan
+window.CHART_CONFIG
+window.DESIGN_TOKENS
+window.DESIGN_TOKENS.palette[0
+window.addEventListener('resize', () => chart.resize(
+window.resize
+wrap-up
+xAxis
+yAxis
+ypedArray
+{ left: box.x, top: box.y, width: box.w, height: box.h, z: 0 }
+{ x: box.x + w/2, y: box.y + h/2, symbolSize: [w, h] }
+已交付 ECharts 图表；如愿意，请评价它是否准确、清晰且适合用途，或说明希望调整之处。 # absorbed into draw-diagram's unified Evaluation Form; the engine noun became the parameterized （引擎:<engine>）, artifact forms owned by delivery-contract.md

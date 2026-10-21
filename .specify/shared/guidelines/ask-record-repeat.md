@@ -17,8 +17,8 @@
 与既有机制的关系(引用,不复述):
 
 - 输入合理性的升级规则见指令文件的 `## Fact, Correctness & Logic Checks (Input Sanity)`。
-- "需求不清本身就是高风险信号"见 `shared/guidelines/task-complexity-rubric.md`。
-- 事实该记在哪个文件,由 `shared/guidelines/one-source-of-truth.md` 裁定。
+- "需求不清本身就是高风险信号"见 `.specify/shared/guidelines/task-complexity-rubric.md`。
+- 事实该记在哪个文件,由 `.specify/shared/guidelines/one-source-of-truth.md` 裁定。
 - 术语与同音易混词的记录位是项目词汇表。
 
 ---
@@ -54,12 +54,12 @@
 | 得到的答案属于 | 落点 |
 |---|---|
 | 某个概念/术语的含义、同音易混词 | 项目词汇表(用户条目为权威) |
-| 某类行为的规范判据 | 该主题的 `shared/guidelines/` 真源文档 |
+| 某类行为的规范判据 | 该主题的 `.specify/shared/guidelines/` 真源文档 |
 | 某个项目特定的坑、环境怪癖 | 指令文件的项目经验章节 |
 | 某个特性的裁定与澄清 | 该特性目录下对应阶段的产物 |
 | 一次性的偏好、本轮的范围裁定 | 项目记忆层 |
 
-落点的**归属裁定**归 `shared/guidelines/one-source-of-truth.md`;本表只回答"这类答案通常去哪",不重复其规则。
+落点的**归属裁定**归 `.specify/shared/guidelines/one-source-of-truth.md`;本表只回答"这类答案通常去哪",不重复其规则。
 
 **举一反三、触类旁通**——这是记录环节最容易做错的一半:
 
@@ -116,5 +116,5 @@
 
 - 给一条规矩新增表面时,MUST 同批加守卫(契约测试或既有扫描),否则新增的是未来漂移点而不是可达性。
 - 发现自己在**第二次**推导同一条规矩:当轮就给它补一层表面,并把这次重复记为该规矩重要度的证据。
-- 发现某处是**内容形态**的重复:按 `shared/guidelines/one-source-of-truth.md` 的修复方向,把副本改成引用,不要把措辞改到一致。
+- 发现某处是**内容形态**的重复:按 `.specify/shared/guidelines/one-source-of-truth.md` 的修复方向,把副本改成引用,不要把措辞改到一致。
 - 用户给出的答案若与既有文档冲突:先按 Ask 澄清归属,再落 Record;不要在两个地方各留一个版本。

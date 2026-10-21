@@ -1,0 +1,326 @@
+# merge baseline — frozen fact tokens of one merged source skill
+# source-material: .specify/teams/.work/command-logic-as-classified-skills/merge-scratch/git-server-init
+# frozen: 2026-10-11T13:40:45Z by coverage_probe.py --emit-baseline (gate at exit 0)
+#
+# Re-verify at any later date, with no scratch material present:
+#   coverage_probe.py --baseline git-server-init.baseline.txt <target-doc>...
+#
+# A trailing ' # <reason>' marks a token reviewed as a verified false positive
+# (the fact survived under different wording); it never fails the gate.
+# A backtick-quoted line is a token whose own text starts with '#' or contains
+# ' # ' — quoting keeps it from being read back as a comment.
+# Tokens are FROZEN — --baseline loads them verbatim and never re-extracts.
+# Do not regenerate this file from itself: extraction is not idempotent, and a
+# re-extracted baseline is a weaker gate that still prints 'coverage clean'.
+`# for git clone`
+${SKILL_HOME}/assets/
+${SKILL_HOME}/references/
+${SKILL_HOME}/scripts/
+${SKILL_WORKDIR}/.specify/
+*.sample
+*_git
+--action
+--alias
+--allow-empty
+--bare
+--check
+--check --verify
+--comment
+--config
+--create-home
+--dry-run
+--gid
+--gid <existing>
+--git-dir
+--git-home
+--git-user
+--host
+--host <ssh-alias|user@host>
+--hostname
+--identities-only
+--identity-file
+--initial-branch
+--list
+--local
+--no-verify
+--port
+--pubkey
+--repo
+--unit-id
+--unit-type
+--update
+--user
+--verify
+--version
+-b <branch>
+-c core.hooksPath=/dev/null
+/3b
+/600
+/CentOS/Alibaba
+/D2/D3
+/D3
+/HEAD
+/assets/
+/authorized_keys
+/bin/bash
+/clone
+/conf.d/team-a
+/conf.d/team-b
+/config
+/dev/null
+/etc/passwd
+/etc/ssh/sshd_config
+/fetch
+/gid
+/git
+/heads/
+/heads/main
+/home/git
+/home/git/
+/home/git/.ssh
+/home/git/.ssh/authorized_keys
+/home/git/<ns-a>/<repo-1>.git
+/home/git/<ns-b>/<repo-3>.git
+/home/git/ns/repo.git
+/hostname/port
+/id_rsa
+/id_rsa.pub
+/infra
+/infra.git
+/keys/
+/ns/repo.git
+/other
+/references/
+/references/reference-architecture.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/references/ssh-config-entry.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/references/troubleshooting.md
+/repo
+/repo.git
+/scripts/
+/scripts/provision-git-server.sh
+/scripts/ssh_config_insert.py
+/shared/patterns/reconcile-pattern.md
+/shared/workflow/feedback-step.md
+/shell
+/skills/git-server-init/SKILL.md # converted SKILL.md paths (three source SKILL.mds became references/*-workflow.md; skill_id dropped as form)
+/ssh-config-entry.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+/team-alpha/infra.git
+/tmp/l.git
+/tmp/probe
+/tmp/s
+/troubleshooting.md
+/usr/bin/ssh
+192
+256
+600
+644
+664
+666
+700
+755
+775
+777
+</dev/null
+<git-home>
+<git-home>/<namespace>
+<namespace>/<name>
+<ns>
+AllowGroups
+AllowUsers
+Authenticated to ... as git
+AuthorizedKeysFile
+BEFORE
+CHECK
+CONVERGED
+CertificateFile
+Could not read from remote repository
+DLP
+DenyUsers
+DynamicForward
+EOF
+Enforcing
+ForwardAgent
+GIT_SSH_COMMAND
+GIT_SSH_COMMAND="ssh -v"
+GIT_TRACE
+GIT_TRACE_PACKET
+GIT_TRACE_PACKET=1 git push
+GlobalKnownHostsFile
+HEAD
+Host
+Host *
+Host <prefix>_*
+Host workspace_*
+Host workspace_foo_git
+Hostname
+IdentitiesOnly
+IdentitiesOnly yes
+IdentityFile
+Include
+LEAVE
+LIST_OPTIONS
+LocalForward
+Match
+Match all
+Match exec
+MaxAuthTries
+NOT-CONVERGED
+PUSH
+Permission denied
+Permission denied (publickey
+Permissive
+Port
+ProxyJump
+PubkeyAuthentication yes
+RHEL
+RSA
+RemoteForward
+SEE
+SHA256
+SKILL_HOME
+SKILL_WORKDIR
+STOP
+SendEnv
+ServerAliveInterval
+SetEnv
+StrictHostKeyChecking
+StrictModes
+Too many authentication failures
+User
+User git
+UserKnownHostsFile
+WHEN
+WRITABLE
+Warning: Permanently added
+admin
+all
+authorized_keys
+axAuthTries
+cannot open /etc/passwd
+canonical
+command -v sudo
+core.sharedrepository
+cp <path> <path>.bak
+debug1
+defaultBranch
+dentitiesOnly
+dentityFile
+description
+docs
+does not appear to be a git repository
+echo >>
+emoteForward
+endEnv
+entOS
+enyGroups
+enyUsers
+ertificateFile
+erverAliveInterval
+etEnv
+exec
+fatal: Could not read from remote repository
+feedback-utils.py --action record --unit-id "skill:git-server-init" --unit-type skill # unit id renamed to skill:git-workspace
+getenforce
+git --version
+git checkout -- <path>
+git clone
+git clone git@<alias>:<namespace>/<repo>.git
+git init
+git init --bare
+git init --bare -b
+git ls-remote
+git push
+git push --no-verify
+git-receive-pack
+git-shell
+git:git
+git:root
+git@<alias>:<ns-a>/<repo-1>.git
+git@<alias>:<ns-b>/<repo-3>.git
+git@alias:/home/git/ns/repo.git
+git@alias:ns/repo
+git@alias:ns/repo.git
+git@alias:repo.git
+git@alias:~/ns/repo.git
+grep -Ei '^(AllowUsers\|AllowGroups\|DenyUsers)' /etc/ssh/sshd_config
+grep -Ei '^(PubkeyAuthentication\|AuthorizedKeysFile)' /etc/ssh/sshd_config
+group git already exists
+hooks/
+hooksPath
+host
+id -gn
+id -u
+id_rsa
+id_rsa.pub
+identitiesonly yes
+identityfile
+infra
+init
+init.defaultBranch
+install -o -g -m 600
+llowGroups
+llowUsers
+ln -f <repo-path> <runtime-path>
+lobalKnownHostsFile
+main
+master
+mkdir -p
+myserver-admin
+myserver_git
+namespace
+objects/
+ocalForward
+orwardAgent
+packet
+provision-git-server.sh
+provision-git-server.sh --check
+pub
+reference-architecture.md
+references/ssh-config-entry.md # renamed reference files: content carried verbatim, filenames prefixed per target convention (fleet-*/server-*/submodule-*)
+refs/
+refs/heads/<initial-branch>
+root
+root:root
+roxyJump
+serKnownHostsFile
+skill_id
+specify/shared/patterns/reconcile-pattern.md
+specify/shared/workflow/feedback-step.md
+ssh -G
+ssh -G <alias>
+ssh -G <host>
+ssh <admin-target> 'git --version'
+ssh <alias> "git-receive-pack '<path>'"
+ssh <alias> whoami
+ssh-config-entry.md
+ssh/authorized_keys
+ssh_config
+ssh_config_insert
+ssh_config_insert.py
+ssh_config_insert.py --verify
+ssh_home_t
+sshd -T | grep -i strictmodes
+sshd_config
+start_command
+start_command: /usr/bin/ssh
+symbolic-ref
+systemctl reload sshd
+team-a
+team-alpha
+trictHostKeyChecking
+trictModes
+troubleshooting.md
+ubkeyAuthentication
+user
+user 'git' already exists
+useradd
+useradd --create-home
+useradd -m
+uthorizedKeysFile
+whoami
+workspace_docker_baremetal_8_git
+workspace_docker_baremetal_9_git
+workspace_foo_git
+ynamicForward
+~/.ssh/config
+~/.ssh/id_rsa.pub

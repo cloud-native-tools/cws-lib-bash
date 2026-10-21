@@ -28,7 +28,9 @@ weight_plan:     # 语义视觉强弱（注意力层级）：大模块边界 > �
   key_paths: [relation-id]   # 关键路径在 T3 内用色相抬升；粗细封顶 = T2，不得反压结构
 artifact_intent: static-embed | interactive-html | editable-whiteboard | repo-text | pixel-reproduction
 fidelity_intent: reproduction | fresh        # 复刻既有图 vs 新建
-interactivity_intent: none | tooltip | zoom | dashboard
+interactivity_intent:    # 交互语义规约（不是备注字段）——形式分类/档位/默认值/验收判据 owner：本文件 § 交互语义与验收
+  level: none | basic | rich
+  forms: [hover | click | filter | expand-collapse | zoom-pan | brush | linked-highlight | dashboard]   # 可多选；level=none 时为空
 editability_intent:   none | whiteboard-edit | text-edit
 ```
 
@@ -40,6 +42,50 @@ editability_intent:   none | whiteboard-edit | text-edit
 4. **产物意图显式**：用户没说的 artifact_intent 按 tie-break 默认并在回报中声明假设
 5. **强弱计划必做**：含多层结构的图（zones 非空或元素 >15）必须填 `weight_plan`——委派前把每个 zone/子容器/叶元素/边族分配到 T1–T4；**前门只决定「什么该更显眼」，引擎技能决定「怎么画粗」**（各引擎「强弱实现」小节）；全图单一线宽/单一边框粗细判不合格
 
+## 交互语义与验收（interactivity_intent —— 可交互图表的前门规约）
+
+`interactivity_intent` 把「图表随用户输入做出调整」落为**可验收的语义规约**。本节拥有**形式分类、
+档位、默认值、验收判据**；交付形态（JS 资产策略 / 与共享渲染后端的解耦 / 浏览器验收）归
+[delivery-contract.md](delivery-contract.md) § D7；各 form 在引擎内的实现归引擎层「交互实现」小节
+（当前 d3js / echarts 设有）。三层互不复制。
+
+### 形式分类（forms，8 类；粒度以「一次输入 → 一次可见变化」可判定为准）
+
+| form | 用户输入 | 图的可见变化（判定点） |
+|------|---------|----------------------|
+| `hover` | 指针悬停图元 | 出现提示/高亮，移开消失 |
+| `click` | 点击图元或图例项 | 选中态/详情出现，或可见集合开关 |
+| `filter` | 操作筛选控件（图例/下拉/输入） | 可见元素或数据集合随之增减 |
+| `expand-collapse` | 折叠/展开操作 | 分区/子树可见性切换（布局收拢或重排） |
+| `zoom-pan` | 滚轮/捏合/拖拽画布 | 同一数据的视口缩放或平移 |
+| `brush` | 框选范围 | 范围内图元高亮或筛选生效 |
+| `linked-highlight` | 在任一面板交互 | 其他面板出现对应高亮/筛选 |
+| `dashboard` | 工具栏/跨图操作 | 多图作为整体响应同一输入（toolbox/联动） |
+
+### 档位（level）
+
+| 档位 | 判据 |
+|------|------|
+| `none` | `forms` 为空：静态交付，零交互义务（用户未表达交互诉求时的默认值；既有静态路径不变式） |
+| `basic` | `forms` 恰含 `hover` 或 `click` 之一（单形式最小交互） |
+| `rich` | `forms` ≥ 2，或含任一「改图类」形式（`filter` / `expand-collapse` / `brush` / `linked-highlight` / `dashboard`） |
+
+### 默认值（用户没说全时按此取值，并在回报中声明假设——构建纪律 4 同规）
+
+- 用户**未表达交互诉求** → `level: none`，不默认添加交互。
+- 用户要求**可交互**但未点名形式 → `level: rich` + `forms: [hover, click, filter]`，`artifact_intent` 同步取 `interactive-html`；回报声明假设。
+- 用户点名**仪表板/联动** → `forms` 含 `dashboard`；点名任意具体形式 → `forms` 照抄点名，未点名的维度不添加。
+- 边界：**动画/动图/视频不是交互形式**——forms 分类里没有它们的位置，不得作为任何 form 的实现。
+
+### 验收判据（Step 4 / 覆盖检查「交互」维度的判定规则）
+
+1. **逐 form 复现**：每个声明 form 复现一次「输入 → 可见变化」即通过；任一声明 form 无法复现 → 该维度不覆盖。
+2. **动画不算交互**：过渡/动效只是反馈的形态；无输入驱动的自动播放不满足任何 form。
+3. **控件在而无效不算实现**：事件未绑定、状态未更新、点了没反应 = 未实现。
+4. **代码证据口径**：无法亲自操作的验收环境（无头/静态检查），以「事件绑定 → 状态更新 → 渲染更新」闭合链路的代码证据替代逐项复现，并在回报中注明所用口径。
+5. **未声明的交互不构成缺陷**；已交付的交互须在说明中列出（交付契约 § D7.3）。
+6. `level: none`：零交互义务，不因缺交互判不覆盖。
+
 ## 覆盖检查（Step 4 验收）
 
 | 维度 | 通过判据 |
@@ -48,7 +94,9 @@ editability_intent:   none | whiteboard-edit | text-edit
 | 关系 | 边集合一致且方向一致（hub-spoke 的扇出数一致） |
 | 分组 | zone 成员与边界语义一致（equal-height 等 layout 语义保留） |
 | 产物形态 | 与 artifact_intent 匹配（可编辑/交互/文本/静态） |
+| 强弱 | `weight_plan` 层级在产物中可辨：边框粗细/深浅按 T1>T2>T3 递减、流线最细最浅；关键路径仅色相抬升且粗细 ≤ T2；全图单一线宽判不合格 |
 | 风格 | 与 style_intent 匹配（monochrome 复刻不得引入彩色主题） |
+| 交互 | `level ≠ none` 时逐声明 form 可复现一次「输入 → 可见变化」（判据见 § 交互语义与验收）；`level = none` 零交互义务 |
 
 ## Geometry（几何层 —— 语义层产出，语法层实现）
 
@@ -88,6 +136,5 @@ relations:
 2. 自动布局引擎（mermaid / plantuml）：以脚手架/skinparam **逼近** SDS 几何；无法兑现项（如精确 x/y、等高分区）MUST 在结果清单中**量化声明**（偏离维度 + 幅度 + 原因）
 3. 未声明的偏离 → 按 semantic-fidelity 扣分；已声明的偏离 → 计入该引擎语法实现质量，不计为语义层缺陷
 4. **超界判据**：声明偏离超出 SDS 给定 bound（如 ±150px）时——SDS 含 `auto_layout_intent` 而引擎未利用 → 计**语法层**缺陷；SDS 缺该意图 → 计**语义层**缺陷（建模方漏声明降级秩序）
-| 强弱 | `weight_plan` 层级在产物中可辨：边框粗细/深浅按 T1>T2>T3 递减、流线最细最浅；关键路径仅色相抬升且粗细 ≤ T2；全图单一线宽判不合格 |
 
 任一维度不通过 → 带 delta 说明再委派一次（上限 1 次）；仍不通过 → 如实回报产物与缺口，不粉饰。

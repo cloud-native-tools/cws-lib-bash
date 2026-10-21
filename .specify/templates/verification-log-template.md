@@ -52,6 +52,24 @@ post_change_commit=[GIT_SHA_AT_RUN_END]
 post_change_[METRIC_KEY_1]=[VALUE]
 post_change_[METRIC_KEY_2]=[VALUE]
 
+# -- Evidence records (bind every `pass` claim to archived evidence) --
+# One record per evaluation sample, block shape mirroring the SC blocks below.
+# Rules: a `pass` verdict REQUIRES a complete evidence row — all four keys, no
+# blanks. `evidence_sha256` is SHA-256 over the archived file's bytes
+# (deterministic; `sha256sum`-compatible). `evidence_path` is repo-relative
+# (resolvable from any checkout). A `pass` without a complete evidence row is
+# `unverified` and MUST NOT be cited as passing evidence anywhere downstream.
+# The registered gate `gate-implement-evidence-binding` checks every recorded
+# `pass`: the archived artifact exists, is non-empty, and its computed SHA-256
+# equals the recorded hash — missing/empty/mismatch is RED naming the sample id
+# and the reason, never downgraded to "self-disclosed and continue". Verdicts
+# other than `pass` carry no binding duty.
+
+sample_id=[SC-NNN_OR_SAMPLE_KEY]
+evidence_path=[REPO_RELATIVE_ARCHIVED_ARTIFACT]
+evidence_sha256=[SHA256_HEX_OF_THE_ARCHIVED_FILES_BYTES]
+verdict=[pass|fail|partial|deferred|unknown]
+
 # -- Success Criteria evaluation --
 # One block per SC from requirements.md. Status values: pass | fail | partial | deferred | unknown.
 # When status=deferred, ALSO include SC-NNN_deferred_reason= explaining why and what would unblock.

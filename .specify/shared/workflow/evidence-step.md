@@ -4,11 +4,11 @@
 
 ## Positioning & Red Lines
 
-1. **证据层对消费者中立**:证据由 `evidence-utils.py` 采集并规范化为 findings.json(合同见 `skills/collect-evidence/references/evidence-contract.md`);证据层不含严重度、修复方案、优先级等观点字段——那些属于消费层。
+1. **证据层对消费者中立**:证据由 `evidence-utils.py` 采集并规范化为 findings.json(合同见 `.specify/skills/internal/collect-evidence/references/evidence-contract.md`);证据层不含严重度、修复方案、优先级等观点字段——那些属于消费层。
 2. **Unobserved 红线**:`Unobserved` 状态的证据只可记录,**禁止**当作缺陷去修、禁止推断为结论。未观察 ≠ 不存在,也 ≠ 存在。
 3. **计数只路由**:资产/会话/运行的计数信号只用于路由检查方向,**不得**直接生成优化点或候选。
 4. **候选冻结**:Step B 分拣完成后候选清单即冻结,后续步骤**不得**增删候选——防止"想修什么就把什么说成证据"。
-5. **evidenceState 七态语义不可重定义**:`Present / Wired / Exercised / Outcome-supported / Missing / Unobserved / Not applicable`(定义见 `skills/collect-evidence/references/evidence-discipline.md`);消费方只能自定义**响应方式**,不能裁剪或重定义状态语义。
+5. **evidenceState 七态语义不可重定义**:`Present / Wired / Exercised / Outcome-supported / Missing / Unobserved / Not applicable`(定义见 `.specify/skills/internal/collect-evidence/references/evidence-discipline.md`);消费方只能自定义**响应方式**,不能裁剪或重定义状态语义。
 
 ## Canonical block (steps for the embedding unit)
 
