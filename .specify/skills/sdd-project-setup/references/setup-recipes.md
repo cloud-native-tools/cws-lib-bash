@@ -156,6 +156,21 @@ ssh <alias> "su - <run-user> -c 'cd <project-dir> && specify init . --ai <tool> 
 
 加上：机制矩阵复扫达 complete（或 partial 且缺口已声明）、compat 链接核验 `find <project-dir> -maxdepth 2 -type l ! -exec test -e {} \; -print` 为空。三者齐备才进 S5。
 
+### S4-H Host hook health check（宿主 hook 体检）
+
+无人值守 SDD（sdd-loop-driver）的每次工具调用都会同步等待宿主 agent 的 Pre/Post hook——一个慢 hook 就是整轮的阻塞点。S4 在交棒前执行：
+
+```bash
+python3 <skill>/scripts/hook-health.py --project <project-dir> [--fix] [--json]
+```
+
+- **判据（脚本实现，确定性）**：扫描宿主 user/project 级 settings（Qoder：`~/.qoder/settings.json`、`<project>/.qoder/settings*.json`；Claude：同名路径），只看工具事件（PreToolUse / PostToolUse / PostToolUseFailure）上 `async != true` 的 command hook；`timeout` 缺省或 ≤ `--max-sync-timeout`（默认 5s）即命中。
+- **两类结论**：
+  - `fixable`：普通同步 hook → `--fix` 置 `async: true`，写前备份 `<settings>.hook-health.bak-<ts>`；
+  - `vendor-managed`：带 `_*_managed` 标记，或命令落在自愈遥测路径（AITrace/r2c、yunke、loongsuite、a1）→ **不自动改**。这类 agent 会在秒级内把自己的 hook 条目重写回规范形态，async / timeout 编辑均不持久（2026-10-21 实测：`.r2c` 侧车在 hook 调用后回写；`AI_CODE_ANALYTICS_CLI_HOOK_AUTO_REGISTER=false` 只关闭启动注册，不覆盖该路径）。只报告，并给出处置选项：vendor 支持 async / 停用该 agent / 用隔离 `--config-dir` 运行无人值守 agent / 接受超时成本。
+- **退出码**：`0` 干净或全部修复；`10` 存在未解决风险（report 模式、vendor-managed、手动项）；`2` 参数/解析错误。verify 模式只读（不带 `--fix`）；install/refresh 默认 `--fix`。
+- **登记纪律**：退出码 10 的未解决项写入「未处理清单」，不得静默略过。
+
 **远端命令形态与占位约定**（`<alias>`/`<run-user>`/`<project-dir>`/`<tool>`）同 `.specify/shared/workflow/external-dispatch-recipes.md`（远端拓扑）——本文件仅保留 setup 特有命令（python 解析 / CLI 安装 / specify init / 机制盘点脚本），通用派发形态坍缩为引用（analyze C-31）。
 
 ## S5 候选工作清单（建议而非强制）

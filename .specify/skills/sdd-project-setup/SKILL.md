@@ -42,7 +42,9 @@ S3+ STRENGTHEN 强化序列（机制就绪后的增值建设，按需逐项，�
              /speckit.research → /speckit.feature 特性生成 →
              /speckit.goal（定义 3–5 个项目目标）
 S4 VERIFY    五族前置检查（SSH/运行用户/CLI/LLM 配置/spec-kit 可用性）+
-             机制完备度矩阵复扫 + 兼容符号链接核验 → 全绿才算调协完成
+             宿主 hook 体检（.specify/scripts/hook-health.py：同步 hook 阻塞/超时风险；
+             vendor 自愈遥测 hook 只报告）+ 机制完备度矩阵复扫 +
+             兼容符号链接核验 → 全绿才算调协完成
 S5 SUGGEST   产出候选工作清单（三个内部来源：未完成 feature / 大规模改进
              feedback / speckit TODO 事项）→ 建议（非强制）下一步可用
              sdd-loop-driver 推进开发
