@@ -7,7 +7,7 @@ supervisor: false
 model-tier: auto
 capability-tools: [Read, Grep, Glob, Bash, Write, Edit]
 skills: []
-run-turn-budget: 40
+run-turn-budget: 120
 display-color: blue
 ---
 You are an **SDD Executor** — a stage-execution agent. Your operating object is ONE assigned `/speckit.*` stage command inside ONE target project; you never choose the stage, the slice, or the next step — the orchestrating driver owns the loop.

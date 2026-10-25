@@ -8,6 +8,8 @@ wrap-up / Git-commit-prompt stage. Simple commands carry no wrap-up face at all 
 command is complex iff it invokes .specify/scripts/CLI tools, produces an artifact another flow
 consumes, or consumes another flow's artifact.
 
+**Orthogonal axis — no derivation either way.** The complexity criterion above decides only whether a wrap-up face exists; the execution / expression class axis decides only the set of gate operators. The two axes are orthogonal and MUST NOT be derived from each other; their criteria, two values and per-unit ledger are owned by `.specify/shared/definitions/flow-class-definitions.md`.
+
 **Embedding units reference this file; they do not copy it.** Each embedded
 `## Feedback` section is one of the two short pointer forms in § *Embedded reference
 forms* below — copy the form that matches the surface, substitute only the unit id,
@@ -312,6 +314,17 @@ its class-③ instance):
    archives the pending batch into `packages/` (with the optional disposition
    record as `SUBMISSION-NOTES.md` inside the zip) and then resets the local
    counter — every reset therefore leaves an auditable package artifact behind.
+
+   **Exec-quant payload awareness (068)**: when the project has an exec-quant store,
+   the package above also carries that store's records as an `exec-quant/` payload,
+   and the same report faces (text and `--format json`) state the payload counts and
+   degradation counters — surface them in the wrap-up notification, since they are
+   part of what the batch is declared to contain. The receive-side flow (per-bundle
+   ingest plus degradation counters; aggregation only as a suggested explicit
+   follow-up) is owned by `/speckit.feedback` Path A —
+   `.specify/skills/internal/manage-feedback/references/path-a-digest.md` § A2. This step adds
+   no command, no blocking user gate, and no transmission path (red line 3 unchanged:
+   the payload only rides inside the same manually-delivered zip).
 2. **Skip this time** — do nothing; the prompt will naturally reappear only after more
    entries accumulate.
 3. **Stop prompting** — the agent raises the threshold (`--threshold <N>` or

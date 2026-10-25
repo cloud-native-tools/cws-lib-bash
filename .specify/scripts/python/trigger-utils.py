@@ -503,9 +503,14 @@ def truncate_telemetry(root: Path, window: int) -> None:
 
 
 def ensure_ignore_entry(root: Path) -> None:
-    """V6.9: telemetry is per-turn churn and is ignored; index.json stays tracked."""
-    gi = root / ".gitignore"
+    """V6.9: telemetry is per-turn churn and is ignored; index.json stays tracked.
+
+    The rule is .specify-scoped and therefore lives in the init-managed
+    .specify/.gitignore, never in the project-root .gitignore.
+    """
+    gi = root / ".specify" / ".gitignore"
     try:
+        gi.parent.mkdir(parents=True, exist_ok=True)
         existing = gi.read_text(encoding="utf-8") if gi.is_file() else ""
     except OSError:
         return
@@ -513,7 +518,7 @@ def ensure_ignore_entry(root: Path) -> None:
         return
     prefix = "" if existing.endswith("\n") or not existing else "\n"
     block = (
-        f"{prefix}# proactive flow trigger: per-turn telemetry churns, learning state must not\n"
+        f"{prefix}# proactive flow trigger: per-turn telemetry churns; learning state stays tracked\n"
         f"{IGNORE_ENTRY}\n"
     )
     try:

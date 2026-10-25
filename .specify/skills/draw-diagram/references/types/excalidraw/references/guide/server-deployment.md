@@ -27,7 +27,8 @@ npm start            # 监听 http://127.0.0.1:8383
 常驻（macOS launchd 或简单 nohup 均可）：
 
 ```bash
-nohup node server.mjs > /tmp/excalidraw-render.log 2>&1 &
+mkdir -p ~/tmp
+nohup node server.mjs > ~/tmp/excalidraw-render.log 2>&1 &
 ```
 
 ## 方式 B：Docker（服务器部署）

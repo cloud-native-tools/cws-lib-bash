@@ -78,6 +78,8 @@ classification: external
 
 ### Stage 6 — 保真自检（交付前）
 
+**类别读取（本流程唯一一次，先于下列各项自检）**：执行 `python3 .specify/scripts/python/flow-class-check.py --action lookup --unit-id "/speckit.humanize"`。类别判据与逐流程台账的唯一所有者是 `.specify/shared/definitions/flow-class-definitions.md`，本文件不复述。本技能参与的门禁算子集登记在门禁 owner `.specify/shared/workflow/expression-gates.md` 的 humanize 调用点行（最小集，不按文档型六面登记）；执行细则仍以本文件 Non-negotiables 与本节各项为准。所有者不可解析或引擎缺席（退出码 2）时显示 `owner-unavailable` 且 `marker` 为 null，未登记单元则原样显示其 `marker`（两标签互斥）；两种情形都**不中断改写**，也**不得**把降级当作通过。
+
 1. 受保护集合逐项核对：引文、代码、命令、路径、URL、标识符、公式、`{{...}}`/`${...}`、frontmatter、表格——逐字或语义完全等价，不产生新链接/引用。
 2. 不变量核对：事实、数字、单位、日期、名称、结论、因果关系、引用关系全部在输出中（比对口径：去千分位分隔符、统一空白、同一日历日等价、**不做单位换算**；百分比/版本号/标识符/URL/代码 token 逐字——`diff_protected.py --input <in> --output <out>` 即此口径的确定性执行，exit 0 = 通过）。
 3. 新增句逐条自问「输入是否蕴含」：不蕴含的句子删除或改写为过渡性表述；确属输入蕴含的新句（如引入句）在评估记录中逐条标注依据。

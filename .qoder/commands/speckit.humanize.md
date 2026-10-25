@@ -20,6 +20,14 @@ Consult the project glossary (`.specify/memory/glossary.md`) and apply the proto
 
 `/speckit.humanize` 是人性化改写能力的执行入口，一次调用 = 委派 **`humanize`** 技能执行全部改写工作。意图一句话：把内容改写到读起来像人所写，而事实、数字与受保护内容一个都不动。
 
+### 门禁归口（本模板只声明，不执行）
+
+- 类别（判据、两个取值与逐流程台账）的唯一所有者：`.specify/shared/definitions/flow-class-definitions.md`；本命令不读取类别，也不调用任何脚本。
+- 文档型门禁算子集的唯一所有者：`.specify/shared/workflow/expression-gates.md`；本命令不执行算子。
+- 类别读取与最小算子集的执行，由委派技能在其 Stage 6「交付前保真自检」内承担（同一次运行只读一次）；本模板不复述判据、算子表或调用点表。
+
+### 委派（强制）
+
 **Delegation (mandatory)**: load `.specify/skills/humanize/SKILL.md` and execute per its Workflow。四维度改写工作流、保真底线（FR-007）、语气与受众处理（FR-015）、文件行为（FR-018..FR-022）与注入防护（FR-029）均以该技能为单一事实源，本模板引用而不复述。
 
 ### 技能输入（本命令解析 `$ARGUMENTS` 后传入）

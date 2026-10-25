@@ -151,7 +151,7 @@ git ls-remote git@<git-alias>:<namespace>/<repo>.git
 **关 3a（首选）——本机真实 push：**
 
 ```bash
-d=$(mktemp -d) && git init -q -b main "$d/t" \
+mkdir -p ~/tmp/git-utils && d=$(mktemp -d ~/tmp/git-utils/probe.XXXXXX) && git init -q -b main "$d/t" \
   && git -C "$d/t" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init \
   && git -C "$d/t" remote add s "git@<git-alias>:<namespace>/<repo>.git" \
   && git -C "$d/t" push -q s main && echo "PUSH OK" && rm -rf "$d"

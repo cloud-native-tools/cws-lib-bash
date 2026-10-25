@@ -3,6 +3,8 @@
 > 本文件是 sdd-loop-driver 对「等待、监控、轮询、监听」语义的**唯一权威落点**。SKILL.md、dispatch-recipes.md、stage-prompts.md 只引用本文件，不复述规则。自包含：运行时零框架依赖，全部参数为入口参数。
 >
 > 适用对象：远程/本地子代理进程、异步脚本、阶段日志、心跳、退出记录，以及多线并行时的批量监听。
+>
+> **适用边界**：本文档的信号源、窗口、正证据与 watcher 判定适用于外部 CLI 派发（远端拓扑，或显式外部本地派发）。本地原生子代理由宿主运行时托管，U3 是一次同步调用——不产生退出记录/PID/心跳，不适用本模型，也不得为它创建 runner/FIFO。
 
 ## 0. 不变量（Invariants）
 
@@ -72,6 +74,22 @@
 - 驱动者收到 `TIMEOUT` 后 MUST 先跑 `--once` 最终快照：若 status/sentinel 已出现，按 U4/U5 重新路由，**不得判 stall**；若 `pid=alive` + `heartbeat=fresh` 仍无终态，优先延长/继续窗口。停线或 TERM 必须经用户显式决定，并在停止前再跑一次 `--once`，保留 worktree/status/log 证据。
 - **无提交 ≠ 卡死**：长审计/长测试期间可能数十分钟没有 commit；判断依据是 pid/heartbeat/status/session 活动，而不是 commit 间隔。
 
+### 3.2 迭代标识与监听命令签名（宿主重复调用保护，2026-10-25）
+
+**问题**：多窗口监听天然要重复同一条命令；Qoder Desktop/CLI 会把「同参数连续调用 5 次」判为重复工具调用并提示可能陷入循环，驱动者因此被宿主打断、把正常的长阶段误当卡死。这不是监视器判定，也不是子代理故障。
+
+**规则（MUST）**：
+
+1. **每个窗口携带字面量令牌**：`watch-target.sh … --iter "<run_id>-w<NN>"`（hook 长读传第 6 个位置参数，或 `WATCH_ITER` 环境变量），`<NN>` 从 `01` 起逐窗口递增。watcher 在 `WATCH` / `EVIDENCE` 行回显 `iter=`，用于日志串联。
+2. **令牌必须写在命令文本里**：`--iter "$(date +%s)"`、`$$`、`$RANDOM` 等运行时展开**无效**——宿主在命令执行前比较的是字面文本，展开后即使不同，签名仍然相同。把递增后的值直接写成字面量（如 `--iter 070-impl-w07`）。
+3. **连续监听命令不得字节相同**：即使本轮只想重复上一窗口的信号，也必须换用下一个 `NN`；禁止复用上一条命令。
+4. **`RUNNING` 后立即以新令牌重入**：窗口到期返回 `RUNNING` 时，驱动者立刻发起下一窗口并递增 `NN`，不在 agent 侧等待。
+5. **重入续号**：新会话/重接线先从该阶段最后一次 watcher 输出（或状态目录中的日志）读取 `iter=`，在其后继续编号；无法取得时改用新的运行段标记（如 `<run_id>-r2-w01`），绝不重复使用旧令牌。
+6. **回退轮询同样适用**：无法起阻塞窗口而使用一次性状态快照时，命令必须以字面量赋值开头并在输出中回显，例如 `POLL_ITER='<run_id>-p<NN>'; ssh … "echo POLL iter=$POLL_ITER; …"`；连续两次快照同样不得字节相同。
+7. **令牌不影响判定**：`iter` 只作身份与可观测性标签，MUST NOT 改变 verdict、退出码、deadline、窗口长度或信号读取。
+
+**被宿主判重后的处置**：不要原样重发；改用新的 `NN` 做一次 `--once` 快照（或换查询信号），并在状态脊/汇报中记录「宿主去重，不是子代理失败」。
+
 ## 4. 机制阶梯（事件优先）
 
 按顺序选择；只有上一级不可用时才降级。降级必须在状态脊记录原因。
@@ -84,7 +102,8 @@
    - 独立 `sleep N` 回合后检查（空等烧回合）；
    - 固定 cadence 作为缺省（应作为回退）；
    - 监视器判定「窗口到期」后直接停线/杀进程；
-   - 用 `pgrep` 零匹配、进程消失或日志静默推断完成。
+   - 用 `pgrep` 零匹配、进程消失或日志静默推断完成；
+   - 连续提交字节相同的监听命令（宿主重复调用保护会误判卡死；见 §3.2）。
 
 **窗口尺寸**：`--window` ≤ 宿主工具超时上限 − 30s 余量（例如宿主上限 600s → 窗口 300–540s）。窗口到期返回 `RUNNING` 后**立即**发起下一窗口，不在 agent 侧等待。若宿主没有可调工具超时，使用短窗口（60–120s）重复。
 
@@ -125,7 +144,7 @@ ssh <alias> "su - <run-user> -c 'bash /home/<run-user>/watch-target.sh \
   --log /home/<run-user>/log-<line>-<stage>.log \
   --sentinel <STAGE>-DONE --heartbeat /home/<run-user>/heartbeat-<line>-<stage>.log \
   --deadline-epoch <epoch> --window 200 --interval 3 \
-  --deadline-grace 120'"
+  --deadline-grace 120 --iter <run_id>-w<NN>'"
 ```
 
 ## 7. 存活判据的正确性（pgrep 陷阱）
@@ -164,7 +183,7 @@ label|pid_file|status_file|log|sentinel|heartbeat|deadline_epoch
 ## 9. 与 U3/U4/U5 的接线
 
 - **U2**：状态脊写入 `stage_started_at`、`stage_deadline_epoch`、四件套路径（pid/status/log/heartbeat）与哨兵字面量。
-- **U3**：按 §4 选机制；终止判定 → 写状态脊 `last_verdict` + 证据一行 → 进 U4（`DONE`/`INCOMPLETE`）或 U5（其余）。`RUNNING` → 立即重入。
+- **U3**：按 §4 选机制；终止判定 → 写状态脊 `last_verdict` + 证据一行 → 进 U4（`DONE`/`INCOMPLETE`）或 U5（其余）。`RUNNING` → 以递增的 `--iter` 立即重入下一窗口（§3.2）。
 - **U4**：哨兵（必要）+ 产物核验 + 纪律抽查（充分）；`DONE` 只是候选，不是结论。
 - **U5**：四要素上送件携带 watcher 的 `verdict` / `pid` / `heartbeat` / `rc` / `reason` / `last_status` 快照，并注明 `grace_expired` 是否发生；收到 `TIMEOUT` 先 `--once` 最终快照，活进程不得仅凭 TIMEOUT 停线/杀进程；绝不静默等待。
 - **重入**：先 `--once` 快照，按判定进 U4/U5 或恢复窗口。
@@ -177,7 +196,7 @@ label|pid_file|status_file|log|sentinel|heartbeat|deadline_epoch
 
 - 单目标与 `--manifest` 多目标；`--once` 快照；`--self-test` 回归用例。
 - hook 参数：`--hook-done F`（持久完成记录，先查）与 `--hook-fifo F`（窗口内阻塞读，事件到达即缩短等待）；仅单目标可用。
-- 输出为单行 `WATCH label=… verdict=… pid=… heartbeat=… hook=… anomaly=… sentinel=… rc=… elapsed=… reason=… stream=na|absent|growing|idle line=… run=…`；终止判定附带一行 `EVIDENCE …`（提供 `--raw-stream` 时附 `raw=<path> bytes=<n>`）。`stream=` 只作可见性，不参与任何 verdict。
+- 输出为单行 `WATCH label=… verdict=… pid=… heartbeat=… hook=… anomaly=… sentinel=… rc=… elapsed=… reason=… stream=na|absent|growing|idle line=… run=… iter=…`；终止判定附带一行 `EVIDENCE …`（提供 `--raw-stream` 时附 `raw=<path> bytes=<n>`）。`stream=` 只作可见性，不参与任何 verdict。
 - 只读信号，不 kill、不写项目状态；hook 事件只标记 `hook=observed`，从不由它直接产生 DONE。
 - 退出码与判定表由 `--help` / `--self-test` 钉住；本文件的 §3 是语义映射，代码是精确值所有者；自测覆盖 hook-done、hook-fifo、零匹配、僵尸、PID 复用与伪完成。
 
@@ -232,7 +251,8 @@ HOOK_EVENT_DIR="$dir" HOOK_STAGE="$stage" HOOK_FIFO="$dir/hook-done-$line-$stage
   --pid-file … --status-file … --log … --sentinel "$STAGE-DONE" --heartbeat … \
   --hook-done "$dir/hook-event-$stage.json" \
   --hook-fifo "$dir/hook-done-$stage.fifo" \
-  --deadline-epoch "$deadline" --window 540 --interval 3
+  --deadline-epoch "$deadline" --window 540 --interval 3 \
+  --iter "<run_id>-w<NN>"
 ```
 
 - `--hook-done` 每轮先查（check-before-wait）；`--hook-fifo` 用 `read -t <interval> <> fifo` 等待，事件到达即进入下一轮判定。
@@ -243,14 +263,15 @@ HOOK_EVENT_DIR="$dir" HOOK_STAGE="$stage" HOOK_FIFO="$dir/hook-done-$line-$stage
 
 ```bash
 # 每个窗口：一次 ssh（与 runner 同一身份），长读远端 FIFO/done，工具超时 = window + 30s
+# 末尾的 <run_id>-w<NN> 是字面量迭代令牌（逐窗口递增，见 §3.2）
 ssh -o BatchMode=yes -o ConnectTimeout=5 <alias> \
   "su - <run-user> -c 'bash --noprofile --norc -c \
     \"bash /home/<run-user>/watch-hook.sh <stage> <window> <deadline> \
       /home/<run-user>/hook-done-<stage>.fifo \
-      /home/<run-user>/hook-event-<stage>.json\"'"
+      /home/<run-user>/hook-event-<stage>.json <run_id>-w<NN>\"'"
 # 事件返回后，仍需在远端跑一次 watch-target.sh --once 取得权威判定
 ssh <alias> "su - <run-user> -c 'bash --noprofile --norc -c \
-  \"bash /home/<run-user>/watch-target.sh ... --once\"'"
+  \"bash /home/<run-user>/watch-target.sh ... --once --iter <run_id>-p<NN>\"'"
 ```
 
 - SSH 断开**不杀远端进程**；下一窗口先查 `done.json`，再读 FIFO，丢失连接不丢事件。

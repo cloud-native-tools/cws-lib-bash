@@ -6,11 +6,11 @@
 # runner's exit record and the stage sentinel remain authoritative.
 #
 # Environment (set by the runner):
-#   HOOK_EVENT_DIR  directory for event/done artifacts (default /tmp/sdd-loop-hook)
+#   HOOK_EVENT_DIR  directory for event/done artifacts (default $HOME/tmp/sdd-loop-hook)
 #   HOOK_STAGE      line/stage label
 #   HOOK_FIFO       optional FIFO path (default <dir>/hook-done-<stage>.fifo)
 set -u
-dir="${HOOK_EVENT_DIR:-/tmp/sdd-loop-hook}"
+dir="${HOOK_EVENT_DIR:-$HOME/tmp/sdd-loop-hook}"
 stage="${HOOK_STAGE:-unknown}"
 fifo="${HOOK_FIFO:-$dir/hook-done-$stage.fifo}"
 eventf="$dir/hook-event-$stage.json"

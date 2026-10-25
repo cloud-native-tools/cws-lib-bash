@@ -14,6 +14,7 @@ Search the project memory store and surface the most relevant entries so the cur
 - At the start of a `/speckit.*` command or skill run, to load relevant context before acting.
 - Mid-task, when you need prior decisions or conventions on a specific subject.
 - When the user asks what is already known/decided about a topic.
+- To check whether a user emphasis has occurred before, query the stable `key:<ascii-slug>` tag; the promotion trigger is owned by `.specify/shared/guidelines/knowledge-promotion.md` § 2.
 
 ## Workflow
 1. Derive a compact query from the task: key terms, the feature key (if any), and useful tags.
@@ -33,6 +34,7 @@ Search the project memory store and surface the most relevant entries so the cur
      --limit 5
    ```
    Use `--format json` when you need to parse results programmatically; the default text output is human-readable.
+   Tag filtering is any-of: when checking a specific emphasis key, pass one `key:<ascii-slug>` tag at a time (not `user-emphasis` plus the key in one call).
 4. Read the returned entry paths for full content when a summary is not enough, then fold the relevant points into your working context.
 5. If nothing relevant is found, proceed without memory and rely on the current spec/plan.
 
