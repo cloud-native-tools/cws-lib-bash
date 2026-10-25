@@ -1,6 +1,6 @@
 # Dispatch Recipes — 五大执行机制命令形态（sdd-loop-driver）
 
-> 本文件是宿主 agent 驱动外部子代理的**操作手册**：全部命令形态自包含可用，不依赖任何框架文档（对撰写底稿的引用仅为溯源注解）。所有路径、用户名、别名均为入口参数占位——机制零硬编码。
+> 本文件是宿主 agent 驱动阶段子代理的**操作手册**：本地拓扑用宿主原生子代理，远端拓扑用外部 agent CLI；全部命令形态自包含可用，不依赖任何框架文档（对撰写底稿的引用仅为溯源注解）。所有路径、用户名、别名均为入口参数占位——机制零硬编码。
 >
 > **委派化声明（2026-10-16 裁定）**：与配方真源 `.specify/shared/workflow/external-dispatch-recipes.md` 同型的机制段已坍缩为引用；本文件保留 **loop-driver 特有差异面**（心跳机制、脱离形态权威落点、阶段链与收尾编排）与对真源的引用——单一事实落点，重复即漂移。
 
@@ -13,6 +13,23 @@
 派发前探测目标项目当前所处 SDD 阶段，未声明阶段时**必须探测、禁止猜测**。命令形态（三信号：分支名 / 近期提交 / specs 目录）见 `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 1——本配方坍缩为引用。
 
 两条本技能纪律保留：三信号与终态权威文档路径一起判定续跑阶段，判定结果写入该线状态脊；必须覆盖收尾场景——review 已完成、只剩合并时直接进入收尾配方（Recipe 4）。
+
+## 本地原生拓扑（默认：入口未给 host+path）
+
+本地拓扑不使用 SSH/`su`，也不启动外部 agent CLI。目标项目按 SKILL.md § U0 缺省解析取**当前项目**；阶段派发直接使用当前宿主 agent 的原生子代理（如 Claude Code `Agent`/`Task`、Qoder CLI 原生 subagent）：
+
+- **派发**：把 `stage-prompts.md` 的三段骨架直接作为原生子代理提示词（上下文较大时可先落一份 brief 文件并让子代理读取）；一阶段一次调用，不写 runner、不建 FIFO/hook。
+- **等待**：原生调用是同步阻塞调用，返回即阶段结束——这次调用本身就是 U3 的等待；不适用 `watch-model.md` 的窗口/心跳/退出记录判定，也不得为它启动 `watch-target.sh`。
+- **状态与校验**：U2 派发前写状态脊；返回后按 U4 独立校验（校验者仍不是执行子代理）。失败/超时按 U5 的重试与上送规则处置——没有后台进程可杀。
+- **多线**：宿主支持并行原生调用时可按线并行；否则串行，一线一状态脊。
+- **边界**：MUST NOT 在本地以 `qodercli` / `claude -p` 等外部 CLI 启动子代理；本文件 Recipe 2–3 的 runner/脱离/统一监听仅用于远端拓扑。宿主没有原生子代理能力时，由驱动者在本会话直接执行阶段命令（单代理形态），仍不得降级到外部 CLI。
+
+## 阶段子代理预算与分段（Stage Subagent Budget & Bounded Dispatch）
+
+- **默认预算**：阶段执行子代理的 `run-turn-budget` 为 **120**（owner：`agents/sdd-executor.agent.md`；2026-10-22 由 40 上调，依据：065a implement 阶段 30 个任务在 40 回合耗尽）。预算变更属 source change，必须同步 agent 模板、`.specify/agents/templates/` 镜像与各工具 render。
+- **有界分段**：大阶段（implement >20 任务，或契约 >40 条）MUST 拆成 **≤8 任务 / 一个 phase** 的子派发；每段在状态脊写 `part_scope` 与 checkpoint，子代理回传 `PARTn-DONE` 或 `ANOMALY`；驱动者 U4 通过后才派下一段。禁止把整个大阶段压在一次派发里。
+- **输出纪律**：子派发 brief MUST 要求执行者用工具**分段写文件**（每次 Write/Edit 一部分），禁止在一个回复里输出整段实现或整份测试；每段回传改动清单、测试计数、提交哈希。这样同时规避 output-token 上限。
+- **状态字段**：状态脊记录 `turn_budget`、`sub_dispatch`、`part_scope`、`checkpoint`；预算耗尽/输出上限属 U5 预算触顶，按卡死处置上报，不得伪完成。
 
 ## Recipe 1 — 阶段提示词文件（Stage Prompt File）
 
@@ -62,7 +79,7 @@ HOOK_EVENT_DIR="$dir" HOOK_STAGE="$stage" HOOK_FIFO="$dir/hook-done-$line-$stage
 - hook 事件只产生 `hook=observed`；退出记录/哨兵仍是权威。正常完成时 hook 缩短等待，API 崩溃时 Stop 不触发、由 status/exit 记录判 FAILED。
 - 模板：`.specify/scripts/hook-stop.sh`；本地/远端模型与故障矩阵见 `watch-model.md` §11–§12。
 
-## Recipe 3 — 脱离模式派发 + 统一监听（Detached Dispatch & Unified Watch，缺省形态）——**nohup 权威落点**
+## Recipe 3 — 脱离模式派发 + 统一监听（Detached Dispatch & Unified Watch，远端缺省形态）——**nohup 权威落点**
 
 **让子代理在后台自己跑，驱动者用长轮询窗口监听**——派发连接断开不中断子代理，等待期间不消耗模型回合。本形态是 loop-driver 实测独有差异面（analyze H-04 裁定：权威落点在本文件，不迁配方真源）；监听规则本体见 `watch-model.md`，本节只给命令形态：
 
@@ -84,7 +101,7 @@ ssh <alias> "su - <run-user> -c 'bash /home/<run-user>/watch-target.sh \
   --log /home/<run-user>/log-<line>-<stage>.log \
   --sentinel <STAGE>-DONE --heartbeat /home/<run-user>/heartbeat-<line>-<stage>.log \
   --deadline-epoch <stage_deadline_epoch> --window 200 --interval 3 \
-  --deadline-grace 120'"
+  --deadline-grace 120 --iter <run_id>-w<NN>'"
 ```
 
 要点：
@@ -93,11 +110,26 @@ ssh <alias> "su - <run-user> -c 'bash /home/<run-user>/watch-target.sh \
 - **外层三重重定向必须**：`nohup` 任务本体之外再带 `< /dev/null` 并把 ssh 通道的 stdout/stderr 重定向（`> /dev/null 2>&1`）——缺省时后台任务继承 ssh 通道的 stdio，本地 ssh 挂起直到超时（实测 2026-10-16：每次派发白烧一次 2 分钟本地超时，进程虽照常启动但驱动者节拍被打断）。runner 自身的 stdout/stderr 在 `su -c` 内层落 `runner-log`，保证归属 run-user 可读。
 - **监听机制阶梯（`watch-model.md` §4）**：长轮询窗口缺省 → 宿主原生通知仅作补充（且不得结束驱动者会话）→ 间隔轮询回退；**禁止**独立 `sleep N` 回合空等。
 - **窗口到期 ≠ 阶段超时**：watcher 返回 `RUNNING`（退出码 10）时立即发起下一窗口，不做 agent 侧等待；只有 `TIMEOUT`（阶段 deadline）进入 U5。这条把「监视器零匹配/窗口到期误判超时」与真正的阶段超时分开（2026-10 实测缺陷：`pgrep -c` 零匹配先输出 0 再被 `|| echo 0` 追加第二个 0，导致 clarify 已完成仍被误判超时）。
+- **监听签名唯一（宿主重复调用保护）**：每个监听窗口 MUST 在命令文本中携带字面量 `--iter <run_id>-w<NN>`，`NN` 逐窗口递增；连续两次监听命令不得字节相同。令牌不能用 `$(date +%s)`/`$$`/`$RANDOM` 之类运行时展开——宿主在命令执行前比较字面签名，展开不改变签名。规则 owner：`watch-model.md` §3.2。
 - **TIMEOUT 不是终止命令**：watcher 在 deadline 后继续采样 `--deadline-grace` 秒（缺省 120s），晚完成会重判 `DONE`/`FAILED`。收到 `TIMEOUT` 后驱动者 MUST 先做 `--once` 最终快照；`pid=alive` + `heartbeat=fresh` 时不得仅凭 TIMEOUT 停线/杀进程；停线须用户显式决定并保留 worktree/status/log。
 - **正证据优先**：每轮一次读取退出记录 → PID 存活 → 日志尾行 → 心跳 mtime；进程消失、日志静默、`pgrep` 零匹配都**不是**完成。心跳只证明 runner 外壳活着，与 PID 一起看。
 - **多线批查**：一个窗口一次 ssh 检查多条线（`--manifest` 模式），任一线终止即返回全部线快照，**判定仍逐线独立做**；输出只保留判定行与必要证据，哨兵未现且进程存活时无需更多输出。
 - **观察面纪律（底稿注解：External Dispatch Visibility Contract，`subagent-definitions.md`）**：禁止**缓冲至退出**式派发——`qodercli -p "<prompt>" > agent.log 2>&1 &` 这种「输出缓冲到进程退出才落盘」的形态让运行期零可见性，是明令禁止的反模式。`stage-runner.sh` 缺省用 `--output-format stream-json`：raw 落盘、live log 增量增长，退出记录与窗口监听仍以哨兵/退出记录为准；CLI 不支持时降级 buffered 并记 `progress=degraded`（efficiency-model §4）。
 - 终止判定 `DONE` / `INCOMPLETE` → 独立校验（见 stage-prompts.md）；其余终止判定 → U5；通过则派发下一阶段（回到 Recipe 1/2/3）。
+
+### 回退轮询（一次性状态快照）
+
+无法起阻塞窗口时才用；每条快照命令 MUST 以字面量迭代令牌开头并在输出中回显，连续两次不得字节相同（规则 owner `watch-model.md` §3.2）：
+
+```bash
+POLL_ITER='<run_id>-p<NN>'
+ssh -o BatchMode=yes <alias> \
+  "echo POLL iter=$POLL_ITER at=\$(date -u +%FT%TZ); date; \
+   echo ---status---; cat /home/<run-user>/status-<line>-<stage>; \
+   echo ---git---; su - <run-user> -c 'git -C <project-dir> log -1 --oneline'"
+```
+
+禁止形态：`sleep N; ssh …` 原样连发（2026-10-25 宿主判重的直接来源）；需要跨多个窗口等待时改用 `watch-target.sh --window` 并逐窗口递增 `--iter`。
 
 ### Hook + SSH 远程窗口（推荐补充）
 
@@ -109,7 +141,7 @@ ssh -o BatchMode=yes <alias> \
   "su - <run-user> -c 'bash --noprofile --norc -c \
     \"bash /home/<run-user>/watch-hook.sh <stage> <window> <deadline> \
       /home/<run-user>/hook-done-<stage>.fifo \
-      /home/<run-user>/hook-event-<stage>.json\"'"
+      /home/<run-user>/hook-event-<stage>.json <run_id>-w<NN>\"'"
 # 事件或 HOOK_TIMEOUT 返回后，再跑一次远端 watch-target.sh --once 取权威判定
 ```
 
@@ -135,7 +167,7 @@ ssh -o BatchMode=yes <alias> \
   - **analyze 门**：产物 = findings 报告正文（只读命令，不产新提交）；门判据 = 报告中 CRITICAL/HIGH 发现为零或已处置。
   - **回环规则（两门同构，一轮有界）**：门发现的问题回上游阶段修复（checklist 项失败 → 重派 plan 或 tasks；analyze CRITICAL/HIGH → 重派 requirements/plan/tasks 对应修复）后重过该门，同一门最多回环一轮；第二轮 checklist 仍未过 → 豁免放行并记录进状态脊；第二轮 analyze 仍有 CRITICAL/HIGH → 停线上送（跨产物矛盾带病进 implement 会放大，不可豁免）。
 - **合并收尾（git 状态判定，不设哨兵）**：review 后合并回 main——判定条件为特性分支的提交已包含于集成分支、且工作树无该分支的未合并/冲突残留；两项齐备即该线合并完成。push 与远程分支操作缺省不执行（确认门控破坏性动作；仅入口显式授权时先推后合）。
-- **脏树合并变体（实测配方）**：工作树存在与集成分支冲突的既有脏文件、`git checkout main` 被终止时，不动工作树——`git push . HEAD:main` 快进本地 main 引用，再 `git push origin HEAD:main` 推远端；工作树留在特性分支无害，重入只认状态脊。
+- **脏树合并变体（实测配方）**：工作树存在与集成分支冲突的既有脏文件、`git checkout main` 被终止时，不动工作树——`git push . HEAD:main` 快进本地 main 引用，再 `git push origin HEAD:main` 推远端；工作树留在特性分支无害，重入只认状态脊。**仓含 submodule 时**必须加 `--no-recurse-submodules`（默认 `push.recurseSubmodules` 会尝试推送子模块，在 detached/no-remote 子模块上以「远端意外挂断」失败，main 引用不变）：`git push --no-recurse-submodules . HEAD:main`。
 - **分支清理（branch hygiene，合并后的收尾步）**：合并并推送后，删除本特性的特性分支——本地用 `git branch -d`（安全删除，未合并自动拒删），远端先 `git merge-base --is-ancestor origin/<branch> main` 验证祖先关系再 `git push origin --delete`；判定 NOT-MERGED 的分支保留并登记进收尾汇总，不强删。该线历史上的遗留分支同规则一并巡检（实测定级示例见 2026-10-15 xuanji-doc：6 条规格/验证分支 + 1 条已并入的 kb-v41-phase-t 时代分支，全部验证祖先后删除，终态仅存 main）。
 - **P0 前置门**：同线上一特性 review 的 P0 发现未修复或未显式豁免前，禁止派发该线下一特性规格的 requirements（P0 语义 = fix before next spec；豁免记录进状态脊）。
 - **工作树归档清扫（archive-or-ignore，合并的前置门）**：合并前驱动者必须把该线工作树残留逐文件（或逐聚类）归类处置，确保「代码全部归档合并到主干并推送上游」可判定：
@@ -150,7 +182,7 @@ ssh -o BatchMode=yes <alias> \
 
 ## Recipe 5 — 本地拓扑与变体
 
-- **本地拓扑**：项目在本机时省略 ssh/su，直接以本地项目为工作目录执行 runner；需求上下文先写简报文件（`/tmp/<topic>-sdd-brief.md`），子代理提示词只指示「先完整阅读简报，再执行对应阶段命令」——命令形态见 `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 5（本配方坍缩为引用）。监听同样走 `watch-target.sh`，只是去掉 ssh/su 层（`watch-model.md` §6）。
+- **本地拓扑**：项目在本机时省略 ssh/su，直接以本地项目为工作目录执行 runner；需求上下文先写简报文件（`~/tmp/<project>/<topic>-sdd-brief.md`），子代理提示词只指示「先完整阅读简报，再执行对应阶段命令」——命令形态见 `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 5（本配方坍缩为引用）。监听同样走 `watch-target.sh`，只是去掉 ssh/su 层（`watch-model.md` §6）。
 - **本地脱离（缺省形态，与远端同构）**：`setsid` 可用时优先，本机 macOS 无 `setsid` 时用 `nohup + disown`；stdin 接 `/dev/null`，stdout/stderr 重定向到 runner-log：
 
   ```bash
@@ -171,6 +203,20 @@ ssh -o BatchMode=yes <alias> \
   ```
 
   远端等价形态：`ssh <alias> "nohup su - <run-user> -c 'bash <skill-dir>/scripts/stage-runner.sh …' < /dev/null > /dev/null 2>&1 &"`。两种拓扑的派发记录都写 `detached=yes`；无法脱离时写 `no` 并按未受保护运行记录风险。重入先 `watch-target.sh --once` 快照，已完成的阶段只核验、不重派。
+- **Qoder 桌面宿主变体（在 Qoder Desktop app 内驱动 headless）**：桌面版会向所有子进程注入四个 SDK 运行时变量，直接启动 `qodercli -p` 会在参数解析阶段报
+  `sdk_invalid_args: Agent SDK entrypoint env is set but required flags are missing`（无哨兵、无日志产物）。本拓扑 MUST 用桌面适配器包裹 runner，使清除后的环境沿 `stage-runner → qodercli` 传递（变量清单、探针与 1.1.76 实测见 `references/cli/qodercli.md` § "Qoder Desktop Host Adapter"）：
+
+  ```bash
+  env -u QODER_AGENT_SDK_ENTRYPOINT -u QODER_AGENT_SDK_VERSION \
+      -u QODER_SDK_AUTH_PAYLOAD_FILE -u QODER_SDK_CUSTOM_BASE_URL_BYOK \
+    nohup bash <skill-dir>/scripts/stage-runner.sh \
+      --cli "<cli>" --cli-args "<cli args>" --project-dir "<project-dir>" \
+      --prompt-file "<prompt-file>" --sentinel "<STAGE>-DONE" --line "<line>" \
+      --stage "<stage>" --state-dir "<state-dir>" --mode auto --detached yes \
+      </dev/null >"<state-dir>/runner-log-<line>-<stage>.log" 2>&1 &
+  ```
+
+  桌面/CLI 的 `--permission-mode auto` 仍然必需（`accept_edits` 会拒绝 git 等白名单外 Bash）。桌面加载项目技能走 `<repo>/.qoder/skills → .specify/skills`；框架技能按项目副本分发，不建全局链接（R0）。
 - **构建固化变体**：同一主机按角色分线（不同系统用户在各自目录固化不同层），仅经入口参数（执行身份、路径）区分，机制零新增分支——形态见同文件 § Recipe 6。
 
 ## Recipe 6 — 线路登记、归属信封与消息入口（064）
@@ -196,7 +242,7 @@ python3 <skill-dir>/scripts/line-registry.py --action register \
 
 ```bash
 ... watch-target.sh ... --line-id <line> --run-id <run> --registry <registry> --meta <meta> \
-  --lease-ttl 600 --window 200 \
+  --lease-ttl 600 --window 200 --iter <run_id>-w<NN> \
   --lease-renew-cmd "python3 <skill-dir>/scripts/line-registry.py --action lease-renew --line-id <line> --session <session>" \
   --lease-renew-interval 60
 ```

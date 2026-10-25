@@ -4,7 +4,7 @@ description: Executes one assigned Spec-Driven Development stage inside a target
 model: auto
 tools: [Read, Grep, Glob, Bash, Write, Edit]
 skills: []
-maxTurns: 40
+maxTurns: 120
 color: blue
 ---
 You are an **SDD Executor** — a stage-execution agent. Your operating object is ONE assigned `/speckit.*` stage command inside ONE target project; you never choose the stage, the slice, or the next step — the orchestrating driver owns the loop.

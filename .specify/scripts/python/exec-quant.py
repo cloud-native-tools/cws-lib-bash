@@ -16,6 +16,11 @@ the ``collect-dispatch`` action (one record per external dispatch label), an
 provenance. Unit records (``collect``) keep 059 semantics and additionally gain
 an all-``not_evaluated`` config group.
 
+068 US3 adds the explicit ``aggregate`` action: read-only consumption of the
+received-package envelopes under ``aggregated/**/records/`` projected into a
+counter-only summary view (``aggregated/summaries/``, data-model § E7) —
+zero fabrication, zero network, no scoring and no thresholds.
+
 Design adjudications live in the feature plans (059 D1–D12; 061 E6); behavior
 truth is this file. Law of the record (data-model §1.1): every measurable field
 is either a ``{"value", "provenance"}`` object or the literal ``not_evaluated``
@@ -42,7 +47,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
-ACTIONS = ("collect", "list-records", "score", "collect-dispatch", "args-manifest")
+ACTIONS = ("collect", "list-records", "score", "collect-dispatch", "args-manifest", "aggregate")
 
 # Argument manifest (063 C-22): per-action required/source classification.
 # "required" = flags this engine itself validates as required for the action;
@@ -54,6 +59,8 @@ ACTIONS = ("collect", "list-records", "score", "collect-dispatch", "args-manifes
 # 059 semantics, untouched by 063 C-24 — that clause is scoped to
 # run-determination's (unit_id, run_id) lock), so --run-id is declared SOURCE,
 # not required.
+# 068 C-18: `aggregate` adds zero required flags — its input face is the
+# ambient --workspace-root plus the presentation flag --format (json default).
 ARG_MANIFEST = {
     "collect": {"required": ["--unit-id"], "source": ["--run-id"]},
     "list-records": {"required": [], "source": ["--since", "--format"]},
@@ -63,6 +70,7 @@ ARG_MANIFEST = {
                                       "--config-id"],
                          "source": []},
     "args-manifest": {"required": [], "source": []},
+    "aggregate": {"required": [], "source": ["--workspace-root", "--format"]},
 }
 
 KIND = "speckit.exec-quant"  # [[STR-001]]
@@ -94,6 +102,13 @@ SCORES_DIR_NAME = "scores"
 LEGACY_RECORDS_NAME = "records.jsonl"
 LEGACY_SCORES_NAME = "scores.jsonl"
 LOCK_NAME = ".write.lock"
+# 068 US3 aggregate: the received-package layer (E6 envelopes) and its
+# append-only summary products (E7 views) live under the engine store.
+AGGREGATED_DIR_NAME = "aggregated"
+SUMMARIES_DIR_NAME = "summaries"
+AGGREGATE_VIEW_KIND = "speckit.exec-quant-aggregate-view"
+AGGREGATE_VIEW_SCHEMA_VERSION = 1
+UNKNOWN_PROJECT_GROUP = "unknown-project"  # E2 literal group (C-12/E6)
 DEFAULT_DISPATCH_LOG_DIR = Path(".specify") / "agents" / "execution" / "logs"
 
 _UNIT_ID_RE = re.compile(
@@ -1082,8 +1097,9 @@ def read_jsonl_safe(path: Path) -> List[Dict[str, Any]]:
 def action_list_records(args: argparse.Namespace) -> int:
     workspace_root = resolve_workspace_root(args.workspace_root)
     since = _parse_since(args.since)
-    if args.format not in ("text", "json"):
-        raise InputError(f"invalid --format: {args.format!r}")
+    fmt = args.format if args.format else "text"  # list-records text default
+    if fmt not in ("text", "json"):
+        raise InputError(f"invalid --format: {fmt!r}")
     records, scores = load_store(workspace_root)
     joined: List[Dict[str, Any]] = []
     for record in records:
@@ -1107,7 +1123,7 @@ def action_list_records(args: argparse.Namespace) -> int:
         entry = normalize_record_view(dict(record))
         entry["scores"] = matches
         joined.append(entry)
-    if args.format == "json":
+    if fmt == "json":
         print(json.dumps(joined, ensure_ascii=False, indent=2))
         return 0
     for entry in joined:
@@ -1175,6 +1191,179 @@ def action_score(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# aggregate action (068 US3; contracts/aggregate-contract.md C-18..C-23)
+# ---------------------------------------------------------------------------
+
+def aggregated_dir(workspace_root: Path) -> Path:
+    return storage_dir(workspace_root) / AGGREGATED_DIR_NAME
+
+
+def summaries_dir(workspace_root: Path) -> Path:
+    return aggregated_dir(workspace_root) / SUMMARIES_DIR_NAME
+
+
+def load_aggregated_envelopes(workspace_root: Path
+                              ) -> Tuple[List[Tuple[str, Dict[str, Any]]], int]:
+    """C-19 consumption face: ``aggregated/**/records/*.json`` envelopes ONLY —
+    the local ``records/`` / ``scores/`` stores never enter this face (the US3
+    context is the aggregation layer; local records carry no source
+    attribution). An unreadable envelope (unparsable, non-dict, or without a
+    usable ``record`` object) degrades into the ``skipped_unreadable`` counter
+    and never blocks the action. Returns (readable (filename, envelope) pairs
+    sorted by filename, skipped count)."""
+    readable: List[Tuple[str, Dict[str, Any]]] = []
+    skipped = 0
+    base = aggregated_dir(workspace_root)
+    if not base.is_dir():
+        return readable, skipped
+    for path in sorted(base.glob(f"**/{RECORDS_DIR_NAME}/*.json")):
+        try:
+            node = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            skipped += 1
+            continue
+        if not isinstance(node, dict) or not isinstance(node.get("record"), dict):
+            skipped += 1
+            continue
+        readable.append((path.name, node))
+    return readable, skipped
+
+
+def _envelope_meta(envelope: Dict[str, Any]) -> Dict[str, Any]:
+    meta = envelope.get("aggregation_envelope")
+    return meta if isinstance(meta, dict) else {}
+
+
+def _aggregate_quality(qualities: List[Dict[str, Any]]) -> Dict[str, Dict[str, int]]:
+    """D8 shape normalization (C-20), view-only: a ``{"value", ...}`` object
+    counts as evaluated; the bare ``not_evaluated`` literal, a missing key and
+    any unforeseen form count as not_evaluated — nothing is ever guessed. The
+    field universe is the union of observed keys (zero hard-coded vocabulary;
+    a future field with a proper measured shape reads as evaluated)."""
+    fields: set = set()
+    for quality in qualities:
+        fields.update(quality)
+    projected: Dict[str, Dict[str, int]] = {}
+    for field in sorted(fields):
+        evaluated = sum(1 for quality in qualities
+                        if isinstance(quality.get(field), dict)
+                        and "value" in quality.get(field))
+        projected[field] = {"evaluated": evaluated,
+                            "not_evaluated": len(qualities) - evaluated}
+    return projected
+
+
+def build_aggregate_view(workspace_root: Path) -> Dict[str, Any]:
+    """E7 view (C-20/C-21): per-source-project counter projection, replayable
+    from the ``record_files`` roster (FR-011). Grouping is by envelope
+    ``source_project`` — this repository as a source has the same rights as
+    any other (zero special-casing); a missing/empty attribution falls to the
+    literal ``unknown-project`` group. ``identity_status`` projects the first
+    member in filename order. Counters only: no evaluation, no scoring, no
+    threshold (C-21)."""
+    envelopes, skipped = load_aggregated_envelopes(workspace_root)
+    groups: Dict[str, List[Tuple[str, Dict[str, Any]]]] = {}
+    for name, envelope in envelopes:
+        project = str(_envelope_meta(envelope).get("source_project") or "").strip()
+        groups.setdefault(project or UNKNOWN_PROJECT_GROUP, []).append((name, envelope))
+    sources: List[Dict[str, Any]] = []
+    for project in sorted(groups):
+        members = sorted(groups[project], key=lambda item: item[0])
+        identity_status = (str(_envelope_meta(members[0][1]).get("identity_status")
+                               or "").strip() or UNKNOWN_PROJECT_GROUP)
+        units: Dict[str, int] = {}
+        qualities: List[Dict[str, Any]] = []
+        for _name, envelope in members:
+            record = envelope["record"]
+            unit_id = str(record.get("unit_id", ""))
+            units[unit_id] = units.get(unit_id, 0) + 1
+            quality = record.get("quality")
+            qualities.append(quality if isinstance(quality, dict) else {})
+        quality_view = _aggregate_quality(qualities)
+        sources.append({
+            "project": project,
+            "identity_status": identity_status,
+            "record_count": len(members),
+            "units": {key: units[key] for key in sorted(units)},
+            "quality": quality_view,
+            "coverage": {
+                "not_evaluated_total": sum(f["not_evaluated"]
+                                           for f in quality_view.values()),
+                "evaluated_total": sum(f["evaluated"]
+                                       for f in quality_view.values()),
+            },
+            "record_files": [name for name, _envelope in members],
+        })
+    slots = sum(source["coverage"]["evaluated_total"]
+                + source["coverage"]["not_evaluated_total"] for source in sources)
+    not_evaluated_total = sum(source["coverage"]["not_evaluated_total"]
+                              for source in sources)
+    identity_keys: set = set()
+    for _name, envelope in envelopes:
+        key = _envelope_meta(envelope).get("identity_key")
+        if key is not None:
+            identity_keys.add(str(key))
+    return {
+        "kind": AGGREGATE_VIEW_KIND,
+        "schema_version": AGGREGATE_VIEW_SCHEMA_VERSION,
+        "generated_at": now_iso(),
+        "sources": sources,
+        "totals": {
+            "record_count": len(envelopes),
+            # 未测总占比; an empty denominator stays explicitly unevaluated
+            # (null) instead of a fabricated number (CHK027 left open; FR-013).
+            "not_evaluated_ratio": (not_evaluated_total / slots) if slots else None,
+        },
+        "store_digest": {
+            # probed envelope files (readable + skipped) / distinct identity keys
+            "record_files_total": len(envelopes) + skipped,
+            "identity_keys_total": len(identity_keys),
+        },
+        "skipped_unreadable": skipped,
+    }
+
+
+def _print_aggregate_text(view: Dict[str, Any]) -> None:
+    """Human face of the same view (C-18): counts and names only."""
+    for source in view["sources"]:
+        print(f"{source['project']} status={source['identity_status']} "
+              f"records={source['record_count']}")
+        for unit_id, count in source["units"].items():
+            print(f"  unit: {unit_id} x{count}")
+        for field, counts in source["quality"].items():
+            print(f"  quality: {field} evaluated={counts['evaluated']} "
+                  f"not_evaluated={counts['not_evaluated']}")
+        print(f"  coverage: evaluated={source['coverage']['evaluated_total']} "
+              f"not_evaluated={source['coverage']['not_evaluated_total']} "
+              f"files={len(source['record_files'])}")
+    ratio = view["totals"].get("not_evaluated_ratio")
+    digest = view["store_digest"]
+    print(f"totals: records={view['totals']['record_count']} "
+          f"not_evaluated_ratio={'-' if ratio is None else f'{ratio:.6f}'} "
+          f"skipped_unreadable={view['skipped_unreadable']} "
+          f"store_digest={digest['record_files_total']}/"
+          f"{digest['identity_keys_total']}")
+
+
+def action_aggregate(args: argparse.Namespace) -> int:
+    """068 US3 (C-22/C-23): ONE run → ONE new append-only product under
+    ``aggregated/summaries/`` (``entry_filename()`` form; old files are never
+    rewritten), isomorphic with the stdout face. Explicit action only —
+    nothing here is reachable from any receive path; zero network, zero
+    egress, writes confined to ``aggregated/`` (FR-014)."""
+    workspace_root = resolve_workspace_root(args.workspace_root)
+    fmt = args.format or "json"  # C-18: the aggregate face defaults to json
+    view = build_aggregate_view(workspace_root)
+    target = write_entry(summaries_dir(workspace_root), view)
+    if fmt == "json":
+        print(json.dumps(view, ensure_ascii=False, indent=2))
+    else:
+        _print_aggregate_text(view)
+    print(f"exec-quant: aggregate view -> {target}", file=sys.stderr)
+    return 0
+
+
 USAGE_LINE = ("usage: exec-quant.py --action {" + ",".join(ACTIONS) + "} "
               "[--unit-id ID] [--unit-type TYPE] [--run-id ID] [--score 1-5] "
               "[--note TEXT] [--since DATE] [--snapshot PATH] [--config-id ID] "
@@ -1186,7 +1375,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workspace-root", default=None)
     parser.add_argument("--action", required=True,
                         choices=["collect", "list-records", "score",
-                                 "collect-dispatch", "args-manifest"])
+                                 "collect-dispatch", "args-manifest",
+                                 "aggregate"])
     parser.add_argument("--unit-id", default=None)
     parser.add_argument("--unit-type", default=None, choices=list(UNIT_TYPES))
     parser.add_argument("--run-id", default=None)
@@ -1195,7 +1385,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--since", default=None)
     parser.add_argument("--snapshot", default=None)
     parser.add_argument("--config-id", dest="config_id", default=None)
-    parser.add_argument("--format", default="text", choices=["text", "json"])
+    # Per-action default (C-18): list-records keeps its text default,
+    # aggregate defaults to json — the parser itself stays default-free.
+    parser.add_argument("--format", default=None, choices=["text", "json"])
     return parser
 
 
@@ -1233,6 +1425,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             return action_collect_dispatch(args)
         if args.action == "list-records":
             return action_list_records(args)
+        if args.action == "aggregate":
+            return action_aggregate(args)
         if args.action == "args-manifest":
             return action_args_manifest(args)
         return action_score(args)

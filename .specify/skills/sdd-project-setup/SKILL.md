@@ -20,6 +20,17 @@ spec-kit 本地 fork（master）在上游 SDD 之上扩充了大量机制——f
 - 入口话术声明**目标与模式**：目标项目（本地路径，或 ssh 别名+运行用户+项目目录——远端形态参数与 sdd-loop-driver 一致）、模式（`install` 全新安装 / `refresh` 刷新既有 / `verify` 只读核查）、目标 AI 工具（qoder/claude/codex/opencode/hermes/copilot，或 `all`——按脚本惯例一次性为 claude/copilot/opencode/qoder 全部 agent init，默认推荐）。
 - 由 sdd-loop-driver 委派时（其 U1 发现 `.specify/` 缺失或宪法不在位）：模式由委派上下文决定——缺失=`install`，退化=`refresh`。
 
+### S0 入口缺省解析
+
+入口可以只给一句意图（如「初始化 spec-kit」）；缺省按下表解析，**不得因参数不全而切换流程或索要环境信息**：
+
+| 入口缺省 | 解析规则 |
+|----------|----------|
+| 目标项目 | 未给路径且未给 host/ssh 别名 → **当前项目**（`git rev-parse --show-toplevel`；非 git 仓库取会话工作目录）；给了本地路径 → 该路径；host + 运行用户 + 项目目录给全 → 远端 |
+| 执行拓扑 | 无 host/ssh 别名 → **本地**；远端三元组给全 → 远端；只给 host 或三元组不完整 → 问一个澄清问题，不猜 |
+| 模式 | 入口未给 → 按本次 S1 分级：absent=`install`、degraded/partial=`refresh`、complete=`verify` |
+| 目标 AI 工具 | 入口未给 → `all`（默认推荐） |
+
 ## The Loop (S0–S5)
 
 ```text
@@ -41,7 +52,8 @@ S3+ STRENGTHEN 强化序列（机制就绪后的增值建设，按需逐项，�
              setup-recipes.md）：/speckit.history → /speckit.docs 深化 →
              /speckit.research → /speckit.feature 特性生成 →
              /speckit.goal（定义 3–5 个项目目标）
-S4 VERIFY    五族前置检查（SSH/运行用户/CLI/LLM 配置/spec-kit 可用性）+
+S4 VERIFY    五族前置检查（SSH/运行用户/CLI/LLM 配置/spec-kit 可用性；
+             本地拓扑仅 ④ LLM 配置/⑤ spec-kit 可用性，①–③ 不适用）+
              宿主 hook 体检（.specify/scripts/hook-health.py：同步 hook 阻塞/超时风险；
              vendor 自愈遥测 hook 只报告）+ 机制完备度矩阵复扫 +
              兼容符号链接核验 → 全绿才算调协完成
@@ -49,6 +61,8 @@ S5 SUGGEST   产出候选工作清单（三个内部来源：未完成 feature /
              feedback / speckit TODO 事项）→ 建议（非强制）下一步可用
              sdd-loop-driver 推进开发
 ```
+
+**Dispatch carrier（承载选择）**：本地拓扑（缺省）→ 编排者直执或宿主**原生子代理**（native subagent）；远端拓扑 → 外部 agent CLI（`qodercli` 等）经 run-agent 以拓扑声明派发。MUST NOT 在本地启动 `qodercli` 作为子代理——细则见「Subagent Delegation」。
 
 **Instruction-chain budget gate**: `/speckit.instructions` 的 `BUDGET` 报告是 S3 的收敛条件之一；超预算处理见 `references/setup-recipes.md` § S3.4（先走 owner 的 R1/R2，仍超则执行 R3 project-filled 章节外迁；无法收敛列 pending）。
 
@@ -62,6 +76,7 @@ S5 SUGGEST   产出候选工作清单（三个内部来源：未完成 feature /
 6. **幂等收敛**：S2/S3/S3+ 的每一动作 MUST 幂等——同一稳定态上重复执行不产生新的写动作；每项动作执行前 MUST 以本次 S1 盘点结果为缺口凭据，禁止凭上次执行的记忆跳过或重做（幂等与重入语义见 setup-recipes.md）。
 7. **运行时与 CLI 就绪先于 init**：S2 执行 specify init 前 MUST 完成 S2 的 CLI 层——python 解析阶梯三级全缺 → **报错退出，绝不自动安装 Python**；CLI 安装链三源全败 → 报告缺口并停止；两者都不得静默跳过 init 或手工伪造 `.specify/`。
 8. **指令体积预算收敛**：S3 的 `/speckit.instructions` 之后 MUST 读取生成器的 `BUDGET` 报告；`over` 时 MUST 先走 owner 的 R1/R2，仍超且存在可迁移 project-filled 章节时 MUST 按 `references/setup-recipes.md` § S3.4 执行 R3 回退；未回到预算内且无可迁移章节时 MUST 作为 pending 上报（上调预算/拆分章节），不得静默转述告警或删除项目内容。
+9. **本地拓扑原生承载**：入口未给环境信息（无 host/ssh 别名且无项目路径）时，目标项目缺省为当前项目、拓扑为本地（S0 缺省表）；此情形下治理命令由编排者亲自执行，或交给当前宿主 agent 的**原生子代理**——MUST NOT 以 `qodercli` / `claude -p` 等外部 agent CLI 启动子代理。外部 CLI 仅用于远端拓扑（治理命令为交互短任务，不满足外部模式的隔离/并行/长跑刚需；native-first 依据：`.specify/shared/definitions/subagent-definitions.md` § mode selection）。
 
 ## Discipline Defaults
 
@@ -77,10 +92,11 @@ S5 SUGGEST   产出候选工作清单（三个内部来源：未完成 feature /
 
 ## Subagent Delegation（子代理委派说明——2026-10-16 裁定）
 
-本手册是**编排者**：调协动作的执行主体按需委派承接技能（可选形态——本技能独立运行时不强制）：
+本手册是**编排者**：调协动作的执行主体按**执行拓扑**选择承载形态（承接技能可选——本技能独立运行时不强制）：
 
 - **盘点与验证的执行**：`.specify/scripts/mechanism-inventory.py` 由编排者直接运行（只读脚本，无需子代理）；远端盘点经 `ssh + su` 形态执行（占位约定同 `.specify/shared/workflow/external-dispatch-recipes.md`）。
-- **S2/S3 治理命令的派发**：`specify init` / `/speckit.*` 治理命令如需以子代理承载，经 **run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）以拓扑声明派发——前置检查与失败处置链随其 `references/dispatch-preflight.md`；独立运行时编排者亦可亲自执行治理命令（等价路径）。
+- **本地拓扑（默认：入口未给 host+path）**：`specify init` / `/speckit.*` 治理命令由编排者**亲自执行**，或交给**当前宿主 agent 的原生子代理**（native subagent，如 Claude Code `Agent`/`Task` 工具、Qoder CLI 原生 subagent）——MUST NOT 启动 `qodercli` / `claude -p` 等外部 agent CLI 作为子代理。本地无进程隔离、长跑或跨模型需求，原生是共享默认（`.specify/shared/definitions/subagent-definitions.md` § mode selection）。
+- **远端拓扑（入口给全 ssh 别名 + 运行用户 + 项目目录）**：治理命令经 **run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）以拓扑声明派发外部子代理（agent CLI，如 `qodercli`），`ssh + su` 进入执行侧——前置检查与失败处置链随其 `references/dispatch-preflight.md`。
 - **职责切分线**：框架调协（install/reconcile/strengthen/verify/候选清单）= 本技能；SDD 完整阶段循环 = sdd-loop-driver；创建/派发/修正 = create-agent / run-agent / improve-agent（见 `.specify/shared/definitions/agent-definitions.md` § Driving Subagents via the Three Layers）。
 
 ## Boundary

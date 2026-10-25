@@ -21,8 +21,8 @@ Consult the project glossary (`.specify/memory/glossary.md`) and apply the proto
 **Delegation (mandatory)**: load `.specify/skills/internal/manage-feedback/SKILL.md` and execute per its Routing flow and Behavior Rules, plus its two path references:
 
 - `.specify/skills/internal/manage-feedback/SKILL.md` — 路由判定真源:意图识别(`package` 短路 / 探针注入 / 存量决定)、帽子判定(根级源目录判据,术语见 `.specify/shared/definitions/dogfooding-definitions.md`)、清单盘点(探针总览 + `.specify/memory/feedback/backlog.md` 路由积压)、分类与单向内容精化、双侧非空 / 空范围 / 不可判定条款、行为规则(零网络红线、exit 2 是裁决、路由判定须呈报)。
-- `.specify/skills/internal/manage-feedback/references/path-a-digest.md` — **Path A 就地消化**:A1 入站包清点(重投 / 中断 / 孤儿识别)→ A2 抽取与大批量读纪律 → A3 自省(Introspection)→ A4 对账与渠道路由(含 backlog 写入)→ A5 原子清理与 consume-log → A6 本地条目 dispose。
-- `.specify/skills/internal/manage-feedback/references/path-b-and-probe.md` — **Path B 打包上送**(status / 过滤汇总 / dispose / package / hat-aware 清理 / mark-submitted)与 **Probe Injection**(仅显式请求)。
+- `.specify/skills/internal/manage-feedback/references/path-a-digest.md` — **Path A 就地消化**:A1 入站包清点(重投 / 中断 / 孤儿识别)→ A2 抽取与大批量读纪律 + exec-quant 载荷接收(`ingest-exec-quant --package <zip>`,每包恰一次,降级计数知情;汇总至多是建议的显式后续步骤,不并入接收流程)→ A3 自省(Introspection)→ A4 对账与渠道路由(含 backlog 写入)→ A5 原子清理与 consume-log → A6 本地条目 dispose。
+- `.specify/skills/internal/manage-feedback/references/path-b-and-probe.md` — **Path B 打包上送**(status / 过滤汇总 / dispose / package——exec-quant 载荷随包:全量包含、引擎封顶、降级计数知情 / hat-aware 清理 / mark-submitted)与 **Probe Injection**(仅显式请求)。
 
 引擎 = `.specify/scripts/python/feedback-utils.py`:机制(旗标校验、schema 检查、退出码、排除计数)归引擎,调用编排归技能;二者不一致时以引擎裁决为准。
 

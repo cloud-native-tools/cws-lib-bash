@@ -288,7 +288,8 @@ if [ "$QUERY_SYSTEM" = false ] && [ "$QUERY_SHELL" = false ] && [ "$QUERY_PROJEC
 fi
 
 if [ "$JSON_MODE" = true ]; then
-  tmp_dir=$(mktemp -d)
+  mkdir -p "$ROOT_DIR/.specify/.tmp"
+  tmp_dir=$(mktemp -d "$ROOT_DIR/.specify/.tmp/tools-refresh.XXXXXX")
   trap 'rm -rf "$tmp_dir"' EXIT
 
   if [ "$QUERY_SYSTEM" = true ]; then

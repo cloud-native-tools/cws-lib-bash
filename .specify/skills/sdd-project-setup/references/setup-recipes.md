@@ -34,11 +34,13 @@
 本地：`python3 <skill>/scripts/mechanism-inventory.py --project <path> [--json]`
 远端：`ssh <alias> "python3 -" < <skill>/scripts/mechanism-inventory.py --project <project-dir>`（或先 scp 脚本再执行；只读，无副作用）
 
+`<path>` 缺省为当前项目根——解析规则见 SKILL.md § When to Load / S0 入口缺省解析。
+
 ## S2 INSTALL
 
 S2 分两层，**CLI 层先于项目层**：S2-0 python 运行时解析 → S2-1 specify CLI ensure/安装 → S2-2 项目 init / 刷新。
 
-**执行侧界定**：S2 全部命令运行在**执行侧**（目标项目所在环境；远端形态经 `ssh <alias> "su - <run-user> -c '...'"` 在远端执行），编排侧本地宿主只做盘点派发、不安装 speckit、不误触发安装链——两侧角色划分、安装归属与反模式清单的真源见 `.specify/shared/workflow/execution-topology.md`（执行拓扑模型），本节只保留 S2 的应用。
+**执行侧界定**：S2 全部命令运行在**执行侧**（目标项目所在环境；远端形态经 `ssh <alias> "su - <run-user> -c '...'"` 在远端执行），编排侧本地宿主只做盘点派发、不安装 speckit、不误触发安装链——两侧角色划分、安装归属与反模式清单的真源见 `.specify/shared/workflow/execution-topology.md`（执行拓扑模型），本节只保留 S2 的应用。**本地拓扑缺省**（入口未给 host+path）：目标项目=当前项目，命令直接在会话工作目录执行（无 `ssh`/`su`）；治理命令的承载形态见 SKILL.md § Subagent Delegation（本地 native / 远端 external）。
 
 ### S2-0 Python 运行时解析（CLI 层前置）
 
@@ -56,7 +58,7 @@ S2 分两层，**CLI 层先于项目层**：S2-0 python 运行时解析 → S2-1
 
 - **ensure（幂等门）**：`command -v specify` 在位 → 跳过安装（升级 = 重新执行 install.sh，clean reinstall 语义，阶梯内 upgrade-in-place 级优先既有安装的 python）。
 - **install（委托 install.sh）**：
-  1. 获取 install.sh——本地 spec-kit checkout 直接用（`<spec-kit-checkout>/install.sh`）；无 checkout 时 `git clone --depth 1 <三源之首> /tmp/spec-kit` 后用其根目录 install.sh；
+  1. 获取 install.sh——本地 spec-kit checkout 直接用（`<spec-kit-checkout>/install.sh`）；无 checkout 时 `git clone --depth 1 <三源之首> ~/tmp/spec-kit` 后用其根目录 install.sh；
   2. `cd <project-dir>` 后执行 `bash <install.sh> [args]`——参数直接透传（`--python` 钉阶梯、`--intranet-only` 纯内网、`--index-url` 显式指定、`--dry-run` 只看计划）；
   3. 退出码契约：`0` 成功 · `2` 缺前置（python/pip/git/uv）· `3` 无可用「源 × index」组合或全源安装失败 · `5` `specify check` 终验失败——非 0 一律视为安装未完成，按码处置不重试盲跑。
 - **验证**：install.sh 内置 `specify check` 终验；独立补验时在选定 bin 目录优先的前提下执行。
@@ -152,7 +154,7 @@ ssh <alias> "su - <run-user> -c 'cd <project-dir> && specify init . --ai <tool> 
 
 ## S4 VERIFY（五族前置检查 + 矩阵 + 链接）
 
-**五族前置检查**（2026-10-16 上收——权威落点 `.specify/skills/internal/run-agent/references/dispatch-preflight.md`，本节引用不复写；结论每项 ≤3 行摘要写入凭证。本技能处置后仍缺 = ⑤ fail 语义）。
+**五族前置检查**（2026-10-16 上收——权威落点 `.specify/skills/internal/run-agent/references/dispatch-preflight.md`，本节引用不复写；结论每项 ≤3 行摘要写入凭证。本技能处置后仍缺 = ⑤ fail 语义）。**本地拓扑只适用 ④ LLM 配置与 ⑤ spec-kit 可用性**——① SSH、② 运行用户、③ 子代理 CLI 无远端/外部 CLI 可查，逐项记 `n/a`（不构成 fail）；远端拓扑五族全查。
 
 加上：机制矩阵复扫达 complete（或 partial 且缺口已声明）、compat 链接核验 `find <project-dir> -maxdepth 2 -type l ! -exec test -e {} \; -print` 为空。三者齐备才进 S5。
 

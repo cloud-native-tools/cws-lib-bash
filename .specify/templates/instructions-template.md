@@ -70,6 +70,10 @@ Parallel branches and agent flows share one git history, so any machine-managed 
 
 Before creating or changing a machine-managed store, ask: **what happens if two branches run this at the same time?** If the answer is "they write the same path", the layout is wrong.
 
+## Temporary Directory Discipline
+
+Agent-created scratch MUST use a sanctioned temp root and MUST already be matched by `.gitignore`; bare system temp and ad-hoc directories are forbidden. Roots, cleanup, and exceptions: `.specify/shared/guidelines/temp-directory-discipline.md`.
+
 ## Task Complexity Rubric
 
 Right-size your thinking to the task: under-thinking complex or high-stakes tasks causes defects and rework (a **quality** cost); over-thinking trivial tasks wastes time and adds noise (an **efficiency** cost). Classify each task by scope/size, uncertainty/novelty, blast radius/reversibility, cross-cutting impact, and requirements clarity, then adopt the matching depth — **Trivial → Minimal**, **Standard → Moderate**, **Complex → Deep**, **High-stakes/Ambiguous → Exhaustive**. Tie-break to the **higher tier** (blast radius and requirements clarity dominate); treat unclassifiable tasks as **Standard** (the default), and treat unclear/under-specified requirements as themselves a High-stakes signal — clarify before proceeding.
@@ -170,6 +174,10 @@ Three ideas, one loop — **acquire → retain → keep reachable**. Each closes
 **Boundary with One Source Of Truth**: repetition is legitimate in **pointer shape** (a short normative reminder plus the owner's path) and forbidden in **content shape** (restating the owner's table, threshold literal, or enumeration). Mechanical test — if changing the fact requires editing more than the owner, it is already a copy; convert it back into a reference rather than re-wording it to agree.
 
 Full philosophy, the load-bearing criteria, and where each kind of answer belongs: `.specify/shared/guidelines/ask-record-repeat.md`.
+
+## Knowledge Recording & Promotion
+
+Every non-derivable takeaway from a run MUST be recorded before wrap-up; normative rules belong in their owner document. A point the user keeps emphasizing MUST be promoted into the main flow (owner, ambient surface, guard), not merely recorded. Scope, threshold, evidence: `.specify/shared/guidelines/knowledge-promotion.md`.
 
 ## ID Register (编号登记)
 

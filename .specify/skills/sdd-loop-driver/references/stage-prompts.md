@@ -4,7 +4,7 @@
 
 ## Stage Prompt Skeleton（三段骨架，每阶段一次）
 
-每阶段把以下三段完整指令写入提示词文件（`prompt-<line>-<stage>.md`），阶段名替换 `<STAGE>`。
+每阶段把以下三段完整指令交给阶段子代理：远端外部派发写入提示词文件（`prompt-<line>-<stage>.md`）；本地原生派发直接作为 Agent/Task 提示词（无需落盘）。阶段名替换 `<STAGE>`。
 
 **红线（反嵌套拓扑）**：提示词是子代理的**全部输入**，三段骨架之外不得夹带驱动机制本身——反嵌套义务真源已上收 run-agent 派发治理（不引用驱动/循环技能、不指示加载技能、不含循环逻辑；派发前拦截），本行保留提醒并引用、不复述义务全文（analyze C-28）。
 
@@ -44,9 +44,9 @@
 
 ## U3 统一监听与驱动者生命周期（Watch Protocol）
 
-监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。
+监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。**本地原生调用是一次同步阻塞调用，返回即终止判定；下列窗口/轮询/重入规则仅用于外部 CLI 派发。**
 
-- **合法等待**：在有界长轮询窗口内等待（一次工具调用跑 `watch-target.sh --window N`），终止判定或窗口到期即返回；`RUNNING` → 立即重入下一窗口，**不在 agent 侧 sleep、不按固定 cadence 空转**。
+- **合法等待**：在有界长轮询窗口内等待（一次工具调用跑 `watch-target.sh --window N`），终止判定或窗口到期即返回；`RUNNING` → 立即重入下一窗口，**不在 agent 侧 sleep、不按固定 cadence 空转**。每个窗口携带字面量 `--iter <run_id>-w<NN>`（`NN` 递增），避免宿主把同参数连续调用判成重复/卡死（owner：`watch-model.md` §3.2）。
 - **非法等待**：独立 `sleep N` 回合；挂起监视器后结束驱动者会话「等待通知/恢复」——在会话式宿主（subagent 结束即停摆）中这意味着循环静默死亡，直接违反 Hard Requirement 1 与 5。唯一例外：宿主已被探针证明通知会自动恢复**同一运行**（`watch-model.md` §6）；此时原生通知只能作唤醒补充，每次唤醒仍做一次快照判定。
 - **终止判定去向**：`DONE` / `INCOMPLETE` → U4；`ANOMALY` / `FAILED` / `DEAD` / `TIMEOUT` / `NO_SIGNAL` → U5；`RUNNING` → 重入。
 - **窗口到期 ≠ 阶段超时**：只有状态脊中的 `stage_deadline_epoch` 触发 `TIMEOUT`；单窗口到期只产生 `RUNNING`。watcher 不杀进程，处置属 U5。
@@ -415,7 +415,7 @@ CLI 行为知识的唯一落点是 `references/cli/`（schema owner：`reference
 
 ### 本地拓扑（本地简报先行）
 
-项目在本机时：runner 直接以本地项目为工作目录（无 ssh/su 层）；**需求上下文先写成简报文件**（如 `/tmp/<topic>-sdd-brief.md`），子代理提示词只说「先完整阅读简报，再执行 /speckit.requirements」——文件承载的上下文比内联进提示词更稳（不失真、可复查、可复用）。
+项目在本机时：runner 直接以本地项目为工作目录（无 ssh/su 层）；**需求上下文先写成简报文件**（如 `~/tmp/<project>/<topic>-sdd-brief.md`），子代理提示词只说「先完整阅读简报，再执行 /speckit.requirements」——文件承载的上下文比内联进提示词更稳（不失真、可复查、可复用）。
 
 ### 构建固化变体（按角色分线）
 

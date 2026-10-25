@@ -9,11 +9,11 @@
 # 空白模板见 project-input.template.yaml；字段业务含义与必填档位见 references/required-info.md；
 # 字段类型/取值域/关联约束的权威是 ../schema/project.sql（DDL，由数据库强制）。
 #
-# 试跑（三步全走 SQL，装载即校验）：
-#   python3 ../scripts/project-db.py --db /tmp/project.db --load project-input.example.yaml
-#   python3 ../scripts/project-db.py --db /tmp/project.db --check
-#   python3 ../scripts/project-db.py --db /tmp/project.db --export-json /tmp/progress-data.json
-#   python3 ../scripts/progress-engine.py --db /tmp/project.db --summary --quiet-json
+# 试跑（三步全走 SQL，装载即校验；先 mkdir -p ~/tmp/summarize-project）：
+#   python3 ../scripts/project-db.py --db ~/tmp/summarize-project/project.db --load project-input.example.yaml
+#   python3 ../scripts/project-db.py --db ~/tmp/summarize-project/project.db --check
+#   python3 ../scripts/project-db.py --db ~/tmp/summarize-project/project.db --export-json ~/tmp/summarize-project/progress-data.json
+#   python3 ../scripts/progress-engine.py --db ~/tmp/summarize-project/project.db --summary --quiet-json
 
 schema: project-input/v1
 

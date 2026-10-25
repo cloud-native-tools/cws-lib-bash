@@ -41,8 +41,9 @@ its own facts while gaining the source's. The same probe covers that direction: 
 pre-merge version of the edited doc as material.
 
 ```bash
-git show HEAD:<target-doc> > /tmp/pre-merge.md      # a temp file — not <(...)
-python3 ${SKILL_HOME}/scripts/coverage_probe.py /tmp/pre-merge.md <target-doc>
+mkdir -p .specify/.tmp/merge-skills
+git show HEAD:<target-doc> > .specify/.tmp/merge-skills/pre-merge.md      # a temp file — not <(...)
+python3 ${SKILL_HOME}/scripts/coverage_probe.py .specify/.tmp/merge-skills/pre-merge.md <target-doc>
 ```
 
 Process substitution (`<(git show …)`) does **not** work: the probe is handed a pipe, reads zero
