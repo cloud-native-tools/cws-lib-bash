@@ -241,7 +241,7 @@ For stages without a part-commit discipline (`plan`, `review`, `analyze`, `clari
 
 After integration the driver runs the unchanged stage U4: the stage sentinel is necessary, artifact verification is required, and discipline checks are required; package verdicts are inputs and never substitutes (VI-13). A failed package or a failed U4 fails the stage gate.
 
-Closure and merge stay driver-owned under 058 and 064: this layer does not push, force-merge, or auto-merge, and preserves the existing confirmation gates (VI-14). The `integrate` event, the stage U4, `wp-report.py`, and the `stage-close` event follow in that order (OR-03, OR-11).
+Closure and merge stay driver-owned under 058 and 064: this layer does not push, force-merge, or auto-merge, and preserves the existing approval discipline (VI-14). The `integrate` event, the stage U4, `wp-report.py`, and the `stage-close` event follow in that order (OR-03, OR-11).
 
 The deterministic simulator in `tests/fixtures/wp_driver_sim.py` models this part as `verify()` plus `integrate()`; like section 14.1 it proves the mechanical rules, not an LLM's adherence.
 
