@@ -59,7 +59,7 @@ Technology-specific ignore file patterns for project setup verification during `
 `.Rproj.user/`, `.Rhistory`, `.RData`, `.Ruserdata`, `*.Rproj`, `packrat/`, `renv/`
 
 ### Universal
-`.DS_Store`, `Thumbs.db`, `*.tmp`, `*.swp`, `.vscode/`, `.idea/`
+`.DS_Store`, `Thumbs.db`, `*.tmp`, `.tmp/`, `*.swp`, `.vscode/`, `.idea/`
 
 ## Tool-Specific Patterns
 

@@ -51,10 +51,13 @@ with both.
 from __future__ import annotations
 
 import argparse
+import fcntl
+import hashlib
 import json
 import os
 import re
 import sys
+import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -1032,6 +1035,57 @@ def _speckit_version() -> str:
         return "unknown"
 
 
+
+def _skill_names_in(skills_dir: Path) -> set:
+    if not skills_dir.is_dir():
+        return set()
+    return {p.name for p in skills_dir.iterdir()
+            if p.is_dir() and (p / "SKILL.md").is_file()}
+
+
+def framework_skill_names(workspace_root: Path) -> Tuple[Optional[set], str]:
+    """Resolve the skill names bundled with the Spec Kit framework itself.
+
+    Returns ``(names, source)``; ``names`` is None when the bundle cannot be
+    resolved at all. Sources, in priority order:
+
+    1. the installed spec-kit package (``<pkg>/skills/<name>/SKILL.md``) —
+       the wheel ships only framework skills, so this set excludes any
+       user-authored skills a downstream project installed alongside them;
+    2. a framework-repo checkout (``<workspace_root>/skills/`` next to
+       ``src/specify_cli/``).
+    """
+    try:
+        import importlib.util
+        spec = importlib.util.find_spec("specify_cli")
+        if spec is not None and getattr(spec, "origin", None):
+            names = _skill_names_in(Path(spec.origin).resolve().parent / "skills")
+            if names:
+                return names, "installed-package"
+    except Exception:
+        pass
+    if (workspace_root / "src" / "specify_cli").is_dir():
+        names = _skill_names_in(workspace_root / "skills")
+        if names:
+            return names, "framework-repo"
+    return None, "unresolved"
+
+
+def is_framework_unit(unit_id: str, framework_skills: Optional[set]) -> bool:
+    """Whether a feedback unit targets the Spec Kit framework itself.
+
+    ``/speckit.*`` commands are framework units by definition; a ``skill:``
+    unit is a framework unit only when the skill ships in the framework
+    bundle. Feedback about user-project skills stays local (it has local
+    workaround value) but is never packaged for upstream delivery.
+    """
+    if unit_id.startswith("/speckit."):
+        return True
+    if unit_id.startswith("skill:"):
+        return framework_skills is not None and unit_id[len("skill:"):] in framework_skills
+    return False
+
+
 def detect_upstream(index: Dict[str, Any]) -> Dict[str, Any]:
     """Resolve the upstream repo URL for manual feedback delivery.
 
@@ -1095,12 +1149,561 @@ def action_upstream(args: argparse.Namespace) -> Dict[str, Any]:
     return detect_upstream({"upstream_repo": set_url or state["upstream_repo"]})
 
 
+# --------------------------------------------------------------------------- #
+# Exec-Quant payload (068 package leg; contracts/package-layout.md C-1..C-9)
+# --------------------------------------------------------------------------- #
+EXEC_QUANT_STORAGE_REL = Path(".specify") / "memory" / "exec-quant"
+PAYLOAD_DIRNAME = "exec-quant"
+PAYLOAD_RECORDS_DIRNAME = "records"
+PAYLOAD_MANIFEST_NAME = "payload-manifest.json"
+PAYLOAD_KIND = "speckit.exec-quant-payload"  # data-model § E4
+PAYLOAD_SCHEMA_VERSION = 1
+# [[STR-001]] (requirements § Shared Strings; same anchor as the quant
+# engine's KIND constant)
+RECORD_KIND = "speckit.exec-quant"
+# C-2 is the single normative source of the cap values; these constants are
+# the implementation's only definition of them (no second table anywhere).
+MAX_PAYLOAD_RECORDS = 1000
+MAX_PAYLOAD_BYTES = 16 * 1024 * 1024  # 16 MiB
+
+# 068 intake leg (intake-contract C-10..C-17; data-model § E6 / research D5/D6)
+AGGREGATED_DIRNAME = "aggregated"
+AGGREGATED_RECORDS_DIRNAME = "records"
+AGGREGATE_LOCK_NAME = ".write.lock"  # C-13 shared critical section
+ENVELOPE_SCHEMA_VERSION = 1  # data-model § E6
+ENVELOPE_KIND = "speckit.exec-quant-aggregated"  # data-model § E6
+IDENTITY_KEY_SEP = "\x1f"  # C-13 / D6 five-tuple separator
+UNKNOWN_PROJECT = "unknown-project"  # C-12 literal group (E2 enum value)
+
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_PROJECT_NAME_RE = re.compile(
+    r"^\s*(?:-\s*)?\*\*Project Name\*\*:\s*(.+?)\s*$", re.M)
+
+
+def exec_quant_dir(workspace_root: Path) -> Path:
+    return Path(workspace_root).resolve() / EXEC_QUANT_STORAGE_REL
+
+
+def _resolve_source_commit(workspace_root: Path) -> Optional[str]:
+    """Workspace HEAD commit (C-5 / research D3), or ``None``.
+
+    ``git rev-parse HEAD`` is implemented by its semantic — resolving the
+    workspace repo's current HEAD commit — via pure local file reads:
+    ``.git`` directory or gitdir-pointer file → ``HEAD`` → loose ref file →
+    ``packed-refs``. Rationale (recorded in notes/red-first-evidence.md,
+    ruling B): this engine carries a red-line guard
+    (``tests/unit/test_feedback_package.py::test_engine_source_has_no_network_
+    or_push``) that forbids a process-spawn surface, and the package leg is
+    zero-network (C-9). Any failure → ``None`` (no retry, no blocking). Only
+    40-hex values are accepted (data-model § E2); anything else degrades to
+    ``None``.
+    """
+    git = Path(workspace_root) / ".git"
+    try:
+        if git.is_file():  # worktree/submodule: "gitdir: <path>" pointer
+            pointer = git.read_text(encoding="utf-8").strip()
+            if not pointer.startswith("gitdir:"):
+                return None
+            git = (Path(workspace_root)
+                   / pointer[len("gitdir:"):].strip()).resolve()
+        if not git.is_dir():
+            return None
+        head = (git / "HEAD").read_text(encoding="utf-8").strip()
+        if _SHA_RE.match(head):  # detached HEAD
+            return head
+        if not head.startswith("ref:"):
+            return None
+        ref = head[len("ref:"):].strip()
+        loose = git / ref
+        if loose.is_file():
+            sha = loose.read_text(encoding="utf-8").strip()
+            return sha if _SHA_RE.match(sha) else None
+        packed = git / "packed-refs"
+        if packed.is_file():
+            for line in packed.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                sha, _, ref_name = line.partition(" ")
+                if ref_name == ref and _SHA_RE.match(sha):
+                    return sha
+        return None
+    except (OSError, ValueError):
+        return None
+
+
+def _resolve_package_identity(workspace_root: Path) -> Dict[str, Any]:
+    """Package-level source project identity (C-5 / research D3).
+
+    ``project_name``: ``**Project Name**:`` line of the workspace's
+    ``.specify/instructions.md`` → workspace directory basename → empty +
+    ``identity_status: "unknown-project"``. Never a filesystem absolute path
+    and no new credential surface (FR-003).
+    """
+    project_name = ""
+    instructions = (Path(workspace_root) / ".specify" / "instructions.md")
+    try:
+        match = _PROJECT_NAME_RE.search(instructions.read_text(encoding="utf-8"))
+        if match:
+            project_name = match.group(1)
+    except (OSError, ValueError):
+        pass
+    if not project_name:
+        project_name = Path(workspace_root).resolve().name or ""
+    return {
+        "project_name": project_name,
+        "source_commit": _resolve_source_commit(workspace_root),
+        "identity_status": "identified" if project_name else "unknown-project",
+    }
+
+
+def _read_payload_object(raw: bytes) -> Optional[Dict[str, Any]]:
+    """One swept item → record object, or None (C-1: object + kind gate)."""
+    try:
+        obj = json.loads(raw.decode("utf-8"))
+    except (ValueError, UnicodeDecodeError):
+        return None
+    if not isinstance(obj, dict) or obj.get("kind") != RECORD_KIND:
+        return None
+    return obj
+
+
+def _collect_exec_quant_payload(workspace_root: Path) -> Dict[str, Any]:
+    """Read-only sweep of the workspace exec-quant store (C-1 / C-2).
+
+    Dual form: per-entry ``records/*.json`` files plus the legacy single-file
+    ``records.jsonl`` stream, both fully included when they coexist (FR-001,
+    no watermark). Items that fail to parse as a record-kind object are
+    skipped and counted in ``skipped_unreadable``. Legacy entries are named
+    ``legacy-records-L%04d.json`` from physical line number 1; blank lines
+    are not records (ruling A, notes/red-first-evidence.md). Scan window =
+    snapshot taken when the sweep starts (A3 semantics). Sort key
+    ``(collected_at ascending, payload record name ascending)``; a missing
+    ``collected_at`` sorts as the empty string (ruling U-02). Caps are
+    applied to the sorted prefix as whole records (ruling U-01): the first
+    entry that would exceed a cap — and every entry after it — counts into
+    ``truncated_count``, so a single oversize record is itself truncated and
+    no partial bytes ever leave the store. Every probed item lands in
+    exactly one of the three buckets (ruling U-03), so
+    ``skipped_unreadable + truncated_count + record_count`` equals the
+    probed total.
+
+    Never raises: every degradation lands in a counter (C-9, non-blocking).
+    """
+    store = exec_quant_dir(workspace_root)
+    records_dir = store / "records"
+    legacy_path = store / "records.jsonl"
+    counts = {"records-dir": 0, "legacy-jsonl": 0}
+    skipped = 0
+    # candidates: (name, source_form, collected_at, raw bytes), usable only
+    candidates: List[Tuple[str, str, str, bytes]] = []
+
+    # Snapshot window (C-1): materialize the name list once at sweep start —
+    # writes landing mid-sweep are not included.
+    if records_dir.is_dir():
+        for path in sorted(records_dir.glob("*.json")):
+            try:
+                raw = path.read_bytes()
+            except OSError:
+                skipped += 1
+                continue
+            if _read_payload_object(raw) is None:
+                skipped += 1
+                continue
+            record = json.loads(raw.decode("utf-8"))
+            collected_at = str(record.get("collected_at", "") or "")
+            candidates.append((path.name, "records-dir", collected_at, raw))
+            counts["records-dir"] += 1
+    if legacy_path.is_file():
+        try:
+            lines = legacy_path.read_text(encoding="utf-8").splitlines()
+        except (OSError, ValueError):
+            lines = []
+        for lineno, line in enumerate(lines, start=1):
+            if not line.strip():
+                continue  # ruling A: blank line is not a record
+            raw = line.encode("utf-8")
+            if _read_payload_object(raw) is None:
+                skipped += 1
+                continue
+            record = json.loads(raw.decode("utf-8"))
+            collected_at = str(record.get("collected_at", "") or "")
+            candidates.append((f"legacy-records-L{lineno:04d}.json",
+                               "legacy-jsonl", collected_at, raw))
+            counts["legacy-jsonl"] += 1
+
+    # C-2: deterministic, cross-machine reproducible (ruling U-02).
+    candidates.sort(key=lambda c: (c[2], c[0]))
+
+    included: List[Dict[str, Any]] = []
+    total_bytes = 0
+    for name, source_form, collected_at, raw in candidates:
+        if (len(included) >= MAX_PAYLOAD_RECORDS
+                or total_bytes + len(raw) > MAX_PAYLOAD_BYTES):
+            break  # U-01: first violator and every entry after it truncate
+        included.append({"name": name, "source_form": source_form,
+                         "collected_at": collected_at, "data": raw})
+        total_bytes += len(raw)
+
+    return {
+        "identity": _resolve_package_identity(workspace_root),  # C-5 / D3
+        "records": included,
+        "record_count": len(included),
+        "source_form_counts": counts,
+        "skipped_unreadable": skipped,
+        "truncated_count": len(candidates) - len(included),
+        "cap_records": MAX_PAYLOAD_RECORDS,
+        "cap_bytes": MAX_PAYLOAD_BYTES,
+        "collected_at_range": ([included[0]["collected_at"],
+                                included[-1]["collected_at"]]
+                               if included else None),
+    }
+
+
+def _payload_report(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """C-7 JSON-report projection: counts + identity, never record bytes."""
+    identity = payload["identity"]
+    return {
+        "record_count": payload["record_count"],
+        "source_form_counts": dict(payload["source_form_counts"]),
+        "skipped_unreadable": payload["skipped_unreadable"],
+        "truncated_count": payload["truncated_count"],
+        "cap_records": payload["cap_records"],
+        "cap_bytes": payload["cap_bytes"],
+        "collected_at_range": payload["collected_at_range"],
+        "identity_status": identity["identity_status"],
+        "project_name": identity["project_name"] or None,
+        "source_commit": identity["source_commit"],
+    }
+
+
+def _render_payload_sections(
+        payload: Dict[str, Any]) -> Tuple[Dict[str, Any], List[str]]:
+    """C-4 / C-6 / data-model E5: ONE renderer, two faces.
+
+    The machine manifest (``exec-quant/payload-manifest.json``, field set =
+    data-model § E4) and the human ``MANIFEST.md`` § Exec-Quant Payload lines
+    are derived here from the same payload values, so the two faces cannot
+    drift apart (One Source Of Truth). The empty-payload section is always
+    rendered and declares 「无量化数据」 (FR-005 explicit degradation).
+    """
+    identity = payload["identity"]
+    manifest = {
+        "schema_version": PAYLOAD_SCHEMA_VERSION,
+        "kind": PAYLOAD_KIND,
+        "identity": dict(identity),
+        "record_count": payload["record_count"],
+        "source_form_counts": dict(payload["source_form_counts"]),
+        "skipped_unreadable": payload["skipped_unreadable"],
+        "truncated_count": payload["truncated_count"],
+        "cap_records": payload["cap_records"],
+        "cap_bytes": payload["cap_bytes"],
+        "collected_at_range": payload["collected_at_range"],
+    }
+    forms = manifest["source_form_counts"]
+    project = identity["project_name"] or "unknown-project"
+    lines = ["## Exec-Quant Payload", ""]
+    if manifest["record_count"] == 0:
+        lines += ["Exec-Quant Payload: none (无量化数据).",
+                  "The source store had no readable exec-quant records at "
+                  "package time."]
+    else:
+        lines += [f"- **Records**: {manifest['record_count']}",
+                  f"- **Source forms**: records-dir {forms['records-dir']}, "
+                  f"legacy-jsonl {forms['legacy-jsonl']}"]
+    lines += [f"- **Skipped unreadable**: {manifest['skipped_unreadable']}",
+              f"- **Truncated**: {manifest['truncated_count']}",
+              f"- **Cap**: {manifest['cap_records']} records / "
+              f"{manifest['cap_bytes']} bytes "
+              f"(triggered: {'yes' if manifest['truncated_count'] else 'no'})",
+              f"- **Source project**: {project}"]
+    if manifest["collected_at_range"]:
+        lines.append(f"- **Collected range**: "
+                     f"{manifest['collected_at_range'][0]} → "
+                     f"{manifest['collected_at_range'][1]}")
+    lines.append("")
+    return manifest, lines
+
+
+# --------------------------------------------------------------------------- #
+# Exec-Quant intake (068 US2 receive leg; contracts/intake-contract.md C-10..C-17)
+# --------------------------------------------------------------------------- #
+def _identity_key(record: Dict[str, Any], source_project: str) -> str:
+    """C-13 / D6: sha256 of the five-tuple ``source_project ␟ unit_id ␟
+    unit_type ␟ run_id ␟ collected_at`` joined with ``\\x1f``. The tuple is
+    content-free (the F-01 remediation): ``content_hash`` is computed
+    separately and MUST NOT enter this key. A missing field participates as
+    the empty string (same convention as the U-02 sort rule)."""
+    parts = [str(source_project or ""),
+             str(record.get("unit_id", "") or ""),
+             str(record.get("unit_type", "") or ""),
+             str(record.get("run_id", "") or ""),
+             str(record.get("collected_at", "") or "")]
+    return hashlib.sha256(
+        IDENTITY_KEY_SEP.join(parts).encode("utf-8")).hexdigest()
+
+
+def _canonical_json(record: Dict[str, Any]) -> str:
+    """C-13 / D6 canonical form: sort_keys + ensure_ascii=False + compact."""
+    return json.dumps(record, sort_keys=True, ensure_ascii=False,
+                      separators=(",", ":"))
+
+
+def _content_hash(record: Dict[str, Any]) -> str:
+    """C-13: independent canonical-JSON sha256 — comparison field only,
+    never mixed into ``identity_key`` (D6 / analyze F-01)."""
+    return hashlib.sha256(
+        _canonical_json(record).encode("utf-8")).hexdigest()
+
+
+def _source_slug(project_name: str, identity_key: str) -> str:
+    """D5 / E6: slugged project name (lowercase, ``[a-z0-9-]``) + 8-char
+    identity short hash; an empty identity string collapses to the literal
+    ``unknown-project`` group (deterministic, no hash suffix, C-12)."""
+    name = re.sub(r"[^a-z0-9]+", "-",
+                  str(project_name or "").strip().lower()).strip("-")
+    if not name:
+        return UNKNOWN_PROJECT
+    return f"{name}-{identity_key[:8]}"
+
+
+def _build_envelope(record: Dict[str, Any], identity: Any,
+                    package_file: str) -> Dict[str, Any]:
+    """Data-model § E6 envelope: attribution face + the source record sealed
+    verbatim under ``record`` (C-14/C-15 — no rewrite, completion or drop of
+    any source field; unknown fields ride along untouched)."""
+    ident = dict(identity) if isinstance(identity, dict) else {}
+    project = str(ident.get("project_name") or "").strip()
+    status = str(ident.get("identity_status")
+                 or (UNKNOWN_PROJECT if not project else "identified"))
+    source_project = project or UNKNOWN_PROJECT  # E6: missing → literal
+    return {
+        "aggregation_envelope": {
+            "schema_version": ENVELOPE_SCHEMA_VERSION,
+            "kind": ENVELOPE_KIND,
+            "source_project": source_project,
+            "source_commit": ident.get("source_commit"),
+            "identity_status": status or UNKNOWN_PROJECT,
+            "identity_key": _identity_key(record, source_project),
+            "content_hash": _content_hash(record),
+            "package_file": str(package_file or ""),
+            "ingested_at": now_iso(),
+        },
+        "record": record,
+    }
+
+
+def _intake_entry_filename() -> str:
+    """C-14: envelope filename rides the quant engine's ``entry_filename()``
+    form (timestamp with microseconds + 8-hex uuid), decoupled from the
+    source member names (which are not guaranteed unique across packages).
+    The engine stay decoupled, so the format is re-derived here; the
+    normative owner is intake-contract C-14."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+    return f"{stamp}-{uuid.uuid4().hex[:8]}.json"
+
+
+def _write_envelope_atomic(group_dir: Path,
+                           envelope: Dict[str, Any]) -> Path:
+    """tmp+rename atomic write (write_entry form); leaves zero residue."""
+    group_dir.mkdir(parents=True, exist_ok=True)
+    target = group_dir / _intake_entry_filename()
+    tmp = group_dir / (".tmp-" + uuid.uuid4().hex + ".part")
+    tmp.write_text(
+        json.dumps(envelope, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8")
+    os.replace(tmp, target)
+    return target
+
+
+def _scan_identity_window(aggregated: Path) -> Dict[str, str]:
+    """C-13 dedup window: ``identity_key → content_hash`` over every existing
+    aggregated envelope (all groups). Unreadable envelopes stay outside the
+    window (they cannot veto a write they cannot be compared against)."""
+    window: Dict[str, str] = {}
+    if not aggregated.is_dir():
+        return window
+    for group in sorted(aggregated.iterdir()):
+        records_dir = group / AGGREGATED_RECORDS_DIRNAME
+        if not records_dir.is_dir():
+            continue
+        for path in sorted(records_dir.glob("*.json")):
+            try:
+                envelope = json.loads(path.read_text(encoding="utf-8"))
+                env = envelope["aggregation_envelope"]
+                key = env["identity_key"]
+                content_hash = env["content_hash"]
+            except (OSError, ValueError, KeyError, TypeError):
+                continue
+            if isinstance(key, str) and isinstance(content_hash, str):
+                window[key] = content_hash
+    return window
+
+
+def _intake_result(record_count: int, ingested: int, duplicates: int,
+                   skipped: int, conflicts: int, groups: int,
+                   manifest_unreadable: bool) -> Dict[str, Any]:
+    """C-16 output face: the fixed seven-key report."""
+    return {
+        "record_count": record_count,
+        "ingested": ingested,
+        "duplicates_skipped": duplicates,
+        "skipped_unreadable": skipped,
+        "identity_conflicts": conflicts,
+        "groups_touched": groups,
+        "manifest_unreadable": manifest_unreadable,
+    }
+
+
+def action_ingest_exec_quant(args: argparse.Namespace) -> Dict[str, Any]:
+    """Unpack the ``exec-quant/`` payload of an inbound feedback bundle into
+    the local aggregated layer (068 US2; intake-contract C-10..C-17).
+
+    Payload recognition = zip member path prefix ``exec-quant/`` (C-11): a
+    package without it is a zero-count no-op with zero storage writes (the
+    068-pre package stays zero-difference, FR-009). Attribution reads the
+    payload manifest identity only — a missing/corrupt manifest or an
+    ``unknown-project`` identity lands the literal ``unknown-project`` group
+    and is never guessed from paths or content (C-12, FR-006). Per-member
+    parse/kind failures are non-blocking ``skipped_unreadable`` (C-11,
+    FR-010). Dedup check + write share ONE flock critical section on
+    ``aggregated/.write.lock`` (C-13): same identity_key + same content_hash
+    → ``duplicates_skipped``; same key + different content → keep-first +
+    ``identity_conflicts``. Envelopes are per-entry tmp+rename atomic writes
+    (C-14) and the feedback store is never read or written (C-14/FR-006;
+    the intake never triggers aggregate, C-17). Exit ladder: degradations
+    complete with exit 0; ``--package`` missing/not a zip/an unwritable
+    aggregated store is exit 2 (C-16/D10).
+    """
+    if not getattr(args, "package", None):
+        raise FeedbackError(
+            "ingest-exec-quant: --package <zip> is required (the inbound "
+            "feedback bundle carrying the exec-quant payload)")
+    package_path = Path(args.package)
+    if not package_path.is_file():
+        raise FeedbackError(
+            f"ingest-exec-quant: --package file not found: {package_path}")
+    try:
+        archive = zipfile.ZipFile(package_path)
+    except (OSError, ValueError, zipfile.BadZipFile) as exc:
+        raise FeedbackError(
+            f"ingest-exec-quant: --package is not a readable zip: "
+            f"{package_path} ({exc})")
+    workspace_root = resolve_workspace_root(args.workspace_root)
+    store = exec_quant_dir(workspace_root)  # single quant-store locator (068 boundary)
+    aggregated = store / AGGREGATED_DIRNAME
+
+    prefix = PAYLOAD_DIRNAME + "/"
+    manifest_name = f"{prefix}{PAYLOAD_MANIFEST_NAME}"
+    with archive:
+        names = archive.namelist()
+        payload_members = sorted(
+            name for name in names
+            if name.startswith(prefix) and name != manifest_name)
+        if not payload_members:
+            # C-11: no exec-quant/ payload → zero difference vs 068-pre.
+            return _intake_result(0, 0, 0, 0, 0, 0, False)
+
+        manifest: Optional[Dict[str, Any]] = None
+        manifest_unreadable = manifest_name not in names
+        if not manifest_unreadable:
+            try:
+                manifest = json.loads(archive.read(manifest_name)
+                                      .decode("utf-8"))
+                if not isinstance(manifest, dict):
+                    manifest, manifest_unreadable = None, True
+            except (OSError, ValueError, UnicodeDecodeError,
+                    zipfile.BadZipFile):
+                manifest, manifest_unreadable = None, True
+
+        # C-12: attribution from the manifest identity ONLY. A missing or
+        # unknown-project identity normalizes to the literal group; no
+        # guessing from the zip path or the record content.
+        raw_identity = manifest.get("identity") if manifest else None
+        identity = dict(raw_identity) if isinstance(raw_identity, dict) else {}
+        project_name = str(identity.get("project_name") or "").strip()
+        if (str(identity.get("identity_status") or "") == UNKNOWN_PROJECT
+                or not project_name):
+            identity = {"project_name": "",
+                        "source_commit": identity.get("source_commit"),
+                        "identity_status": UNKNOWN_PROJECT}
+
+        record_count = 0
+        skipped = 0
+        parsed: List[Dict[str, Any]] = []
+        for member in payload_members:
+            record_count += 1
+            try:
+                obj = json.loads(archive.read(member).decode("utf-8"))
+            except (OSError, ValueError, UnicodeDecodeError,
+                    zipfile.BadZipFile):
+                skipped += 1
+                continue
+            if not isinstance(obj, dict) or obj.get("kind") != RECORD_KIND:
+                skipped += 1
+                continue
+            parsed.append(obj)
+
+    if not parsed:
+        # Nothing writable: zero storage touch even when members were skipped.
+        return _intake_result(record_count, 0, 0, skipped, 0, 0,
+                              manifest_unreadable)
+
+    resolved_project = project_name or UNKNOWN_PROJECT
+    # D5: the source-slug group is anchored on the first parsed record's
+    # identity short hash (the red-first contract pins this form).
+    group_slug = _source_slug(
+        project_name, _identity_key(parsed[0], resolved_project))
+
+    try:
+        aggregated.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise FeedbackError(
+            f"ingest-exec-quant: aggregated store is not writable: "
+            f"{aggregated} ({exc})")
+
+    ingested = 0
+    duplicates = 0
+    conflicts = 0
+    groups_touched: set = set()
+    lock_path = aggregated / AGGREGATE_LOCK_NAME
+    with lock_path.open("a+") as lock_handle:
+        fcntl.flock(lock_handle, fcntl.LOCK_EX)
+        try:
+            # C-13: the dedup check and every write share this one critical
+            # section, so two concurrent intakes can never double-write.
+            window = _scan_identity_window(aggregated)
+            for record in parsed:
+                key = _identity_key(record, resolved_project)
+                content_hash = _content_hash(record)
+                prior = window.get(key)
+                if prior is not None:
+                    if prior == content_hash:
+                        duplicates += 1
+                    else:  # keep-first: same identity, different content
+                        conflicts += 1
+                    continue
+                _write_envelope_atomic(
+                    aggregated / group_slug / AGGREGATED_RECORDS_DIRNAME,
+                    _build_envelope(record, identity, package_path.name))
+                window[key] = content_hash
+                ingested += 1
+                groups_touched.add(group_slug)
+        finally:
+            fcntl.flock(lock_handle, fcntl.LOCK_UN)
+
+    return _intake_result(record_count, ingested, duplicates, skipped,
+                          conflicts, len(groups_touched), manifest_unreadable)
+
+
 def write_package(
     workspace_root: Path,
     index: Dict[str, Any],
     selected: List[Dict[str, Any]],
     notes: Optional[str] = None,
     include_introspection: bool = False,
+    payload: Optional[Dict[str, Any]] = None,
+    excluded: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Zip ``selected`` entries into ``packages/``; source files are never touched.
 
@@ -1109,11 +1712,27 @@ def write_package(
     When ``include_introspection`` is set, introspection reports referenced by
     the selected entries ride along under ``introspection/`` and are listed in
     a MANIFEST section (engine-cli C-9..C-12).
+
+    068 package leg: when ``payload`` (from ``_collect_exec_quant_payload``)
+    is given, its records ride along under ``exec-quant/`` as a first-class
+    payload (C-3) declared by ``exec-quant/payload-manifest.json`` (C-4) and
+    a MANIFEST § Exec-Quant Payload section rendered by the same function
+    (C-6). FR-019: the early return fires only when BOTH the feedback
+    entries and the payload records are empty — payload-only packages are
+    produced with an explicit ``Entries: 0``.
     """
     upstream = detect_upstream(index)
-    if not selected:
-        return {"packaged": 0, "zip": None, "missing": [], "upstream": upstream,
-                "note": "No feedback entries to package."}
+    payload_records = list(payload["records"]) if payload else []
+    if not selected and not payload_records:
+        result = {"packaged": 0, "zip": None, "missing": [],
+                  "upstream": upstream,
+                  "note": "No feedback entries or exec-quant payload records "
+                          "to package."}
+        if excluded:
+            result["excluded"] = sorted({str(e.get("unit_id", "?")) for e in excluded})
+        if payload is not None:
+            result["exec_quant_payload"] = _payload_report(payload)
+        return result
 
     store_dir = feedback_dir(workspace_root)
     packages_dir = store_dir / PACKAGES_DIRNAME
@@ -1125,6 +1744,10 @@ def write_package(
         zip_path = packages_dir / f"feedback-{timestamp_id()}-{counter}.zip"
         counter += 1
 
+    # FR-019: selected may be empty while a payload-only package is produced.
+    time_range = (f"{selected[0].get('created', '-')} → "
+                  f"{selected[-1].get('created', '-')}"
+                  if selected else "-")
     manifest_lines = [
         "# Feedback Package Manifest",
         "",
@@ -1134,11 +1757,19 @@ def write_package(
         "",
         f"- **Generated**: {now_iso()}",
         f"- **Entries**: {len(selected)}",
-        f"- **Time range**: {selected[0].get('created', '-')} → "
-        f"{selected[-1].get('created', '-')}",
+        f"- **Time range**: {time_range}",
         f"- **spec-kit version**: {_speckit_version()}",
         f"- **Install source**: {upstream.get('url') or 'unknown'}"
         + (f" @ {upstream['commit']}" if upstream.get("commit") else ""),
+    ]
+    if excluded:
+        excluded_units = sorted({str(e.get("unit_id", "?")) for e in excluded})
+        manifest_lines.append(
+            f"- **Excluded (non-framework, kept local)**: {len(excluded)} "
+            f"entr{'y' if len(excluded) == 1 else 'ies'} — "
+            + ", ".join(excluded_units)
+        )
+    manifest_lines += [
         "",
         "| Created | Unit | Partial | Probe | Slice | Summary |",
         "|---------|------|---------|-------|-------|---------|",
@@ -1185,6 +1816,19 @@ def write_package(
                         status = f"{report_status.get(rid, '?')} (missing)"
                     manifest_lines.append(
                         f"| {rid} | {linked_n} | {status} |")
+        if payload is not None:
+            # 068 C-3/C-4: payload members only under exec-quant/; record
+            # members are byte-verbatim copies of the source bytes (zero
+            # re-sort, re-encode, or field filtering); the machine manifest
+            # and the human section below come from ONE renderer (C-6).
+            payload_manifest, payload_lines = _render_payload_sections(payload)
+            for record in payload_records:
+                zf.writestr(f"{PAYLOAD_DIRNAME}/{PAYLOAD_RECORDS_DIRNAME}/"
+                            f"{record['name']}", record["data"])
+            zf.writestr(f"{PAYLOAD_DIRNAME}/{PAYLOAD_MANIFEST_NAME}",
+                        json.dumps(payload_manifest, ensure_ascii=False,
+                                   indent=2) + "\n")
+            manifest_lines += payload_lines
         zf.writestr("MANIFEST.md", "\n".join(manifest_lines) + "\n")
         if notes and notes.strip():
             zf.writestr(
@@ -1194,8 +1838,12 @@ def write_package(
             )
 
     rel_zip = zip_path.relative_to(workspace_root).as_posix()
-    return {"packaged": len(packaged), "zip": rel_zip, "missing": missing,
-            "upstream": upstream}
+    result = {"packaged": len(packaged), "zip": rel_zip, "missing": missing,
+              "excluded": sorted({str(e.get("unit_id", "?")) for e in (excluded or [])}),
+              "upstream": upstream}
+    if payload is not None:
+        result["exec_quant_payload"] = _payload_report(payload)
+    return result
 
 
 def action_package(args: argparse.Namespace) -> Dict[str, Any]:
@@ -1204,6 +1852,12 @@ def action_package(args: argparse.Namespace) -> Dict[str, Any]:
     External entries (``kind: external``) are host-project-local by contract
     (engine-cli C-4): they are excluded from the upstream package and only
     surfaced as an ``excluded_external`` count.
+
+    068 package leg: the workspace exec-quant store is swept read-only
+    (C-1/C-2) and its records ride along as the exec-quant payload (FR-001
+    full inclusion — the sweep is independent of the entry time filter, so
+    no watermark exists). Every payload degradation is non-blocking (C-9):
+    it surfaces as counters in the report faces, never as a failure.
     """
     workspace_root = resolve_workspace_root(args.workspace_root)
     state = load_store_state(workspace_root)
@@ -1217,16 +1871,38 @@ def action_package(args: argparse.Namespace) -> Dict[str, Any]:
     excluded_external = sum(1 for e in selected if e.get("kind") == "external")
     selected = [e for e in selected if e.get("kind") != "external"]
 
+    # Framework-scope filter: only feedback about the Spec Kit framework itself
+    # is packaged for upstream delivery. User-project skill feedback stays local.
+    framework_skills, bundle_source = framework_skill_names(workspace_root)
+    excluded_framework = [
+        e for e in selected
+        if not is_framework_unit(str(e.get("unit_id", "")), framework_skills)
+    ]
+    included = [e for e in selected if e not in excluded_framework]
+    excluded_units = sorted({str(e.get("unit_id", "?")) for e in excluded_framework})
+
+    payload = _collect_exec_quant_payload(workspace_root)  # C-9: never raises
     result = write_package(workspace_root, {
         "upstream_repo": state["upstream_repo"],
         "introspections": state["introspections"],
-    }, selected,
+    }, included,
                            include_introspection=bool(
-                               getattr(args, "include_introspection", False)))
+                               getattr(args, "include_introspection", False)),
+                           payload=payload, excluded=excluded_framework)
     result["excluded_external"] = excluded_external
+    if excluded_units:
+        result["excluded"] = excluded_units
     if not result.get("zip"):
         result["upstream"] = detect_upstream(
             {"upstream_repo": state["upstream_repo"]})
+        if excluded_framework:
+            note = ("All pending entries target non-framework units "
+                    "(user-project skills); they stay local and are not "
+                    "packaged for upstream delivery.")
+            if bundle_source == "unresolved":
+                note += (" The framework skill bundle could not be resolved, so "
+                         "only /speckit.* command entries would be packaged.")
+            result["note"] = note
         return result
     result["next_steps"] = _send_guidance(result["upstream"]) + [
         "After you have dealt with the batch (sent or deliberately ignored), "
@@ -1503,6 +2179,20 @@ def render_text(action: str, payload: Dict[str, Any]) -> str:
         ]
         if payload.get("missing"):
             lines.append(f"  missing entry files skipped: {payload['missing']}")
+        if payload.get("excluded"):
+            lines.append("  excluded non-framework units (kept local): "
+                         + ", ".join(payload["excluded"]))
+        rep = payload.get("exec_quant_payload")
+        if rep:  # 068 C-7: payload inclusion visible on the text face too
+            if rep.get("record_count"):
+                lines.append(
+                    f"  exec-quant payload: {rep['record_count']} record(s) "
+                    f"(skipped unreadable: {rep['skipped_unreadable']}, "
+                    f"truncated: {rep['truncated_count']})")
+            else:
+                lines.append(
+                    "  exec-quant payload: none (no readable exec-quant "
+                    "records — 无量化数据)")
         lines.extend(f"  {step}" for step in payload.get("next_steps", []))
         return "\n".join(lines)
     if action == "upstream":
@@ -1512,6 +2202,26 @@ def render_text(action: str, payload: Dict[str, Any]) -> str:
                     "--action upstream --set <repo-url>")
         commit = f" @ {payload['commit']}" if payload.get("commit") else ""
         return f"Upstream repo ({payload.get('source')}): {url}{commit}"
+    if action == "ingest-exec-quant":
+        if not payload.get("record_count"):
+            return ("Exec-quant payload: none (无量化数据) — nothing to "
+                    "ingest; the feedback face was not touched.")
+        lines = [
+            f"Ingested exec-quant payload: {payload['record_count']} record(s) "
+            f"({payload['ingested']} new, "
+            f"{payload['duplicates_skipped']} duplicate(s) skipped, "
+            f"{payload['skipped_unreadable']} skipped unreadable, "
+            f"{payload['identity_conflicts']} identity conflict(s); "
+            f"groups touched: {payload['groups_touched']})",
+            "  next: aggregate is a separate explicit action (--action "
+            "aggregate on the quant engine) — ingest never triggers it",
+        ]
+        if payload.get("manifest_unreadable"):
+            lines.append(
+                "  note: payload-manifest.json was missing/unreadable — "
+                "members were attempted one by one; identity fell back to "
+                "unknown-project")
+        return "\n".join(lines)
     if action == "list":
         matches = payload.get("matches", [])
         if not matches:
@@ -1539,11 +2249,13 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         choices=["record", "status", "list", "dispose", "mark-submitted", "reindex",
                  "package", "cleanup", "upstream", "migrate-legacy",
-                 "introspect-register", "args-manifest"],
+                 "introspect-register", "args-manifest", "ingest-exec-quant"],
     )
     parser.add_argument("--package", default=None,
                         help="cleanup: path to the package zip (workspace-"
-                             "relative or absolute), or 'latest'")
+                             "relative or absolute), or 'latest'; "
+                             "ingest-exec-quant: the inbound feedback bundle "
+                             "to unpack (required)")
     parser.add_argument("--report-file", default=None,
                         help="introspect-register: path to the introspection "
                              "report file")
@@ -1655,6 +2367,7 @@ _ACTIONS = {
     "migrate-legacy": action_migrate_legacy,
     "introspect-register": action_introspect_register,
     "args-manifest": action_args_manifest,
+    "ingest-exec-quant": action_ingest_exec_quant,
 }
 
 

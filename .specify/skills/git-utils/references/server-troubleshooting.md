@@ -147,15 +147,17 @@ ssh <admin-target> 'chown -R git:git /home/git/<ns>'
 ```bash
 # 1. 读路径是否正常（能读到 refs 就说明认证与 transport 完好）
 git ls-remote git@<git-alias>:<ns>/<repo>.git
-git clone git@<git-alias>:<ns>/<repo>.git /tmp/probe   # 能拿到内容即正常
+mkdir -p ~/tmp/git-utils
+git clone git@<git-alias>:<ns>/<repo>.git ~/tmp/git-utils/probe   # 能拿到内容即正常
 
 # 2. 包级追踪：push 到底走到哪一步
 GIT_TRACE_PACKET=1 GIT_TRACE=1 git push <remote> <branch> 2>&1 | head -20
 
 # 3. 对照组：纯本地 push（不经 ssh）
-git init -q --bare -b main /tmp/l.git && git init -q -b main /tmp/s \
-  && git -C /tmp/s -c user.email=t@t -c user.name=t commit -q --allow-empty -m i \
-  && git -C /tmp/s push /tmp/l.git main
+mkdir -p ~/tmp/git-utils
+git init -q --bare -b main ~/tmp/git-utils/l.git && git init -q -b main ~/tmp/git-utils/s \
+  && git -C ~/tmp/git-utils/s -c user.email=t@t -c user.name=t commit -q --allow-empty -m i \
+  && git -C ~/tmp/git-utils/s push ~/tmp/git-utils/l.git main
 ```
 
 判定为客户端拦截的特征：

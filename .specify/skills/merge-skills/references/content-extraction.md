@@ -4,7 +4,7 @@ Phase 2 of the merge. Goal: get the source skill's **content** out of its **form
 neutral, readable intermediate you can freely reorganize — without hand-transcribing
 (program-first: deterministic conversion belongs to a tool, not the LLM).
 
-The intermediate is **scratch**: land it under `${SKILL_WORKDIR}/tmp/merge-<source>/`,
+The intermediate is **scratch**: land it under `<project>/.specify/.tmp/merge-skills/merge-<source>/`,
 never inside the target's committed tree. It is deleted in Phase 8.
 
 ## By source form
@@ -48,8 +48,9 @@ for name in sorted(os.listdir(SRC)):
 Run it against a scratch dir, then read the `.md` output as your Phase-3/4 material:
 
 ```bash
-python3 /tmp/html2md.py <source>/open-api /tmp/merge-<source>/  # example
-wc -c /tmp/merge-<source>/*.md                                  # size the material
+mkdir -p ~/tmp/merge-skills .specify/.tmp/merge-skills
+python3 ~/tmp/merge-skills/html2md.py <source>/open-api .specify/.tmp/merge-skills/merge-<source>/  # example
+wc -c .specify/.tmp/merge-skills/merge-<source>/*.md                                               # size the material
 ```
 
 Interpreter note: if the host `python3` lacks `bs4`/`markdownify`, use a project venv that

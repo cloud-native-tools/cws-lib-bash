@@ -55,7 +55,8 @@ For larger batches, extract to a temp directory first (faster, avoids repeated u
 overhead):
 
 ```bash
-tmpdir=$(mktemp -d)
+mkdir -p .specify/.tmp
+tmpdir=$(mktemp -d .specify/.tmp/feedback-batch.XXXXXX)
 for z in feedback/feedback-*.zip; do unzip -o -d "$tmpdir/$(basename $z .zip)" "$z"; done
 # then read files with standard file-reading tools
 ```
@@ -89,6 +90,31 @@ cannot (same batch, different filename):
   `git log --all --oneline -- feedback/<zip>` returns nothing → an **orphan**: its
   contents are unrecoverable once A5 removes it. Carry the orphan mark into the
   report.
+
+**Exec-quant payload ingest (068, one engine call per bundle)**: alongside reading
+the entries, run the payload unpack once per bundle — this is what makes A5's bundle
+removal safe for quantified data, because the payload outlives the zip in the local
+aggregated layer:
+
+```bash
+python3 .specify/scripts/python/feedback-utils.py --action ingest-exec-quant --package <zip>
+```
+
+The action unpacks the bundle's `exec-quant/` payload into
+`.specify/memory/exec-quant/aggregated/<source-slug>/records/` and never touches the
+feedback store. Its report is the degradation surface — `record_count` / `ingested` /
+`duplicates_skipped` / `skipped_unreadable` / `identity_conflicts` / `groups_touched`
+/ `manifest_unreadable` — and those counters MUST land in the batch's digest report,
+never dropped silently. Degradations (unreadable payload manifest, unreadable member,
+`unknown-project` identity, same-key-different-content conflicts, re-delivered
+duplicates) complete with exit 0; exit 2 means the call itself could not run
+(`--package` missing, not a readable zip, aggregated store unwritable) — a verdict,
+reported not argued around. A bundle without an `exec-quant/` payload is a zero-count
+no-op with zero writes (068-pre bundles stay zero-difference), and re-ingesting the
+same bundle is idempotent (`ingested: 0`, `duplicates_skipped` full). **Receiving
+never aggregates**: the cross-project summary view is a separate explicit action
+(`--action aggregate` on `exec-quant.py`) — offer it in the report as a suggested
+follow-up step, do not run it inside the receive flow.
 
 ## A3 — Introspection(自省)
 
@@ -174,8 +200,8 @@ rm feedback/feedback-<ts>.zip   # each processed bundle in this batch
   An orphan the report did not name is not deleted.
 - **Orphan preserve-first precondition**: before deleting ANY orphan-marked bundle,
   copy it to the standard preserve path
-  `${TMPDIR:-/tmp}/speckit-feedback-preserve/<zip-name>` (a grace copy for the current
-  session — `${TMPDIR}` is ephemeral across reboots; anyone needing longer retention
+  `.specify/.tmp/feedback-preserve/<zip-name>` (a grace copy for the current
+  session — the scratch root is transient across reboots; anyone needing longer retention
   moves it and records the final location). An orphan whose preserve copy failed is
   not deleted. The consume-log Cleanup column MUST record the preserve path for every
   orphan.

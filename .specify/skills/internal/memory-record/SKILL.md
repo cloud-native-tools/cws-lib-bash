@@ -19,12 +19,18 @@ Invoke during or right after a `/speckit.*` command or skill run when the intera
 - Review feedback that should shape future work.
 - The in-flight working state of a long run (what was just done / the next step).
 
+A non-derivable takeaway from the run is a recording obligation, not an optional nicety — see `.specify/shared/guidelines/knowledge-promotion.md` § 1.
+
 ## What NOT to store
 Do not store anything derivable from project state: code, architecture, file layouts, git history, or content already captured in `constitution.md`, `features.md`, `features/<ID>.md`, or `tools.md`. Memory is only for **non-derivable** context. Keep entries short and high-signal.
+
+The recording obligation and the repeated-emphasis promotion trigger are owned by `.specify/shared/guidelines/knowledge-promotion.md`; this skill owns the write mechanics.
 
 ## Choosing scope
 - `session` — short-term / working memory for the current effort (progress, in-flight state, ephemeral context). Append-only; safe to prune later.
 - `knowledge` — long-term / distilled memory that stays useful across sessions (stable preferences, conventions, lasting decisions). Upserted by title slug, so re-recording the same subject updates it.
+
+For a user emphasis, use `session` with tags `user-emphasis,key:<ascii-slug>` so the second occurrence can be counted; the promotion trigger is owned by `.specify/shared/guidelines/knowledge-promotion.md` § 2.
 
 ## Workflow
 1. Confirm the trigger is a Spec Kit command or skill. Determine the correct `--source`:
@@ -33,6 +39,7 @@ Do not store anything derivable from project state: code, architecture, file lay
    The engine rejects any other source, so this is a hard boundary — never fabricate a source to force a write.
 2. Distill the takeaway into a concise title and a few lines of content.
 3. Pick the scope (`session` vs `knowledge`) using the guidance above.
+   - For a user emphasis, first check prior occurrences with `memory-utils.py --action recall --scope all --tags "key:<ascii-slug>" --format json`. If this is the second occurrence, follow `.specify/shared/guidelines/knowledge-promotion.md` § 2 — do not stop after recording.
 4. Run the shared engine from the project root:
    ```bash
    python3 "${SKILL_WORKDIR}/.specify/scripts/python/memory-utils.py" \

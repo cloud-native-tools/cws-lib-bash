@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "qoder",
-  "rendered_at": "20261021T170204Z",
+  "rendered_at": "20261025T104351Z",
   "entries": {
     ".claude/agents/sdd-executor.md": {
       "source": "templates/sdd-executor.agent.md",
@@ -29,7 +29,7 @@
     },
     ".opencode/agents/sdd-executor.md": {
       "source": "templates/sdd-executor.agent.md",
-      "sha256": "7882d665d7bd4c668b3160c3334c92fa5a90b55518e0d2dc6601318ed4ecb118"
+      "sha256": "054e05cf2b7ec4866cd60ffb20fd9031812d2936749c34c8d4a7f1c662c71cc4"
     },
     ".opencode/agents/skill-verifier.md": {
       "source": "templates/skill-verifier.agent.md",
@@ -41,7 +41,7 @@
     },
     ".qoder/agents/sdd-executor.agent.md": {
       "source": "templates/sdd-executor.agent.md",
-      "sha256": "6c8238316c9ebecd526b23304a8f2ce0e29dd5145a5d0245232f7b7776d84cf2"
+      "sha256": "052b14a09cffa99609042adf479f9a251e52e91acfdcfec0a14b9853e2e36282"
     },
     ".qoder/agents/skill-verifier.agent.md": {
       "source": "templates/skill-verifier.agent.md",

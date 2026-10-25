@@ -140,9 +140,10 @@ containers (observed in this environment):
 
 ```bash
 docker run -d --name hugo-verify <image> sleep 600
-tar czf /tmp/site.tar.gz <docs>
-docker cp /tmp/site.tar.gz hugo-verify:/tmp/
-docker exec hugo-verify sh -c 'mkdir -p /w && tar xzf /tmp/site.tar.gz -C /w && cd /w/<docs> && hugo --minify'
+tar czf ~/tmp/site.tar.gz <docs>
+docker exec hugo-verify mkdir -p /w
+docker cp ~/tmp/site.tar.gz hugo-verify:/w/site.tar.gz
+docker exec hugo-verify sh -c 'tar xzf /w/site.tar.gz -C /w && cd /w/<docs> && hugo --minify'
 ```
 
 ### No-docs guard test

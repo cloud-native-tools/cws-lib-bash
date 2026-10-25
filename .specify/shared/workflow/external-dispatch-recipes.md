@@ -61,9 +61,9 @@ Run the stage in the background with its output streamed to a local log, then po
 
 ```bash
 ssh <alias> "su - <run-user> -c 'bash /home/<run-user>/run-<line>-<stage>.sh'" \
-  > /tmp/<line>-<stage>.log 2>&1 &     # background; one ssh stream per line
+  > ~/tmp/<project>/<line>-<stage>.log 2>&1 &     # background; one ssh stream per line
 
-tail -N /tmp/<line>-<stage>.log        # poll until the sentinel line appears
+tail -N ~/tmp/<project>/<line>-<stage>.log        # poll until the sentinel line appears
 ```
 
 On seeing `<STAGE>-DONE`, write the next stage's prompt file and continue the loop — this polling step **is** the loop's engine (see the pattern doc). On seeing the sentinel missing past the stage timeout, treat it as a stall, not a silence (pattern doc's stall handling).
@@ -72,7 +72,7 @@ On seeing `<STAGE>-DONE`, write the next stage's prompt file and continue the lo
 
 ## Recipe 5 — Local Variant: Brief File First (本地简报先行)
 
-For the local topology with a large requirement context, write the context to a brief file first (e.g. `/tmp/<topic>-sdd-brief.md`) and keep the subagent prompt minimal: "read the brief in full, then run `/speckit.requirements`". A file-backed brief is more stable than inlining the whole context in the prompt.
+For the local topology with a large requirement context, create `~/tmp/<project>/` and write the context to a brief file first (e.g. `~/tmp/<project>/<topic>-sdd-brief.md`) and keep the subagent prompt minimal: "read the brief in full, then run `/speckit.requirements`". A file-backed brief is more stable than inlining the whole context in the prompt.
 
 When multiple specs progress in parallel on one project, the prompt MUST declare the concurrency isolation explicitly (which pre-existing uncommitted areas are not read/modified/committed by this line) and the "main session commits after review" boundary. An isolated item that later needs access is unblocked only by an explicit, per-item, bounded **narrow-read authorization** — never implicitly.
 

@@ -34,6 +34,18 @@ request rather than by judgment.
    `--action package --include-introspection` 把覆盖它们的自省报告一并入包;用户可拒绝,
    拒绝不阻断打包。外部条目(`kind: external`)由引擎自动排除并只回报
    `excluded_external` 计数——它们属 Path A,永不随包上行。
+
+   **Exec-quant payload (068)**: the same `--action package` call also sweeps the
+   workspace's exec-quant store read-only and rides its records along under
+   `exec-quant/` as a first-class payload — **full inclusion** independent of the
+   entry time filter (no watermark), under engine-enforced caps (1,000 records /
+   16 MiB) that truncate with the remainder reported. Every payload degradation
+   (unreadable record, truncation, missing project identity) is non-blocking: it
+   surfaces as counters in the report — text and `--format json` both faces — and in
+   the zip's `MANIFEST.md` § Exec-Quant Payload section, which is rendered even for
+   an empty payload and then declares 无量化数据. Feedback-empty + payload-non-empty
+   still produces a package, with `Entries: 0` explicit. The receiving side unpacks
+   this payload per bundle (see `./path-a-digest.md` § A2).
 5. **Post-package cleanup (hat-aware closing step of the package run)**: whether the
    packaged batch may leave the active store depends on which hat this repo wears —
    decided by the SKILL.md Routing flow's step-2 criterion, not restated here.

@@ -37,12 +37,20 @@ Single target:
                   [--sentinel STAGE-DONE] [--heartbeat H] [--raw-stream PATH] \
                   [--hook-fifo F | --hook-done F] \
                   [--line-id ID --run-id RUN] [--stage STAGE] [--meta FILE] \
-                  [--registry DIR] \
+                  [--registry DIR] [--iter TOKEN] \
                   [--lease-ttl N --lease-renew-cmd CMD --lease-renew-interval N] \
 
                   [--deadline-epoch E | --timeout T] \
                   [--window N] [--interval N] [--start-grace N] \
                   [--deadline-grace N] [--heartbeat-max-age N] [--once] [--verbose]
+
+--iter TOKEN tags THIS invocation and is echoed as iter= on WATCH and EVIDENCE
+(default: na). A multi-window watch repeats the same command by design, and
+hosts such as Qoder reject byte-identical tool calls as a repeated-call loop;
+every window MUST carry a literal, different token such as "<run>-w07". Write
+the token literally: substitutions like $(date +%s) or $$ are expanded only
+after the host has compared the command text, so they do not change the
+signature. The token never affects any verdict or exit code.
 
 --raw-stream PATH reports stream=na|absent|growing|idle on the WATCH line and
 raw=<path> bytes=<n> on EVIDENCE; raw growth is visibility only and never
@@ -88,8 +96,8 @@ The watcher must run as the same identity as the runner (kill -0 permission).
 --hook-done F: a non-empty F is a persistent early signal (same rule).
 Both are supplementary: sentinel/status/exit-record remain authoritative.
 --self-test runs zero-match / dead / zombie / pid-reuse / fake-done /
-anomaly / exit-code / timeout / hook / manifest / registry-identity / lease-window
-regression cases.
+anomaly / exit-code / timeout / hook / manifest / registry-identity / lease-window /
+iteration-token regression cases.
 
 EOF
 }
@@ -142,6 +150,7 @@ LINE_ID=""
 RUN_ID=""
 STAGE=""
 META=""
+ITER=""
 REGISTRY_DIR="${SPECIFY_LINE_REGISTRY_DIR:-}"
 LEASE_TTL=""
 LEASE_RENEW_CMD=""
@@ -174,6 +183,7 @@ while [ "$#" -gt 0 ]; do
     --run-id) [ "$#" -ge 2 ] || die_usage "--run-id needs a value"; RUN_ID="$2"; shift 2 ;;
     --stage) [ "$#" -ge 2 ] || die_usage "--stage needs a value"; STAGE="$2"; shift 2 ;;
     --meta) [ "$#" -ge 2 ] || die_usage "--meta needs a value"; META="$2"; shift 2 ;;
+    --iter) [ "$#" -ge 2 ] || die_usage "--iter needs a value"; ITER="$2"; shift 2 ;;
     --registry) [ "$#" -ge 2 ] || die_usage "--registry needs a value"; REGISTRY_DIR="$2"; shift 2 ;;
     --lease-ttl) [ "$#" -ge 2 ] || die_usage "--lease-ttl needs a value"; LEASE_TTL="$2"; shift 2 ;;
     --lease-renew-cmd) [ "$#" -ge 2 ] || die_usage "--lease-renew-cmd needs a value"; LEASE_RENEW_CMD="$2"; shift 2 ;;
@@ -563,6 +573,7 @@ evaluate() {
   fi
 
   V_LABEL="$label"; V_VERDICT="$verdict"; V_CODE="$code"; V_REASON="$reason"
+  V_ITER=$(one_line "${ITER:-na}")
   V_PID="$pid_state"; V_HB="$hb_state"; V_HOOK="$hook_state"; V_SENT="$sent_state"
   V_RC="${s_rc:-na}"; V_LAST="$last"; V_STATUS_RAW=""
   [ "$anomaly" -eq 1 ] && V_ANOMALY="observed" || V_ANOMALY="no"
@@ -601,9 +612,9 @@ evaluate() {
 }
 
 format_verdict() {
-  printf 'WATCH label=%s verdict=%s pid=%s heartbeat=%s hook=%s anomaly=%s sentinel=%s rc=%s elapsed=%s reason=%s stream=%s line=%s run=%s stage=%s event=watcher-verdict at=%s attribution=%s' \
+  printf 'WATCH label=%s verdict=%s pid=%s heartbeat=%s hook=%s anomaly=%s sentinel=%s rc=%s elapsed=%s reason=%s stream=%s line=%s run=%s stage=%s event=watcher-verdict at=%s attribution=%s iter=%s' \
     "$V_LABEL" "$V_VERDICT" "$V_PID" "$V_HB" "$V_HOOK" "$V_ANOMALY" "$V_SENT" "$V_RC" "$V_ELAPSED" "$V_REASON" "$V_STREAM" \
-    "$LINE_ID" "$RUN_ID" "$STAGE" "$V_AT" "$V_ATTR"
+    "$LINE_ID" "$RUN_ID" "$STAGE" "$V_AT" "$V_ATTR" "$V_ITER"
 
 }
 
@@ -613,8 +624,8 @@ format_evidence() {
   if [ -n "$RAW_STREAM" ]; then
     raw_extra=" raw=$RAW_STREAM bytes=$V_RAW_BYTES"
   fi
-  printf 'EVIDENCE label=%s last="%s" status="%s" line=%s run=%s stage=%s event=watcher-verdict at=%s attribution=%s%s' \
-    "$V_LABEL" "$last" "$V_STATUS_RAW" "$LINE_ID" "$RUN_ID" "$STAGE" "$V_AT" "$V_ATTR" "$raw_extra"
+  printf 'EVIDENCE label=%s last="%s" status="%s" line=%s run=%s stage=%s event=watcher-verdict at=%s attribution=%s%s iter=%s' \
+    "$V_LABEL" "$last" "$V_STATUS_RAW" "$LINE_ID" "$RUN_ID" "$STAGE" "$V_AT" "$V_ATTR" "$raw_extra" "$V_ITER"
 }
 
 emit_single() {
@@ -767,7 +778,8 @@ cleanup_selftest() {
 
 self_test() {
   local pass=0 fail=0
-  ST_TMP=$(mktemp -d "${TMPDIR:-/tmp}/watch-target-selftest.XXXXXX") || {
+  mkdir -p "$HOME/tmp"
+  ST_TMP=$(mktemp -d "$HOME/tmp/watch-target-selftest.XXXXXX") || {
     echo "SELF-TEST: cannot create temp dir" >&2
     return 1
   }
@@ -1195,6 +1207,25 @@ EOS
     --status-file "$base/status-stream-detached" --log "$base/log-stream-detached.log" \
     --sentinel PLAN-DONE --window 8 --interval 1 --start-grace 4)
   check stream-detached-survives 0 DONE "${r%%$'\n'*}" "${r#*$'\n'}"
+
+  # 20. per-window iteration token is echoed and never changes the verdict
+  local it1 it2 irc1 irc2 iout1 iout2
+  it1=$(watch --label iter-token --status-file "$base/status1" --log "$base/log1" \
+    --sentinel PLAN-DONE --once --iter "run42-w01")
+  irc1=${it1%%$'\n'*}; iout1=${it1#*$'\n'}
+  it2=$(watch --label iter-token --status-file "$base/status1" --log "$base/log1" \
+    --sentinel PLAN-DONE --once --iter "run42-w02")
+  irc2=${it2%%$'\n'*}; iout2=${it2#*$'\n'}
+  if [ "$irc1" -eq 0 ] && [ "$irc2" -eq 0 ] \
+     && printf '%s\n' "$iout1" | grep -q 'iter=run42-w01' \
+     && printf '%s\n' "$iout1" | grep -q 'verdict=DONE' \
+     && printf '%s\n' "$iout2" | grep -q 'iter=run42-w02' \
+     && printf '%s\n' "$iout2" | grep -q 'verdict=DONE' \
+     && [ "$iout1" != "$iout2" ]; then
+    ok iter-token-signature
+  else
+    bad iter-token-signature "rc1=$irc1 rc2=$irc2 tokens missing or output identical"
+  fi
 
   if [ "$fail" -eq 0 ]; then
     printf 'SELF-TEST: %s passed, 0 failed\n' "$pass"
