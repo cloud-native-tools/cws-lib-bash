@@ -1,7 +1,7 @@
 {
   "version": 1,
   "tool": "qoder",
-  "rendered_at": "20261025T104310Z",
+  "rendered_at": "20261025T101624Z",
   "entries": {
     ".claude/agents/sdd-executor.md": {
       "source": "templates/sdd-executor.agent.md",
