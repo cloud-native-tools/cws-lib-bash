@@ -338,7 +338,9 @@ in progress, do NOT improvise: apply the Scope Revision Protocol from
    existing rows), then cascade to plan/contracts as needed.
 2. **Append tasks, never renumber**: new work lands as new `T0NN` rows appended to
    `tasks.md` (marked to the relevant story or Polish); existing IDs and history stay
-   intact.
+   intact. The one sanctioned exception is duplicate-ID collision repair by
+   `/speckit.sanitize --lane renumber` — it re-labels only a duplicated definition, never
+   an ID that collides with nothing.
 3. **Re-verify the touched surface**: re-run the affected contract/integration batch plus
    mirror checks before continuing the phase sequence.
 4. **Leave a trace**: note the directive and its landing (FRs, tasks, commits) in

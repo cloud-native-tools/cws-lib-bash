@@ -42,6 +42,15 @@
 - 对齐说明：本回传契约与快速失败纪律（fast-fail）的子代理派发注入义务一致——异常必须显式回传，静默是不被接受的输出。
 ```
 
+### 只读阶段变体（Read-only Stage Variant）
+
+analyze 等声明只读的阶段沿用同一三段骨架，但第①/②段 MUST 把「只读」限定在**产物面**，并显式保留 Wrap-up 记账例外：
+
+- **产物只读**：不修改制品、不提交、不 push；命令面「no file writes」一律按「no artifact writes」理解。
+- **Wrap-up 记账必需**：Run Determination / Exec Quant / Feedback Record 三步是**获准的唯一写面**（只写 session / feedback 记账），MUST 照常执行；unit-id 用本阶段命令身份（`/speckit.<stage>`），执行体按技能身份记账（`skill:<name>`）时 U4 同样接受。
+- **不得只写「严格只读」**：缺记账例外的派发会让执行者把三步一起跳过（实测先例：046 的 analyze / analyze2 因此零 feedback、零 session 记录）。
+- **无法写记账时**：执行者 MUST 在最后一行输出 `WRAPUP-DEFERRED: <原因>`（替代静默跳过），由驱动者按 U4 记账核验补跑；`WRAPUP-DEFERRED` 不是完成信号。
+
 ## U3 统一监听与驱动者生命周期（Watch Protocol）
 
 监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。**本地原生调用是一次同步阻塞调用，返回即终止判定；下列窗口/轮询/重入规则仅用于外部 CLI 派发。**
@@ -59,13 +68,14 @@
 
 ## Independent Verification（独立校验程序，U4）
 
-阶段完成判定由**独立校验步骤**执行——校验者不是该阶段的执行子代理（由主代理自身核验，或另行派发一个校验子代理）。三条件同时成立才判完成：
+阶段完成判定由**独立校验步骤**执行——校验者不是该阶段的执行子代理（由主代理自身核验，或另行派发一个校验子代理）。四条件同时成立才判完成：
 
 1. **哨兵（必要条件）**：本次阶段输出的最后一行是 `<STAGE>-DONE`。日志正文中出现的历史回显不算——只认本次输出末尾。
 2. **产物核验（充分条件之一）**：`git log` 出现该阶段的新增提交；该阶段的 spec 产物文件存在（requirements 阶段 → requirements.md；plan 阶段 → plan.md；tasks 阶段 → tasks.md；checklist 阶段 → checklists/ 目录新增清单文件；analyze 阶段 → findings 报告正文输出于本次阶段日志——只读命令不产新提交，哨兵 + 报告正文即产物，git log 新增提交对该阶段不作要求；implement 阶段 → 代码提交与测试；review 阶段 → review 产物）。
 3. **纪律合规抽查（充分条件之二）**：第②段的执行要求未被违反——脏文件未被提交/还原、无未授权 push、假设已记录。
+4. **Wrap-up 记账核验（记账条件）**：按该阶段的命令身份（`/speckit.<stage>`）或对应技能身份（`skill:<name>`），在 `session/` 找到 run-determination 记录、在 `feedback/` 找到对应 feedback 条目（引擎返回 `simple-unit` 或 `duplicate` 的跳过同样计入满足）；有特性上下文（spec 目录存在）时，该条目 MUST 带 `--feature` 且与当前 requirement key 一致。阶段输出 `WRAPUP-DEFERRED` 时，驱动者 MUST 在放行前亲自补跑三步（命令取自该阶段命令或技能的 Wrap-up），并把结果指针写入状态脊的 `wrapup` 字段；未补跑即判 INCOMPLETE。
 
-**伪完成判未完成**：尾标在而产物缺 = 未完成，循环不派发下一阶段。**U3 返回 `DONE` 只是候选**，三条件同时成立才放行；`INCOMPLETE`（退出 rc=0 但哨兵缺失）按伪完成判未完成。校验结论含逐项证据指针，可被第二位复核者独立复现。
+**伪完成判未完成**：尾标在而产物缺 = 未完成，循环不派发下一阶段。**记账缺失同样按伪完成判未完成**——阶段声明完成但三步未执行、也未返回 `WRAPUP-DEFERRED` 的，U4 不得放行。**U3 返回 `DONE` 只是候选**，四条件同时成立才放行；`INCOMPLETE`（退出 rc=0 但哨兵缺失）按伪完成判未完成。校验结论含逐项证据指针，可被第二位复核者独立复现。
 
 ## Deterministic Gates（确定性门，U4 / 派发前）
 

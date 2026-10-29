@@ -123,11 +123,20 @@ exhibits them:
   not that the problem is solved.
 - When an obstacle is encountered, the underlying cause MUST be identified and repaired;
   bypassing safety checks or removing the surface that exposes the problem is forbidden.
+- Symptom suppression MUST NOT be used as a fix: commenting out the code that fails to
+  compile, skipping or muting a failing command, or excluding a failing check from the
+  pipeline all make a step look green while leaving the problem in place. Whether a problem
+  is solved MUST be judged at the whole-run level, never by one step succeeding.
+- Under version control, a `.bak` / `.backup` / `.orig` copy MUST NOT be created to preserve
+  a file; a file that should go MUST be deleted, because history is an unambiguous backup
+  and a random copy is not.
 - When a destructive operation is genuinely required (deletion, force-overwrite, reset),
   it MUST be explicitly confirmed with the user before execution.
 
 Rationale: destructive shortcuts destroy information and trust, and usually recreate the
-same problem elsewhere; mandatory confirmation keeps irreversible actions under human control.
+same problem elsewhere; symptom suppression is the same shortcut wearing a green check.
+Mandatory confirmation keeps irreversible actions under human control, while version
+control turns deletion into a reversible act that needs no ad-hoc backup file.
 
 ### XI. Complete & Correct Options, or None
 Presenting options that are incomplete or incorrect is WORSE than presenting no options:
@@ -248,6 +257,49 @@ output costs nearly nothing. Discarding output mid-pipeline is a quiet form of e
 destruction: nothing looks deleted, yet the only remaining path to the answer is a full
 re-execution. One captured run answers many follow-up questions, and that gain compounds
 across every question the work will produce.
+
+### XVI. Directory Governance (Named, Documented, Ignored When Temporary)
+Every directory in this repository MUST exist for a documented reason, under a documented
+name, with a documented meaning:
+- The rules — naming, the registration obligation, the index of owner documents, and the
+  temporary-directory requirement — are defined once in
+  `.specify/shared/guidelines/directory-governance.md`; consumers MUST reference it, do not
+  restate it.
+- A new top-level directory, or the first of a new kind under an existing tree, MUST be
+  registered in its area's directory map in the same change that creates it; a directory
+  whose meaning is documented nowhere MUST NOT be created.
+- Directory names MUST be lowercase kebab-case and read as the concept they hold, following
+  the path-is-semantic rule of Principle X; tool/framework-mandated names MUST NOT be
+  renamed.
+- A temporary or scratch directory MUST use a sanctioned root and MUST already be matched by
+  `.gitignore` before its first write inside the repository; roots, cleanup, and exceptions
+  are owned by `.specify/shared/guidelines/temp-directory-discipline.md`.
+- This principle adds a naming and registration obligation, not machinery: it MUST NOT
+  justify a directory scanner, a registry generator, or any new tracking system.
+
+Rationale: an unowned directory is a silent claim on the repository's structure — it appears
+with no stated purpose, survives by inertia, and later readers cannot tell a deliberate
+layout from leftover scratch. Documenting name and meaning at creation is one sentence of
+work that keeps the tree legible; the temporary-directory rule extends the same discipline to
+data that must not outlive its work item.
+
+### XVII. Grounded Naming
+A name is load-bearing information that links an entity into the project's knowledge network,
+so naming MUST NOT be improvised; when a name must be chosen, the first available source in
+this order decides:
+- User instruction — a name the user stated MUST be used verbatim.
+- Project convention — an established naming rule (style guide, directory convention,
+  glossary term) MUST win over personal preference.
+- Sibling imitation — with no rule, the name MUST follow the closest same-kind siblings
+  already in the codebase.
+- Own choice — only when none of the above applies MAY a new name be invented, and it MUST
+  describe what the entity is or does, not where it happened to be used.
+- A rename that a higher-priority source mandates MUST be carried through every reference
+  in the same change.
+
+Rationale: a name is how every later reader, search, and agent finds an entity and connects
+it to related concepts. An improvised name silently breaks those links, so the cheapest
+correct decision is always the one an existing authority already made.
 
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->

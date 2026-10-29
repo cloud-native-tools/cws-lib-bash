@@ -1,6 +1,6 @@
 # Execution Topology (执行拓扑) — 编排侧与执行侧的两环境模型
 
-Single source of truth for the **two-side execution topology** of the SDD-driving external skills (`sdd-project-setup`, `sdd-loop-driver`). It exists because the two skills are routinely misread as running "wherever the project is" — the most costly misreading is installing or initializing the speckit framework on the wrong side. Per-skill files keep only their own application of this model and point here; command shapes stay in [`external-dispatch-recipes.md`](external-dispatch-recipes.md) (§ Two Topologies), the dispatch *declaration* stays in [`../definitions/subagent-definitions.md`](../definitions/subagent-definitions.md) (§ Execution Topology Declaration), and preflight stays in run-agent `references/dispatch-preflight.md`.
+Single source of truth for the **two-side execution topology** of the SDD-driving external skills (`sdd-project-setup`, `sdd-house-keeping`, `sdd-loop-driver`). It exists because the skills are routinely misread as running "wherever the project is" — the most costly misreading is installing or initializing the speckit framework on the wrong side. Per-skill files keep only their own application of this model and point here; command shapes stay in [`external-dispatch-recipes.md`](external-dispatch-recipes.md) (§ Two Topologies), the dispatch *declaration* stays in [`../definitions/subagent-definitions.md`](../definitions/subagent-definitions.md) (§ Execution Topology Declaration), and preflight stays in run-agent `references/dispatch-preflight.md`.
 
 ## The Two Sides
 
@@ -13,7 +13,7 @@ Single source of truth for the **two-side execution topology** of the SDD-drivin
 | **到达方式** | —（就是本会话） | `ssh`/`su`，或本地退化形态直接执行 |
 
 ```text
-编排侧（本地宿主 agent，加载 sdd-project-setup / sdd-loop-driver）
+编排侧（本地宿主 agent，加载 sdd-project-setup / sdd-house-keeping / sdd-loop-driver）
   │  ssh <alias>  →  su - <run-user>
   ▼
 执行侧（远端开发机 · 目标项目目录）
@@ -26,11 +26,22 @@ Single source of truth for the **two-side execution topology** of the SDD-drivin
 
 **技能与子代理不同环境是常态而非例外**：技能（编排侧）通常在本地 agent 中运行，经 ssh 登录远端开发机启动子代理执行操作。编排侧缺 `specify`/venv 不是缺口、不触发安装；一切安装与初始化动作都在执行侧发生。
 
+## Carrier decision (local vs remote)
+
+This is the single decision rule for the three SDD-driving external skills:
+
+- **No remote information** (no ssh alias + run user + project directory) → **local**. Target resolution follows the dependency class in [`target-resolution.md`](target-resolution.md): `sdd-project-setup` uses the current project (git root / session cwd) and creates the `.specify/` baseline; `sdd-house-keeping` and `sdd-loop-driver` locate the nearest valid `.specify/` ancestor from the session cwd and refuse/handoff when none exists. Execution happens via the orchestrator or the host's **native subagent**. MUST NOT launch `qodercli` / `claude -p` locally.
+- **Analysis/validation fan-out is not stage dispatch.** The local rule above governs the three SDD-driving skills' stage/bootstrap/housekeeping dispatch. The bounded read-only fan-out required by `/speckit.analyze` §5.5 — and the same-author detection delegation in [`objective-analysis-gate.md`](objective-analysis-gate.md) — selects its carrier per [`../definitions/subagent-definitions.md`](../definitions/subagent-definitions.md) § Mode Selection: native when the executor can nest; **External read-only CLI (`qodercli -p` / `claude -p`) when the executor is itself a non-nesting subagent**; never a session-creation API. Remote topology is unchanged.
+- **Complete remote triple** → **remote**. The execution side is reached as `ssh <alias>` → `su - <run-user>` → `cd <project-dir>`, and the subagent CLI runs inside `<project-dir>`. The CLI default is the execution-config defaults layer (`.specify/agents/execution/configs/_defaults.yaml`, seeded from `.specify/templates/execution-config-defaults.yaml`, default `cli: qodercli`); agent/inline layers may override.
+- **Partial remote information** → ask one clarifying question; never silently fall back to local.
+- Each skill's `S0`/`H0`/`U0` keeps only its own mode/tool defaults; the carrier rule above is not restated elsewhere.
+
 ## Per-Skill Mapping
 
 | 技能 | 编排侧执行的部分 | 执行侧执行的部分 |
 |------|------------------|------------------|
-| **sdd-project-setup** (S0–S5) | 加载手册、跑 `mechanism-inventory.py`（只读脚本经 ssh 推送到执行侧执行）、派发与登记、S4 复核汇总、S5 候选清单 | S2 全部（python 解析阶梯 → specify CLI 安装 → `specify init`，远端经 `ssh … "su - <run-user> -c '…'"`）；S3/S3+ 治理与强化命令（以子代理承载或远端直执） |
+| **sdd-project-setup** (S0–S2 + handoff) | 加载手册、跑 `mechanism-inventory.py`（只读脚本经 ssh 推送到执行侧执行）、派发与登记、bootstrap 后 handoff 给 sdd-house-keeping | S2 全部（python 解析阶梯 → specify CLI 安装 → `specify init`，远端经 `ssh … "su - <run-user> -c '…'"`）；constitution 初始化 |
+| **sdd-house-keeping** (H0–H5) | 加载手册、跑只读盘点/验证脚本（远端经 ssh 推送到执行侧）、派发治理命令、汇总记录回收结果与运行报告 | H2/H3 的 `/speckit.*` 治理/强化命令（以子代理承载或远端直执）；H4 hook health 在目标侧执行 |
 | **sdd-loop-driver** (U0–U6) | 加载者即驱动者：U0 入口、U1 断点探测（ssh 只读探测）、U2 派发（写 prompt/runner 文件到执行侧）、U3 轮询、U4 独立校验、U5 卡死处置、U6 收尾汇总——全部亲自执行，不委托 subagent | 阶段子代理在项目目录内执行 `/speckit.*` 阶段命令（runner 脚本承载，后台执行 + 日志回传） |
 
 两侧一致的判定线：**凡是读写目标项目、调用 `specify`/`/speckit.*` 的动作 → 执行侧；凡是编排、判定、轮询、校验、落状态脊的动作 → 编排侧。**

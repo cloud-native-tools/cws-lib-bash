@@ -22,11 +22,11 @@ import sys
 from pathlib import Path
 
 LEGACY_SUFFIXES = (
-    "063-sdd-loop-efficiency/contracts/cli-profiles.md",
+    "075-sdd-loop-efficiency/contracts/cli-profiles.md",
     "test_cli_profile_record.py",
     "references/cli/README.md",
 )
-DEFAULT_BRANCH = "063-sdd-loop-efficiency"
+DEFAULT_BRANCH = "075-sdd-loop-efficiency"
 
 
 def git(repo: Path, *args: str):

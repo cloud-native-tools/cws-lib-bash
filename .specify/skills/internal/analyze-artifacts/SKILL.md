@@ -14,9 +14,9 @@ implement — before implementation starts. The output is one **compact findings
 (≤50 rows) whose CRITICAL/HIGH severities survive an independent validation wave, plus the
 coverage/linkage summaries that make the absence of findings itself an evidenced claim.
 
-The skill is **strictly read-only**: it modifies no file. (The single sanctioned exception
-is the wrap-up Feedback step's engine entry — local bookkeeping, not an artifact
-modification.)
+The skill is **strictly read-only on artifacts**: it modifies no artifact. (The single
+sanctioned exception is the wrap-up engine entries — Run Determination / Exec Quant /
+Feedback Record — local bookkeeping, not an artifact modification.)
 
 Canonical extraction source: `.specify/templates/commands/analyze.md` § Execution Steps 1–7,
 Operating Principles, and the do-not-flag list. The command template keeps entry +

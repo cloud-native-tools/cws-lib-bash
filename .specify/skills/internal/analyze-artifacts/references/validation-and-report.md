@@ -32,6 +32,19 @@ read-only validation subagent.**
   detection agents and the validators MUST be **disjoint sets** (owner:
   `.specify/shared/workflow/objective-analysis-gate.md` rule 5) — a detector validating its
   own finding is the self-review this pass exists to remove.
+- **Dispatch carrier.** The wave dispatches **workers, never sessions**, and selects its carrier
+  per `.specify/shared/definitions/subagent-definitions.md` § Mode Selection: the native subagent
+  tool when the executing runtime exposes one; **external read-only CLI (`qodercli -p` /
+  `claude -p`) when the analyzing executor is itself a non-nesting subagent** — one process per
+  finding, run in parallel, command shape in
+  `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 7. Host session-creation APIs
+  (`create_chat_session`, `fork_chat_session`, or any equivalent) are **PROHIBITED** for this wave:
+  they create a user-visible standard conversation per validator, inherit the orchestrator's model
+  and permission mode, and have no bounded scope or result contract. This exception is scoped to
+  the validation wave; stage dispatch keeps its local-topology rule.
+- **Read-only proof.** Launch every external validator with write tools disabled and session
+  persistence off. After the wave, `git status --porcelain` in the analyzed repository MUST be
+  unchanged; any change invalidates the wave (fast fail) regardless of the verdicts returned.
 - **Downgrade rate is a reported metric.** State how many findings were sent, `confirm`ed,
   `downgrade`d, and `reject`ed. A wave that downgrades most of what it receives is evidence
   that detection over-rated severity — that observation belongs in the report's remediation
@@ -52,7 +65,8 @@ read-only validation subagent.**
 - **Subagent-unavailable fallback.** If the validation subagent dispatch fails twice in a row
   (upstream error), a direct evidence re-read by the analyzing agent MAY substitute; the
   report row MUST then carry `(validated: direct re-read, subagent unavailable)` so the
-  weaker evidence path is visible to the reader.
+  weaker evidence path is visible to the reader. A session-creation API is not a successful
+  dispatch and MUST NOT be used as a fallback.
 
 ## 6. Compact analysis report
 

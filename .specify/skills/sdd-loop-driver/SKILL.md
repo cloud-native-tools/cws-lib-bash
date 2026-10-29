@@ -13,7 +13,7 @@ classification: external
 
 **触发语义与路由**：以本技能名加载并给出功能/改进描述 = SDD 目标，目标项目可为任意仓库（含本技能自身仓库）；改进本技能也必须走 U0/U1 → 阶段链。仅入口显式声明「只做技能维护、不走 SDD」时，才允许 improve-skills/create-skills 维护路径。**主导流程唯一**：**加载后的第一个动作**是写出 U0 入口声明与阶段计划，在此之前不加载其他技能、不编辑文件、不派发 subagent。
 
-**质量门完整**：checklist/analyze/review 在无人值守循环中一律必经、不可省略（编排见 dispatch-recipes.md Recipe 4）。与 sdd-project-setup **非强绑定、各自可独立运行**：框架调协归它，阶段循环归本技能；候选清单仅建议，需确认后启动。
+**质量门完整**：checklist/analyze/review 在无人值守循环中一律必经、不可省略（编排见 dispatch-recipes.md Recipe 4）。与 sdd-project-setup / sdd-house-keeping **非强绑定、各自可独立运行**：框架 bootstrap 归 setup，周期性维护/记录回收归 house-keeping，阶段循环归本技能；候选清单仅建议，需确认后启动。
 
 ## Driver Topology（驱动拓扑——义务真源：run-agent 派发治理）
 
@@ -34,8 +34,8 @@ classification: external
 
 | 入口缺省 | 解析规则 |
 |----------|----------|
-| 目标项目 | 未给路径且未给 host/ssh 别名 → **当前项目**（在 git 仓库内取仓库根；非 git 取会话工作目录；当前工作目录含 `.specify/` 时以其为准）；给了本地路径 → 该路径；远端三元组给全 → 远端 |
-| 执行拓扑 | 未给 ssh 别名/run-user/远端路径 → **本地**（宿主原生子代理；MUST NOT 启动 qodercli）；给全 → 远端（外部 CLI）；只给 host 或三元组不完整 → 问一个澄清问题，不猜 |
+| 目标项目 | 遵循 `.specify/shared/workflow/target-resolution.md`：**强依赖 `.specify/`**，未给路径且未给 host/ssh 别名 → 从会话 cwd **向上搜索**最近的合法 `.specify/` 根（显式本地路径则从其向上搜索）；找不到 → 拒绝执行并 handoff `sdd-project-setup` / 提示 `specify init`；显式目标优先；拒绝 basename `.specify`；远端先跑 execution-side target-root probe |
+| 执行拓扑 | 未给 ssh 别名/run-user/远端路径 → **本地**（宿主原生子代理；阶段派发 MUST NOT 启动 qodercli，analyze 验证波例外见 `references/dispatch-recipes.md` § 本地原生拓扑）；给全 → 远端（外部 CLI）；只给 host 或三元组不完整 → 问一个澄清问题，不猜 |
 | 终态权威文档 | 入口描述 + 现有 `docs/` + 宪法；写入 U0 状态脊 |
 | 断点 | U1 自动探测，禁止猜测 |
 | 特性切片 | 入口描述；未给则按权威文档推导，不自动选题 |
@@ -53,6 +53,25 @@ classification: external
 - 本技能名 + 明确「只改技能文档/不走 SDD」→ 技能维护路径；不得强制派发阶段。
 - 纯提问/咨询 → 回答并停；不自动启动循环。
 
+### Invoked-from-Team Entry（团队内调用入口）
+
+除独立入口外，本手册支持**被团队席位调用**的入口形态：一个已获有效授权的成员席位，为其一条职责启动**恰好一次**有界嵌套运行。该形态**接受的输入恰为六项、且集合封闭**——多出的事实不得被静默忽略，缺任一项即拒绝：
+
+| 事实 | 含义 |
+|------|------|
+| `goal_ref` | 绑定的 Goal 引用（必填） |
+| `target_ref` | 可选的 Target 引用；缺省 = 对绑定 Goal 整体运行 |
+| `team_slug` | 发起调用的团队 slug（授权坐标之一） |
+| `seat_slug` | 发起调用的席位 slug（授权坐标之一） |
+| `scope` | 授权的工件 / 领域范围 |
+| `verdict_ref` | 路由裁决记录的引用（其裁决必须是 SDD 值） |
+
+**U0 之前完成校验**：六项事实在写出 U0 入口声明**之前**全部校验；任一不通过即**拒绝启动并点名失败条件**，不把职责改写到能通过的形状，也不进入 U0。有效授权谓词（Agent 定义能力 AND 席位策略，按 (team, seat) 解析）的可执行形态是 `python3 .specify/scripts/python/sdd-route.py --action authorize`——提示词改词修不好一次拒绝。
+
+**止于 review，不主张合并权**：嵌套运行在驱动既有 review 修复循环收束后结束，交回结构化 handoff；它**不进入 merge 步**，也不主张属于**外层**的合并权——集成由外层按其既有确认门处置。
+
+校验表、handoff schema、写线登记、失败与卡死交回、消费方义务的**唯一落点**是 `references/nested-invocation.md`；本节只声明入口形态与上述三条边界，不复述其表。独立入口（本文件其余各节的形态与骨架）逐字不变——本入口是**追加**，不是替换。
+
 ## The Loop (U0–U6)
 
 ```text
@@ -60,7 +79,7 @@ U0 ENTRY     一遍性入口：目标、线、断点（或"探测"）、终态�
 U1 PROBE     每线：断点探测（git 分支 + 近期提交 + specs 目录 + 终态文档）判定续跑阶段
 U2 DISPATCH  本地：原生子代理逐阶段派发（同步返回）；远端：写 prompt + runner 后台派发（配方见 references/dispatch-recipes.md）
 U3 WATCH     远端统一监听：单次调用内长轮询信号（退出记录/哨兵/PID/心跳）至终止判定或窗口到期；窗口到期只返回 RUNNING 并立即以递增 --iter 重入，只有阶段 deadline 产生 TIMEOUT（本地原生调用即等待，不轮询；见 references/watch-model.md）
-U4 VERIFY    独立校验：哨兵（必要）+ 产物核验 + 纪律抽查（充分）→ 通过才续环
+U4 VERIFY    独立校验：哨兵（必要）+ 产物核验 + 纪律抽查 + Wrap-up 记账核验（充分）→ 通过才续环
 U5 STALL     超时/重试上限/预算触顶 → 停线、状态脊落盘、出上送件（绝不静默等待）
 U6 LEAVE     全线收束：逐线合并收尾（git 状态判定 + 工作树归档清扫，缺省本地合并）+ 一份收尾汇总
 ```
@@ -84,14 +103,17 @@ Hook 只是提前完成信号（`--settings` 注入、写 done/FIFO、`hook=obse
 ## Hard Requirements
 
 1. **自迭代**：U4 通过后立即派发下一阶段（U2），不等用户任何形式的「继续」。
-2. **独立校验**：阶段完成判定不由执行者自报——校验者不是该阶段执行子代理；哨兵在而产物缺 = 伪完成，判未完成。
+2. **独立校验**：阶段完成判定不由执行者自报——校验者不是该阶段执行子代理；哨兵在而产物缺 = 伪完成，判未完成；阶段 Wrap-up 记账缺失（且未返回 `WRAPUP-DEFERRED`）同样按伪完成判未完成（记账核验归 `references/stage-prompts.md` § Independent Verification）。
 3. **卡死处置**：达重试上限（缺省 2 次）或阶段超时（缺省 90 分钟）→ 停环、落状态脊、出上送件四要素（发现了什么 / 为何吃重 / 已产生的中间产物逐项可定位 / 可选处置）。
 4. **状态脊**：每线状态文件在 U2 派发前、U3 终止判定时、U4 校验后、U5 停线时先写后动；续环与重入只认状态脊，不依赖会话记忆。
 5. **驱动者生命周期**：U3 是当前运行内的有界等待（外部 CLI 用窗口；本地原生以一次同步调用为界，见 `references/watch-model.md`），驱动者必须存活到全线收束或显式停线上送；独立 `sleep` 回合与「挂监视器后等通知/恢复」均不合法——除非宿主已被探针证明能自动恢复同一运行。确须结束时，唯一合法路径是把状态脊写为 stalled/reentry-required 并显式上报。
-6. **驱动拓扑**：加载者即驱动者，亲自执行 U0–U6；阶段子代理只收三段骨架提示词；本地拓扑用宿主原生子代理（MUST NOT 启动 qodercli），远端才用外部 CLI；反嵌套义务真源在 run-agent 派发治理，本手册于 U2 派发前自检。
+6. **驱动拓扑**：加载者即驱动者，亲自执行 U0–U6；阶段子代理只收三段骨架提示词；本地拓扑的阶段派发用宿主原生子代理（MUST NOT 启动 qodercli），远端才用外部 CLI；反嵌套义务真源在 run-agent 派发治理，本手册于 U2 派发前自检。
 7. **流程不可替换**：U0/U1 与阶段计划写出前禁止直接编辑目标仓库；禁止用 improve-skills/create-skills 等维护路径替代 SDD 阶段链（目标为本仓库时同样适用）。唯一例外：入口显式声明「只做技能维护、不走 SDD」。
 8. **快照只读**：`.specify/scripts/loop-state.py` 的 snapshot 只读——MUST NOT 写状态脊、四件套、Registry 或工作树（唯一写路径是显式 `--out`，且落在 state dir / repo 内一律拒绝），MUST NOT 杀进程、删证据或移除 worktree；`stop` 在 065a 只是建议。字段面与检测读法 owner 是 `references/state-awareness.md`。
 9. **监听签名唯一**：每个监听窗口的 Shell 调用 MUST 在命令文本中携带字面量迭代标识——watcher 用 `--iter "<run_id>-w<NN>"`，hook 长读传第 6 个参数——`NN` 逐窗口递增，连续两次监听命令不得字节相同。令牌必须写成字面量，不能用 `$(date +%s)`/`$$`/`$RANDOM` 之类运行时展开：宿主（Qoder）在执行前比较签名，同参数连续调用会被判为重复并误报卡死。规则 owner 与重入续号：`references/watch-model.md` §3.2。
+10. **目标项目治理优先（本地与远端同规）**：对目标仓库的任何写动作或目录创建之前，MUST 先读取并遵守目标项目的治理文档——宪法（constitution）与指令（instructions），包括其中的原则、目录规范、命名规则与临时目录纪律；与目标项目既有文档冲突时以目标项目为准。经 ssh 的远端目标同规——远端目录创建同样受目标项目治理约束。目标项目尚无治理框架时委托 sdd-project-setup，不得以本技能的缺省形态替代目标治理。文件清单与兼容符号链接见 References。
+11. **运行期目录唯一**：目标仓 `.specify/` 命名空间是本技能唯一合法落点。临时数据（worktree、cache、tmp）走 `<repo>/.specify/.tmp/sdd-loop/{worktrees,cache,tmp}/<line_id>`，由 `.specify/.gitignore` 的 `.tmp/` 规则覆盖、工作项结束时清理；长期状态（状态脊）走 `<repo>/.specify/state/<line_id>.md`，按 line 一文一件、不随工作项清理（入口显式 `--state-dir` 时以入口为准）。布局 owner：`.specify/scripts/line-registry.py` 与 `references/dispatch-recipes.md`；Line Registry 仍缺省在 `$XDG_STATE_HOME/spec-kit/lines/` 或 `~/.local/state/spec-kit/lines/`（环境级，仓库外）。这两类落点由本技能独占；MUST NOT 使用 `.spec-kit/` 或任何其它仓库内 ad-hoc 目录（`tmp/`、`scratch/`、`state/`、`work/` 等）。首次写入前必须完成忽略状态确认（`git check-ignore -q .specify/.tmp`；缺失则先补规则）；目标项目自己的目录治理文档存在时，以目标项目为准。
+12. **嵌套运行是一条写线、且不主张合并权**：被团队席位调用时（§ Invoked-from-Team Entry），本次运行作为**一条写线**注册到既有 line registry 与 worktree-per-write-line（`.specify/scripts/line-registry.py`）；领域重叠由该机制串行化或拒绝，MUST NOT 新建第二套 registry / ownership 模型 / integration queue。运行止于 review 并交回 handoff：MUST NOT merge、MUST NOT push——集成归外层按其确认门处置。
 
 ## Discipline Defaults
 
@@ -132,11 +154,13 @@ Hook 只是提前完成信号（`--settings` 注入、写 done/FIFO、`hook=obse
 - `references/watch-model.md` — 统一监听模型：信号源、判定状态机、窗口/期限、多线 manifest、hook/SSH 与故障矩阵。
 - `references/state-awareness.md` — 状态感知快照 owner：入口与调用形态、六类检测与两类保留形态、§Derived Mapping（镜像 FR-004）、§Stage Artifact Map、probe 契约、动作建议与 watchbeat 读法；本手册与其它 references 只引用其章节，不复述整表。
 - `references/stage-prompts.md` — 三段骨架、独立校验、Line/Envelope/Ingress、重接线、变体、并发隔离、卡死处置。
+- `references/nested-invocation.md` — 团队内调用入口的完整契约：入口校验表、handoff schema（字段集封闭、三值 outcome、集成身份四事实）、写线登记、失败与卡死交回、消费方义务。
 - `.specify/scripts/loop-state.py` — 只读快照引擎（`snapshot` / `--probe` / `--self-test`；`recover`、`check-spine` 返回结构化拒绝），字段面与退出码契约见 `references/state-awareness.md`。
 - `.specify/scripts/watch-target.sh` — 长轮询 watcher 参考实现（快照、归属过滤、hook、lease、逐窗口 `--iter` 迭代标识）。
 - `.specify/scripts/hook-stop.sh` / `watch-hook.sh` — Stop hook 模板与远端同身份长读。
 - `.specify/scripts/line-registry.py` — 环境级 Registry、原子写/同线锁、信封分类、消息入口、集成队列。
 - `.specify/scripts/decomposition-check.py` / `pre-analyze-check.py` / `overlap-check.py` — 三个确定性门（owner：efficiency-model §5–§7）。
+- **目标项目治理文档**（运行时读取，经 ssh 同样适用）：目标项目的 `constitution`（`.specify/memory/constitution.md`）与 `instructions`（`.specify/instructions.md`，含 `AGENTS.md` / `QODER.md` / `CLAUDE.md` 兼容符号链接）；两者不随本技能分发，缺失时按 Hard Requirement 10 处置。
 
 ## Boundary
 
@@ -144,14 +168,14 @@ Hook 只是提前完成信号（`--settings` 注入、写 done/FIFO、`hook=obse
 - 阶段命令为不透明单元：不改各 `/speckit.*` 命令内部流程。
 - 不绑定特定项目族或工作区命名规则：别名、用户、路径、CLI、断点阶段全部入口参数化。
 - 同仓多写线：worktree-per-write-line + Ownership Manifest + 确定性集成队列；规则见 `references/dispatch-recipes.md` Recipe 7 与 `references/stage-prompts.md` Concurrency Isolation。worktree 仅在合并成功后移除。
-- 目标项目未安装 spec-kit（无 `.specify/`）时：**委托 sdd-project-setup** 处置（本技能不执行初始化），处置完成并取得就绪凭证后重入循环。
+- 目标项目未安装 spec-kit（无 `.specify/`）时：**委托 sdd-project-setup** 做 bootstrap（本技能不执行初始化）；bootstrap 返回 `maintenance-pending` 时，再**委托 sdd-house-keeping H1–H4** 做首次维护，取得 ready 凭证后重入循环。
 
 ## Subagent Create & Dispatch Delegation（子代理创建与派发委派）
 
 本手册是**编排者**：它不自带派发机制，而是委派两个承接技能完成驱动子代理的任务（2026-10-16 委派化裁定）：
 
 - **实例创建 → create-agent**（`.specify/skills/internal/create-agent/SKILL.md`）：从 `agents/sdd-executor.agent.md` 按职责实例化阶段执行实例（一实例一职责）；产出=`.specify/agents/instances/<slug>.agent.md`。
-- **阶段派发 → run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）：本地拓扑用宿主原生子代理（MUST NOT 启动 qodercli），远端拓扑用外部 CLI；以拓扑声明 + 实例引用发起执行；前置检查与失败处置见其 `references/dispatch-preflight.md`。
+- **阶段派发 → run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）：本地拓扑的阶段派发用宿主原生子代理（MUST NOT 启动 qodercli），远端拓扑用外部 CLI；远端进入形态为 `ssh <alias>` → `su - <run-user>` → `cd <project-dir>`，CLI 缺省取 execution-config defaults（`cli: qodercli`），可按 agent/inline 覆盖；以拓扑声明 + 实例引用发起执行；前置检查与失败处置见其 `references/dispatch-preflight.md`。
 - **编排本体在本手册**：阶段序列（U0–U6）、状态脊、哨兵与独立校验、卡死处置、收尾合并不由承接技能承担（职责切分见 agent-definitions § Driving Subagents via the Three Layers）。
 - **阶段子代理预算**：默认 `run-turn-budget` 120；大 implement 阶段按 ≤8 任务/段拆分，细则见 `references/dispatch-recipes.md` § 阶段子代理预算与分段。
 

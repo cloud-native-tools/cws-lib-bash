@@ -177,6 +177,7 @@ legend（三面含义只在此声明一次，24 格不重复）：**结构 = 实
 | skill:merge-skills | execution | behavior-oracle |  | 交付合并后的技能实体；覆盖与再运行可核验 |
 | skill:sdd-loop-driver | execution | behavior-oracle |  | 交付阶段推进与证据；由阶段记录与检查器判定 |
 | skill:sdd-project-setup | execution | behavior-oracle |  | 交付项目调谐结果；由机制分级脚本判定 |
+| skill:sdd-house-keeping | execution | behavior-oracle |  | 交付周期性维护结果与运行报告；由盘点/验证脚本与 sanitize 回收结果判定 |
 | skill:think-skills | execution | behavior-oracle |  | 交付执行行为的模拟判定；以与真实运行一致为准 |
 | skill:analyze-artifacts | execution | behavior-oracle |  | 交付一致性分析结论；可重跑复算并作为门禁裁决 |
 | skill:archive-session | execution | behavior-oracle | yes | 类中立（session）：导出会话产物，无自身交付物 |

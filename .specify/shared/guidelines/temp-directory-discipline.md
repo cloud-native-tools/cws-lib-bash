@@ -10,7 +10,7 @@ Agent 创建的临时目录的唯一真源。规范:**临时目录 MUST 落在�
 |---|---|---|
 | 跨仓库 / 用户级临时数据 | `~/tmp/<project>/<purpose>/` | 不在 git 仓库内,不适用 `.gitignore` |
 | 仓库内临时数据 | `<project>/.specify/.tmp/<purpose>/` | MUST 被 `.specify/.gitignore` 的 `.tmp/` 规则匹配 |
-| 框架自有运行时工作区 | `.specify/history/.work/`、`.specify/teams/.work/`、`.specify/agents/execution/logs/` | 由各自 owner 授权,不属本纪律改造范围 |
+| 框架自有运行时工作区 | `.specify/history/.work/`、`.specify/teams/.work/`、`.specify/agents/execution/logs/`、`.specify/state/` | 由各自 owner 授权,不属本纪律改造范围（技能自有的运行期根由 `.specify/shared/guidelines/directory-governance.md` §5 登记；`.specify/state/` 为长期状态，不随工作项清理） |
 
 `<purpose>` MUST 是稳定、可读的短名(如 `merge-skills`、`feedback`),使同一工作项的临时物聚在一起,便于清理。
 

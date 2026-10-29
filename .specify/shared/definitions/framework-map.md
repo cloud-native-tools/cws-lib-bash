@@ -6,7 +6,14 @@ This is a **map, not a manual**: it tells you *what* exists and *where* it lives
 
 | What | Where | Notes (what lives there — not how to use it) |
 |------|-------|-----------------------------------------------|
-| Project memory | `.specify/memory/` | constitution, features index + `features/<ID>.md`, glossary, `tools/` records, feedback store |
+| Project memory | `.specify/memory/` | constitution, features index + `features/<ID>.md`, glossary, register, `tools/` records, feedback store, `session/` + `knowledge/` (memory-as-files), `evidence/` (evidence runs), `exec-quant/` (run measurements), `retention/` (record consume→receipt→retire summaries, receipts, plans, ledgers), `trigger/` (proactive-flow state), `sanitize/` (findings cache) |
+| Long-lived runtime state | `.specify/state/` | per-entry state kept across sessions (never one shared aggregate); e.g. SDD loop-driver line spines — owner: `.specify/shared/guidelines/directory-governance.md` §5 |
+| Temporary workspace | `.specify/.tmp/` | git-ignored scratch, cleaned at work-item end; e.g. `.specify/.tmp/sdd-loop/` (worktrees, cache, tmp) — owner: `.specify/shared/guidelines/temp-directory-discipline.md` |
+| Goals | `.specify/goal/<slug>/` | goal definitions plus per-goal `summary/`; owner: `/speckit.goal` + `goal-utils.py` |
+| History knowledge base | `.specify/history/` | distilled, theme-aggregated conversation knowledge; owner: `/speckit.history` + `history-utils.py` |
+| Review reports | `.specify/review/` | archived code-review reports; owner: the `code-review` skill |
+| Project summary | `.specify/project/` | `summary/` delivery directory plus legacy manage-project artifacts (read-only); owner: the `summarize-project` skill |
+| Spec archive | `.specify/archive/spec/` | archived feature specs; owner: `/speckit.sanitize`'s archive-spec disposition |
 | Artifact templates | `.specify/templates/` | requirements/plan/tasks templates rendered by `/speckit.*` |
 | Automation scripts | `.specify/scripts/` | bash/python engines invoked by commands and skills |
 | Installed skills | `.specify/skills/` | one directory per skill (`SKILL.md` + references/ + .specify/scripts/) |

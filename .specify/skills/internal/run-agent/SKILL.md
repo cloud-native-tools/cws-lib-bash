@@ -119,10 +119,31 @@ ungoverned and editing the prompt cannot undo that.
 **Anti-nesting obligation (反嵌套，派发前拦截)**: the outgoing prompt MUST NOT reference any
 driver/loop skill (e.g. `sdd-loop-driver`), MUST NOT instruct the subagent to load any skill,
 and MUST NOT contain loop logic — the loader of a driver manual is the driver itself, and a
-subagent that receives the manual becomes a second driver, so the hierarchy escapes (循环层级
-恒为 1：驱动者 → 阶段执行者，不存在第三层). The pre-dispatch probe extends to this obligation:
-a prompt that names a driver skill fails the probe and MUST NOT be dispatched. Provenance:
-the sdd-loop-driver Driver Topology defect fix (2026-10-16); obligation declared in
+subagent that receives the manual becomes a second driver, so the hierarchy escapes.
+
+**The narrowed hierarchy is depth 2, not an exemption**: 循环层级深度 2，其三个条件的完整谓词、
+链上三个禁令、virtual 模态排除与「每成员一运行」的硬上限的唯一声明位点是
+`.specify/shared/definitions/subagent-definitions.md` § Dispatch-Time Governance Obligation —
+referenced here, never restated. A stage executor stays a leaf: a dispatch prompt handed to it
+MUST NOT name a driver.
+
+**Pre-dispatch probe (fail-closed)**: the probe resolves the two declared halves by calling the
+engine, never by re-reading the definitions in prose:
+
+```console
+$ python3 .specify/scripts/python/sdd-route.py --action authorize \
+    --agent <agent-definition> --team <team-slug> --seat <seat-slug> --format json
+```
+
+Run it from the target project root, so the roster resolves. Dispatch only when the record's
+`effective` value is `allowed` **and** the duty's recorded routing decision is `sdd`; any other
+value, an unreadable input (exit `2`), or a missing decision record blocks the dispatch. The
+probe fails closed and a refusal is never dispatched: it MUST name the failed condition — the
+failing half (`agent` / `seat` / `both`), the recipient's resolved values, the two source paths
+and the seat slug — because a record saying only "not authorized" tells the reader nothing about
+which declaration to fix. Rewording the prompt cannot repair a refusal: the verdict is resolved
+from the declarations, not from the prompt's wording. Provenance: the sdd-loop-driver Driver
+Topology defect fix (2026-10-16); obligation declared in
 `.specify/shared/definitions/subagent-definitions.md` § Dispatch-Time Governance Obligation.
 
 **Scope boundary**: Run mode executes a **single** agent on a **single** task. For
@@ -169,7 +190,27 @@ at init time): `name` (required), `description` (required), `capability-tools`,
 `disallowed-tools`, `model-tier` (`auto` / `lite` / `efficient` / `performance` /
 `ultimate`), `run-turn-budget`, `timeout-mins`, `skills`, `mcp-servers`, `permission-mode`,
 `background`, `isolation`, `display-color`, plus the framework fields `user-invocable`,
-`disable-model-invocation`, `supervisor`, `role-scope`, `project`.
+`disable-model-invocation`, `supervisor`, `role-scope`, `project`, `sdd-invocation`.
+
+**`sdd-invocation`** is the SDD invocation capability key: an authored instance declares it
+to state whether its seat may start a nested SDD run, and its seat-side counterpart is the
+`seats:` entry in `team.md`.
+Three facts about it are **owned elsewhere and cited here, never restated**: the closed
+value set, the absent-key default, and the framework-only (never rendered to a host tool)
+status all live in the neutral key set `NEUTRAL_AGENT_METADATA_KEYS` /
+`NEUTRAL_AGENT_FRAMEWORK_KEYS` in `src/specify_cli/__init__.py` — read that owner for the
+values. `validate_agent_metadata` rejects a declaration whose value falls outside the
+owner's closed set, and `parse_agent_frontmatter` accepts it only as a flat scalar (no list
+or mapping form).
+
+**承载责任（hosting responsibility）**：声明 `sdd-invocation: allowed` 的定义 MUST 在正文里同时写明
+三件事 —— ① 承载驱动（`sdd-loop-driver`）本身；② 自身不执行任何阶段命令；③ 止于 review，并把
+handoff 交回外层。声明与正文 MUST 一起被读取：只有声明而缺这三条陈述判不合规，只有这三条陈述而
+没有声明同样判不合规 —— 承载能力不是一件可以默认成立的事。阶段执行者能力仍是叶子，MUST NOT 声明
+`allowed`，该禁令对本仓出厂预设置件 `agents/sdd-executor.agent.md` 直接断言，而不是对一条约定断言。
+取值域、缺省与「不渲染到宿主工具」三项一律按路径读中立键集所有者
+`src/specify_cli/__init__.py`（`NEUTRAL_AGENT_METADATA_KEYS` / `NEUTRAL_AGENT_FRAMEWORK_KEYS`），
+本节不复述取值。
 
 **Authoring rules**: focus on **what** the agent does and **when to call** it; concise,
 explicit instructions over narrative; a single responsibility per agent; least-privilege

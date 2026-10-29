@@ -28,6 +28,7 @@ Generate a checklist file at `FEATURE_DIR/checklists/requirements.md`:
 
 - [ ] No [NEEDS CLARIFICATION] markers remain
 - [ ] Requirements are testable and unambiguous
+- [ ] Stability / containment claims name a baseline referent and a derivable allowed-delta set (owner: `.specify/shared/guidelines/closed-set-claims.md`)
 - [ ] Success criteria are measurable
 - [ ] Success criteria are technology-agnostic (no implementation details)
 - [ ] All acceptance scenarios are defined
@@ -104,6 +105,10 @@ Generate a checklist file at `FEATURE_DIR/checklists/requirements.md`:
 - DO NOT create checklists embedded in the spec (separate command)
 - User-facing wording and context rules are defined once in `.specify/shared/guidelines/user-facing-comprehension.md` (this file covers surface classes ⑤ and ⑦); its condition sets MUST NOT be restated here.
 - Recorded gap, deliberately not filled: class ⑦'s plan- and task-artifact side carries no wording rules of its own — a stakeholder / plain-language / business search of those two templates returns zero hits — and this discipline adds none, because a plan and a task list are written for implementers rather than for stakeholders. Adding wording rules there would widen scope, not close a gap.
+
+### Stability and containment claims
+
+A requirement or success criterion that a machine-produced surface changes only within an enumerated set, or that anything "unaffected" stays identical, MUST follow `.specify/shared/guidelines/closed-set-claims.md` — read that owner; do not restate its criteria. Such a claim is a completion predicate: it MUST meet the owner's five requirements, and a hand-written byte-site list over a generated surface, or an undefined aggregate such as "unaffected leaves", is void.
 
 ### Section Requirements
 

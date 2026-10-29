@@ -265,7 +265,13 @@ def load_probe_registry(workspace_root: Path) -> Dict[str, Any]:
                 errors.append(
                     f"object '{oid}': unit '{o.get('unit', '')}' must be /speckit.* or skill:*")
         for rel, _entry in _catalog_entries(text):
-            if not (workspace_root / rel).is_file():
+            # Reachability follows the same two-face doctrine as _engine_script
+            # (framework-source face first, runtime .specify/ face second —
+            # downstream projects only have the latter).
+            if not any(
+                (workspace_root / face / rel).is_file()
+                for face in (Path("."), Path(".specify"))
+            ):
                 errors.append(f"non-entity catalog entry unreachable: {rel}")
         external = _load_external_probes(workspace_root, errors)
         class_kind = {c.get("class_id", ""): c.get("kind", "") for c in classes}

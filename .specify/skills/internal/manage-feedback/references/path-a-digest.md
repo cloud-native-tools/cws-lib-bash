@@ -169,6 +169,82 @@ The recurrence test for closing a backlog row is that the **named owner file act
 changed** (a commit, or a measurement of the owner showing the defect gone), never
 that the row exists.
 
+### A4a — Carrier assignment for digested client entries (载体指派)
+
+A digested client entry (`kind: external`, or an `internal` entry A3 routed
+`local-sink`) receives **exactly one follow-up carrier**, drawn from a **closed
+set of three** existing mechanisms — no fourth carrier exists, and
+**no entry is ever assigned two carriers**:
+
+| # | Carrier | When it applies | Owner (cited, never restated) |
+|---|---------|-----------------|-------------------------------|
+| 1 | **todo Park mode** | The default landing for free-floating improvement ideas that have no code anchor yet | `.specify/shared/guidelines/todo-in-context.md` owns the Park store boundary and the park → promote → insert lifecycle; the command face is `/speckit.todo` (`.specify/templates/commands/todo.md`) |
+| 2 | **New requirements specification** | The finding constrains what this project's own source must implement | the requirements flow, `.specify/templates/commands/requirements.md` |
+| 3 | **One subject loop of the improvement command** | The finding lands on a client artifact that meets the Execution Subject criteria | `.specify/shared/workflow/self-improvement-workflow.md` owns the subject-loop rules |
+
+The carriers' boundaries and storage locations belong to those owners — this
+section cites the owners and restates none of their content (contract C-27).
+
+Routing discipline for the three-carrier rule:
+
+- **One row per entry in the routing backlog**: each digested external entry
+  writes **exactly one backlog row** in `.specify/memory/feedback/backlog.md`
+  naming its unique carrier, and that row is listed in the digest report. A
+  routing that lives only in the consume-log is a dead letter — the backlog is
+  what is still owed.
+- **Undecidable is reported, not dropped**: an entry whose carrier cannot be
+  decided in this run is reported as `undecided` in the digest report and left
+  open for the next digest — it is never silently dropped and never parked
+  without a decision.
+- **Default is Park, by name**: when a free-floating idea matches none of the
+  two narrower carriers, the row names Park explicitly (not an implicit
+  fallback nobody can audit).
+
+### A4b — Digest report facts (消化呈报)
+
+The digest report of a client project carries at least these facts:
+
+1. **This run's hat and armed state**, plus how the armed state was resolved
+   (explicit unit / unique external probe / ambiguity disclosure).
+2. **The entry count and disposition of each side** — external (Path A) and
+   internal (Path B) — including every refinement move.
+3. **The readings of the four loop metrics** — captured from the engine's
+   read-only `client-metrics` action (`.specify/scripts/python/feedback-utils.py
+   --action client-metrics`); the report cites the action's output and never
+   recomputes the metrics itself.
+
+Path A's **atomic cleanup** semantics (A5) stay exactly as specified —
+metric computation is never merged into the cleanup action, and the
+four-metric readings are advisory context for the user, never a gate,
+threshold input, or state transition.
+
+### A4c — Two-side target closure (目标闭集)
+
+The two-side target closure is unchanged and applies to every client entry
+(contract C-28):
+
+- Framework friction stays framework-side; framework friction is never
+  registered on client units.
+- Client code defects are never posted as framework-side entries.
+- The same observation never appears on both sides.
+- The existing one-directional content refinement is preserved: analysis may
+  move an `internal` entry toward this project (`local-sink`), but can never
+  move an `external` entry upstream — the engine's report validation rejects
+  that outright — and **every move is reported in the digest**, named per entry.
+
+When both sides are non-empty (only possible in a client project), Path A and
+Path B both run in the same session and both are reported; one side is never
+silently dropped to keep the run short.
+
+### A4d — Vanished client unit (消失单元)
+
+When a client unit disappears from the probe registry, its existing entries
+stay readable and are **never rewritten, deleted, or re-attributed** — the
+registry no longer resolving the unit says nothing about the entry's content.
+The digest report lists the unit's resolution failure as a **named finding**
+(naming the unit), so the next run starts from a fact instead of rediscovering
+the gap.
+
 ## A5 — Cleanup (mandatory closing step of the digest run)
 
 The user confirms the **routing decisions** in the digest report — confirmation of the

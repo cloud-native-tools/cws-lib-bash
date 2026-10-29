@@ -60,6 +60,7 @@ After **every** run, write `.specify/teams/<slug>/runs/<UTC-timestamp>-report.md
 ## Result Summary ## Deliverables ## Verification ## Execution Detail ## Run Workspace ## Summary
 Summary: produced | skipped(cadence) | skipped(budget) | declined(no-material); Overlap: none | contested(<n>) | undecidable(<team,…>)
 First activation: declare the summary mechanism has activated and the cadence now in force (首次激活需声明).
+## Nested SDD Runs
 ```
 
 ### Verification(必填段,本节为该口径的唯一真源)
@@ -71,6 +72,19 @@ First activation: declare the summary mechanism has activated and the cadence no
 3. **One-Source-Of-Truth 类验收** — MUST 先从**落盘产物**提取实际出现的短语,再以这些短语为查询集反向计数;MUST NOT 以「我以为写了的短语」为查询集 —— 那样复写检查必然假阴(查询集与被查集不同源)。机械判据见 `.specify/shared/guidelines/one-source-of-truth.md` § Reference, don't copy。
 
 Stage 级批量判定的实读证据下限由 `references/patterns.md` § Serial Chain → Substance floor 持有,不在此复述。
+
+### Nested SDD Runs section（必填段,本节为该段的唯一真源）
+
+每个 run 报告 MUST 在既有必填段之后**末尾追加**一个嵌套段,标题字面量逐字为 `## Nested SDD Runs`(不得改写、不得改变标题层级、不得并入其它段)。该段对**每次运行**强制 —— 有界 pattern(parallel / serial / iteration)与 continuous 一律适用,与该次运行是否真的发生过嵌套 SDD 调用无关。既有必填段的名称、次序与内容义务逐字不变;MUST NOT 省略该段,省略即判违约。
+
+- **每次调用一行**: 一行恰好五个字段 —— `outcome`、`artifact paths`、`evidence paths`、`routing-verdict reference`、`anomalies`。`outcome` 取自三值封闭集 `[[STR-004]]` / `[[STR-005]]` / `[[STR-006]]`;第四值、自由文本或空值一律非法。
+- **无嵌套调用**: MUST 在段内显式声明「本次无嵌套 SDD 调用」,不是省略整段 —— 即便正确内容本是 none,省略仍是违约。
+- **路径以路径携带**: artifact / evidence 只写路径,段内 MUST NOT 内联工件正文;`[[STR-005]]` / `[[STR-006]]` 的嵌套运行 MUST NOT 改写成成功语气 —— 它们原样上抛。
+- **routing-verdict reference**: 指向 `074a` 在 Agent 执行证据里记录的那条裁决(`.specify/scripts/python/sdd-route.py` 是该记录的产生者),段内只承载**引用**:MUST NOT 复制输入集、裁决表或理由码词表,MUST NOT 重算。记录不可定位时记 `missing`,外层 MUST NOT 重算或补写。
+- **handoff 字段集按引用读取**: 封闭字段集归 `.specify/skills/sdd-loop-driver/references/nested-invocation.md`;交接未携带的字段按缺失记录,MUST NOT 用调用方叙述补齐;交接缺 integration identity 即为 incomplete handoff,外层 MUST NOT 据此报成功。
+- **与 `## Verification` 并列**: 嵌套段是 `## Verification` 的**同级段**,不是替代 —— 嵌套运行自己的验证证据不解除外层运行的验证义务,外层运行的验证标准照旧适用。
+- **写者唯一**: 团队 supervisor 是该段与本次运行全部 tracked 工件的**唯一写者**;嵌套运行不写任何 tracked 工件 —— 不改报告、不写 goal archive、不写 spec 目录 —— 它的产出只是回传的 handoff,由 supervisor 消费。
+- **归因边界**: 报告期 supervisor 追加**至多一条**、携带既有 Target 引用的台账条目 —— 声明了 Target 时**恰一条**,未声明时**零条**;复用既有归因字段 `target_ref`(字段、文法与缺省归 `references/summary-mapping.md` § 6.5)。未声明 Target 的运行 MUST NOT 臆造占位 Target,其台账行不带归因字段(既有 Goal 整体形态)。本段对 Goal 面只是消费者:MUST NOT 新增 Goal 字段、MUST NOT 建立 Goal → requirements spec 的结构链接、MUST NOT 写 Goal 定义文件;解析出的 Goal 字段集在运行前后完全一致。
 
 ## Pattern Selection (Decision Tree)
 

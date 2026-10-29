@@ -41,6 +41,23 @@ Collect only evidence from the completed window. Use the canonical Feedback step
 qualifying framework unit, but treat the entry as one sensor. Do not edit the subject while
 observing; do not turn unrelated project/system findings into local candidates.
 
+The observation source resolves by subject type:
+
+- A command or skill subject uses the canonical Feedback step's run-determination
+  history projection as one sensor; the embedding unit records the engine call and
+  the engine owns its output shape.
+- A `custom:` subject has no legitimate run-determination persistence source: the
+  engine's source contract accepts only command and skill unit forms, so for a
+  custom subject every record fails closed with `persisted: false` and a reason.
+  The why segment therefore states the disclosure 「运行判定历史未评估」 together
+  with the engine's reason verbatim —
+  `the memory engine's --source contract does not accept <unit-id>; the record is emitted but not landed` —
+  and takes its observations from this unit's `kind: external` entries (the client channel) plus
+  the existing evidence lanes (owner: `.specify/shared/workflow/evidence-step.md`). Invent
+  no source string to make a write succeed, forge no history, and never phrase
+  "no history" as "past runs were fine". Widening the run-determination source
+  contract is the engine owner's action and happens nowhere in this loop.
+
 ### SI-2 — Qualify and Freeze Evidence
 
 Execute `.specify/shared/workflow/evidence-step.md` Step A/B. Reuse fresh evidence or collect available

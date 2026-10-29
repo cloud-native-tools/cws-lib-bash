@@ -16,13 +16,13 @@
 
 ## 本地原生拓扑（默认：入口未给 host+path）
 
-本地拓扑不使用 SSH/`su`，也不启动外部 agent CLI。目标项目按 SKILL.md § U0 缺省解析取**当前项目**；阶段派发直接使用当前宿主 agent 的原生子代理（如 Claude Code `Agent`/`Task`、Qoder CLI 原生 subagent）：
+本地拓扑不使用 SSH/`su`，也不启动外部 agent CLI。目标项目按 SKILL.md § U0 与 `.specify/shared/workflow/target-resolution.md` 解析：强依赖 `.specify/`，从显式路径/会话 cwd **向上搜索**最近的合法 `.specify/` 根；找不到就拒绝执行并 handoff `sdd-project-setup` / 提示 `specify init`。阶段派发直接使用当前宿主 agent 的原生子代理（如 Claude Code `Agent`/`Task`、Qoder CLI 原生 subagent）：
 
 - **派发**：把 `stage-prompts.md` 的三段骨架直接作为原生子代理提示词（上下文较大时可先落一份 brief 文件并让子代理读取）；一阶段一次调用，不写 runner、不建 FIFO/hook。
 - **等待**：原生调用是同步阻塞调用，返回即阶段结束——这次调用本身就是 U3 的等待；不适用 `watch-model.md` 的窗口/心跳/退出记录判定，也不得为它启动 `watch-target.sh`。
 - **状态与校验**：U2 派发前写状态脊；返回后按 U4 独立校验（校验者仍不是执行子代理）。失败/超时按 U5 的重试与上送规则处置——没有后台进程可杀。
 - **多线**：宿主支持并行原生调用时可按线并行；否则串行，一线一状态脊。
-- **边界**：MUST NOT 在本地以 `qodercli` / `claude -p` 等外部 CLI 启动子代理；本文件 Recipe 2–3 的 runner/脱离/统一监听仅用于远端拓扑。宿主没有原生子代理能力时，由驱动者在本会话直接执行阶段命令（单代理形态），仍不得降级到外部 CLI。
+- **边界**：MUST NOT 在本地以 `qodercli` / `claude -p` 等外部 CLI 启动子代理；本文件 Recipe 2–3 的 runner/脱离/统一监听仅用于远端拓扑。宿主没有原生子代理能力时，由驱动者在本会话直接执行阶段命令（单代理形态），仍不得降级到外部 CLI。本条只约束**阶段派发**：`/speckit.analyze` §5.5 的只读验证波不是阶段子代理，执行者不可嵌套时按 `.specify/shared/definitions/subagent-definitions.md` § Mode Selection 选 external 只读校验器（`qodercli` 允许），MUST NOT 用宿主会话创建 API（`create_chat_session` 等）。
 
 ## 阶段子代理预算与分段（Stage Subagent Budget & Bounded Dispatch）
 
@@ -180,10 +180,12 @@ ssh -o BatchMode=yes <alias> \
 - **逐线强制与时序（实测教训 2026-10-15 xuanji-robot 漏扫）**：多线并行时归档清扫**逐线各执行一遍**——驱动者不得因「一条线已扫」而推断全线干净；时序固定为「末阶段提交完成 → 归档清扫（含清扫产生的归档提交）→ 合并 → 推送 → 该线状态脊记录归零判定」；收尾汇总**每线必须携带工作树归档判定字段**（归零 / 残留 N 项+分类），缺该字段的线视为未收束——用清单字段强制可见，不依赖驱动者记忆。
 - 全部线收束后向用户出**收尾汇总**：逐线终态阶段、合并结果、**工作树归档判定（归零 / 残留 N 项+分类）**、遗留异常与证据指针。
 
-## Recipe 5 — 本地拓扑与变体
+## Recipe 5 — 本地拓扑与远端 runner 变体
 
-- **本地拓扑**：项目在本机时省略 ssh/su，直接以本地项目为工作目录执行 runner；需求上下文先写简报文件（`~/tmp/<project>/<topic>-sdd-brief.md`），子代理提示词只指示「先完整阅读简报，再执行对应阶段命令」——命令形态见 `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 5（本配方坍缩为引用）。监听同样走 `watch-target.sh`，只是去掉 ssh/su 层（`watch-model.md` §6）。
-- **本地脱离（缺省形态，与远端同构）**：`setsid` 可用时优先，本机 macOS 无 `setsid` 时用 `nohup + disown`；stdin 接 `/dev/null`，stdout/stderr 重定向到 runner-log：
+> **SDD local default**：本地拓扑的缺省承载是**宿主原生子代理 / 编排者直执**（见本文件 `## 本地原生拓扑`）。下面的 runner/脱离形态用于**远端**；本地 MUST NOT 以 `qodercli` 作为 SDD 缺省子代理。只有入口显式要求“本地外部派发”时才允许本地 runner，并须记录该例外。（analyze 验证波例外见 `## 本地原生拓扑` 边界条。）
+
+- **本地原生缺省**：项目在本机时省略 ssh/su；需求上下文先写简报文件（`~/tmp/<project>/<topic>-sdd-brief.md`），子代理提示词只指示「先完整阅读简报，再执行对应阶段命令」；一阶段一次原生调用，不写 runner、不建 FIFO/hook。命令形态见 `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 5（本配方坍缩为引用）。监听不适用窗口模型（`watch-model.md` §6）。
+- **远端 runner（缺省形态，与远端同构）**：`setsid` 可用时优先，本机 macOS 无 `setsid` 时用 `nohup + disown`；stdin 接 `/dev/null`，stdout/stderr 重定向到 runner-log：
 
   ```bash
   if command -v setsid >/dev/null 2>&1; then
@@ -276,7 +278,7 @@ git -C <repo> worktree add -b line/<line> <worktree_path> <base_sha>
 ```
 
 - 每条写线一个独立 worktree + 专用分支 `line/<line>`；`worktree_path` / `branch` / `base_sha` 登记进 Registry。
-- 缺省 `worktree_path=<repo_parent>/.spec-kit/worktrees/<repo-basename>/<line_id>`；目标已存在或跨文件系统 → 显式失败，不得复用/删除其他 line 的 worktree。
+- 缺省 `worktree_path=<repo>/.specify/.tmp/sdd-loop/worktrees/<line_id>`（`.specify/.gitignore` 的 `.tmp/` 规则覆盖；与仓库同盘，天然满足同文件系统要求）；目标已存在或跨文件系统 → 显式失败，不得复用/删除其他 line 的 worktree。
 - 一个 worktree 同时只有一个写 line；阶段子代理只在该 worktree 内提交，**不得切换分支、创建/删除 worktree、改写其他 line 的 worktree**。
 - 运行时记录（feedback / session / knowledge / exec-quant）写在各自 worktree 内；**阶段提交不提交运行时记录**（路径集合以 `data-model.md` § E8 为唯一枚举；`evidence/`、`history/`、`trigger/` 明确排除）。
 

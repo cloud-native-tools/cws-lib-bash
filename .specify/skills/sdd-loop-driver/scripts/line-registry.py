@@ -1785,9 +1785,9 @@ def action_allocate_resources(ctx: Context) -> int:
             used.append((int(ports[0]), int(ports[1])))
     port_start, port_end = allocate_port_block(used, start, block)
     repo = Path(entry["repo_root"])
-    repo_parent = repo.parent
-    cache_dir = repo_parent / ".spec-kit" / "cache" / repo.name / line_id
-    tmp_dir = repo_parent / ".spec-kit" / "tmp" / repo.name / line_id
+    runtime_root = repo / ".specify" / ".tmp" / "sdd-loop"
+    cache_dir = runtime_root / "cache" / line_id
+    tmp_dir = runtime_root / "tmp" / line_id
     resources = {
         "ports": [port_start, port_end],
         "cache_dir": str(cache_dir),

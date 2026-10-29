@@ -20,7 +20,7 @@
 #   DISPATCH_CLI        agent CLI binary          (default: qodercli; claude also works)
 #   DISPATCH_LOG_DIR    artifact directory        (default: .specify/agents/execution/logs,
 #                                                  which .specify/.gitignore already ignores;
-#                                                  falls back to $HOME/tmp/spec-kit-dispatch
+#                                                  falls back to $HOME/tmp/spec-kit/dispatch
 #                                                  when that tree is unavailable)
 #   DISPATCH_FILTER     stream filter script      (default: <this script's dir>/stream-filter.py)
 #   DISPATCH_CLI_FLAGS  non-interactive CLI flags (default: "-p --output-format stream-json
@@ -51,7 +51,7 @@ if [[ -n "${DISPATCH_LOG_DIR:-}" ]]; then
 elif [[ -d ".specify/agents/execution" ]]; then
   LOG_DIR=".specify/agents/execution/logs"
 else
-  LOG_DIR="$HOME/tmp/spec-kit-dispatch"
+  LOG_DIR="$HOME/tmp/spec-kit/dispatch"
 fi
 FILTER="${DISPATCH_FILTER:-${SCRIPT_DIR}/stream-filter.py}"
 CLI_FLAGS="${DISPATCH_CLI_FLAGS:--p --output-format stream-json --dangerously-skip-permissions}"

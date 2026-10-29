@@ -110,6 +110,7 @@
 | skill-merge-skills-wrapup | skill-wrapup | skill:merge-skills | wrap-up |
 | skill-self-improvement-wrapup | skill-wrapup | skill:self-improvement | wrap-up |
 | skill-sdd-project-setup-wrapup | skill-wrapup | skill:sdd-project-setup | wrap-up |
+| skill-sdd-house-keeping-wrapup | skill-wrapup | skill:sdd-house-keeping | wrap-up |
 | skill-study-project-wrapup | skill-wrapup | skill:study-project | wrap-up |
 | skill-summarize-project-wrapup | skill-wrapup | skill:summarize-project | wrap-up |
 | skill-think-skills-wrapup | skill-wrapup | skill:think-skills | wrap-up |
