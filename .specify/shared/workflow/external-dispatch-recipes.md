@@ -13,6 +13,8 @@ Operational recipes for driving an **external subagent** (Mode 3 in [`subagent-d
 
 Both topologies support parallel lines: one connection/process per line, each line tracked with its own task entry (e.g. TaskCreate/TaskUpdate) so the orchestrator never conflates their states.
 
+> **SDD-driving skills boundary**: for `sdd-project-setup`, `sdd-house-keeping` and `sdd-loop-driver`, the **local** topology defaults to the orchestrator / host native subagent and MUST NOT launch `qodercli` locally. The local external-CLI variant in Recipe 5 is for consumers that explicitly choose external dispatch; it is not the SDD local default. The **remote** topology is `ssh <alias>` → `su - <run-user>` → `cd <project-dir>` → subagent CLI; the CLI default is the execution-config defaults layer (`.specify/templates/execution-config-defaults.yaml`, `cli: qodercli`). The **only local exception** is the bounded read-only validation/detection fan-out (`/speckit.analyze` §5.5, `objective-analysis-gate.md`): it is worker dispatch, not stage dispatch, and selects External per `subagent-definitions.md` § Mode Selection (Recipe 7).
+
 ## Recipe 1 — Breakpoint Probe (断点探测)
 
 Before dispatching, detect which SDD stage the target project is currently at, so the entry can resume from the breakpoint instead of restarting:
@@ -79,6 +81,35 @@ When multiple specs progress in parallel on one project, the prompt MUST declare
 ## Recipe 6 — Role-Split Variant (构建固化分线)
 
 On one host, split by role into parallel lines: one run user solidifies infrastructure in the host-side project, another solidifies build configuration in the workspace project. Same recipes, two `(user, dir)` parameter sets running concurrently.
+
+## Recipe 7 — Read-only Validation Fan-out (只读验证波)
+
+Carrier for `/speckit.analyze` §5.5 and the same-author detection delegation wave: **one external
+process per finding, all in parallel, no host sessions.** Use this recipe when the executing agent
+is itself a non-nesting subagent (no native subagent tool) and must still obtain fresh-context
+read-only validators.
+
+```bash
+# one dispatch per finding; the flags carry the read-only allowlist and keep the run out of history
+DISPATCH_CLI_FLAGS="-p --output-format stream-json --permission-mode auto \
+  --tools Read Grep Glob Bash --no-session-persistence" \
+DISPATCH_LOG_DIR="<run-dir>/validators" \
+  .specify/skills/internal/create-team/scripts/dispatch.sh \
+    "validate-<finding-id>" "<repo>" "<brief>-<finding-id>.md"
+```
+
+- **Brief per finding** — only the finding (id, category, claim, severity) plus its evidence
+  locations; never the detection reasoning, never the other findings.
+- **Read-only enforcement** — the allowlist above excludes every write tool; `--no-session-persistence`
+  keeps the run out of session history. For `claude`, the equivalent is `--disallowedTools Write Edit`
+  plus `--no-session-persistence`. On a Qoder desktop host, unset the injected SDK env vars before
+  launching (see the project's AGENTS.md qodercli recipe).
+- **Write check** — after the wave, `git status --porcelain` in `<repo>` MUST be unchanged; any change
+  means a validator wrote and the wave is invalid (fast fail).
+- **Result contract** — each `<label>.status` records `exit=0`, and each validator's final message
+  carries the verdict plus both evidence-boundary fields; a missing field marks that validator
+  incomplete and it must be re-asked.
+- **Not a session** — `create_chat_session` / `fork_chat_session` (or any host session-creation API) MUST NOT be used for this wave; see [`subagent-definitions.md`](../definitions/subagent-definitions.md) § Mode Selection.
 
 ## Boundary
 

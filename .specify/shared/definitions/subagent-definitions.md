@@ -44,8 +44,10 @@ Choose per dispatch, per member, by scenario — not by habit:
 | Parallel fan-out (team parallel dispatch, cross-repo analysts) | External (or native parallel calls when the runtime supports them and the task is short) |
 | Team orchestration with stall detection / progress monitoring requirements | External with the Visibility Contract |
 | Subagent must use a different model/config than the orchestrator and the runtime can't override per-dispatch | External (CLI flags: `--model`, `--reasoning-effort`, `--context-window`, …) |
+| Orchestrator is itself a non-nesting subagent (its runtime exposes no native subagent tool) and the work needs fresh context | External (one process per worker, parallel) |
 
 When in doubt: **native first, virtual as fallback, external when isolation/parallelism/observability requirements exceed what the session can provide.**
+**Session-creation APIs are not a carrier.** Creating a host chat session/conversation — `create_chat_session`, `fork_chat_session`, or any equivalent — is NOT one of the three modes above. It materializes a user-visible conversation that inherits the orchestrator's model and permission mode, has no bounded task scope and no result contract, and leaves a permanent entry in the user's session list. Internal dispatch (detection/validation waves, team members, stage executors) MUST use one of the three modes and MUST NOT use a session-creation API; when the orchestrator cannot nest natively, the correct carrier is **External**, not a new session.
 
 ## Execution Topology Declaration (执行拓扑声明)
 
