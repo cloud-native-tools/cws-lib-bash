@@ -117,6 +117,62 @@ DELEGATE_PATHS = (
     ".specify/skills/sdd-loop-driver/scripts/pre-analyze-check.py",
 )
 
+# --------------------------------------------------------------------------- #
+# 077 — `--action structure`: plan-side document structure + two-way comparison
+# (contracts/document-structure.md C-001 … C-016).
+#
+# The four subsection literals and the three column tuples are held **here**: this
+# module is the code-first owner of the structure grammar (research.md R-4), and
+# tests read them from these constants instead of copying the literals. The
+# operator/face owners are untouched: this is an ACTION, never a seventh face.
+# --------------------------------------------------------------------------- #
+STRUCTURE_ACTION = "structure"
+FLOW_CLASS_ENGINE = ".specify/scripts/python/flow-class-check.py"
+STRUCTURE_HEADING = "## Document Structure"        # [[STR-002]]
+STRUCTURE_SUBSECTIONS = (
+    "### Chapter Tree",      # [[STR-003]]
+    "### Reader Baseline",   # [[STR-004]]
+    "### Evidence List",     # [[STR-005]]
+    "### Fact Owners",       # [[STR-006]]
+)
+CHAPTER_TREE_COLUMNS = ("节名", "父节", "目的", "边界")
+EVIDENCE_LIST_COLUMNS = ("断言", "证据等级", "as-of", "source")
+FACT_OWNERS_COLUMNS = ("事实", "owner 路径", "章节锚")
+READER_BASELINE_MARKERS = ("**Readers**:", "**Reading scenario**:")
+TOP_CHAPTER_MARKER = "—"
+STRUCTURE_BASELINE_NAME = "structure-baseline.txt"
+
+# The closed finding code set: four families, no fifth (data-model.md E6). The
+# evidence family *reuses* the shipped evidence codes and the owner family
+# *reuses* the duplicate face's ``duplicate-fact`` — neither is re-invented here.
+STRUCTURE_CODE_FAMILIES = {
+    "structure-syntax": (
+        "document-structure-missing",
+        "subsection-missing",
+        "parent-unknown",
+        "chapter-duplicate",
+        "chapter-purpose-missing",
+        "chapter-boundary-missing",
+    ),
+    "two-way": ("chapter-missing", "chapter-unexpected"),
+    "evidence": (
+        "evidence-unlisted",
+        "grade-invalid",
+        "as-of-malformed",
+        "source-missing",
+        "grade-asof-unpaired",
+    ),
+    "owner": (
+        "owner-duplicate",
+        "owner-path-missing",
+        "owner-anchor-missing",
+        "duplicate-fact",
+    ),
+}
+STRUCTURE_CODES = frozenset(
+    code for codes in STRUCTURE_CODE_FAMILIES.values() for code in codes
+)
+
 
 class InputError(Exception):
     """Input or parse error — always exit code 2 (C-8)."""
@@ -892,6 +948,573 @@ def verify(spec_dir, paths, faces, root, roots=None, owner_paths=None):
     return findings, statuses, count_check, degradations, subjects, owner_labels
 
 
+# --------------------------------------------------------------------------- #
+# 077 — structure helpers
+# --------------------------------------------------------------------------- #
+def _heading_at(line):
+    """``(level, title)`` for an ATX heading line, else ``None``."""
+    match = re.match(r"^(#{1,6})\s+(.*\S)\s*$", line)
+    if not match:
+        return None
+    return len(match.group(1)), match.group(2).strip()
+
+
+def _section_lines(lines, start, level):
+    """Body range of the section opened at *start*: same-or-higher heading ends it."""
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        heading = _heading_at(lines[index])
+        if heading is not None and heading[0] <= level:
+            end = index
+            break
+    return start + 1, end
+
+
+def _cells(line):
+    text = line.strip()
+    if text.startswith("|"):
+        text = text[1:]
+    if text.endswith("|"):
+        text = text[:-1]
+    return [cell.strip() for cell in text.split("|")]
+
+
+def _is_separator_row(cells):
+    return bool(cells) and all(cell and set(cell) <= set("-: ") for cell in cells)
+
+
+def _tables(lines, start, end):
+    """Markdown tables inside ``lines[start:end]`` as ``[(index, raw), …]`` blocks."""
+    tables, block = [], []
+    for index in range(start, end):
+        if lines[index].lstrip().startswith("|"):
+            block.append((index, lines[index]))
+            continue
+        if len(block) >= 2:
+            tables.append(block)
+        block = []
+    if len(block) >= 2:
+        tables.append(block)
+    return tables
+
+
+def _rows_with_columns(block, columns):
+    """Data rows of the table whose header equals *columns*; ``None`` otherwise.
+
+    Matching is by **column name and order**, never by position guesswork: a table
+    whose header differs is not the registered table, so its subsection counts as
+    absent rather than half-parsed.
+    """
+    if tuple(_cells(block[0][1])) != tuple(columns):
+        return None
+    rows = []
+    for index, line in block[1:]:
+        cells = _cells(line)
+        if _is_separator_row(cells):
+            continue
+        cells = (cells + [""] * len(columns))[: len(columns)]
+        rows.append((index + 1, cells))
+    return rows
+
+
+def _first_rows(lines, start, end, columns):
+    for block in _tables(lines, start, end):
+        rows = _rows_with_columns(block, columns)
+        if rows is not None:
+            return rows
+    return None
+
+
+def structure_finding(rule, path, line, section, text, fix_direction=""):
+    """One structural finding (the ``rule`` value is always in STRUCTURE_CODES)."""
+    return {
+        "rule": rule,
+        "path": path,
+        "line": int(line),
+        "section": section,
+        "snippet": snippet(text),
+        "fix_direction": fix_direction,
+    }
+
+
+def _finding_triple(item):
+    return (item["path"], item["rule"], item["section"] or "-")
+
+
+def spec_repo_for(spec_dir, root):
+    """The repository a ``--spec-dir`` belongs to (standard ``.specify/specs/`` layout)."""
+    parent = spec_dir.parent
+    if parent.name == "specs" and parent.parent.name == MIRROR_DIR_NAME:
+        return parent.parent.parent
+    return root
+
+
+def resolve_spec_class(spec_dir, roots, root):
+    """Resolve the line's class through the one lookup entry — no second parser.
+
+    Returns ``(record, verdict, engine_stderr)``. ``verdict`` is the engine's own
+    three-way outcome: 0 resolved, 1 author error (blocking), 2 degraded. The
+    record carries ``class`` / ``source`` / ``marker`` / ``error``; a missing or
+    unexecutable engine degrades exactly like an unparsable owner (FR-009), never
+    like a decision.
+    """
+    key = "spec:%s" % spec_dir.name
+    engine = resolve_payload(roots, FLOW_CLASS_ENGINE)
+    if engine is None:
+        return {
+            "class": None,
+            "source": "default",
+            "marker": None,
+            "error": {
+                "label": "owner-unavailable",
+                "detail": "class engine absent: %s" % FLOW_CLASS_ENGINE,
+            },
+        }, 2, ""
+    try:
+        proc = subprocess.run(
+            [
+                sys.executable,
+                str(engine),
+                "--repo",
+                str(spec_repo_for(spec_dir, root)),
+                "--action",
+                "lookup",
+                "--unit-id",
+                key,
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {
+            "class": None,
+            "source": "default",
+            "marker": None,
+            "error": {
+                "label": "owner-unavailable",
+                "detail": "cannot execute the class engine: %s" % exc,
+            },
+        }, 2, ""
+    record = {}
+    if proc.stdout.strip():
+        try:
+            record = json.loads(proc.stdout)
+        except ValueError:
+            record = {}
+    if proc.returncode not in (0, 1):
+        detail = (proc.stderr or "").strip().splitlines()
+        return {
+            "class": record.get("flow_class"),
+            "source": record.get("source") or "default",
+            "marker": record.get("marker"),
+            "error": {
+                "label": "owner-unavailable",
+                "detail": detail[-1] if detail
+                else "class lookup exit %d" % proc.returncode,
+            },
+        }, 2, (proc.stderr or "")
+    return {
+        "class": record.get("flow_class"),
+        "source": record.get("source"),
+        "marker": record.get("marker"),
+        "error": record.get("error"),
+    }, proc.returncode, (proc.stderr or "")
+
+
+def parse_structure_plan(plan_path, root, spec_root):
+    """Plan-side grammar: the four subsections and their syntax codes (C-001…C-006)."""
+    display = display_path(plan_path, root)
+    lines = read_text(plan_path).splitlines()
+    findings = []
+    subsections = {literal: False for literal in STRUCTURE_SUBSECTIONS}
+    parsed = {"chapters": [], "evidence": [], "owners": []}
+
+    starts = [index for index, line in enumerate(lines) if line.strip() == STRUCTURE_HEADING]
+    if not starts:
+        findings.append(
+            structure_finding(
+                "document-structure-missing",
+                display,
+                1,
+                STRUCTURE_HEADING,
+                "missing chapter: %s" % STRUCTURE_HEADING,
+                fix_direction="按 plan 模板补 %s 章节及其四个子节" % STRUCTURE_HEADING,
+            )
+        )
+        # Parent and child share one root cause: the four `subsection-missing`
+        # findings the absent chapter would imply are suppressed (E6 precedence).
+        return findings, subsections, parsed
+
+    body_start, body_end = _section_lines(lines, starts[0], 2)
+
+    def missing_subsection(literal, detail):
+        findings.append(
+            structure_finding(
+                "subsection-missing",
+                display,
+                1,
+                literal,
+                detail,
+                fix_direction="补齐 %s 子节及其登记的结构" % literal,
+            )
+        )
+
+    # ---- Chapter Tree -----------------------------------------------------
+    literal = STRUCTURE_SUBSECTIONS[0]
+    hits = [index for index in range(body_start, body_end) if lines[index].strip() == literal]
+    rows = None
+    if hits:
+        sub_start, sub_end = _section_lines(lines, hits[0], 3)
+        rows = _first_rows(lines, sub_start, sub_end, CHAPTER_TREE_COLUMNS)
+    if rows is None:
+        missing_subsection(literal, "missing or malformed chapter tree table")
+    else:
+        subsections[literal] = True
+        names = {}
+        for line_no, cells in rows:
+            name, parent, purpose, boundary = cells
+            if not name:
+                continue
+            if name in names:
+                findings.append(
+                    structure_finding("chapter-duplicate", display, line_no, literal,
+                                      name, fix_direction="节名在本表内唯一")
+                )
+            else:
+                names[name] = line_no
+            parsed["chapters"].append({"name": name, "parent": parent, "line": line_no})
+            if not purpose:
+                findings.append(
+                    structure_finding("chapter-purpose-missing", display, line_no,
+                                      literal, name,
+                                      fix_direction="补「读者读完要做的决定」")
+                )
+            if not boundary:
+                findings.append(
+                    structure_finding("chapter-boundary-missing", display, line_no,
+                                      literal, name,
+                                      fix_direction="补「本节不覆盖什么」")
+                )
+        for chapter in parsed["chapters"]:
+            parent = chapter["parent"]
+            if parent == TOP_CHAPTER_MARKER:
+                continue
+            if parent and parent in names:
+                continue
+            findings.append(
+                structure_finding("parent-unknown", display, chapter["line"], literal,
+                                  chapter["name"],
+                                  fix_direction="父节取顶层标记 %s 或本表另一行的节名"
+                                                % TOP_CHAPTER_MARKER)
+            )
+
+    # ---- Reader Baseline --------------------------------------------------
+    literal = STRUCTURE_SUBSECTIONS[1]
+    hits = [index for index in range(body_start, body_end) if lines[index].strip() == literal]
+    values = {}
+    if hits:
+        sub_start, sub_end = _section_lines(lines, hits[0], 3)
+        for index in range(sub_start, sub_end):
+            for marker in READER_BASELINE_MARKERS:
+                if marker in values:
+                    continue
+                if lines[index].strip().startswith(marker):
+                    values[marker] = lines[index].strip()[len(marker):].strip()
+    if hits and all(values.get(marker) for marker in READER_BASELINE_MARKERS):
+        subsections[literal] = True
+    else:
+        missing_subsection(
+            literal,
+            "missing or empty reader declaration (%s)"
+            % " / ".join(READER_BASELINE_MARKERS),
+        )
+
+    # ---- Evidence List ----------------------------------------------------
+    literal = STRUCTURE_SUBSECTIONS[2]
+    hits = [index for index in range(body_start, body_end) if lines[index].strip() == literal]
+    rows = None
+    if hits:
+        sub_start, sub_end = _section_lines(lines, hits[0], 3)
+        rows = _first_rows(lines, sub_start, sub_end, EVIDENCE_LIST_COLUMNS)
+    if rows is None:
+        missing_subsection(literal, "missing or malformed evidence table")
+    else:
+        subsections[literal] = True
+        for line_no, cells in rows:
+            assertion, grade, as_of, source = cells
+            if not (assertion or grade or as_of or source):
+                continue
+            parsed["evidence"].append({"assertion": assertion, "line": line_no})
+            if not grade or not as_of:
+                findings.append(
+                    structure_finding("grade-asof-unpaired", display, line_no, literal,
+                                      assertion,
+                                      fix_direction="等级与 as-of 成组出现")
+                )
+                continue
+            if grade not in GRADE_VALUES:
+                findings.append(
+                    structure_finding("grade-invalid", display, line_no, literal,
+                                      assertion,
+                                      fix_direction="等级取封闭三值 %s"
+                                                    % " / ".join(GRADE_VALUES))
+                )
+            if not ISO_DATE_RE.match(as_of):
+                findings.append(
+                    structure_finding("as-of-malformed", display, line_no, literal,
+                                      assertion, fix_direction="as-of 写成 YYYY-MM-DD")
+                )
+            if not source:
+                findings.append(
+                    structure_finding("source-missing", display, line_no, literal,
+                                      assertion, fix_direction="source 必填且非空")
+                )
+
+    # ---- Fact Owners ------------------------------------------------------
+    literal = STRUCTURE_SUBSECTIONS[3]
+    hits = [index for index in range(body_start, body_end) if lines[index].strip() == literal]
+    rows = None
+    if hits:
+        sub_start, sub_end = _section_lines(lines, hits[0], 3)
+        rows = _first_rows(lines, sub_start, sub_end, FACT_OWNERS_COLUMNS)
+    if rows is None:
+        missing_subsection(literal, "missing or malformed fact-owner table")
+    else:
+        subsections[literal] = True
+        seen = {}
+        for line_no, cells in rows:
+            fact, owner_path, anchor = cells
+            if not fact:
+                continue
+            parsed["owners"].append({"fact": fact, "path": owner_path, "line": line_no})
+            if fact in seen:
+                findings.append(
+                    structure_finding("owner-duplicate", display, line_no, literal, fact,
+                                      fix_direction="每条事实恰有一个 owner")
+                )
+            else:
+                seen[fact] = line_no
+            path_text = owner_path.strip().strip("`").strip()
+            if not path_text or not (spec_root / path_text).exists():
+                findings.append(
+                    structure_finding("owner-path-missing", display, line_no, literal,
+                                      fact, fix_direction="owner 路径必须存在于仓库内")
+                )
+            if not anchor.strip():
+                findings.append(
+                    structure_finding("owner-anchor-missing", display, line_no, literal,
+                                      fact, fix_direction="补章节锚")
+                )
+
+    return findings, subsections, parsed
+
+
+def two_way_findings(parsed, paths, root):
+    """Chapter two-way comparison — only two named codes (C-011 / C-012)."""
+    findings = []
+    names = []
+    for chapter in parsed["chapters"]:
+        if chapter["name"] not in names:
+            names.append(chapter["name"])
+    for path in paths:
+        display = display_path(path, root)
+        lines = read_text(path).splitlines()
+        headings = []
+        for index, line in enumerate(lines):
+            heading = _heading_at(line)
+            if heading is not None and heading[0] >= 2:
+                headings.append((index + 1, heading[0], heading[1]))
+        titles = {title for _number, _level, title in headings}
+        for name in names:
+            if name not in titles:
+                findings.append(
+                    structure_finding("chapter-missing", display, 1, name,
+                                      name, fix_direction="按章节树补该节")
+                )
+        for number, level, title in headings:
+            if level == 2 and title not in names:
+                findings.append(
+                    structure_finding("chapter-unexpected", display, number, title,
+                                      title, fix_direction="计划外顶层章节须先进章节树")
+                )
+    return findings
+
+
+def evidence_unlisted_findings(parsed, paths, root):
+    """Every annotated assertion must have a row in the evidence list (C-014)."""
+    listed = [
+        normalise(row["assertion"])
+        for row in parsed["evidence"]
+        if normalise(row["assertion"])
+    ]
+    findings = []
+    for path in paths:
+        display = display_path(path, root)
+        for number, raw, in_fence in iter_lines(path):
+            if in_fence or not any(marker in raw for marker in GRADE_MARKERS):
+                continue
+            norm = normalise(raw)
+            if any(needle in norm for needle in listed):
+                continue
+            findings.append(
+                structure_finding("evidence-unlisted", display, number, None, raw,
+                                  fix_direction="在证据清单里补该断言的行")
+            )
+    return findings
+
+
+def duplicate_floor_findings(spec_dir, paths, root):
+    """Reuse the shipped ``duplicate`` face and its mechanical floor (C-016)."""
+    subjects = subject_files(spec_dir, paths)
+    # ``allow_mirror=True`` for the same reason the S3 owner set needs it: this
+    # action's subject set *lives* under ``.specify/specs/``, so the mirror
+    # exclusion would silently compare the plan against nothing at all.
+    records = collect_records(subjects, root, "subject", allow_mirror=True)
+    # The reader declaration is a structural marker the plan AND the delivered
+    # document are each required to carry (C-003), not a hand-written fact copy:
+    # comparing it would make every conforming line a duplicate of itself.
+    records = [
+        record for record in records
+        if not any(record["raw"].lstrip().startswith(marker)
+                   for marker in READER_BASELINE_MARKERS)
+    ]
+    converted = []
+    for item in check_duplicates(records, [], subject_pairs=True):
+        converted.append(
+            structure_finding(
+                item["rule"], item["path"], item["line"], None, item["snippet"],
+                fix_direction=item.get("fix_direction", ""),
+            )
+        )
+    return converted
+
+
+def load_structure_baseline(spec_dir):
+    """``(path, triples)``; a missing file is the EMPTY set, never an exemption."""
+    path = spec_dir / STRUCTURE_BASELINE_NAME
+    entries = set()
+    if not path.is_file():
+        return path, entries
+    for number, raw in enumerate(read_text(path).splitlines(), 1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        parts = [part.strip() for part in line.split("\t")]
+        if len(parts) != 3:
+            raise InputError(
+                "%s:%d is not a `file<TAB>code<TAB>section` triple"
+                % (STRUCTURE_BASELINE_NAME, number)
+            )
+        entries.add(tuple(parts))
+    return path, entries
+
+
+def structure_report(spec_dir, paths, root, roots):
+    """Run the structure action; returns the JSON payload (``action: structure``)."""
+    plan_path = spec_dir / "plan.md"
+    files_scanned = len(paths) + (1 if plan_path.is_file() else 0)
+    record, verdict, engine_stderr = resolve_spec_class(spec_dir, roots, root)
+    findings = []
+    subsections = {literal: False for literal in STRUCTURE_SUBSECTIONS}
+    two_way = "not-run"
+    status = "not-applicable"
+    baseline = {"path": str(spec_dir / STRUCTURE_BASELINE_NAME), "entries": 0, "new": 0}
+
+    if verdict == 0 and record["class"] == "expression":
+        if plan_path.is_file():
+            plan_findings, subsections, parsed = parse_structure_plan(
+                plan_path, root, spec_repo_for(spec_dir, root)
+            )
+            findings.extend(plan_findings)
+        else:
+            parsed = {"chapters": [], "evidence": [], "owners": []}
+            findings.append(
+                structure_finding(
+                    "document-structure-missing",
+                    display_path(plan_path, root),
+                    1,
+                    STRUCTURE_HEADING,
+                    "plan.md is absent",
+                    fix_direction="先产出 plan.md 与其 %s 章节" % STRUCTURE_HEADING,
+                )
+            )
+        if paths:
+            two_way = "run"
+            findings.extend(two_way_findings(parsed, paths, root))
+            findings.extend(evidence_unlisted_findings(parsed, paths, root))
+            findings.extend(duplicate_floor_findings(spec_dir, paths, root))
+        findings.sort(key=lambda item: (item["path"], item["line"], item["rule"],
+                                        item["section"] or ""))
+        baseline_path, frozen = load_structure_baseline(spec_dir)
+        fresh = [item for item in findings if _finding_triple(item) not in frozen]
+        status = "fail" if fresh else "ok"
+        baseline = {"path": str(baseline_path), "entries": len(frozen), "new": len(fresh)}
+    elif verdict == 1:
+        status = "fail"
+
+    payload = {
+        "action": STRUCTURE_ACTION,
+        "checked_at": utc_now(),
+        "class": record["class"],
+        "source": record["source"],
+        "marker": record["marker"],
+        "error": record["error"],
+        "status": status,
+        "two_way": two_way,
+        "scope": {
+            "spec_dir": str(spec_dir),
+            "plan": str(plan_path) if plan_path.is_file() else None,
+            "paths": [str(path) for path in paths],
+            "files_scanned": files_scanned,
+        },
+        "subsections": subsections,
+        "findings": findings,
+        "baseline": baseline,
+    }
+    return payload, engine_stderr
+
+
+def render_structure_text(payload):
+    lines = [
+        "doc-consistency-check: %s" % payload["action"],
+        "checked_at: %s" % payload["checked_at"],
+        "class=%s source=%s" % (
+            payload["class"] if payload["class"] is not None else "unknown",
+            payload["source"] or "unknown",
+        ),
+        "status: %s" % payload["status"],
+        "two-way: %s" % payload["two_way"],
+        "files_scanned: %d" % payload["scope"]["files_scanned"],
+    ]
+    if payload.get("error"):
+        lines.append(
+            "error: %s — %s"
+            % (payload["error"].get("label"), payload["error"].get("detail", ""))
+        )
+    if payload["status"] == "not-applicable":
+        lines.append(
+            "not-applicable: 结构门禁只适用于表达类；已检视 %d 个文件，未做结构判定"
+            % payload["scope"]["files_scanned"]
+        )
+    else:
+        for item in payload["findings"]:
+            lines.append(
+                "%s:%s: %s: %s"
+                % (item["path"], item["line"], item["rule"], item["snippet"])
+            )
+            if item.get("fix_direction"):
+                lines.append("    fix: %s" % item["fix_direction"])
+        lines.append(
+            "baseline: entries=%d new=%d"
+            % (payload["baseline"]["entries"], payload["baseline"]["new"])
+        )
+        lines.append("findings: %d" % len(payload["findings"]))
+    return "\n".join(lines)
+
+
 def report_payload(spec_dir, paths, files_scanned, faces, findings, count_check,
                    degradations, owners=None):
     return {
@@ -947,9 +1570,10 @@ def render_text(payload):
 def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Document-form consistency checker (069a): reader / evidence / "
-                    "duplicate / count faces."
+                    "duplicate / count faces; 077 adds `--action structure` "
+                    "(plan-side document structure + two-way comparison)."
     )
-    parser.add_argument("--action", default="verify", choices=("verify",))
+    parser.add_argument("--action", default="verify", choices=("verify", STRUCTURE_ACTION))
     parser.add_argument("--spec-dir", default="")
     parser.add_argument(
         "--path",
@@ -979,7 +1603,15 @@ def main(argv=None):
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
     parser.add_argument("--json-out", default="")
+    parser.add_argument(
+        "--freeze",
+        action="store_true",
+        help="structure action only: print the current violation triples "
+             "(file<TAB>code<TAB>section); this process never writes the baseline file",
+    )
     args = parser.parse_args(argv)
+
+    structure_mode = args.action == STRUCTURE_ACTION
 
     try:
         faces = parse_faces(args.faces)
@@ -993,6 +1625,11 @@ def main(argv=None):
                 paths.append(path)
             else:
                 raise InputError("--path does not exist: %s" % path)
+        if structure_mode and spec_dir is None:
+            raise InputError(
+                "`--action %s` needs --spec-dir (its subject is that spec's plan.md)"
+                % STRUCTURE_ACTION
+            )
         if spec_dir is None and not paths:
             raise InputError("nothing to check: give --spec-dir and/or --path")
         if spec_dir is not None and not spec_dir.is_dir():
@@ -1000,6 +1637,29 @@ def main(argv=None):
 
         roots = root_candidates(Path(__file__))
         root = roots[0]
+
+        if structure_mode:
+            payload, engine_stderr = structure_report(spec_dir, paths, root, roots)
+            if engine_stderr.strip() and payload["status"] == "fail":
+                # The author's error must reach stderr verbatim: it names the file
+                # and the line (FR-005), which the payload cannot carry.
+                sys.stderr.write(engine_stderr if engine_stderr.endswith("\n")
+                                 else engine_stderr + "\n")
+            if args.freeze:
+                for item in payload["findings"]:
+                    print("\t".join(_finding_triple(item)))
+                return 0
+            if args.json_out:
+                Path(args.json_out).write_text(
+                    json.dumps(payload, indent=2, ensure_ascii=False) + "\n",
+                    encoding="utf-8",
+                )
+            if args.format == "json":
+                print(json.dumps(payload, ensure_ascii=False))
+            else:
+                print(render_structure_text(payload))
+            return 1 if payload["status"] == "fail" else 0
+
         owner_paths = []
         if args.owner_path:
             missing = []
@@ -1019,6 +1679,9 @@ def main(argv=None):
         )
     except InputError as exc:
         print("doc-consistency-check: input error: %s" % exc, file=sys.stderr)
+        return 2
+    except OSError as exc:
+        print("doc-consistency-check: cannot write --json-out: %s" % exc, file=sys.stderr)
         return 2
 
     findings.sort(key=lambda item: (item["path"], item["line"], item["rule"]))

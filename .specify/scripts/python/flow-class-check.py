@@ -17,7 +17,12 @@ criteria or the values' meaning. It only:
   companion numbers (C-2 / C-3);
 * ``--action lookup --unit-id <id>`` — return the registered class for a unit, or
   the default class plus the fixed "undeclared, running on the default" marker for
-  a well-formed but unregistered unit.
+  a well-formed but unregistered unit. 077 adds the feature-line key family
+  ``spec:<spec directory name>``: the class is read from the ``**Flow Class**``
+  line in that spec's ``requirements.md`` head region (never inferred, never
+  written into the per-unit ledger). Its record is field-for-field identical to a
+  unit-key record, and an absent declaration yields the default class plus the
+  advisory ``declaration-absent`` (exit 0, not a finding).
 * ``--action isomorphism`` — parse the owner's isomorphism map (8 stages x 3
   faces) and its four non-isomorphism boundaries, then judge the 24 cells, the
   truthfulness of every enforcement annotation against the gate owner's
@@ -43,10 +48,14 @@ and ``ledger-reconciler.md`` C-3 / C-14):
   ``red_kind`` names that state with the fixed priority
   ``owner-unavailable`` > ``framework-source-required`` > ``parse-failure`` >
   ``gap`` > ``clean``;
-* ``lookup``: 0 = resolved (including the default degradation), 2 = malformed unit
-  id or unparsable owner. An unparsable owner keeps the default class semantics,
-  reports ``owner-unavailable`` on stderr and leaves ``marker`` null — the two
-  degradation labels are mutually exclusive (requirements FR-009 / FR-016);
+* ``lookup``: 0 = resolved (including the default degradation and the
+  ``declaration-absent`` advisory), 1 = a feature-line declaration carries an
+  author error (``invalid-class`` / ``declaration-malformed`` /
+  ``declaration-duplicate`` / ``declaration-misplaced`` — blocking, never merged
+  into 2), 2 = malformed unit id / unreadable spec input or unparsable owner. An
+  unparsable owner keeps the default class semantics, reports ``owner-unavailable``
+  on stderr and leaves ``marker`` null — the two degradation labels are mutually
+  exclusive (requirements FR-009 / FR-016);
 * ``isomorphism`` / ``delegation`` / ``faces``: 0 = zero findings, 1 = at least
   one finding, 2 = input error (missing/unparsable owner or gate owner) or a
   payload root (``framework-source-required``). A payload root emits zero
@@ -787,7 +796,14 @@ def action_check(repo: Path, output_format: str) -> int:
 def render_lookup_text(record: dict) -> str:
     lines = [
         "unit_id: %s" % record["unit_id"],
-        "%s: %s" % (CLASS_KEY, record[CLASS_KEY]),
+        "%s: %s" % (
+            CLASS_KEY,
+            record[CLASS_KEY] if record[CLASS_KEY] is not None else "null",
+        ),
+        "%s: %s" % (
+            FLOW_TYPE_KEY,
+            record.get(FLOW_TYPE_KEY) if record.get(FLOW_TYPE_KEY) is not None else "null",
+        ),
         "source: %s" % record["source"],
         "marker: %s" % (record["marker"] if record["marker"] is not None else "null"),
         "basis: %s" % (record["basis"] if record["basis"] is not None else "null"),
@@ -826,6 +842,7 @@ def default_lookup_record(unit_id: str, stamp: str) -> dict:
         "checked_at": stamp,
         "unit_id": unit_id,
         CLASS_KEY: DEFAULT_CLASS,
+        FLOW_TYPE_KEY: None,
         "source": "default",
         "marker": None,
         "basis": None,
@@ -834,8 +851,440 @@ def default_lookup_record(unit_id: str, stamp: str) -> dict:
     }
 
 
+# --------------------------------------------------------------------------- #
+# 077: the feature-line key family (contracts/class-resolution.md)
+# --------------------------------------------------------------------------- #
+SPEC_KEY_RE = re.compile(r"^spec:([a-z0-9][a-z0-9-]*)$")
+SPECS_DIR_REL = Path(".specify") / "specs"
+SPECS_DIR_IN_PAYLOAD = Path("specs")
+SPEC_REQUIREMENTS = "requirements.md"
+
+# The declaration line: verbatim field name, half-width colon, exactly one space,
+# one token, end of line (no trailing whitespace, no inline comment). The closed
+# two-value set is judged separately so an out-of-set value is `invalid-class`
+# rather than a shape error (data-model E3).
+RELATED_FEATURE_HEADING = "## Related Feature"
+DECLARATION_LINE_RE = re.compile(r"^\*\*Flow Class\*\*: ([^\s]+)$")
+# Presence probe: field-shaped regardless of case, inner spacing or the colon
+# that follows. Used to tell "the field is there but wrong" from "there is no
+# field at all" (C-006: MUST NOT fall back to "absent"). Leading whitespace is
+# tolerated here on purpose — a shifted line is a malformed field, not a missing one.
+DECLARATION_PROBE_RE = re.compile(r"^\s*\*\*\s*flow\s+class\s*\*\*", re.IGNORECASE)
+DECLARATION_ABSENT = "declaration-absent"
+
+# The document type: a subordinate attribute of ``flow_class`` (owner:
+# ``.specify/shared/definitions/flow-class-definitions.md`` § 文档类型). It is optional —
+# a line that is absent leaves ``flow_type: null`` — but when present it is
+# closed-set and only meaningful for ``expression`` lines; an ``execution`` line
+# may carry only the explicit ``-``. Extending the set is an owner revision.
+FLOW_TYPE_KEY = "flow_type"
+FLOW_TYPE_NONE = "-"
+FLOW_TYPE_VALUES = (
+    "technique-document",
+    "user-manual",
+    "reference",
+    "runbook",
+    "design-note",
+    FLOW_TYPE_NONE,
+)
+FLOW_TYPE_LINE_RE = re.compile(r"^\*\*Flow Type\*\*: ([^\s]+)$")
+FLOW_TYPE_PROBE_RE = re.compile(r"^\s*\*\*\s*flow\s+type\s*\*\*", re.IGNORECASE)
+
+
+def spec_key_name(unit_id: str):
+    """Return the spec-directory basename a ``spec:`` key carries, else ``None``.
+
+    The family is closed: ``spec:`` + the spec directory basename, grammar
+    ``^spec:[a-z0-9][a-z0-9-]*$``. A bare directory name, ``feature:<ID>`` and any
+    ``/``-bearing path are *not* this family — they fall through to the existing
+    unit-id judgement and keep its exit 2 (contract C-002). The basename (never a
+    path, never a Feature id) is what lets the source tree and the payload tree
+    resolve the same line to the same key (research.md R-2).
+    """
+    match = SPEC_KEY_RE.fullmatch(unit_id or "")
+    return match.group(1) if match else None
+
+
+def spec_requirements_path(repo: Path, name: str) -> Path:
+    """Resolve ``<repo>/.specify/specs/<name>/requirements.md`` under both hats.
+
+    ``--repo <proj>`` is the client-payload hat and reads
+    ``<proj>/.specify/specs/…``; ``--repo <proj>/.specify`` names the payload
+    root itself and degenerates to ``<repo>/specs/…`` (contract
+    ``class-resolution.md`` C-003).
+    """
+    if repo.name == MIRROR_DIR_NAME:
+        return repo / SPECS_DIR_IN_PAYLOAD / name / SPEC_REQUIREMENTS
+    return repo / SPECS_DIR_REL / name / SPEC_REQUIREMENTS
+
+
+def display_path(repo: Path, path: Path) -> str:
+    """A repo-relative path when possible — diagnostics name the file the author edits."""
+    try:
+        return str(path.relative_to(repo))
+    except ValueError:
+        return str(path)
+
+
+def spec_input_error(repo: Path, unit_id: str, path: Path, stamp: str,
+                     output_format: str, detail: str = "") -> int:
+    """Exit 2 for a well-formed ``spec:`` key whose line cannot be read.
+
+    Two registrations meet here (contracts/class-resolution.md C-003 / C-006):
+
+    * the label is ``owner-unavailable``, not ``invalid-unit-id``. The key is
+      legal — what is missing is the input it names (the spec directory, its
+      ``requirements.md``, or a readable copy of it). Requirements FR-009 puts
+      "key or input invalid (exit 2)" in the *same* degradation branch as an
+      absent owner, and the dispatch payload's ``error`` slot is a closed
+      two-value domain ``{owner-unavailable, -}``; a third label here would
+      leave the driver's U4 without a branch (code review important-1). The
+      distinguishing information moves into ``detail``.
+    * ``flow_class`` is ``null``: an exit-2 record must never hand a consumer a
+      decided class (C-003 / C-007 — a misspelled spec key would otherwise read
+      as a firm ``execution``). ``source`` stays ``default`` because no
+      declaration line was read, and ``error.label`` is what keeps that pair
+      from being read as "not declared" (C-005, narrowed for this path).
+    """
+    detail = detail or ("spec input not found: %s" % display_path(repo, path))
+    record = default_lookup_record(unit_id, stamp)
+    record[CLASS_KEY] = None
+    record["error"] = {"label": DEGRADATION_LABEL, "detail": detail}
+    print("%s: %s" % (DEGRADATION_LABEL, detail), file=sys.stderr)
+    emit_lookup(record, output_format)
+    return 2
+
+
+def parse_spec_declaration(text: str) -> dict:
+    """Read the feature line's declaration; the class is never inferred.
+
+    Outcomes, in the order they are judged (data-model E3):
+
+    * ``declaration-duplicate`` — the field appears more than once anywhere in the
+      file. Only the count is read; whether the two values agree is irrelevant
+      (C-004). It outranks ``declaration-misplaced`` for the same root cause.
+    * ``declaration-misplaced`` — the single field line sits after the first
+      ``## Related Feature`` heading. Position only (C-005).
+    * ``declaration-malformed`` — the field is present but the line is not the
+      verbatim form: full-width colon, field-name case variant, trailing
+      whitespace, inline comment, leading shift (C-006). It MUST NOT be read as
+      "no field at all".
+    * ``invalid-class`` — verbatim shape, value outside the closed set (C-009).
+    * ``declared`` — verbatim shape with a closed-set value.
+    * ``absent`` — no field-shaped line anywhere; the default path (C-008).
+
+    Only the head region and only the verbatim grammar count — nothing here looks
+    at the path, the file name, the extension, the body or the commit history
+    (requirements FR-001 / contract C-002).
+    """
+    lines = text.splitlines()
+    related_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith(RELATED_FEATURE_HEADING)
+        ),
+        None,
+    )
+    field_lines = [
+        (index + 1, line)
+        for index, line in enumerate(lines)
+        if DECLARATION_PROBE_RE.match(line)
+    ]
+
+    if len(field_lines) > 1:
+        first_line, _first_text = field_lines[0]
+        second_line, second_text = field_lines[1]
+        return {
+            "status": "error",
+            "code": "declaration-duplicate",
+            "line": second_line,
+            "value": declaration_value_fragment(second_text),
+            "reason": "the field appears more than once — a second declaration is "
+                      "a second source of truth",
+            "also_line": first_line,
+        }
+
+    if len(field_lines) == 1:
+        line_no, line = field_lines[0]
+        if related_index is not None and (line_no - 1) > related_index:
+            return {
+                "status": "error",
+                "code": "declaration-misplaced",
+                "line": line_no,
+                "value": declaration_value_fragment(line),
+                "reason": "the declaration belongs in the head region, before "
+                          "`%s`" % RELATED_FEATURE_HEADING,
+                "also_line": None,
+            }
+        match = DECLARATION_LINE_RE.fullmatch(line)
+        if not match:
+            return {
+                "status": "error",
+                "code": "declaration-malformed",
+                "line": line_no,
+                "value": line.strip(),
+                "reason": "the field must read exactly `**Flow Class**: <class>` — "
+                          "half-width colon, one space, no trailing whitespace, no "
+                          "inline comment",
+                "also_line": None,
+            }
+        if match.group(1) not in CLASS_VALUES:
+            return {
+                "status": "error",
+                "code": "invalid-class",
+                "line": line_no,
+                "value": match.group(1),
+                "reason": "outside the closed set (%s)" % ", ".join(CLASS_VALUES),
+                "also_line": None,
+            }
+        return {"status": "declared", "value": match.group(1), "line": line_no}
+
+    return {"status": "absent"}
+
+
+def parse_spec_flow_type(text: str, class_value) -> dict:
+    """Read the optional ``**Flow Type**`` line; absent is legal, malformed is not.
+
+    Same head-region and verbatim rules as the class line (owner:
+    ``.specify/shared/definitions/flow-class-definitions.md`` § 文档类型). The type is
+    subordinate: an ``execution`` line — or the default class when the class line
+    is absent — accepts only the explicit ``-``. Author errors use the same exit 1
+    as class errors; an absent line leaves ``flow_type: null``.
+    """
+    lines = text.splitlines()
+    related_index = next(
+        (
+            index
+            for index, line in enumerate(lines)
+            if line.startswith(RELATED_FEATURE_HEADING)
+        ),
+        None,
+    )
+    field_lines = [
+        (index + 1, line)
+        for index, line in enumerate(lines)
+        if FLOW_TYPE_PROBE_RE.match(line)
+    ]
+
+    if len(field_lines) > 1:
+        first_line, _first_text = field_lines[0]
+        second_line, second_text = field_lines[1]
+        return {
+            "status": "error",
+            "code": "flow-type-duplicate",
+            "line": second_line,
+            "value": flow_type_value_fragment(second_text),
+            "reason": "the field appears more than once — a second declaration is "
+                      "a second source of truth",
+            "also_line": first_line,
+        }
+
+    if len(field_lines) == 1:
+        line_no, line = field_lines[0]
+        if related_index is not None and (line_no - 1) > related_index:
+            return {
+                "status": "error",
+                "code": "flow-type-misplaced",
+                "line": line_no,
+                "value": flow_type_value_fragment(line),
+                "reason": "the declaration belongs in the head region, before "
+                          "`%s`" % RELATED_FEATURE_HEADING,
+                "also_line": None,
+            }
+        match = FLOW_TYPE_LINE_RE.fullmatch(line)
+        if not match:
+            return {
+                "status": "error",
+                "code": "flow-type-malformed",
+                "line": line_no,
+                "value": line.strip(),
+                "reason": "the field must read exactly `**Flow Type**: <type>` — "
+                          "half-width colon, one space, no trailing whitespace, no "
+                          "inline comment",
+                "also_line": None,
+            }
+        value = match.group(1)
+        if value not in FLOW_TYPE_VALUES:
+            return {
+                "status": "error",
+                "code": "invalid-flow-type",
+                "line": line_no,
+                "value": value,
+                "reason": "outside the closed set (%s)" % ", ".join(FLOW_TYPE_VALUES),
+                "also_line": None,
+            }
+        effective_class = class_value if class_value is not None else DEFAULT_CLASS
+        if effective_class == EXECUTION and value != FLOW_TYPE_NONE:
+            return {
+                "status": "error",
+                "code": "flow-type-mismatch",
+                "line": line_no,
+                "value": value,
+                "reason": "a document type is only meaningful for expression lines; "
+                          "execution lines carry `%s`" % FLOW_TYPE_NONE,
+                "also_line": None,
+            }
+        return {"status": "declared", "value": value, "line": line_no}
+
+    return {"status": "absent"}
+
+
+def flow_type_value_fragment(line: str) -> str:
+    """The value (or the raw line) a diagnostic carries for an offending type field."""
+    match = FLOW_TYPE_LINE_RE.fullmatch(line)
+    if match:
+        return match.group(1)
+    return line.strip()
+
+
+def declaration_value_fragment(line: str) -> str:
+    """The value (or the raw line) a diagnostic carries for an offending field."""
+    match = DECLARATION_LINE_RE.fullmatch(line)
+    if match:
+        return match.group(1)
+    return line.strip()
+
+
+def spec_declaration_error(repo: Path, unit_id: str, path: Path, declaration: dict,
+                           stamp: str, output_format: str) -> int:
+    """Exit 1: an author error in the declaration, never the exit-2 degradation.
+
+    The record carries ``flow_class: null`` + ``source: declaration`` — a consumer
+    that reads only the record must not see a decided class, and must not see the
+    ``execution`` + ``default`` pair either (C-007). The diagnostic is one stderr
+    line naming the file, the line and the offending value (C-008).
+    """
+    detail = "%s:%d carries '%s', %s" % (
+        display_path(repo, path),
+        declaration["line"],
+        declaration["value"],
+        declaration["reason"],
+    )
+    if declaration.get("also_line"):
+        detail += " (first declared at %s:%d)" % (
+            display_path(repo, path),
+            declaration["also_line"],
+        )
+    record = default_lookup_record(unit_id, stamp)
+    record[CLASS_KEY] = None
+    record["source"] = "declaration"
+    record["error"] = {"label": declaration["code"], "detail": detail}
+    print("%s: %s" % (declaration["code"], detail), file=sys.stderr)
+    emit_lookup(record, output_format)
+    return 1
+
+
+def spec_type_error(repo: Path, unit_id: str, path: Path, finding: dict,
+                    stamp: str, output_format: str) -> int:
+    """Exit 1: an author error in the optional ``**Flow Type**`` line.
+
+    The record carries ``flow_class: null`` and ``flow_type: null`` — an
+    undeclared pair must never be presented as decided (C-007's reading, applied
+    to the subordinate axis). The diagnostic names the file, the line and the
+    offending value, exactly like the class-line errors.
+    """
+    detail = "%s:%d carries '%s', %s" % (
+        display_path(repo, path),
+        finding["line"],
+        finding["value"],
+        finding["reason"],
+    )
+    if finding.get("also_line"):
+        detail += " (first declared at %s:%d)" % (
+            display_path(repo, path),
+            finding["also_line"],
+        )
+    record = default_lookup_record(unit_id, stamp)
+    record[CLASS_KEY] = None
+    record["source"] = "declaration"
+    record["error"] = {"label": finding["code"], "detail": detail}
+    print("%s: %s" % (finding["code"], detail), file=sys.stderr)
+    emit_lookup(record, output_format)
+    return 1
+
+
+def action_lookup_spec(repo: Path, unit_id: str, name: str, stamp: str,
+                       output_format: str) -> int:
+    """Resolve a feature line's class from its ``requirements.md`` declaration.
+
+    Declared -> ``source: declaration`` with the declared value. No declaration ->
+    the default class, ``source: default`` and the 069 marker, plus the advisory
+    ``declaration-absent`` in ``error.label``: exit 0, not a finding, never part of
+    a gate's pass/fail set. Author errors (duplicate / misplaced / malformed /
+    invalid value) -> exit 1, never the exit-2 path (that path is reserved for
+    mechanism absence, requirements FR-009). The advisory requires a parsable
+    owner — this function only runs after ``parse_owner`` succeeded, so it can
+    never coexist with ``owner-unavailable`` (requirements FR-004).
+    """
+    path = spec_requirements_path(repo, name)
+    if not path.is_file():
+        return spec_input_error(repo, unit_id, path, stamp, output_format)
+
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        # Same exit-2 registration as an absent file: the input cannot be read,
+        # so no class is decided and the label is the closed degradation one.
+        return spec_input_error(
+            repo, unit_id, path, stamp, output_format,
+            detail="spec requirements unreadable: %s (%s)"
+                   % (display_path(repo, path), exc),
+        )
+
+    declaration = parse_spec_declaration(text)
+    if declaration["status"] == "error":
+        return spec_declaration_error(
+            repo, unit_id, path, declaration, stamp, output_format
+        )
+
+    flow_type = parse_spec_flow_type(
+        text,
+        declaration["value"] if declaration["status"] == "declared" else None,
+    )
+    if flow_type["status"] == "error":
+        return spec_type_error(repo, unit_id, path, flow_type, stamp, output_format)
+
+    record = default_lookup_record(unit_id, stamp)
+    if declaration["status"] == "declared":
+        record[CLASS_KEY] = declaration["value"]
+        record["source"] = "declaration"
+    else:
+        record["marker"] = DEFAULT_MARKER
+        record["error"] = {
+            "label": DECLARATION_ABSENT,
+            "detail": (
+                "no `**Flow Class**: <class>` line in the head region of %s; "
+                "running on the default class" % display_path(repo, path)
+            ),
+        }
+    if flow_type["status"] == "declared":
+        record[FLOW_TYPE_KEY] = flow_type["value"]
+    emit_lookup(record, output_format)
+    return 0
+
+
 def action_lookup(repo: Path, unit_id: str, output_format: str) -> int:
     stamp = checked_at()
+
+    # contracts/class-resolution.md C-009 (registered change): the owner parses
+    # *before* the key family, so an unavailable owner degrades every key — the
+    # spec: family included — with the same label. The previous order judged the
+    # key grammar first and reported invalid-unit-id for the same input; both are
+    # exit 2 and change no gate (requirements FR-011 exemption ①). MUST NOT be
+    # silently reverted to the old order.
+    try:
+        ledger = parse_owner(repo)
+    except OwnerError as exc:
+        return owner_degradation(unit_id, stamp, str(exc), output_format)
+
+    name = spec_key_name(unit_id)
+    if name is not None:
+        # A feature line is resolved from its declaration line only; it is never
+        # matched against § 逐流程台账, whose row set equals the framework unit
+        # inventory (contract C-010).
+        return action_lookup_spec(repo, unit_id, name, stamp, output_format)
+
     if not UNIT_ID_RE.fullmatch(unit_id or ""):
         record = default_lookup_record(unit_id, stamp)
         record["error"] = {
@@ -846,15 +1295,6 @@ def action_lookup(repo: Path, unit_id: str, output_format: str) -> int:
             "invalid unit id %r: expected /speckit.<stem> or skill:<dir>" % unit_id,
             file=sys.stderr,
         )
-        emit_lookup(record, output_format)
-        return 2
-
-    try:
-        ledger = parse_owner(repo)
-    except OwnerError as exc:
-        record = default_lookup_record(unit_id, stamp)
-        record["error"] = {"label": DEGRADATION_LABEL, "detail": str(exc)}
-        print("%s: %s" % (DEGRADATION_LABEL, exc), file=sys.stderr)
         emit_lookup(record, output_format)
         return 2
 

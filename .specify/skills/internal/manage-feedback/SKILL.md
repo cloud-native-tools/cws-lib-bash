@@ -165,7 +165,21 @@ prompt MUST NOT recommend it.
   --package <zip>`, once per bundle, degradation counters reported; aggregation is at
   most a suggested explicit follow-up, never part of the receive flow), A3
   Introspection(自省), A4 reconcile and route, A5 atomic cleanup with the consume-log
-  row, A6 dispose local entries, and the Path A behavior rules.
+  row, A6 dispose local entries, and the Path A behavior rules. In a client
+  project, A4 additionally assigns each digested external entry **exactly one
+  follow-up carrier** from the closed set of three (todo Park mode as the named
+  default, a new requirements specification, or one subject loop of the
+  improvement command — boundaries owned by
+  `.specify/shared/guidelines/todo-in-context.md`, `.specify/templates/commands/requirements.md`,
+  and `.specify/shared/workflow/self-improvement-workflow.md`, cited never restated):
+  one row per entry in `.specify/memory/feedback/backlog.md`, listed in the
+  digest report; an undecidable entry is reported `undecided` and kept for the
+  next digest, never silently dropped. The digest report carries this run's hat
+  and armed state plus how it was resolved, the entry count and disposition of
+  each side, and the readings of the four loop metrics (read-only
+  `client-metrics` action pointer). When a client unit vanishes from the probe
+  registry its entries stay readable, are never rewritten, deleted, or
+  re-attributed, and the resolution failure is reported as a named finding.
 - **Path B — 打包上送 (Package For The Framework Upstream)**: execute per
   [`./references/path-b-and-probe.md`](./references/path-b-and-probe.md) — status,
   filtered summary, disposition, packaging, hat-aware post-package cleanup,
@@ -193,6 +207,11 @@ prompt MUST NOT recommend it.
   findings routed but not executed — read at inventory, written at A4, and a row
   closes only on evidence that its named owner file changed. The consume-log is a
   batch audit trail; it does not carry work forward.
+- **Client carriers are one-per-entry**: a digested client entry gets exactly one
+  named carrier (Park default / new requirements spec / improvement subject
+  loop), never two and never a fourth mechanism; the carrier row lives in the
+  routing backlog and is listed in the digest report, and every refinement move
+  is reported there too.
 
 ## Boundaries
 

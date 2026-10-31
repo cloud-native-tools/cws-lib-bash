@@ -34,8 +34,8 @@ Each command owns exactly one transition:
 | `/speckit.plan` | `Draft → Planned` | MUST NOT land `Implemented` |
 | `/speckit.tasks` | Maintain `Planned` | Status unchanged |
 | `/speckit.implement` | `Planned → Implemented` | Requires Pre-Status-Flip Gate |
-| `/speckit.checklist` | `Implemented → Ready for Review` | If applicable; applies only when the checklist runs after implement |
-| `/speckit.review` | `Implemented → Ready for Review` | review.md committed AND every deferred item resolved or waived |
+| `/speckit.checklist` | `Implemented → Ready for Review` | Conditional initiator — applies only when the checklist runs after `/speckit.implement`: after implement it initiates the transition and cites the same owner criterion; before implement it initiates nothing, MUST NOT error for the absence of a code-segment conclusion, and MUST NOT manufacture one. Criteria are owned by `.specify/templates/feature-details-template.md` § Canonical Status State Machine and are not restated here |
+| `/speckit.review` | `Implemented → Ready for Review` | Unconditional initiator. Criteria are owned by `.specify/templates/feature-details-template.md` § Canonical Status State Machine and are not restated here; this gate is a property of the transition, not of this one command |
 
 ## Pre-Status-Flip Gate (implement phase only)
 

@@ -53,6 +53,25 @@ classification: external
 - 本技能名 + 明确「只改技能文档/不走 SDD」→ 技能维护路径；不得强制派发阶段。
 - 纯提问/咨询 → 回答并停；不自动启动循环。
 
+### Invoked-from-Team Entry（团队内调用入口）
+
+除独立入口外，本手册支持**被团队席位调用**的入口形态：一个已获有效授权的成员席位，为其一条职责启动**恰好一次**有界嵌套运行。该形态**接受的输入恰为六项、且集合封闭**——多出的事实不得被静默忽略，缺任一项即拒绝：
+
+| 事实 | 含义 |
+|------|------|
+| `goal_ref` | 绑定的 Goal 引用（必填） |
+| `target_ref` | 可选的 Target 引用；缺省 = 对绑定 Goal 整体运行 |
+| `team_slug` | 发起调用的团队 slug（授权坐标之一） |
+| `seat_slug` | 发起调用的席位 slug（授权坐标之一） |
+| `scope` | 授权的工件 / 领域范围 |
+| `verdict_ref` | 路由裁决记录的引用（其裁决必须是 SDD 值） |
+
+**U0 之前完成校验**：六项事实在写出 U0 入口声明**之前**全部校验；任一不通过即**拒绝启动并点名失败条件**，不把职责改写到能通过的形状，也不进入 U0。有效授权谓词（Agent 定义能力 AND 席位策略，按 (team, seat) 解析）的可执行形态是 `python3 .specify/scripts/python/sdd-route.py --action authorize`——提示词改词修不好一次拒绝。
+
+**止于 review，不主张合并权**：嵌套运行在驱动既有 review 修复循环收束后结束，交回结构化 handoff；它**不进入 merge 步**，也不主张属于**外层**的合并权——集成由外层按其既有确认门处置。
+
+校验表、handoff schema、写线登记、失败与卡死交回、消费方义务的**唯一落点**是 `references/nested-invocation.md`；本节只声明入口形态与上述三条边界，不复述其表。独立入口（本文件其余各节的形态与骨架）逐字不变——本入口是**追加**，不是替换。
+
 ## The Loop (U0–U6)
 
 ```text
@@ -94,6 +113,8 @@ Hook 只是提前完成信号（`--settings` 注入、写 done/FIFO、`hook=obse
 9. **监听签名唯一**：每个监听窗口的 Shell 调用 MUST 在命令文本中携带字面量迭代标识——watcher 用 `--iter "<run_id>-w<NN>"`，hook 长读传第 6 个参数——`NN` 逐窗口递增，连续两次监听命令不得字节相同。令牌必须写成字面量，不能用 `$(date +%s)`/`$$`/`$RANDOM` 之类运行时展开：宿主（Qoder）在执行前比较签名，同参数连续调用会被判为重复并误报卡死。规则 owner 与重入续号：`references/watch-model.md` §3.2。
 10. **目标项目治理优先（本地与远端同规）**：对目标仓库的任何写动作或目录创建之前，MUST 先读取并遵守目标项目的治理文档——宪法（constitution）与指令（instructions），包括其中的原则、目录规范、命名规则与临时目录纪律；与目标项目既有文档冲突时以目标项目为准。经 ssh 的远端目标同规——远端目录创建同样受目标项目治理约束。目标项目尚无治理框架时委托 sdd-project-setup，不得以本技能的缺省形态替代目标治理。文件清单与兼容符号链接见 References。
 11. **运行期目录唯一**：目标仓 `.specify/` 命名空间是本技能唯一合法落点。临时数据（worktree、cache、tmp）走 `<repo>/.specify/.tmp/sdd-loop/{worktrees,cache,tmp}/<line_id>`，由 `.specify/.gitignore` 的 `.tmp/` 规则覆盖、工作项结束时清理；长期状态（状态脊）走 `<repo>/.specify/state/<line_id>.md`，按 line 一文一件、不随工作项清理（入口显式 `--state-dir` 时以入口为准）。布局 owner：`.specify/scripts/line-registry.py` 与 `references/dispatch-recipes.md`；Line Registry 仍缺省在 `$XDG_STATE_HOME/spec-kit/lines/` 或 `~/.local/state/spec-kit/lines/`（环境级，仓库外）。这两类落点由本技能独占；MUST NOT 使用 `.spec-kit/` 或任何其它仓库内 ad-hoc 目录（`tmp/`、`scratch/`、`state/`、`work/` 等）。首次写入前必须完成忽略状态确认（`git check-ignore -q .specify/.tmp`；缺失则先补规则）；目标项目自己的目录治理文档存在时，以目标项目为准。
+12. **嵌套运行是一条写线、且不主张合并权**：被团队席位调用时（§ Invoked-from-Team Entry），本次运行作为**一条写线**注册到既有 line registry 与 worktree-per-write-line（`.specify/scripts/line-registry.py`）；领域重叠由该机制串行化或拒绝，MUST NOT 新建第二套 registry / ownership 模型 / integration queue。运行止于 review 并交回 handoff：MUST NOT merge、MUST NOT push——集成归外层按其确认门处置。
+13. **类别感知（只换算子与槽位内容）**：阶段派发载荷 MUST 携带类别**四元组**（`flow_class=` / `source=` / `marker=` / `error=`；值域、缺键处置与派发纪律归 `references/stage-prompts.md` § 类别四元组的派发纪律），本地原生子代理与远端 CLI 同规；缺任一键即**派发构造缺陷**，U4 不放行。U4 对表达类 MUST 校验门禁证据——算子结果齐备、证据文件存在且非空、载荷与当场解析一致、`stage-status` 在行（校验程序归 `references/stage-prompts.md` § Independent Verification）；载荷 `error` 位非 `-`（即 `owner-unavailable`）时 MUST 走 `owner-unavailable` 分支——记降级观测、保持既有门禁集，MUST NOT 按表达类校验。预算槽位装什么归 `references/efficiency-model.md` §2.8（`selection_basis=docs-gate-full`），时点与槽位数不变。驱动 MUST NOT 因类别改变阶段序列、哨兵字面量、watcher 判定与退出码、卡死处置、快车道判据或 analyze / review 调用率（两者保持 100%）；任何以「本线属表达类」为由跳过或缩短阶段的请求被拒。类别只改变两件事：用哪套算子证明同一不变量、预算槽位里装什么。
 
 ## Discipline Defaults
 
@@ -134,6 +155,7 @@ Hook 只是提前完成信号（`--settings` 注入、写 done/FIFO、`hook=obse
 - `references/watch-model.md` — 统一监听模型：信号源、判定状态机、窗口/期限、多线 manifest、hook/SSH 与故障矩阵。
 - `references/state-awareness.md` — 状态感知快照 owner：入口与调用形态、六类检测与两类保留形态、§Derived Mapping（镜像 FR-004）、§Stage Artifact Map、probe 契约、动作建议与 watchbeat 读法；本手册与其它 references 只引用其章节，不复述整表。
 - `references/stage-prompts.md` — 三段骨架、独立校验、Line/Envelope/Ingress、重接线、变体、并发隔离、卡死处置。
+- `references/nested-invocation.md` — 团队内调用入口的完整契约：入口校验表、handoff schema（字段集封闭、三值 outcome、集成身份四事实）、写线登记、失败与卡死交回、消费方义务。
 - `.specify/scripts/loop-state.py` — 只读快照引擎（`snapshot` / `--probe` / `--self-test`；`recover`、`check-spine` 返回结构化拒绝），字段面与退出码契约见 `references/state-awareness.md`。
 - `.specify/scripts/watch-target.sh` — 长轮询 watcher 参考实现（快照、归属过滤、hook、lease、逐窗口 `--iter` 迭代标识）。
 - `.specify/scripts/hook-stop.sh` / `watch-hook.sh` — Stop hook 模板与远端同身份长读。

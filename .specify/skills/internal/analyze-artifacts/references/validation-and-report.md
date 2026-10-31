@@ -65,7 +65,8 @@ read-only validation subagent.**
 - **Subagent-unavailable fallback.** If the validation subagent dispatch fails twice in a row
   (upstream error), a direct evidence re-read by the analyzing agent MAY substitute; the
   report row MUST then carry `(validated: direct re-read, subagent unavailable)` so the
-  weaker evidence path is visible to the reader. A session-creation API is not a successful dispatch and MUST NOT be used as a fallback.
+  weaker evidence path is visible to the reader. A session-creation API is not a successful
+  dispatch and MUST NOT be used as a fallback.
 
 ## 6. Compact analysis report
 

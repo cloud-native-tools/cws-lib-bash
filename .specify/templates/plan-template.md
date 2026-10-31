@@ -59,6 +59,26 @@
 
 **Re-check after Phase 1**: [Date and short note when the post-design re-check was run; copy the same table refreshed against the design artefacts]
 
+## Decision Tensions
+
+*Owner of the record shape, the admissibility criteria, the rejection forms and the load-bearing
+threshold: `.specify/shared/guidelines/decision-tension.md` — one pointer, read from the repository
+root (the same form this template uses for `.specify/memory/constitution.md`); a plan artifact lives
+under `.specify/specs/<key>/`, so a plan-directory-relative link would resolve to a path that does
+not exist. This section lists the field names and points at that file — it MUST NOT restate the
+criteria table, the rejection list or the threshold table.*
+
+Fields: `decision`, `antithesis`, `binding_constraints` (with `pole_a` and `pole_b`),
+`discriminating_evidence`, `expected_sacrifice`, `revision_trigger`; record identifier `tension_id`
+(`T-NNN`).
+
+Every record is carried by a level-3 sub-section whose heading begins with `T-NNN`
+(e.g. `### T-001 — <one-line title>`), and its six fields are written in the owner's shape.
+
+If and only if this plan contains no load-bearing decision, write the literal `N/A` plus one line
+per trigger explaining why that trigger does not hold (the trigger list is owned by the owner's
+threshold section); the section MUST NOT be deleted or left empty.
+
 ## Project Structure
 
 ### Documentation (this spec)
@@ -148,6 +168,71 @@ reference the real directories captured above. Explicitly note any new top-level
 | Source file (edited) | Mirror / generated copies (must land identically) | Verify |
 |----------------------|---------------------------------------------------|--------|
 | [e.g. `templates/commands/x.md`] | [e.g. `.claude/commands/speckit.x.md`; `.github/prompts/speckit.x.prompt.md`; `.qoder/commands/speckit.x.md`; `.opencode/command/speckit.x.md` — per-tool copies via regen-command-copies.py; NO `.specify/templates/commands/` mirror (retired)] | [e.g. `diff -q` on the pairs touched here, judged against the baseline measured before the edit — "no NEW drift"; regenerated copies contain the edit. Never a pre-written exit code] |
+
+## Document Structure
+
+<!--
+  ACTION REQUIRED (expression-class lines only): replace every [<placeholder>] below, or delete
+  this whole section. Delete it also when this line declares no class.
+
+  OWNERSHIP: this template is the **producer** of the skeleton, so the literals are written here
+  verbatim — the chapter heading `## Document Structure` and its four subsections `### Chapter Tree`,
+  `### Reader Baseline`, `### Evidence List`, `### Fact Owners`. Read them from this file, not from
+  another project's spec artifacts: `[[STR-NNN]]` ids are a per-spec namespace, so a downstream
+  project that went looking for `[[STR-002]]`…`[[STR-006]]` in its own § Shared Strings would find
+  unrelated literals or nothing at all.
+  The semantics, and the code-first owner of the grammar, are
+  `scripts/python/doc-consistency-check.py` (`STRUCTURE_HEADING`, `STRUCTURE_SUBSECTIONS`,
+  `CHAPTER_TREE_COLUMNS`, `EVIDENCE_LIST_COLUMNS`, `FACT_OWNERS_COLUMNS`,
+  `READER_BASELINE_MARKERS`); a checker consumes those constants, never a copied heading.
+  A feature spec that keeps its own Shared Strings table MAY cite this section by its STR ids —
+  that is a per-spec convenience and never the owner.
+
+  CLASS CONDITION: 表达类 MUST 产出该章节、执行类 MUST NOT 被要求产出 — this section is a required
+  plan output for an expression-class line, and it MUST NOT become a new mandatory section for an
+  execution-class line (that would contradict the zero-change guarantee for execution-class lines).
+
+  JUDGEMENT: `doc-consistency-check.py --action structure --spec-dir <spec dir>` reads this section;
+  a missing chapter is `document-structure-missing` and a missing subsection is `subsection-missing`.
+  Add `--path <delivered document>` to compare the delivered document's top-level chapters against
+  the Chapter Tree; without it the run says `two-way: not-run` and MUST NOT be read as two-way pass.
+-->
+
+### Chapter Tree
+
+*The single structural source for the delivered document: every chapter planned here MUST appear in
+the delivered document, and a delivered top-level chapter absent from this table is
+`chapter-unexpected`. `父节` takes the top-level marker `—` or the name of another row of this table.*
+
+| 节名 | 父节 | 目的 | 边界 |
+|------|------|------|------|
+| [<chapter name>] | — | [<the decision the reader must be able to make after this chapter>] | [<what this chapter does not cover>] |
+| [<chapter name>] | [<another row's chapter name>] | [<...>] | [<...>] |
+
+### Reader Baseline
+
+**Readers**: [<the baseline reader — reuse `shared/guidelines/user-facing-comprehension.md` § 基准读者与覆盖协议; do NOT invent a second definition>]
+**Reading scenario**: [<the reading situation this document is written for>]
+
+### Evidence List
+
+*One row per factual assertion the delivered document will carry. Grade, as-of and source are a
+triple: `shared/workflow/expression-gates.md` § 证据分级与 as-of owns the vocabulary and the
+marriage rule, so this table only repeats the four columns.*
+
+| 断言 | 证据等级 | as-of | source |
+|------|----------|-------|--------|
+| [<assertion>] | [<grade>] | [<YYYY-MM-DD>] | [<path, command or URL the grade rests on>] |
+
+### Fact Owners
+
+*Each fact has exactly one owner. Two rows owning the same fact is `owner-duplicate`; an owner path
+that does not exist in the repository is `owner-path-missing`; an empty anchor is
+`owner-anchor-missing`.*
+
+| 事实 | owner 路径 | 章节锚 |
+|------|------------|--------|
+| [<fact>] | [<repository-relative owner path>] | [<§ section anchor in that owner>] |
 
 ## Complexity Tracking
 

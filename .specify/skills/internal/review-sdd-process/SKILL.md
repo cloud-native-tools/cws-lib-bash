@@ -1,6 +1,6 @@
 ---
 name: review-sdd-process
-description: Critically review the SDD process behind a completed feature — the spec/plan/tasks artifacts and the workflow that produced them, never the code they produced — and produce a self-contained, improvement-focused report for the spec-kit framework maintainers. Captures portable project context with commit-reachability verification, reconstructs the process execution history from git (with working-tree fallbacks when commits are missing or ungrouped), diagnoses friction, ambiguity, cargo-cult boilerplate, drift risks and process gaps, validates every P0 finding through an independent read-only subagent wave with evidence snapshots at diagnosis time, and fills the review report template. This skill has no overlap with the code-review skill, which reviews code diffs/PRs. Use this when the user mentions ["review SDD process", "process review", "SDD 过程评审", "过程评审", "评审 SDD 过程", "review report", "评审报告", "improvement report", "改进报告", "framework friction", "process gaps", "过程改进", "process retrospective", "/speckit.review"].
+description: Critically review the SDD process behind a completed feature — the spec/plan/tasks artifacts and the workflow that produced them, never the code they produced — and produce a self-contained, improvement-focused report for the spec-kit framework maintainers. Captures portable project context with commit-reachability verification, reconstructs the process execution history from git (with working-tree fallbacks when commits are missing or ungrouped), diagnoses friction, ambiguity, cargo-cult boilerplate, drift risks and process gaps, validates every P0 finding through an independent read-only subagent wave with evidence snapshots at diagnosis time, and fills the review report template. Its judgment object is distinct from the code-review skill's — that one judges a committed code delta, this one judges the SDD process that produced the feature — and `/speckit.review` composes both in a fixed order: this skill's process segment always runs first, the code segment second. Use this when the user mentions ["review SDD process", "process review", "SDD 过程评审", "过程评审", "评审 SDD 过程", "review report", "评审报告", "improvement report", "改进报告", "framework friction", "process gaps", "过程改进", "process retrospective", "/speckit.review"].
 classification: internal
 skill_id: "<SKILL:.specify/skills/internal/review-sdd-process/SKILL.md>"
 ---
@@ -161,10 +161,13 @@ category), top 3 recommendations.
 
 ## Boundaries
 
-- **Code review is not this skill.** The existing `code-review` skill reviews **code
-  diffs/PRs** (pre-submission author self-check, structured dimension review of a delta).
-  This skill reviews the **SDD process artifacts** (spec/plan/tasks) and the workflow that
-  produced them. No overlap — keep the two separate even though both say "review".
+- **Code review is a sibling judgment object, not this skill.** The `code-review` skill
+  judges a **committed code delta** (pre-submission author self-check, structured
+  dimension review of the delta, merge gate); this skill judges the **SDD process
+  artifacts** (spec/plan/tasks) and the workflow that produced them. The two judgment
+  objects stay distinct, and `/speckit.review` composes them in a fixed order — this
+  skill's process segment first and unconditionally, the code segment second — each
+  keeping its own severity vocabulary, neither relabelled into the other.
 - **Cross-artifact consistency analysis is not this skill.** `/speckit.analyze` runs a
   read-only consistency pass **before** implementation (drift, coverage gaps, ambiguity);
   this skill critiques the process **after** implementation and feeds framework

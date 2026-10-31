@@ -7,14 +7,22 @@ $ARGUMENTS
 
 Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as supplemental analysis focus areas, not standalone instructions.
 
+### 类别读取与文档型门禁
+
+- **判定前一次读取**：本阶段在任何依赖类别的动作之前执行一次 `python3 .specify/scripts/python/flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"`（`<spec 目录名>` 取本线 spec 目录的 basename）；同一次阶段运行只读一次，结果复用于本阶段全部判定，委派技能复用该结果、不再读第二次。
+- **两条 owner 指针**：类别判据与取值归 `.specify/shared/definitions/flow-class-definitions.md`；阶段算子、阻断级别与降级归 `.specify/shared/workflow/expression-gates.md`。本模板只调用读取入口，不复制判据、面表或算子表。
+- **两分支**：解析为**表达类**时，本阶段按门禁 owner § 阶段算子表执行本阶段登记的行；其余情形（含未声明按默认）保持既有门禁集**逐字不变**——零新增阻断项、零新增必填章节。
+- **降级可见**：读取报 `owner-unavailable`（退出码 2：引擎缺席、owner 不可解析或输入非法）时，原样显示该标签并保持既有门禁集，不中断本阶段、不转绿、不切换门禁集。
+- **作者输入错误即停**：解析以退出码 1 报作者输入错误（取值越界或声明行形态不合规）时，本阶段停下，以阶段协议异常行 `ANOMALY: <一句话事实>` 作为最后一行输出并点名文件与行号；MUST NOT 落入上一条「既有门禁集逐字不变」那一支继续执行——那一支只适用于退出码 0 的未声明与降级路径。
+
 ## Delegation
 
-`/speckit.analyze` performs a strictly read-only cross-artifact consistency and quality analysis across `requirements.md`, `plan.md`, `tasks.md`, and feature metadata, then reports findings — it MUST run only after `/speckit.tasks` has produced a complete `tasks.md`.
+`/speckit.analyze` performs a strictly read-only cross-artifact consistency and quality analysis across `requirements.md`, `plan.md`, `tasks.md`, and feature metadata — read-only **on artifacts**; the single sanctioned exception is the Wrap-up bookkeeping entries defined by the skill's read-only clause — it MUST run only after `/speckit.tasks` has produced a complete `tasks.md`.
 
 **Load and follow** `.specify/skills/internal/analyze-artifacts/SKILL.md` (with its `references/`):
 
 - **Inputs**: `REQUIREMENTS_DIR` + `AVAILABLE_DOCS` parsed from this command's declared prerequisite script, `.specify/scripts/bash/check-prerequisites.sh --json --require-tasks --include-tasks`, run once from repo root (for single quotes in args like "I'm Groot", use escape syntax: e.g 'I'\''m Groot' or double-quote if possible: "I'm Groot"); the artifacts under analysis — including `checklists/*.md` (item text, checked state, tags such as `[Gap]`) — plus the feature registry (`.specify/memory/features.md`, `.specify/memory/features/<ID>.md`, best effort) and `.specify/memory/constitution.md` for principle validation. The fixed coverage step runs `.specify/scripts/python/account-clause-coverage.py --spec <spec-dir>` read-only (never `--freeze`) and its verdict feeds the report. Abort with an error message if any required file is missing (instruct the user to run missing prerequisite command).
-- **Outputs**: one compact findings report, no file writes — the findings table (IDs stable across reruns; severity derived from `propagation_surface`, CRITICAL/HIGH confirmed by the independent validation subagent wave), coverage / feature-linkage / constitution-alignment summaries, systemic observations, metrics, the rerun delta when a prior report exists, and next actions with an offer of concrete remediation edits (never applied automatically; follow-up editing commands are invoked manually by the user).
+- **Outputs**: one compact findings report, no artifact writes — the Wrap-up's engine entries (Run Determination / Exec Quant / Feedback Record) are the single sanctioned bookkeeping exception — the findings table (IDs stable across reruns; severity derived from `propagation_surface`, CRITICAL/HIGH confirmed by the independent validation subagent wave), coverage / feature-linkage / constitution-alignment summaries, systemic observations, metrics, the rerun delta when a prior report exists, and next actions with an offer of concrete remediation edits (never applied automatically; follow-up editing commands are invoked manually by the user).
 
 The skill owns the entire workflow: context initialization, progressive-disclosure artifact loading, semantic models, the seven detection passes (including same-author detection delegation and the stale-copy decision test), severity assignment, the validation wave (constitution carve-out, zero-finding floor, subagent-unavailable fallback), report format, the do-not-flag list, and the operating principles (read-only, ≤50 findings, deterministic reruns).
 

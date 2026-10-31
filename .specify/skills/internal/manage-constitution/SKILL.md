@@ -194,6 +194,24 @@ Before processing the template, scan the project to understand its actual contex
     every dispatch and requires an explicit anomaly line on return. This principle adds a
     way of triaging, not machinery: it MUST NOT justify an anomaly-detection engine, a
     triage scorer, a maturity report, or any new ledger or registry.
+  - **Directory Governance (Named, Documented, Ignored When Temporary)** — every directory in
+    the repository MUST exist for a documented reason, under a documented lowercase
+    kebab-case name, and MUST be registered in its area's directory map in the same change
+    that creates it; a directory whose meaning is documented nowhere MUST NOT be created. A
+    temporary or scratch directory MUST use a sanctioned root and MUST be matched by
+    `.gitignore` before its first write inside the repository. The rules (naming, the
+    registration obligation, the index of owner documents, and the temporary-directory
+    requirement) live at `.specify/shared/guidelines/directory-governance.md` and MUST be
+    referenced, not restated. This principle adds a naming and registration obligation, not
+    machinery: it MUST NOT justify a directory scanner, a registry generator, or any new
+    tracking system.
+  - **Grounded Naming** — a name links an entity into the project's knowledge network and
+    MUST NOT be improvised; the first available source decides, in this order: user
+    instruction > project convention > imitation of the closest same-kind siblings > a
+    self-chosen descriptive name. A name mandated by a higher-priority source MUST be carried
+    through every reference in the same change. This principle adds a decision order, not
+    machinery: it MUST NOT justify a naming linter, a glossary generator, or any new
+    tracking system.
 - Ensure the Governance section lists amendment procedure, versioning policy, and compliance
   review expectations.
 

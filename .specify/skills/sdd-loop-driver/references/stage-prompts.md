@@ -19,7 +19,16 @@
 - 状态脊：STATE_SPINE_PATH=<state_spine_path>（U0 入口声明；缺失即快速失败）
 - 证据目录：EVIDENCE_DIR=<spec-dir>/test-evidence
 - 状态脊写入模式：SPINE_WRITE_MODE=direct|transport
+- 本线类别（四元组；每次阶段派发前重新解析本线 requirements.md 的声明行）：flow_class=<值>；source=<declaration|default>；marker=<默认标记或空>；error=<owner-unavailable|->
 ```
+
+**类别四元组的派发纪律**（owner：`contracts/driver-integration.md` C-001…C-003；本段只规定派发什么，不复制类别判据）：
+
+- **唯一载体**：提示词是类别的唯一载体（环境变量不被远端子代理继承）；本地原生子代理与远端 CLI 两种拓扑**同规**——四元组一律写在第①段，两种拓扑逐字相同。
+- **取值来源**：唯一来源是该线 `requirements.md` 的**声明行**，经同一解析入口在**每次阶段派发前**解析一次；状态脊中的类别行只是带日期的观测，MUST NOT 充当**取值来源**；重入时重新解析并与观测比对，不一致记 `re-baseline` 事件并更新观测。
+- **缺键即缺陷**：缺任一元组键（`flow_class=` / `source=` / `marker=` / `error=`）即判**派发构造缺陷**，U4 不放行。阶段**子代理** MUST NOT 自行**推断**、补默认或按介质猜测类别——它既没有声明面，也没有解析入口。
+- **`error` 位值域**：`error` 的值域恰为 `owner-unavailable` / `-` 两项——`-` = 无错误位，`owner-unavailable` = 降级。**降级有三种原因，标签只有一个**：owner 不可解析、调用方无法执行引擎、解析以退出码 2 报输入缺失（spec 目录或其 `requirements.md` 不存在 / 不可读；`flow-class-check.py` 对该路径同样打 `owner-unavailable`，原因写 `detail`）。**不要**把 `invalid-unit-id` 写进载荷——它只属于「键不属于任何已登记键族」的调用方缺陷，阶段永远不会用它构造键。`declaration-absent` 是 advisory 发现码，MUST NOT 进入**载荷**（否则「作者未声明」会被读成一种错误）。
+- **`marker` 位的收窄**：`marker` 为空只在 `error=owner-unavailable` 时合法（降级形态本就没有默认标记）；`source=default` 且 `error=-` 时 `marker` 为空即**缺字段**，按缺键处置。两个可区分的未声明形态：`source=default` + `marker=<默认标记>` + `error=-` = 作者没写声明；`source=default` + `marker` 空 + `error=owner-unavailable` = 机制降级。
 
 ### 第②段：执行要求（默认纪律，每次派发原样携带）
 
@@ -42,6 +51,15 @@
 - 对齐说明：本回传契约与快速失败纪律（fast-fail）的子代理派发注入义务一致——异常必须显式回传，静默是不被接受的输出。
 ```
 
+### 只读阶段变体（Read-only Stage Variant）
+
+analyze 等声明只读的阶段沿用同一三段骨架，但第①/②段 MUST 把「只读」限定在**产物面**，并显式保留 Wrap-up 记账例外：
+
+- **产物只读**：不修改制品、不提交、不 push；命令面「no file writes」一律按「no artifact writes」理解。
+- **Wrap-up 记账必需**：Run Determination / Exec Quant / Feedback Record 三步是**获准的唯一写面**（只写 session / feedback 记账），MUST 照常执行；unit-id 用本阶段命令身份（`/speckit.<stage>`），执行体按技能身份记账（`skill:<name>`）时 U4 同样接受。
+- **不得只写「严格只读」**：缺记账例外的派发会让执行者把三步一起跳过（实测先例：046 的 analyze / analyze2 因此零 feedback、零 session 记录）。
+- **无法写记账时**：执行者 MUST 在最后一行输出 `WRAPUP-DEFERRED: <原因>`（替代静默跳过），由驱动者按 U4 记账核验补跑；`WRAPUP-DEFERRED` 不是完成信号。
+
 ## U3 统一监听与驱动者生命周期（Watch Protocol）
 
 监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。**本地原生调用是一次同步阻塞调用，返回即终止判定；下列窗口/轮询/重入规则仅用于外部 CLI 派发。**
@@ -59,13 +77,27 @@
 
 ## Independent Verification（独立校验程序，U4）
 
-阶段完成判定由**独立校验步骤**执行——校验者不是该阶段的执行子代理（由主代理自身核验，或另行派发一个校验子代理）。三条件同时成立才判完成：
+阶段完成判定由**独立校验步骤**执行——校验者不是该阶段的执行子代理（由主代理自身核验，或另行派发一个校验子代理）。四条件同时成立才判完成：
 
 1. **哨兵（必要条件）**：本次阶段输出的最后一行是 `<STAGE>-DONE`。日志正文中出现的历史回显不算——只认本次输出末尾。
 2. **产物核验（充分条件之一）**：`git log` 出现该阶段的新增提交；该阶段的 spec 产物文件存在（requirements 阶段 → requirements.md；plan 阶段 → plan.md；tasks 阶段 → tasks.md；checklist 阶段 → checklists/ 目录新增清单文件；analyze 阶段 → findings 报告正文输出于本次阶段日志——只读命令不产新提交，哨兵 + 报告正文即产物，git log 新增提交对该阶段不作要求；implement 阶段 → 代码提交与测试；review 阶段 → review 产物）。
 3. **纪律合规抽查（充分条件之二）**：第②段的执行要求未被违反——脏文件未被提交/还原、无未授权 push、假设已记录。
+4. **Wrap-up 记账核验（记账条件）**：按该阶段的命令身份（`/speckit.<stage>`）或对应技能身份（`skill:<name>`），在 `session/` 找到 run-determination 记录、在 `feedback/` 找到对应 feedback 条目（引擎返回 `simple-unit` 或 `duplicate` 的跳过同样计入满足）；有特性上下文（spec 目录存在）时，该条目 MUST 带 `--feature` 且与当前 requirement key 一致。阶段输出 `WRAPUP-DEFERRED` 时，驱动者 MUST 在放行前亲自补跑三步（命令取自该阶段命令或技能的 Wrap-up），并把结果指针写入状态脊的 `wrapup` 字段；未补跑即判 INCOMPLETE。
 
-**伪完成判未完成**：尾标在而产物缺 = 未完成，循环不派发下一阶段。**U3 返回 `DONE` 只是候选**，三条件同时成立才放行；`INCOMPLETE`（退出 rc=0 但哨兵缺失）按伪完成判未完成。校验结论含逐项证据指针，可被第二位复核者独立复现。
+**表达类的四项增补校验（全部 blocking）**：类别只改变两件事——用哪套算子证明同一不变量、预算槽位里装什么。MUST NOT 因类别改变阶段序列、哨兵字面量、watcher 判定与退出码、卡死处置、快车道判据或 analyze / review 的调用率（两者保持 100%）。表达类特性线的 U4 在既有四条件之外 MUST 全部通过以下四项，任一项不成立即判未完成：
+
+- **(a) 算子结果齐备**：本阶段**在门禁 owner 阶段算子表中登记的 blocking 行**各有一条结果记录，且无 `not-evaluated`——**计数分母只取该表**：表达类 implement 为 1 行（`G-implement-structure`）；四个 CLI 输出面 MUST NOT 各自被当作算子重复计入。站点构建检查并入同一算子的 `face=build` **子行**，不另立算子、不另占 `operator_id`（`face_scope` 三值：`gate` / `cli` 只出现在算子级行，`sub` 只出现在面级解释行）。
+- **(b) 证据文件存在且非空**：该记录指向的证据文件存在且非空——**不做哈希比对**；MUST NOT 给算子记录新增 `evidence_sha256` 之类的**记账字段**（既有 `gate-implement-evidence-binding` 的哈希只约束 `verification.md` 的 SC 样本行，其 owner 明写非 `pass` 判定不承担绑定义务）。verdict 只由 (a) 读记录取得，MUST NOT 由「文件存在」反推。
+- **(c) 载荷与当场解析一致 + 降级分支**：派发载荷的类别与 U4 **当场解析**值**一致**，不一致判**派发构造缺陷**；载荷 `error` 位非 `-`（值域恰为 `owner-unavailable` / `-`，故非 `-` 只能是 `owner-unavailable`）时 MUST 走 `owner-unavailable` 分支——记一条**降级观测**、**保持既有**执行类门禁集，MUST NOT 按**表达类**四项校验，也 MUST NOT 当作「作者未声明」放行。该分支**不按原因分叉**：owner 不可解析、引擎不可执行与退出码 2 的输入缺失（spec 目录 / `requirements.md` 不存在）同走一条，MUST NOT 为输入缺失设第三分支，也 MUST NOT 按 `detail` 文本判定。
+- **(d) `stage-status` 行在场**：本阶段的 `stage-status` 行**在场**；定向集记录义务不因类别免除——仅文档改动亦 MUST 留该行。
+
+**「四面」与算子表不是同一计量单位**：四面指 CLI 输出面（`reader` / `evidence` / `duplicate` / `count`），不是算子表的四行；U4(a) 的计数分母取算子表（表达类 implement 仅 `G-implement-structure` 一行），四面结果与结构子步由同一份门禁输出文件承载。
+
+**门禁证据缺失即伪完成**：哨兵与产物具备而**门禁证据**缺失 MUST 判**未完成**，MUST NOT 以「产物看起来对」放行，MUST NOT 派发下一阶段。
+
+**子行是面级解释，不是独立口径**：子行为 `fail` 时该算子的**算子级** verdict MUST 为 `fail`——不允许「子行红、算子绿」。`not-applicable` 只出现在 `face=build` **子行**并**单列**：MUST NOT 计入 `passed`、MUST NOT 计入 `failed`；其条数按**面级**从 `evidence_ptr` 指向的门禁输出读出。
+
+**伪完成判未完成**：尾标在而产物缺 = 未完成，循环不派发下一阶段。**记账缺失同样按伪完成判未完成**——阶段声明完成但三步未执行、也未返回 `WRAPUP-DEFERRED` 的，U4 不得放行。**U3 返回 `DONE` 只是候选**，四条件同时成立才放行；`INCOMPLETE`（退出 rc=0 但哨兵缺失）按伪完成判未完成。校验结论含逐项证据指针，可被第二位复核者独立复现。
 
 ## Deterministic Gates（确定性门，U4 / 派发前）
 
@@ -139,6 +171,18 @@ out-of-slot-exception with a reason and evidence. Intermediate verification uses
 targeted-set-v1 (efficiency-model §2.3) and leaves an E3 stage-status row in
 EVIDENCE_DIR.
 ```
+
+### implement 证据面（表达类，C-017…C-019）
+
+表达类特性线的 implement 按 plan 的章节树落文，并在 U4 通过以下 blocking 判定（缺一即该阶段未完成）：
+
+- **① 门禁输出的四面**：`reader` / `evidence` / `duplicate` / `count`——取值集归 `.specify/scripts/python/doc-consistency-check.py` 的 `FACES` 常量（本文件只引用、不重定义）；落文文档的读者声明仍按「前 40 个非空行」窗口判。
+- **② 结构子步**：章节树语法与两向比对——复用既有 `--path` 作落文输入（`--action structure --spec-dir <dir> --path <落文>`），不是第五个 CLI 面。
+- **③ 站点层的构建子行**：站点层存在时检查站点构建，结论并入 `G-implement-structure` 的 `face=build` 面级子行，不另立算子；站点层不存在时记 `not-applicable`（显式，面级单列）。
+- **不通过即未完成**：任一面、子步或子行为 `not-evaluated` MUST NOT 计为通过。
+- **「四面」的唯一读法**：四面指 CLI 输出面，不是算子表的四行——U4(a) 的计数分母取算子表（表达类 implement 仅 `G-implement-structure` 一行），四个 CLI 面由同一份门禁输出文件承载。
+- **唯一证据来源**：四面结果与结构子步落在同一份门禁输出文件（`<spec-dir>/test-evidence/`），作为该阶段 SC 证据的唯一来源——`verification.md` 的 `SC-NNN_value=` 记逐面 `面=verdict` 摘要，证据记录沿用既有四键（`sample_id` / `evidence_path` / `evidence_sha256` / `verdict`）；某面 `not-evaluated` → 该 SC 记 `unknown` 并点名面与原因，MUST NOT 记 `pass`。
+- **边界**：结构面通过 MUST NOT 被援引为内容正确性的证据——它只是必要条件（owner：`.specify/shared/workflow/expression-gates.md` § 结构/链接/构建只是必要条件）。表达类 implement 的 Test-First MAY 按宪法 VII 的 template-only 条款判 `Partial (justified)`，justification 写明替代验证是四项文档门禁输出。
 
 ### 中间阶段与 review block（clarify / plan / tasks / checklist / analyze / review）
 

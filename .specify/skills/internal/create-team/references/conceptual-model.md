@@ -7,7 +7,7 @@
 Every agent participating in a team is described by three orthogonal dimensions:
 
 - **Role** — the responsibility/perspective (e.g. `system-designer`, `test-engineer`, `team-supervisor`); a Role is a **seat** filled by an agent whose **Capacity** is defined in a `agent-capacity-<X>-template.md` (create-agent) or, for the sole Meta role, `agent-team-supervisor-template.md` (create-team). Role is the responsibility; Capacity is what the filling agent can do (see `capacity-vs-responsibility.md`).
-- **Stage** — one of `executor`, `evaluator`, `optimizer` (canonical names; the deprecated dimension name "SubRole" and stage name "improver" are removed).
+- **Stage** — one of `executor`, `evaluator`, `optimizer` (canonical names; the deprecated dimension name "SubRole" and stage name "improver" are removed). 本 Stage 维度**不是** SDD 阶段名册:SDD 的阶段名册(阶段链与其顺序、哨兵、状态脊)仍由驱动所有,唯一真源是 `.specify/skills/sdd-loop-driver/SKILL.md`,本维度只按路径抵达它、不复述也不枚举;本维度不重命名、不重载任何取值,任何 SDD 阶段名都 MUST NOT 被当作一个 team Stage 取值使用。
 - **Type** — `Worker` or `Meta`, **judged independently by what the agent operates on** (see the criterion below). Stage does NOT determine Type; it only supplies a default tendency.
 
 ## Type criterion: judged by operating object, not by stage

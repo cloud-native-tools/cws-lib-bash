@@ -70,7 +70,7 @@ MATERIAL_ROOTS = [
 ]
 MATERIAL_TARGET_PREFIXES = tuple(sorted({path for _, path in MATERIAL_ROOTS}))
 FORBIDDEN_TARGET_PREFIXES = ("src/", "tests/", "node_modules/", ".git/")
-SELF_EXEMPT_PREFIX = ".specify/memory/sanitize"
+SELF_EXEMPT_PREFIX = (".specify/memory/sanitize", ".specify/memory/renumber")
 
 COMPAT_SYMLINKS = [
     "CLAUDE.md", "QODER.md", "AGENTS.md",

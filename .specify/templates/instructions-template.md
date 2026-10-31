@@ -49,6 +49,17 @@ Escalation rules:
 - If the suspected error impacts correctness, security, data loss, or large refactors: **pause and ask a clarifying question**.
 - If the issue is low-risk and the fix is obvious: proceed with the correction and mention it briefly.
 
+## SDD Routing Decision (SDD 分流裁决)
+
+当一次**写留存变更**（会把内容落到磁盘上的变更）被提出时，先到路由规则的唯一所有者处执行一次裁决，再决定这次变更走 SDD 开发流程还是直接修改：
+
+- **规则所有者**：`.specify/shared/definitions/sdd-routing-definitions.md` —— 输入集、封闭取值域、裁决表、优先级与理由码词表全部在那里；本节一律不复述，只按路径抵达。
+- **可执行形态**：`.specify/scripts/python/sdd-route.py` —— 动作、参数与退出码以该引擎的 `--help` 为准。
+- **裁决之后还有一层**：按该裁决走 SDD 开发流程时，启动一次嵌套运行仍需**有效授权**；授权谓词的取值域与缺省按上一条的指针表抵达键集所有者，本节不列取值。
+- **建议不等于启动**：一条主动触发建议本身不足以启动一次 SDD 运行；晋升与自动执行边界见 `.specify/shared/guidelines/proactive-trigger.md` § Promotion & Safety Boundary。
+
+**本节字节上限：2,000 B** —— 判据是这里声明的上限加上生成后的实测增量；生成器的字节预算不构成本节的判据（它可能早已被既有内容超出，也可能尚有余量）。
+
 ## One Source Of Truth
 
 Every fact — a concept's meaning, a normative rule, a threshold, an enumerated list, a configuration value, a count — MUST have exactly one authoritative definition point (its **owner**), and every other location MUST reach it by reference. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/one-source-of-truth.md` (do NOT copy its rules; reference the file) — and binds all commands, skills, and agents:
@@ -58,6 +69,14 @@ Every fact — a concept's meaning, a normative rule, a threshold, an enumerated
 - **Only three duplicates are legitimate**: a machine-regenerated copy (mirrors, per-tool copies, generated indexes — never hand-edited), a literal pinned in a test to detect drift, and a dated record that is never cited as current reality. Anything else repeating a fact is stale-in-waiting: repair it by turning it into a reference, not by correcting its wording.
 
 Owner-selection order, the duplicate conditions, the counts/enumerations rules, and the disagreement procedure: `.specify/shared/guidelines/one-source-of-truth.md`.
+
+## Closed-Set Claims (封闭清单声明)
+
+A requirement, success criterion, DoD item, or verification task that asserts a machine-produced surface "changes only within …" or that anything "unaffected" stays identical is a **containment claim**, and MUST be decidable. The full discipline is defined in a single source of truth — `.specify/shared/guidelines/closed-set-claims.md` (do NOT copy its rules; reference the file) — which owns the claim taxonomy (determinism vs containment), the required elements, the void conditions, and the repair procedure. Applies to every stability or containment assertion over generated or machine-produced surfaces.
+
+## Grounded Naming
+
+A name is key information: it links the entity into the project's knowledge network, and every later reader, search, and agent reaches the entity through it. Naming MUST NOT be improvised — when a name must be chosen, the first available source decides, in this order: user instruction > project convention > imitation of the closest same-kind siblings > a self-chosen descriptive name. A name mandated by a higher-priority source MUST be carried through every reference in the same change. Owner: the project constitution's Grounded Naming principle.
 
 ## Concurrent Development Safety (并发开发安全)
 
@@ -72,13 +91,15 @@ Before creating or changing a machine-managed store, ask: **what happens if two 
 
 ## Temporary Directory Discipline
 
-Agent-created scratch MUST use a sanctioned temp root and MUST already be matched by `.gitignore`; bare system temp and ad-hoc directories are forbidden. Roots, cleanup, and exceptions: `.specify/shared/guidelines/temp-directory-discipline.md`.
+Agent-created scratch MUST use a sanctioned temp root and MUST already be matched by `.gitignore`; bare system temp and ad-hoc directories are forbidden. Roots, cleanup, and exceptions: `.specify/shared/guidelines/temp-directory-discipline.md`. Every other directory follows the naming and registration rules in `.specify/shared/guidelines/directory-governance.md` — a directory with no documented meaning MUST NOT be created.
 
 ## Task Complexity Rubric
 
 Right-size your thinking to the task: under-thinking complex or high-stakes tasks causes defects and rework (a **quality** cost); over-thinking trivial tasks wastes time and adds noise (an **efficiency** cost). Classify each task by scope/size, uncertainty/novelty, blast radius/reversibility, cross-cutting impact, and requirements clarity, then adopt the matching depth — **Trivial → Minimal**, **Standard → Moderate**, **Complex → Deep**, **High-stakes/Ambiguous → Exhaustive**. Tie-break to the **higher tier** (blast radius and requirements clarity dominate); treat unclassifiable tasks as **Standard** (the default), and treat unclear/under-specified requirements as themselves a High-stakes signal — clarify before proceeding.
 
 Full tier table with signals and thinking-depth prescriptions: `.specify/shared/guidelines/task-complexity-rubric.md`.
+
+Load-bearing decisions (承重决策：不可逆 / 跨团队 / 高爆炸半径 / 触及宪法 MUST) record their antithesis, discriminating evidence, expected anti-metric and reopening condition per `.specify/shared/guidelines/decision-tension.md`, the owner of that shape — do not restate its thresholds here.
 
 ## Token Efficiency Discipline
 
@@ -127,6 +148,10 @@ Every user-facing output has to be readable by someone who did not take part in 
 - **Governed surfaces are a closed set (受约束的界面类为封闭集)**: which kinds of user-facing output the discipline governs is enumerated in the owner, and that list grows only by revising it — never per command template.
 
 Should the owner document be missing from a project, it ships with the framework: refresh the project instructions to restore it together with its mirror copy. Do not reconstruct the rules from memory or act on a summary of them.
+
+## Root-Cause Problem Solving
+
+A problem is solved only when the whole run is correct, never because one step turned green. Symptom suppression MUST NOT be used as a fix: commenting out the code that fails to compile, skipping or muting a failing command, or excluding a failing check all make a step look green while leaving the problem in place — repair the root cause or report the problem. Under version control, a file that should go MUST be deleted rather than kept as `.bak` / `.backup` / `.orig`: history is an unambiguous backup and a random copy is not. Owner: the project constitution's quality and remediation principles.
 
 ## Fast Fail Discipline
 
@@ -185,6 +210,7 @@ Every durable identifier — a decision (D-…), open item (OI-…), stage (S…
 
 - **Pointer shape**: identifier → one-line meaning → authority path → status; MUST NOT restate the decision content (One Source Of Truth).
 - **Durable test**: anything cited by a tracked artifact or still pending registers; a throwaway enumeration inside one reply does not.
+- **Sole sanctioned writer**: the register is hand-maintained; the one exception is duplicate-ID collision repair by `/speckit.sanitize --lane renumber`, which renumbers a duplicated definition only and never registers a new ID.
 
 ## Tech Stack & Resources
 - **Project Name**: {{PROJECT_NAME}}

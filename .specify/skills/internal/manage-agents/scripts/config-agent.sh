@@ -5,8 +5,8 @@ set -euo pipefail
 SKILL_HOME="${SKILL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)}"
 SKILL_WORKDIR="${SKILL_WORKDIR:-$(pwd -P)}"
 
-# Active configuration state directory
-CONFIG_AGENT_STATE_DIR="${SKILL_WORKDIR}/.agent-config"
+# Active configuration state (user-level long-lived state; never a repo-local dot dir)
+CONFIG_AGENT_STATE_DIR="${SPECIFY_AGENT_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/spec-kit/agents}"
 CONFIG_AGENT_STATE_FILE="${CONFIG_AGENT_STATE_DIR}/active.json"
 
 # ============================================================

@@ -136,6 +136,24 @@
 | `/speckit.humanize`（W2） | `## Outline` 内、委派技能之前 | 不读取（只给 owner 指针） | 无（模板不执行算子） | 不适用（本行只声明指针与归口） |
 | `skill:humanize`（W4） | Stage 6 保真自检之前（读取一次）→ Stage 6 + Stage 7 | `flow-class-check.py --action lookup --unit-id "/speckit.humanize"`（该流程唯一的类别读取） | 062 域最小集，不按六面登记：`062-stage6-fidelity` · `062-stage6-entailment` · `062-stage5-audience-report` · `062-reviewer-report` | `062-stage6-fidelity` 与 `062-stage6-entailment` blocking；其余为 062 既有报告义务 |
 
+### 特性线阶段命令（`spec:` 键）
+
+**类条件追加**：特性线（一条 spec 目录）的类别经 `spec:<spec 目录名>` 键解析，声明载体与判据归 `.specify/shared/definitions/flow-class-definitions.md` § 特性线声明面（`spec:` 键）。本表只登记「哪个阶段命令在哪一时点读一次类别、随后按哪张表执行」，**不复制**算子 id、面名或阻断级别——那些只有 § 阶段算子表 一处。
+
+| 阶段命令 | 读取时点 | 类别读取 | 执行算子 | 阻断 |
+| --- | --- | --- | --- | --- |
+| `/speckit.requirements` | 声明行写入之后、`validate-requirements.py` 之前 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 requirements 行 | blocking |
+| `/speckit.clarify` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 clarify 行 | blocking |
+| `/speckit.plan` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 plan 行 | blocking |
+| `/speckit.tasks` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 tasks 行 | blocking |
+| `/speckit.checklist` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 checklist 行 | blocking |
+| `/speckit.analyze` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 analyze 行 | blocking |
+| `/speckit.implement` | 阶段入口 | `flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"` | § 阶段算子表 implement 行 | blocking |
+
+- **一次读取**：同一次阶段运行只读一次，结果复用于本阶段全部算子调用；命令与其委托技能在同一产物变更上重叠时复用调用方结果，技能 MUST NOT 再读一次；跨阶段不缓存、跨线不复用。
+- **两分支**：解析为表达类 → 执行本阶段在 § 阶段算子表 登记的行；其余情形（含未声明按默认、含 `owner-unavailable` 降级）→ 既有门禁集逐字不变。MUST NOT 存在第三个分支。
+- **作者输入错误不属降级**：解析以退出码 1 报作者输入错误（取值越界或声明行形态不合规）时，阶段停下并以阶段协议的异常行收尾；MUST NOT 按「既有门禁集逐字不变」继续，也 MUST NOT 记作 `owner-unavailable`。
+
 ## 调用时机与降级
 
 - 读取先于判定：lookup MUST 先于该入口的任何门禁判定执行，且同一次运行只执行一次（同一产物变更不重复读取）。`/speckit.docs` 的读取在命令模板分派前；`/speckit.humanize` 的读取在其委派技能的 Stage 6 之前——命令模板本身不读取。

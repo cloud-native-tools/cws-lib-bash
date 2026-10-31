@@ -224,7 +224,10 @@ pass instead. Keep existing task IDs stable — never renumber (dependency graph
 records, and run history cite those IDs); drive incremental corrections from the step-5
 structural validator and fresh premise/environment re-measurement; and append genuinely
 new work as new IDs at the end, mirroring `/speckit.implement`'s "Append tasks, never
-renumber" precedent. Regenerate from scratch only on explicit user request.
+renumber" precedent. The one sanctioned exception is duplicate-ID collision repair
+performed by `/speckit.sanitize --lane renumber`, which re-labels only a duplicated
+definition and never an ID that collides with nothing. Regenerate from scratch only on
+explicit user request.
 
 ### Premise verification (all task rows)
 

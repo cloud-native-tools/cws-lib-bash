@@ -67,6 +67,26 @@ Reconstruct what actually happened during this feature's SDD lifecycle. Capture 
 | Workflow | [CAT_WORKFLOW_COUNT] |
 | Documentation | [CAT_DOCS_COUNT] |
 
+### 2.1 Code Segment (Verdict and Pointers)
+
+> Fill this subsection on every run — including the runs where the code segment is `not-applicable` or `not-evaluated`, and including a process-segment abort. When the process segment aborted before `review.md` existed, this subsection is the whole report: it must be fillable with nothing else present, so it carries no reference to any other section.
+
+| Field | Value | Source |
+|-------|-------|--------|
+| Base commit | [BASE_SHA] | the resolved diff base |
+| Head commit | [HEAD_SHA] | the run-start `HEAD`, fixed for the run even if commits land later |
+| Base source | [BASE_SOURCE] | the resolution tier the code segment reported |
+| Renderer mode | [RENDERER_MODE] | the code record's header marker (`renderer: text` or `renderer: delta`) |
+| Changed / judged / skipped / gap files | [CHANGED_COUNT] / [JUDGED_COUNT] / [SKIPPED_COUNT] / [GAP_COUNT] | copied field by field from the coverage receipt block; never recomputed, re-aggregated, or read off the record's prose |
+| Segment verdict | [SEGMENT_VERDICT] | one of the four closed values the `code-review` skill owns (`pass`, `blocked`, `not-applicable`, `not-evaluated`) |
+| Gate verdict | [GATE_VERDICT] | the merge-gate verdict source; when it refuses, the named literal `blocking-unresolved` |
+| Reason, when one applies | [SEGMENT_REASON] | mandatory for `not-applicable` (a basis) and for `not-evaluated` (a reason); `none` otherwise |
+| Uncommitted scope | [UNCOMMITTED_DISCLOSURE] | disclosed, never concluded over; the same sentence lives in [RECORD_PATH] |
+| Record | [RECORD_PATH] | written only when the triage value is `run`; otherwise `not written` |
+| Archive | [ARCHIVE_PATH] | this run's archive path; `none` on a first run |
+
+This subsection carries the verdict and the pointers only: no opinion body, no per-severity item count. The findings themselves live in [RECORD_PATH] and are read there.
+
 ## 3. Findings (Problems & Improvement Targets)
 
 > List **only** problems, friction, ambiguities, and concrete improvement targets. Each finding MUST include an inline quoted excerpt of the offending text and a concrete proposed fix. Order by severity (P0 → P1 → P2), then by category. Drop any finding that lacks evidence — vague complaints are not actionable.
@@ -175,6 +195,17 @@ Please share the contents of this document with the spec-kit framework developer
 | F[N] | Stable finding ID (F1, F2, ...) used to cross-reference findings to recommendations |
 | [SHORT_FINDING_TITLE] / [QUOTED_EXCERPT] / [ONE_OR_TWO_SENTENCE_EXPLANATION] / [CONCRETE_CHANGE_TO_NAMED_FILE_OR_SECTION] | Per-finding fields |
 | [REC_*_TITLE] / [CONCRETE_CHANGE] / [IMPACT] | Per-recommendation fields |
+| [BASE_SHA] | The resolved diff base commit id of the code segment (`base..head` interval) |
+| [HEAD_SHA] | The head commit id: the run-start `HEAD`, fixed for the whole run |
+| [BASE_SOURCE] | Which resolution tier produced the base (explicit, feature-first-commit, or trunk merge base) |
+| [RENDERER_MODE] | The code record's header marker: `renderer: text` or `renderer: delta` |
+| [CHANGED_COUNT] / [JUDGED_COUNT] / [SKIPPED_COUNT] / [GAP_COUNT] | The four coverage-receipt counts, copied field by field from the receipt block in the code record — never recomputed |
+| [SEGMENT_VERDICT] | The code segment's verdict, one of the four closed values owned by the `code-review` skill |
+| [GATE_VERDICT] | The merge-gate verdict for the `Implemented → Ready for Review` transition; the refusing literal is `blocking-unresolved` |
+| [SEGMENT_REASON] | The mandatory basis of a `not-applicable` result or the mandatory reason of a `not-evaluated` one; `none` otherwise |
+| [UNCOMMITTED_DISCLOSURE] | The sentence disclosing unreviewed uncommitted working-tree scope, when any exists; the same sentence appears in the code record |
+| [RECORD_PATH] | The code segment record path, `<spec>/code-review.md` |
+| [ARCHIVE_PATH] | This run's archive path for the previous record, or `none` on a first run |
 
 ## Replacement Rules
 

@@ -1,42 +1,42 @@
 ---
 name: sdd-project-setup
-description: SDD 项目框架调协手册（可独立运行）——把目标项目（本地或远端）以调协模式推进到 spec-kit 框架预期的最佳状态：机制盘点（确定性脚本分级 absent/degraded/partial/complete）、specify CLI 安装（python 解析阶梯 + 三源 pip 回退；Python 全缺绝不自动安装、报错退出）、specify init / instructions 刷新、调协序列（constitution → sanitize → feature → instructions → docs，按需逐项）、强化序列（history → docs → research → feature → goal——会话历史蒸馏补料、深度调研、特性列表生成、定义 3–5 个项目目标）、五族前置检查与兼容符号链接验证，最后产出候选工作清单（未完成 feature / 大改进 feedback / TODO 事项——建议而非强制地供 sdd-loop-driver 等下游选用；两技能互不强依赖）。当用户说「初始化 spec-kit」「项目接入 SDD」「框架就绪检查」「调协项目框架」「sdd-project-setup」，或 sdd-loop-driver 的 preflight 发现目标项目无 .specify/ 或机制退化时加载本手册。
+description: SDD 项目框架 bootstrap 手册（可独立运行）——把目标项目（本地或远端）安装或刷新到 `.specify/` 基线：机制盘点（deterministic absent/degraded/partial/complete）、specify CLI 安装（python 解析阶梯 + 三源 pip 回退；Python 全缺绝不自动安装、报错退出）、specify init / instructions 刷新、constitution 与首批内容（feature/docs/goal/agents/team 按需），随后把周期性调协、强化、验证、记录回收与候选清单 handoff 给 sdd-house-keeping。当用户说「初始化 spec-kit」「项目接入 SDD」「框架就绪检查」「调协项目框架」「sdd-project-setup」，或 sdd-loop-driver 的 preflight 发现目标项目无 .specify/ 或机制退化时加载本手册；项目已初始化且本次只需维护时，直接加载 sdd-house-keeping。
 skill_id: "<SKILL:.specify/skills/sdd-project-setup/SKILL.md>"
 classification: external
 ---
 
-> **分类注解**：本 skill 依**依赖轴**判定为 external——自身零 spec-kit 运行时依赖、任何宿主 agent 可直接加载；其内容编排 spec-kit 框架的安装与激活流程（语义耦合在此显式声明），该耦合只体现在它指挥宿主 agent 在目标项目执行 `specify init` / `/speckit.*` 治理命令，不构成本 skill 的运行时依赖。**与 sdd-loop-driver 的关系是软协同而非强绑定**：两技能各自可独立运行；本技能调协完成后**建议**（非强制）下一步可用 sdd-loop-driver 推进开发——handoff 的是一份候选工作清单，是否调用由用户或上游流程决定。
+> **分类注解**：本 skill 依**依赖轴**判定为 external——自身零 spec-kit 运行时依赖、任何宿主 agent 可直接加载；其内容编排 spec-kit 框架的安装与首批内容建设（语义耦合在此显式声明），该耦合只体现在它指挥宿主 agent 在目标项目执行 `specify init` / 少量 `/speckit.*` bootstrap 命令，不构成本 skill 的运行时依赖。**三技能软协同**：本 skill = 一次性 bootstrap（init/refresh + constitution + 首次 feature/docs/goal/agents/team）；`sdd-house-keeping` = bootstrap 之后的周期性调协、强化、验证、记录回收与候选清单；`sdd-loop-driver` = SDD 开发阶段循环。三者各自可独立运行，互不强依赖。
 
 ## What This Skill Does
 
-spec-kit 本地 fork（master）在上游 SDD 之上扩充了大量机制——feature 注册表（37/41 真实项目采用）、feedback 库、memory-as-files、glossary、ID register、evidence、probe 体系等。这些机制只有被正确安装、激活、验证后才能兑现价值。本手册把「让一个项目达到 spec-kit 框架预期的最佳状态」固化为**调协模式**五步程序：先盘点定缺口，再按需调协，最终验证；调协完成后产出候选工作清单供下一步 SDD 开发选用（可选 handoff sdd-loop-driver，非强制）。
+把「让一个项目进入 spec-kit 框架的可用基线」固化为 **bootstrap 程序**：先做确定性盘点定缺口，再安装/刷新，随后完成 constitution 与首批内容，最后把周期性维护 handoff 给 `sdd-house-keeping`。本 skill **不执行**周期性 reconcile/strengthen/verify/report，也不执行任何破坏性清理；这些归 house-keeping 的 H1–H5。
 
-调协分两层：**基础调协**（机制盘点/安装/修复/验证，S1–S4）让框架就绪；**强化序列**（机制就绪后的增值建设，S3+，按需逐项）用框架内容类命令把项目从「机制可用」推进到「知识与规划在位」——history 蒸馏会话历史为文档与知识库补料、research 深度调研、feature 生成特性列表、goal 定义 3–5 个项目目标。
+bootstrap 对象是**双层框架**：**物理机制**（`.specify/` 目录/脚本/链接）与**逻辑框架**（instructions / feature / docs 为必选层，goal / agent / team 按需层）。只把目录铺齐而逻辑资产缺位，不算 bootstrap 完成。两层各有确定性盘点：`.specify/scripts/mechanism-inventory.py` 与 `.specify/scripts/logical-framework.py`。
 
-**幂等契约**：本技能对同一项目可多次执行——每次执行先 S1 盘点定缺口，S2/S3/S3+ 只执行缺口项；**稳定态（机制 complete 且无内容缺口）上的重复执行零结构写动作、零内容重建**，仅刷新 S5 候选清单；CLI 层同样收敛——python 按阶梯选用、`specify` 在位即跳过安装。收敛语义与逐命令重入行为见 setup-recipes.md「幂等与重入语义」。
+**幂等契约**：本技能对同一项目可多次执行——每次执行先 S1 盘点定缺口，S2/S2.5 只执行缺口项；稳定态（机制 complete 且首批内容在位）上的重复执行零结构写动作、零内容重建；`specify` 在位即跳过安装。收敛语义见 `references/setup-recipes.md`。
 
 ## When to Load
 
-- 入口话术声明**目标与模式**：目标项目（本地路径，或 ssh 别名+运行用户+项目目录——远端形态参数与 sdd-loop-driver 一致）、模式（`install` 全新安装 / `refresh` 刷新既有 / `verify` 只读核查）、目标 AI 工具（qoder/claude/codex/opencode/hermes/copilot，或 `all`——按脚本惯例一次性为 claude/copilot/opencode/qoder 全部 agent init，默认推荐）。
-- 由 sdd-loop-driver 委派时（其 U1 发现 `.specify/` 缺失或宪法不在位）：模式由委派上下文决定——缺失=`install`，退化=`refresh`。
+- 目标项目尚未初始化，或 `.specify/` 退化、constitution 缺失，需要 install/refresh + 首批内容。
+- 由 `sdd-loop-driver` 委派：其 preflight ⑤ 发现 `.specify/` 缺失或宪法不在位（缺失=`install`，退化=`refresh`）。
+- **不适用**：目标项目已初始化且只需周期性维护/记录回收 → 直接加载 `sdd-house-keeping`；SDD 开发阶段 → `sdd-loop-driver`。
 
 ### S0 入口缺省解析
 
-入口可以只给一句意图（如「初始化 spec-kit」）；缺省按下表解析，**不得因参数不全而切换流程或索要环境信息**：
+入口可以只给一句意图（如「初始化 spec-kit」）；目标解析遵循共享契约 `.specify/shared/workflow/target-resolution.md`。**setup 不依赖 `.specify/`**：未给目标 → **当前项目**（git root；非 git 取会话 cwd），显式目标优先，拒绝 basename `.specify`，**不向上搜索 `.specify/`**；目标没有 `.specify/` 时由本 skill 创建/刷新。下表只保留本 skill 自己的 mode/tool 缺省：
 
 | 入口缺省 | 解析规则 |
 |----------|----------|
-| 目标项目 | 未给路径且未给 host/ssh 别名 → **当前项目**（`git rev-parse --show-toplevel`；非 git 仓库取会话工作目录）；给了本地路径 → 该路径；host + 运行用户 + 项目目录给全 → 远端 |
-| 执行拓扑 | 无 host/ssh 别名 → **本地**；远端三元组给全 → 远端；只给 host 或三元组不完整 → 问一个澄清问题，不猜 |
-| 模式 | 入口未给 → 按本次 S1 分级：absent=`install`、degraded/partial=`refresh`、complete=`verify` |
-| 目标 AI 工具 | 入口未给 → `all`（默认推荐） |
+| 模式 | 入口未给 → 按本次 S1 分级：absent=`install`、degraded/partial=`refresh`、complete=`bootstrap-content-check` |
+| 目标 AI 工具 | 入口未给 → `all`（一次性为 claude/copilot/opencode/qoder 全部 agent init） |
 
-## The Loop (S0–S5)
+## The Loop (S0–S2 + HANDOFF)
 
 ```text
 S0 ENTRY     一遍性入口：目标、模式、目标工具
-S1 ASSESS    机制盘点：.specify/scripts/mechanism-inventory.py 扫描 .specify/ → 状态分级
-             （absent / partial / degraded / complete）+ 框架版本 provenance
+S1 ASSESS    双盘点：.specify/scripts/mechanism-inventory.py 扫物理机制 → absent/partial/
+             degraded/complete + provenance；.specify/scripts/logical-framework.py 扫逻辑
+             框架 → required/recommended/conditional 三层判定
 S2 INSTALL   （全部在执行侧=目标项目所在环境运行；编排侧本地宿主无需
              speckit，不误触发安装链——拓扑真源见
              .specify/shared/workflow/execution-topology.md）
@@ -45,66 +45,72 @@ S2 INSTALL   （全部在执行侧=目标项目所在环境运行；编排侧本
              clean reinstall + 三源 pip 回退 + specify check 验证 →
              项目层：absent → specify init（推荐 --ai all 一次覆盖全 agent）；
              partial/degraded → /speckit.instructions 刷新（recover 模式）
-S3 RECONCILE 基础调协（按 S1 缺口按需逐项，惯常次序）：
-             /speckit.constitution → /speckit.sanitize → /speckit.feature →
-             /speckit.instructions → /speckit.docs
-S3+ STRENGTHEN 强化序列（机制就绪后的增值建设，按需逐项，细则见
-             setup-recipes.md）：/speckit.history → /speckit.docs 深化 →
-             /speckit.research → /speckit.feature 特性生成 →
-             /speckit.goal（定义 3–5 个项目目标）
-S4 VERIFY    五族前置检查（SSH/运行用户/CLI/LLM 配置/spec-kit 可用性；
-             本地拓扑仅 ④ LLM 配置/⑤ spec-kit 可用性，①–③ 不适用）+
-             宿主 hook 体检（.specify/scripts/hook-health.py：同步 hook 阻塞/超时风险；
-             vendor 自愈遥测 hook 只报告）+ 机制完备度矩阵复扫 +
-             兼容符号链接核验 → 全绿才算调协完成
-S5 SUGGEST   产出候选工作清单（三个内部来源：未完成 feature / 大规模改进
-             feedback / speckit TODO 事项）→ 建议（非强制）下一步可用
-             sdd-loop-driver 推进开发
+S2.5 BOOTSTRAP 首批内容（只补缺失项，不做完整维护）：
+             /speckit.constitution（缺失时）→ /speckit.feature（注册表缺失时
+             种子）→ /speckit.docs（docs 树缺失时）→ /speckit.goal（缺失时定义
+             3–5 个目标）→ /speckit.agents / /speckit.team（用户明确需要时）
+HANDOFF      调用 sdd-house-keeping H0–H4（同一目标/模式）完成首次维护；
+             house-keeping 不可用时返回 bootstrap-complete / maintenance-pending，
+             不冒充 ready；候选清单由 house-keeping H5 产出
 ```
 
-**Dispatch carrier（承载选择）**：本地拓扑（缺省）→ 编排者直执或宿主**原生子代理**（native subagent）；远端拓扑 → 外部 agent CLI（`qodercli` 等）经 run-agent 以拓扑声明派发。MUST NOT 在本地启动 `qodercli` 作为子代理——细则见「Subagent Delegation」。
+**Dispatch carrier**：未给远程三元组 → **本地**，目标=当前项目，由编排者或宿主**原生子代理**执行，MUST NOT 启动 `qodercli`；远程三元组给全 → `ssh <alias>` → `su - <run-user>` → `cd <project-dir>`，经 run-agent 驱动 subagent CLI；CLI 缺省取 execution-config defaults（`cli: qodercli`）。完整判据见 `.specify/shared/workflow/execution-topology.md` § Carrier decision。
 
-**Instruction-chain budget gate**: `/speckit.instructions` 的 `BUDGET` 报告是 S3 的收敛条件之一；超预算处理见 `references/setup-recipes.md` § S3.4（先走 owner 的 R1/R2，仍超则执行 R3 project-filled 章节外迁；无法收敛列 pending）。
+**S2.5 carrier**：本地由编排者在当前项目执行，或交给宿主的原生子代理；远端每个 S2.5 命令经 run-agent 在 `<project-dir>` 下执行（`ssh <alias>` → `su - <run-user>` → `cd <project-dir>`），CLI 缺省 qodercli。
+
+**Instruction-chain budget gate**: S2 的 `/speckit.instructions` 刷新若报告 `BUDGET ... over`，本 skill 不实现 R3；把超预算章节与生成器报告交给 `sdd-house-keeping` H2 的 Budget convergence（owner 细节见其 `maintenance-recipes.md` § Budget）。
 
 ## Hard Requirements
 
-1. **盘点先于处置**：S2/S3 的任何动作之前必须先跑 S1 脚本盘点——禁止凭印象判定项目状态（archive-not-delete；本仓 fleet 实测中 4/41 为退化安装、2/41 缺特性注册表，肉眼不可判）。
-2. **就绪是三态判定而非二态**：`.specify/` 存在 ≠ 就绪；S4 三条件（五族前置检查全 ok + 机制矩阵达 complete 或缺口已声明 + 符号链接完好）同时成立才判调协完成。
-3. **调协按需、不整建**：S3 只执行 S1 判定缺失的项，每项一个治理命令，命中即停；不存在的机制不预建（tools/register 等低频机制按项目需要，缺≠错）。
-4. **声明式缺口**：S3 调协的每一项在产出中登记（执行/已存在/跳过+理由）；未被处理的项必须出现在「未处理清单」——静默省略视为违规。
-5. **建议而非强制**：S5 的候选工作清单是提示（有哪些可做的事），不携带任何「必须调用 sdd-loop-driver」的语义；调用与否由用户或上游流程决定。
-6. **幂等收敛**：S2/S3/S3+ 的每一动作 MUST 幂等——同一稳定态上重复执行不产生新的写动作；每项动作执行前 MUST 以本次 S1 盘点结果为缺口凭据，禁止凭上次执行的记忆跳过或重做（幂等与重入语义见 setup-recipes.md）。
-7. **运行时与 CLI 就绪先于 init**：S2 执行 specify init 前 MUST 完成 S2 的 CLI 层——python 解析阶梯三级全缺 → **报错退出，绝不自动安装 Python**；CLI 安装链三源全败 → 报告缺口并停止；两者都不得静默跳过 init 或手工伪造 `.specify/`。
-8. **指令体积预算收敛**：S3 的 `/speckit.instructions` 之后 MUST 读取生成器的 `BUDGET` 报告；`over` 时 MUST 先走 owner 的 R1/R2，仍超且存在可迁移 project-filled 章节时 MUST 按 `references/setup-recipes.md` § S3.4 执行 R3 回退；未回到预算内且无可迁移章节时 MUST 作为 pending 上报（上调预算/拆分章节），不得静默转述告警或删除项目内容。
-9. **本地拓扑原生承载**：入口未给环境信息（无 host/ssh 别名且无项目路径）时，目标项目缺省为当前项目、拓扑为本地（S0 缺省表）；此情形下治理命令由编排者亲自执行，或交给当前宿主 agent 的**原生子代理**——MUST NOT 以 `qodercli` / `claude -p` 等外部 agent CLI 启动子代理。外部 CLI 仅用于远端拓扑（治理命令为交互短任务，不满足外部模式的隔离/并行/长跑刚需；native-first 依据：`.specify/shared/definitions/subagent-definitions.md` § mode selection）。
+1. **盘点先于处置**：S2/S2.5 的任何动作之前必须先跑 S1 的**两个**盘点脚本（物理机制 + 逻辑框架）——禁止凭印象判定项目状态。
+2. **完成标准是 bootstrap + 首次维护**：`.specify/` 存在 ≠ 就绪；**就绪是三态判定而非二态**——只有 bootstrap 完成**且** house-keeping H4 三条件（五族前置检查全 ok + 物理矩阵 complete 且逻辑矩阵 required 层无未声明缺口 + 符号链接完好）同时成立，才可声明「ready」。house-keeping 不可用时只能返回 `bootstrap-complete / maintenance-pending`，不得冒充 ready。
+3. **按缺口 bootstrap、不整建**：S2.5 只执行 S1 判定缺失的项；不存在的机制不预建（tools/register 等低频机制按项目需要，缺≠错）。
+4. **声明式缺口**：S2/S2.5 的每一项在产出中登记（执行/已存在/跳过+理由）；未处理项交给 house-keeping H5 的未处理清单——静默省略视为违规。
+5. **建议而非强制**：候选工作清单由 house-keeping H5 产出；它是提示，不携带任何「必须调用 sdd-loop-driver」的语义。
+6. **幂等收敛**：S2/S2.5 的每一动作 MUST 幂等——同一稳定态上重复执行不产生新的写动作；每项动作执行前 MUST 以本次 S1 盘点结果为缺口凭据，禁止凭上次执行的记忆跳过或重做。
+7. **运行时与 CLI 就绪先于 init**：S2 执行 specify init 前 MUST 完成 CLI 层——python 解析阶梯三级全缺 → **报错退出，绝不自动安装 Python**；CLI 安装链三源全败 → 报告缺口并停止；两者都不得静默跳过 init 或手工伪造 `.specify/`。
+8. **预算超限交给 house-keeping**：S2 刷新报告的 `BUDGET ... over` 不由 setup 实现 R3；原样交给 house-keeping H2，不得静默转述告警或删除项目内容。
+9. **本地拓扑原生承载**：入口未给环境信息时，目标解析与执行都按本地拓扑；治理命令由编排者亲自执行，或交给当前宿主 agent 的**原生子代理**——MUST NOT 以 `qodercli` / `claude -p` 等外部 agent CLI 启动本地子代理。
+10. **目标项目治理优先（本地与远端同规）**：bootstrap 任何目标项目之前，MUST 先读取目标项目既有的宪法（`.specify/memory/constitution.md`）与指令（`.specify/instructions.md` 及其兼容符号链接），并在全部动作中遵守其原则、目录规范、命名规则与临时目录纪律；MUST NOT 覆盖、绕过或删改这些治理内容。目标项目尚无治理文档时，按框架模板生成（constitution / instructions），MUST NOT 凭空自造规则。
+11. **目录创建限于规范落点**：bootstrap 的目录创建 MUST 限于框架既有落点（`specify init` 产物、`.specify/.tmp/`、目标项目治理文档声明的目录）；MUST NOT 在目标仓库内创建 ad-hoc 目录或临时根；临时数据按目标项目纪律（无则框架 `temp-directory-discipline`）落位，并在首次写入前确认 `.gitignore` 覆盖。
+12. **Bootstrap 后 handoff**：S2.5 完成后，周期性调协、强化、验证、记录回收与候选清单 MUST handoff 给 `sdd-house-keeping`；本 skill MUST NOT 复制其 H1–H5 执行细则。目标项目已初始化且本次只需维护时，直接加载 `sdd-house-keeping`，不重跑 `specify init`。
+13. **无破坏性动作**：本 skill MUST NOT 执行 `/speckit.sanitize`、retention apply 或任何删除/归档；破坏性门归 house-keeping 调用的 sanitize。setup 只做可逆的安装/刷新/内容初始化。
+14. **不做 SDD 阶段推进**：本技能不做任何 SDD 阶段推进；requirements → … → review 归 `sdd-loop-driver`；S2.5 只调用 bootstrap 内容类命令（constitution/feature/docs/goal/agents/team）。
 
 ## Discipline Defaults
 
-- 直接执行不要确认；访谈式问题自行裁决并记录假设（产出附「假设与裁决」节）。
+- Bootstrap 的可逆动作直接执行并附执行报告；访谈式问题自行裁决并记录假设（产出附「假设与裁决」节）。
+- **不执行破坏性动作**：sanitize/retention 的破坏性门归 house-keeping；setup 不确认、不绕过、不代执行。
 - 远端形态时既有脏文件不提交不还原（与 sdd-loop-driver 同一纪律）。
-- 本技能**不做任何 SDD 阶段推进**（requirements 等开发阶段归 sdd-loop-driver）；调协与强化的 /speckit.* 调用仅限治理与建设类（constitution/sanitize/feature/instructions/docs/history/research/goal）。
 - 不 push（除非入口显式授权）。
 
 ## References
 
-- `.specify/shared/workflow/execution-topology.md` — 执行拓扑真源：编排侧/执行侧两侧角色划分、speckit 安装归属（只在执行侧）、本地退化形态、误读反模式清单。
-- `references/setup-recipes.md` — 五步执行细则：机制矩阵维度定义、状态分级判据、CLI 安装链（python 解析阶梯 / 三源 pip 回退 / specify check 验证）、init/refresh 命令形态（本地与远端，含 `--ai all` 全 agent 一次性 init）、S3 调协序列触发条件、五族前置检查引用（权威落点 run-agent dispatch-preflight.md）、符号链接核验、S5 候选工作清单 schema 与三个内部来源、与 sdd-loop-driver 的软协同契约。
+- `.specify/shared/workflow/target-resolution.md` — 三技能共享的目标解析唯一契约（显式目标 > git root > cwd；拒绝 `.specify` 根；不向上搜索）。
+- `.specify/shared/workflow/execution-topology.md` — 执行拓扑真源：编排侧/执行侧两侧角色划分、speckit 安装归属（只在执行侧）。
+- `.specify/scripts/mechanism-inventory.py` — 物理机制盘点（只读）。
+- `.specify/scripts/logical-framework.py` — 逻辑框架盘点（只读；S1 跑一次）。
+- `references/setup-recipes.md` — bootstrap 侧执行细则：机制矩阵、逻辑矩阵、S1/S2 命令、S2.5 首批内容、handoff 与幂等语义。
+- `sdd-house-keeping`（外部技能） — bootstrap 之后的周期性维护 owner：H1 盘点、H2 调协（含 `/speckit.sanitize --lane retention`）、H3 强化、H4 验证、H5 报告。
+- `sdd-loop-driver`（外部技能） — SDD 开发阶段循环 owner；候选清单仅建议。
 
 ## Subagent Delegation（子代理委派说明——2026-10-16 裁定）
 
-本手册是**编排者**：调协动作的执行主体按**执行拓扑**选择承载形态（承接技能可选——本技能独立运行时不强制）：
+本手册是**编排者**：bootstrap 动作的执行主体按**执行拓扑**选择承载形态（承接技能可选——本技能独立运行时不强制）：
 
-- **盘点与验证的执行**：`.specify/scripts/mechanism-inventory.py` 由编排者直接运行（只读脚本，无需子代理）；远端盘点经 `ssh + su` 形态执行（占位约定同 `.specify/shared/workflow/external-dispatch-recipes.md`）。
-- **本地拓扑（默认：入口未给 host+path）**：`specify init` / `/speckit.*` 治理命令由编排者**亲自执行**，或交给**当前宿主 agent 的原生子代理**（native subagent，如 Claude Code `Agent`/`Task` 工具、Qoder CLI 原生 subagent）——MUST NOT 启动 `qodercli` / `claude -p` 等外部 agent CLI 作为子代理。本地无进程隔离、长跑或跨模型需求，原生是共享默认（`.specify/shared/definitions/subagent-definitions.md` § mode selection）。
-- **远端拓扑（入口给全 ssh 别名 + 运行用户 + 项目目录）**：治理命令经 **run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）以拓扑声明派发外部子代理（agent CLI，如 `qodercli`），`ssh + su` 进入执行侧——前置检查与失败处置链随其 `references/dispatch-preflight.md`。
-- **职责切分线**：框架调协（install/reconcile/strengthen/verify/候选清单）= 本技能；SDD 完整阶段循环 = sdd-loop-driver；创建/派发/修正 = create-agent / run-agent / improve-agent（见 `.specify/shared/definitions/agent-definitions.md` § Driving Subagents via the Three Layers）。
+- **盘点**：`.specify/scripts/mechanism-inventory.py` 与 `.specify/scripts/logical-framework.py` 由编排者直接运行（只读脚本，无需子代理）；远端盘点经 `ssh + su` 形态执行。
+- **本地拓扑（默认）**：`specify init` / bootstrap 内容命令由编排者**亲自执行**，或交给**当前宿主 agent 的原生子代理**——MUST NOT 启动 `qodercli` / `claude -p` 等外部 agent CLI 作为本地子代理。
+- **远端拓扑**：bootstrap 命令经 **run-agent**（`.specify/skills/internal/run-agent/SKILL.md`）以拓扑声明派发外部子代理，`ssh + su` 进入执行侧。
+- **职责切分线**：bootstrap（install/refresh + 首批内容 + handoff）= 本技能；周期性维护（reconcile/strengthen/verify/report）= `sdd-house-keeping`；SDD 阶段循环 = `sdd-loop-driver`；创建/派发/修正 = create-agent / run-agent / improve-agent。
 
 ## Boundary
 
-- 目标项目已是 complete 且 verify 模式：出候选清单即止，不做任何写动作。
-- sdd-loop-driver 的 SDD 循环、阶段派发、状态脊、收尾纪律不在本技能范围——那是另一个可独立运行技能的职责；S5 只是建议，不强制调用。
-- 执行侧（目标项目所在环境）未安装 `specify` CLI：S2 CLI 层在该环境自动安装（python 解析阶梯 + 三源 pip 回退；**Python 三级全缺则报错退出，绝不自动安装 Python**）。安装失败且目标项目已有 .specify/：允许走 /speckit.instructions 恢复路径；两者都缺时报告缺口并停止。
-- 编排侧（本地宿主 agent）**不需要 speckit 框架**：技能与子代理通常运行在不同环境——技能驱动 ssh 登录远端开发机启动子代理执行 /speckit.* 命令；python 解析 / CLI 安装 / specify init 只发生在执行侧，编排侧缺 specify 不构成缺口、不得误触发安装链（拓扑真源见 `.specify/shared/workflow/execution-topology.md`）。
+- 只做 bootstrap：install/refresh + constitution + 首次 feature/docs/goal/agents/team + handoff；**不做**完整 reconcile、强化、验证、记录回收或候选清单。
+- 不执行任何破坏性动作；不调用 `/speckit.sanitize`、不调用 retention apply。
+- 不推进任何 SDD 开发阶段；bootstrap 内容命令仅限 constitution/feature/docs/goal/agents/team。
+- 目标项目已是 complete：仍可执行 S1 检查与 S2.5 缺失项；稳定态零写，随后 handoff 给 house-keeping 做 H1–H5。
+- 执行侧未安装 `specify` CLI：S2 CLI 层在该环境自动安装；**Python 三级全缺则报错退出，绝不自动安装 Python**。
+- 编排侧（本地宿主 agent）**不需要 speckit 框架**；python 解析 / CLI 安装 / specify init 只发生在执行侧。
 - 本手册不绑定特定项目族：路径、别名、用户、工具名全部入口参数化。
 
 ## Wrap-up

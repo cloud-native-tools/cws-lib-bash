@@ -3,6 +3,12 @@
 **Requirement Branch**: `[###-requirement-name]`  
 **Created**: [DATE]  
 **Status**: Draft  
+**Flow Class**: [FLOW CLASS]
+**Flow Type**: [FLOW TYPE]
+<!-- 这两行是特性线类别的唯一声明处，由 /speckit.requirements 语义判定后自动写入，作者可改：
+     Flow Class = execution | expression；Flow Type 仅 expression 线有效（owner 的封闭集：
+     technique-document / user-manual / reference / runbook / design-note），execution 线写 `-`。
+     特性索引与详情至多留指向本行的指针，不复制取值。 -->
 **Input**: User description: "$ARGUMENTS"
 
 ## Related Feature *(mandatory)*

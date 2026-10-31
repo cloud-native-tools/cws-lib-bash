@@ -1,7 +1,7 @@
 # git-delta 安装与配置
 
-> `code-review` Skill 的核心渲染引擎。`diff`/`review` 子命令依赖 delta；`note`/`report` 不需要。
-> 原则：环境缺失时**报错 + 给出安装命令后停止**，由用户安装，脚本不自动安装。
+> `code-review` Skill 的渲染引擎。`diff`/`review` 子命令用它把 diff 渲染得好看；`base`/`triage`/`start`/`note`/`receipt`/`report` 不需要它。
+> 原则：渲染器缺失**不阻断**代码段。模式选择是一条两条件规则——渲染器可用**且** stdout 是交互终端（TTY）才渲染（标注 `renderer: delta`），其余情形（agent、非交互、重定向输出）一律文本模式（标注 `renderer: text`）。替代「缺失即停」的证据形态是**覆盖率回执**（coverage receipt）：它把「读全 diff」变成可机械核对的断言。安装由用户完成，脚本**不自动安装**。
 
 ## 一、安装
 

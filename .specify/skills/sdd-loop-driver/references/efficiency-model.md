@@ -84,7 +84,7 @@ FL-01…FL-10 由 `tests/contract/test_sdd_loop_driver_efficiency.py` 的 `test_
 
 ### 2.1 全量定义与作用域
 
-**全量测试运行** = 以项目规范测试运行器执行、不带路径/测试过滤器的完整套件（本仓 = `bash .specify/scripts/bash/run-tests.sh`）。预算以**运行线**为作用域：每线独立台账与独立槽位，多线并行互不共享或消耗。每条运行线恰好两个全量槽位：
+**全量测试运行** = 以项目规范测试运行器执行、不带路径/测试过滤器的完整套件（本仓 = `bash .specify/scripts/bash/run-tests.sh`）。预算以**运行线**为作用域：每线独立台账与独立槽位，多线并行互不共享或消耗。每条运行线**恰好两个槽位**（执行类装全量测试，表达类装文档门禁——内容分支见 §2.8；槽位数、时点与顺序不因类别改变）：
 
 | 槽位 | 时点 | 程序 |
 |------|------|------|
@@ -141,6 +141,25 @@ implement 内 MUST NOT 再运行第二次全量套件；其内部回归比较义
 ### 2.7 契约钉住
 
 TB-01…TB-10 由 `tests/contract/test_sdd_loop_driver_efficiency.py` 的 `test_tb_01…test_tb_10` 钉住；审计行为由 `tests/unit/test_audit_test_budget.py` 覆盖；名称级回归由 `tests/integration/test_sdd_loop_efficiency_regression.py` 覆盖。
+
+### 2.8 表达类的文档门禁槽位（类条件）
+
+表达类特性线的两个槽位只换**内容**，骨架一律不动：槽位数仍是**恰好两个槽位**、时点仍是 implement 起点（`baseline`）与 `review` 通过之后（`closure`）、**槽位顺序**、closure 的**名称级**差集形态与 `audit-test-budget.py` 的判定（含 `stage-check` 语义）**全部不变**。本小节不新增槽位、不改 `stage-check` 语义，也不改 `full-suite` 两个槽位的执行类读法。
+
+| 字段 | 表达类取值 |
+|------|-----------|
+| `selection_basis` | `docs-gate-full`（与 `full-suite` 同位，只在表达类线出现） |
+| `command` | 该次文档门禁的命令串：一次四面调用 `--action verify --faces reader,evidence,duplicate,count` + 结构子步 `--action structure --spec-dir <dir> --path <落文>` + 算子级 `docs-utils.py --action validate`（`G-implement-structure` 的登记执行入口，仍运行、不记 `not-applicable`）；站点层存在时加构建检查——它是同一算子的 `face=build` 面级**子行**，不另立算子 |
+| `rc` | 该命令串的**聚合**退出码：**逐命令**取**非零优先**（任一命令非零则非零，全为 0 才 0）；逐命令原始 rc 写在 `evidence_ptr` 指向的门禁输出里，MUST NOT 为此新增聚合脚本（接线面封闭） |
+| `passed` | verdict = `pass` 的 blocking **算子**数；`not-applicable` 只出现在 `build` 子行，不计入本列 |
+| `failed` | verdict ∈ {`fail`, `not-evaluated`} 的**算子**数 |
+| `failed_names_path` | 失败算子 id 名单文件 |
+| `baseline_compare` | closure：**算子 id** 集合的**名称级**差集（`comm -13` 形态） |
+| `evidence_ptr` | 门禁输出文件；逐面 `not-evaluated` 的原因写在该文件里 |
+
+- **计数口径**：`pass` 计 `passed`；`fail` 与 `not-evaluated` 计 `failed`——两值之和 MUST 等于本次运行产出结果的 blocking **算子级**行数（算子级 verdict 三值互斥且穷尽）。`not-applicable` **单列**——MUST NOT 计入 `passed`、MUST NOT 计入 `failed`；其条数按**面级**从 `evidence_ptr` 指向的门禁输出读出。MUST NOT 定义「算子总数 − (`passed` + `failed`) = `not-applicable` 条数」这类**跨级**等式：算子级行与子行不是同一计量单位；子行为 `fail` 时该算子的算子级 verdict MUST 为 `fail`。
+- **未运行不写行**：槽位 MUST NOT 静默跳过；**未运行**时不写槽位行、**不记 0**（MUST NOT 以 0 表示未运行）。
+- **义务不免除**：非槽位阶段的定向集记录义务不因类别免除——仅文档改动亦 MUST 留 `stage-status` 行；`audit-test-budget.py` 的判定**不变**（本表的内容变化对它零感知）。
 
 ## 3. Plan 只小修约束（Plan Constraint）
 

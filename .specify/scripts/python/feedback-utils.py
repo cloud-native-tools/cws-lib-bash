@@ -52,6 +52,7 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import glob
 import hashlib
 import json
 import os
@@ -61,7 +62,7 @@ import uuid
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 # Probe-family functions live in the shared engine (requirement 056). The
 # hyphenated engine filename is not import-qualified, so load it by path —
@@ -724,6 +725,7 @@ ARG_MANIFEST = {
     "upstream": {"required": [], "source": ["--set"]},
     "migrate-legacy": {"required": ["--plan-file"], "source": []},
     "introspect-register": {"required": ["--report-file"], "source": ["--confirm"]},
+    "client-metrics": {"required": [], "source": ["--unit"]},
     "args-manifest": {"required": [], "source": []},
 }
 
@@ -1022,6 +1024,279 @@ def action_reindex(args: argparse.Namespace) -> Dict[str, Any]:
     migrated = migrate_legacy_index(workspace_root)
     entries = scan_entries(workspace_root)
     return {"reindexed": len(entries), "migrated": migrated}
+
+
+# --------------------------------------------------------------------------- #
+# Client loop metrics (Feature 072, C-46…C-50)
+# --------------------------------------------------------------------------- #
+# Read-built four-metric view over the existing store, routing backlog, and
+# code-segment records. This action has NO write point: it never creates,
+# rewrites, or persists anything — readings are recomputed from the records
+# on every report (程序优先: the engine derives; the agent never recomputes
+# from raw list output). No scoring, weight, total, or cross-metric
+# conversion exists; the four metrics never compose into a single number.
+_RECORD_RUN_STAMP_RE = re.compile(r"^\| \*\*日期\*\* \| `([^`]+)` \|$", re.M)
+_NOTE_HEADING_RE = re.compile(r"^###\s+\S+\s+\[([A-Z]+)\]\s+([^\s(]+)", re.M)
+_BACKTICK_PATH_RE = re.compile(r"`([^`]+)`")
+_REPEAT_PROXY_LABEL = (
+    "coarse proxy - (file, severity) pair reappearance across records of the "
+    "same unit; not a defect recurrence rate"
+)
+
+
+def _parse_iso_epoch(value: Any) -> Optional[float]:
+    try:
+        return datetime.strptime(str(value), "%Y-%m-%dT%H:%M:%SZ").replace(
+            tzinfo=timezone.utc).timestamp()
+    except (ValueError, TypeError):
+        return None
+
+
+def _code_segment_record_stamps(workspace_root: Path) -> Dict[str, Path]:
+    """run stamp -> record path for the code-segment records the review
+    script produces (`.specify/specs/*/code-review.md`). Read-only scan."""
+    out: Dict[str, Path] = {}
+    specs = workspace_root / ".specify" / "specs"
+    if specs.is_dir():
+        for path in sorted(specs.glob("*/code-review.md")):
+            try:
+                text = path.read_text(encoding="utf-8")
+            except OSError:
+                continue
+            m = _RECORD_RUN_STAMP_RE.search(text)
+            if m and m.group(1) not in out:
+                out[m.group(1)] = path
+    return out
+
+
+def _entry_record_pointer(workspace_root: Path, entry: Dict[str, Any]) -> Optional[Path]:
+    """The record file an entry points at (its body's `record=` line)."""
+    entry_file = feedback_dir(workspace_root) / entry.get("file", "")
+    try:
+        text = entry_file.read_text(encoding="utf-8")
+    except OSError:
+        return None
+    _meta, body = parse_frontmatter(text)
+    for line in body.splitlines():
+        if line.startswith("record="):
+            rel = line[len("record="):].strip()
+            return (workspace_root / rel) if rel else None
+    return None
+
+
+def _record_pairs(record_path: Optional[Path]) -> Optional[Set[Tuple[str, str]]]:
+    """(file, severity) pairs from a code-segment record's note headings;
+    None = the record is unreadable (C-50 exclusion rule)."""
+    if record_path is None:
+        return None
+    try:
+        text = record_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    pairs: Set[Tuple[str, str]] = set()
+    for severity, fpath in _NOTE_HEADING_RE.findall(text):
+        pairs.add((fpath, severity.lower()))
+    return pairs
+
+
+def _routing_backlog_rows(workspace_root: Path) -> List[str]:
+    """Raw table rows of the existing routing backlog (read-only)."""
+    path = feedback_dir(workspace_root) / "backlog.md"
+    if not path.is_file():
+        return []
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return []
+    rows = []
+    for line in text.splitlines():
+        s = line.strip()
+        if not s.startswith("|"):
+            continue
+        cells = [c.strip() for c in s.strip("|").split("|")]
+        if not cells or all(set(c) <= set("-: ") for c in cells if c):
+            continue  # markdown separator row
+        if cells[0].lower() == "routed":
+            continue  # table header
+        rows.append(s)
+    return rows
+
+
+def _row_is_carried(row: str) -> bool:
+    """承接类行 (data-model E8): a cell whose text starts with carried-by-."""
+    for cell in row.strip().strip("|").split("|"):
+        cleaned = cell.strip().strip("*").strip()
+        if cleaned.startswith("carried-by-"):
+            return True
+    return False
+
+
+def _row_owner_files_changed(workspace_root: Path, row: str,
+                             created_epoch: Optional[float]) -> bool:
+    """Closure evidence (C-44/V-28): a named owner file exists and its mtime
+    is later than the entry's created stamp. Routing marks never count."""
+    if created_epoch is None:
+        return False
+    for token in _BACKTICK_PATH_RE.findall(row):
+        token = token.strip()
+        if not token:
+            continue
+        candidates: List[Path] = []
+        if "*" in token:
+            candidates = [Path(p) for p in
+                          glob.glob(str(workspace_root / token), recursive=True)]
+        else:
+            candidates = [workspace_root / token]
+        for candidate in candidates:
+            try:
+                if candidate.is_file() and candidate.stat().st_mtime > created_epoch:
+                    return True
+            except OSError:
+                continue
+    return False
+
+
+def _not_evaluated(reason: str, **extra: Any) -> Dict[str, Any]:
+    row: Dict[str, Any] = {"status": "not-evaluated", "reason": reason,
+                           "numerator": 0, "denominator": 0}
+    row.update(extra)
+    return row
+
+
+def _evaluated(numerator: int, denominator: int, **extra: Any) -> Dict[str, Any]:
+    row: Dict[str, Any] = {"status": "evaluated", "numerator": numerator,
+                           "denominator": denominator,
+                           "value": numerator / denominator}
+    row.update(extra)
+    return row
+
+
+def action_client_metrics(args: argparse.Namespace) -> Dict[str, Any]:
+    """Feature 072: read-only loop-effectiveness metrics (C-46…C-50).
+
+    Derivation is program-first from three existing faces only — the feedback
+    store (`kind: external` entries), the routing backlog
+    (`.specify/memory/feedback/backlog.md`), and the code-segment records
+    (`.specify/specs/*/code-review.md`). Nothing is written; no aggregate,
+    index, score, weight, or total is produced or persisted.
+    """
+    workspace_root = resolve_workspace_root(args.workspace_root)
+    unit = (getattr(args, "unit", None) or "").strip() or None
+    entries = [e for e in load_store_state(workspace_root)["entries"]
+               if e.get("kind") == "external"
+               and (unit is None or e.get("unit_id") == unit)]
+    scope = f"unit {unit!r}" if unit else "all client units"
+    boundary = min((str(e.get("created", "")) for e in entries), default=None)
+    records = _code_segment_record_stamps(workspace_root)
+    backlog_rows = _routing_backlog_rows(workspace_root)
+
+    # --- capture coverage (C-43, C-49): captured record run stamps out of
+    # the record run stamps at/after the arming boundary. The boundary is the
+    # creation stamp of the first external entry; earlier records are
+    # excluded by rule and disclosed — never backfilled (C-41).
+    if not entries:
+        coverage = _not_evaluated(
+            "no client entries in scope (" + scope + ") - the arming boundary "
+            "(first external entry's created stamp) cannot be derived; "
+            "pre-arming records are never backfilled (C-41/C-49)",
+            excluded_before_arming=0)
+    else:
+        qualifying = {s for s in records if s >= str(boundary)}
+        excluded = len(records) - len(qualifying)
+        if not qualifying:
+            coverage = _not_evaluated(
+                "no code-segment records at or after the arming boundary "
+                f"({boundary}) - earlier records are excluded by rule, never "
+                "backfilled (C-41/C-49)",
+                excluded_before_arming=excluded)
+        else:
+            captured = {str(e.get("run_id", "")) for e in entries} & qualifying
+            coverage = _evaluated(
+                len(captured), len(qualifying),
+                excluded_before_arming=excluded, boundary=str(boundary))
+
+    # --- into-loop ratio (C-43): entries with a carried-by-* backlog row.
+    total = len(entries)
+    if total == 0:
+        into_loop = _not_evaluated(
+            "no client entries in scope (" + scope + ")")
+        closure = _not_evaluated(
+            "no client entries in scope (" + scope + ")")
+    else:
+        rows_by_entry = {
+            e["id"]: [r for r in backlog_rows
+                      if str(e.get("id", "")) and str(e.get("id")) in r]
+            for e in entries
+        }
+        carried_by_entry = {
+            eid: [r for r in rows if _row_is_carried(r)]
+            for eid, rows in rows_by_entry.items()
+        }
+        into_num = sum(1 for e in entries if carried_by_entry.get(e["id"]))
+        closure_num = 0
+        for e in entries:
+            created_epoch = _parse_iso_epoch(e.get("created", ""))
+            if any(_row_owner_files_changed(workspace_root, r, created_epoch)
+                   for r in carried_by_entry.get(e["id"], [])):
+                closure_num += 1
+        into_loop = _evaluated(into_num, total)
+        # C-44: closure counts only owner-file change evidence; routing marks
+        # (dispose processed/ignored, a carried-by row alone, open-unverified)
+        # are never closure evidence — routing is not completion.
+        closure = _evaluated(closure_num, total)
+
+    # --- repeat-finding rate (C-45, C-50): coarse proxy over (file,
+    # severity) pairs extracted deterministically from the pointed-to record.
+    excluded_unreadable = 0
+    repeat_num = 0
+    repeat_den = 0
+    by_unit: Dict[str, List[Dict[str, Any]]] = {}
+    for e in entries:
+        by_unit.setdefault(str(e.get("unit_id", "")), []).append(e)
+    for unit_id in sorted(by_unit):
+        ordered = sorted(by_unit[unit_id],
+                         key=lambda e: (str(e.get("created", "")),
+                                        str(e.get("id", ""))))
+        seen_pairs: Set[Tuple[str, str]] = set()
+        for e in ordered:
+            pairs = _record_pairs(_entry_record_pointer(workspace_root, e))
+            if pairs is None:
+                excluded_unreadable += 1  # numerator and denominator together
+                continue
+            repeat_den += 1
+            if pairs & seen_pairs:
+                repeat_num += 1
+            seen_pairs |= pairs
+    repeat_extra: Dict[str, Any] = {
+        "proxy": True,
+        "proxy_label": _REPEAT_PROXY_LABEL,
+        "excluded_unreadable_records": excluded_unreadable,
+    }
+    if excluded_unreadable:
+        repeat_extra["excluded_reason"] = (
+            f"{excluded_unreadable} entr(y/ies) whose pointed-to record is "
+            "unreadable - excluded from numerator and denominator together "
+            "(C-50)")
+    if repeat_den == 0:
+        repeat = _not_evaluated(
+            "no client entries with readable pointed-to records in scope ("
+            + scope + ")"
+            + (f"; {excluded_unreadable} excluded as unreadable (C-50)"
+               if excluded_unreadable else ""),
+            **repeat_extra)
+    else:
+        repeat = _evaluated(repeat_num, repeat_den, **repeat_extra)
+
+    return {
+        "unit": unit,
+        "boundary": boundary,
+        "metrics": {
+            "capture_coverage": coverage,
+            "into_loop_ratio": into_loop,
+            "closure_ratio": closure,
+            "repeat_finding_rate": repeat,
+        },
+    }
 
 
 # --------------------------------------------------------------------------- #
@@ -2169,6 +2444,21 @@ def action_introspect_register(args: argparse.Namespace) -> Dict[str, Any]:
 # Rendering / CLI
 # --------------------------------------------------------------------------- #
 def render_text(action: str, payload: Dict[str, Any]) -> str:
+    if action == "client-metrics":
+        lines = ["Client loop metrics (read-built from existing records; "
+                 "advisory only - not a gate, not a status transition, not a "
+                 "threshold input):"]
+        for name in ("capture_coverage", "into_loop_ratio", "closure_ratio",
+                     "repeat_finding_rate"):
+            row = payload["metrics"][name]
+            if row.get("status") == "evaluated":
+                lines.append(f"  {name}: {row['numerator']}/{row['denominator']}"
+                             f" = {row['value']:.4g}")
+            else:
+                lines.append(f"  {name}: not-evaluated - {row['reason']}")
+            if name == "repeat_finding_rate" and row.get("proxy"):
+                lines.append(f"    ({row['proxy_label']})")
+        return "\n".join(lines)
     if action == "package":
         if not payload.get("zip"):
             return payload.get("note", "Nothing to package.")
@@ -2249,7 +2539,8 @@ def build_parser() -> argparse.ArgumentParser:
         required=True,
         choices=["record", "status", "list", "dispose", "mark-submitted", "reindex",
                  "package", "cleanup", "upstream", "migrate-legacy",
-                 "introspect-register", "args-manifest", "ingest-exec-quant"],
+                 "introspect-register", "args-manifest", "ingest-exec-quant",
+                 "client-metrics"],
     )
     parser.add_argument("--package", default=None,
                         help="cleanup: path to the package zip (workspace-"
@@ -2295,6 +2586,10 @@ def build_parser() -> argparse.ArgumentParser:
                         help="dispose: optional introspection ref "
                              "(introspection-<ts>#F-<nn>)")
     parser.add_argument("--workspace-root", default=None)
+    parser.add_argument("--unit", default=None,
+                        help="client-metrics: optional unit filter "
+                             "(custom:<owner>/<name>); without it all client "
+                             "units are in scope")
     parser.add_argument("--unit-id", default=None)
     parser.add_argument("--unit-type", default=None)
     parser.add_argument("--run-id", default=None)
@@ -2338,7 +2633,7 @@ def action_args_manifest(args: argparse.Namespace) -> Dict[str, Any]:
     manifest: Dict[str, Any] = {}
     for action in ("record", "status", "list", "dispose", "mark-submitted",
                    "reindex", "package", "cleanup", "upstream", "migrate-legacy",
-                   "introspect-register", "args-manifest"):
+                   "introspect-register", "client-metrics", "args-manifest"):
         spec = ARG_MANIFEST.get(action)
         if spec is None:
             raise FeedbackError(
@@ -2366,6 +2661,7 @@ _ACTIONS = {
     "cleanup": action_cleanup,
     "migrate-legacy": action_migrate_legacy,
     "introspect-register": action_introspect_register,
+    "client-metrics": action_client_metrics,
     "args-manifest": action_args_manifest,
     "ingest-exec-quant": action_ingest_exec_quant,
 }
@@ -2418,7 +2714,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
     if args.format == "json" or args.action in (
-            "record", "status", "mark-submitted", "reindex", "args-manifest"):
+            "record", "status", "mark-submitted", "reindex", "args-manifest",
+            "client-metrics"):
         # args-manifest (063 C-22): pure JSON regardless of --format — the
         # machine face the compile-embeds renderer consumes.
         print(json.dumps(payload, ensure_ascii=False, indent=2))

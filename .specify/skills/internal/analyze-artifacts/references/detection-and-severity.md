@@ -36,7 +36,7 @@ reference? The conditions that separate the two are owned by
 `.specify/shared/guidelines/one-source-of-truth.md` — read it; do not restate them. **A copy
 that qualifies as legitimate is not a finding.**
 
-## The seven passes
+## The eight passes
 
 Focus on high-signal findings. **Limit to 50 findings total**; aggregate the remainder in an
 overflow summary.
@@ -83,6 +83,46 @@ overflow summary.
   status that MUST NOT regress — rule owner:
   `.specify/templates/feature-details-template.md` § Extension slice rule) never waives the
   stage record, so a correct status beside a stale date or note is **still a finding**.
+
+### I. Decision Tension records
+
+Judged object: **exactly one artifact** — the `plan.md` under the `REQUIREMENTS_DIR` resolved by
+the prerequisite script. The `requirements.md` in the same directory is a mapping reference and
+is never a second judged object. The channel MUST NOT open any other feature directory's
+`plan.md`: a plan outside `REQUIREMENTS_DIR` will produce no finding at all. In-scope historical
+plans written before this channel existed are NOT exempt — a missing section is reported, and
+the remedy is to add it.
+
+Record shape, admissibility criteria, rejection forms and the load-bearing threshold are owned by
+`.specify/shared/guidelines/decision-tension.md` — read that owner; do not restate its tables here.
+
+Three defect classes, each **HIGH**, plus the two record-level validator labels — the section anchor
+and the identifier shape — which carry the same severity, so the table below covers all six labels
+the program can print and no finding can be dropped between the program and this mapping. The value
+domain is HIGH or 0 — there is **no advisory or downgrade tier**, and the detector MUST NOT be asked
+to decide whether the plan holds a load-bearing decision: a missing record is judged fail-closed.
+
+| Defect class | Validator label(s) | Severity |
+|--------------|--------------------|----------|
+| No record — the `## Decision Tensions` section is absent, or present with a bare `N/A` carrying no one-line justification per load-bearing trigger | `dtr-section-missing` | HIGH |
+| Misplaced section — the section is present but is not the direct successor of `## Constitution Check` followed by `## Project Structure`, so the record no longer sits beside the gate it defends | `dtr-anchor` | HIGH |
+| Incomplete record — a field label missing or blank, a single-pole `binding_constraints`, an empty `expected_sacrifice` or the literal `none` | `dtr-record-incomplete`, `dtr-rejected-form` | HIGH |
+| Record identifier malformed, duplicated or skipped — the sub-section heading does not begin with `T-NNN`, or the identifiers are not unique and increasing in document order | `dtr-tension-id` | HIGH |
+| Unmappable cost — `expected_sacrifice` does not resolve to a declared measurement source | `expected-sacrifice-unmapped` | HIGH |
+
+When `requirements.md` has no measurement-source section, branch mechanically on the record
+count: one or more records fail mapping one by one; a compliant `N/A` with zero records produces
+zero findings.
+
+Severity: the propagation-surface criterion owned by
+`.specify/shared/workflow/objective-analysis-gate.md` — no new severity level, score or maturity
+verdict. Every finding names its propagation surface as its FIRST field, namely the plan flowing
+into tasks and implementation (`计划 → 任务 / 实现`).
+
+Deterministic verdicts: every mechanically decidable part — field presence, enumerated values,
+reference resolution — is printed by `.specify/scripts/python/validate-decision-tensions.py`, whose
+`--json` `checks` array carries the per-label counts. Consume that verdict; MUST NOT re-score the
+record semantically, and MUST NOT turn a label count into a percentage or a maturity score.
 
 ## Severity assignment
 

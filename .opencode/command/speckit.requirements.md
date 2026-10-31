@@ -7,6 +7,22 @@ $ARGUMENTS
 
 Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). The text after `/speckit.requirements` IS the feature description.
 
+### 类别读取与文档型门禁
+
+- **判定前一次读取**：本阶段在任何依赖类别的动作之前执行一次 `python3 .specify/scripts/python/flow-class-check.py --action lookup --unit-id "spec:<spec 目录名>"`（`<spec 目录名>` 取本线 spec 目录的 basename）；同一次阶段运行只读一次，结果复用于本阶段全部判定，委派技能复用该结果、不再读第二次。
+- **两条 owner 指针**：类别判据与取值归 `.specify/shared/definitions/flow-class-definitions.md`；阶段算子、阻断级别与降级归 `.specify/shared/workflow/expression-gates.md`。本模板只调用读取入口，不复制判据、面表或算子表。
+- **读取时点**：本阶段的读取发生在 `**Flow Class**` 声明行写入之后、`validate-requirements.py` 之前——先写声明，再读类别，再跑门禁集。
+- **re-baseline**：声明行在本阶段门禁通过之后变更（改值或删行）即记 re-baseline 事件，并按新类别重跑 requirements 门禁集，MUST NOT 静默翻转。
+- **两分支**：解析为**表达类**时，本阶段按门禁 owner § 阶段算子表执行本阶段登记的行；其余情形（含未声明按默认）保持既有门禁集**逐字不变**——零新增阻断项、零新增必填章节。
+- **降级可见**：读取报 `owner-unavailable`（退出码 2：引擎缺席、owner 不可解析或输入非法）时，原样显示该标签并保持既有门禁集，不中断本阶段、不转绿、不切换门禁集。
+- **作者输入错误即停**：解析以退出码 1 报作者输入错误（类别或文档类型的取值越界、形态不合规、位置错误、重复，或文档类型与 `execution` 冲突）时，本阶段停下，以阶段协议异常行 `ANOMALY: <一句话事实>` 作为最后一行输出并点名文件与行号；MUST NOT 落入上一条「既有门禁集逐字不变」那一支继续执行——那一支只适用于退出码 0 的未声明与降级路径。
+
+- **语义分类（写声明之前自动完成，作者无需手填）**：本命令在写规格之前先判定「这是什么需求」，并把结果写入 `requirements.md` 头部的两行声明。
+  - **判类别（`**Flow Class**`）**：按验收 oracle 判，不按介质。交付物在验收时被机器执行 / 解析 / 消费（代码、生成物、契约、站点构建）→ `execution`；交付物交给人阅读、缺陷只在读者读错或与外部事实不符时暴露（技术文档、用户手册、参考手册、运维手册、设计说明）→ `expression`。判据 owner 是 `.specify/shared/definitions/flow-class-definitions.md` § 判据，本卡不复述。
+  - **判文档类型（`**Flow Type**`）**：仅 `expression` 线需要，取值取 owner § 文档类型 的封闭集（本卡不列举）；`execution` 线写 `-`。拿不准时写 `-`（未细分），MUST NOT 发明新取值。
+  - **写入与留痕**：两行写在 `**Status**:` 之后、`**Input**:` 之前；在 `## Assumptions` 记一句判定理由（按什么 oracle 判为 `expression` / 为什么是该类型）。用户显式指定类别或类型时以用户为准，MUST NOT 静默改判。
+  - **判错的处置**：判定之后任何阶段发现类别不符，改声明行并按新类别重跑该阶段门禁（re-baseline），MUST NOT 只改门禁不改声明。
+
 ## Glossary
 
 Apply the glossary protocol in `.specify/shared/workflow/glossary.md`, reading the project glossary at `.specify/memory/glossary.md` (ambient via the Documentation Map). That file owns every rule of this step and this section restates none of them: input correction and anchoring, **including the constraint-side reading of a registered term** (§1); progressive enrichment at wrap-up (§2); conflict detection and which writes proceed directly (§3); manual edits and user precedence (§4).

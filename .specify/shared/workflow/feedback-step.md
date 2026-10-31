@@ -119,6 +119,13 @@ content from the user.
    Identifier discipline: `--feature` carries the **requirement key** (e.g.
    `038-goal-target`); `--feature-id` carries the **Feature registry ID** (e.g.
    `041`). Different number spaces — never overload one field with both.
+
+   **Feature attribution.** When the run has a feature context (a spec directory
+   exists for the work), the call MUST pass `--feature <requirement-key>` and,
+   when the feature is registered, `--feature-id <ID>`; an entry without them is
+   valid only for feature-less units. The compiled Wrap-up line renders the
+   engine's required flags only — the caller supplies these optional flags from
+   context.
 6. **Consolidated submission prompt.** Read `should_prompt` from the `record` output
    (or run `--action status`). When it is `true`, surface a **single** consolidated
    non-blocking notification (非阻塞) inviting the user to run the `/speckit.feedback` command — the user-facing path; never paste the raw
