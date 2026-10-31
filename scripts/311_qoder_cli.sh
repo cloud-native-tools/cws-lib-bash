@@ -24,6 +24,15 @@ QODER_CLI_CONTEXT_WINDOW="${QODER_CLI_CONTEXT_WINDOW:-1000000}"
 # 后台模式日志目录；可导出 QODER_CLI_LOG_DIR 覆盖
 QODER_CLI_LOG_DIR="${QODER_CLI_LOG_DIR:-${TMPDIR:-/tmp}/qoder-cli}"
 
+# 用户级配置根与临时根；可导出同名变量覆盖（测试用临时目录替换）
+QODER_CLI_HOME="${QODER_CLI_HOME:-${HOME}/.qoder}"
+QODER_CLI_TMPDIR="${QODER_CLI_TMPDIR:-${TMPDIR:-/tmp}}"
+
+# 运行痕迹保留天数：临时标记 / 运行日志 / 会话转写；可导出同名变量覆盖
+QODER_CLI_PRUNE_TMP_DAYS="${QODER_CLI_PRUNE_TMP_DAYS:-3}"
+QODER_CLI_PRUNE_LOG_DAYS="${QODER_CLI_PRUNE_LOG_DAYS:-14}"
+QODER_CLI_PRUNE_SESSION_DAYS="${QODER_CLI_PRUNE_SESSION_DAYS:-30}"
+
 # ---------------------------------------------------------------------------
 # 基础执行入口：所有模式函数都经由此入口，统一使用 *_BIN 与 *_OPTION
 # ---------------------------------------------------------------------------
@@ -70,6 +79,77 @@ function qoder_cli_uninstall() {
 function qoder_cli_config() {
   # 打开/管理配置
   qoder_cli_run config "$@"
+}
+
+function qoder_cli_prune() {
+  # 清理过期运行痕迹，降低启动 / 退出 / --resume 时的目录扫描与转写开销
+  # Usage: qoder_cli_prune [--apply] [-t days] [-l days] [-s days]
+  #   -t  临时标记（qoder-*-cwd 与旧版本原生缓存）保留天数（默认 3）
+  #   -l  logs/runs 运行日志保留天数（默认 14）
+  #   -s  会话转写（projects/*/transcript）与 logs/sessions 保留天数（默认 30）
+  # 默认 dry-run 只报告将删除的条目数；--apply 才真正删除
+  local apply=0
+  local tmp_days="${QODER_CLI_PRUNE_TMP_DAYS}"
+  local log_days="${QODER_CLI_PRUNE_LOG_DAYS}"
+  local session_days="${QODER_CLI_PRUNE_SESSION_DAYS}"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --apply) apply=1; shift ;;
+      -t) tmp_days="$2"; shift 2 ;;
+      -l) log_days="$2"; shift 2 ;;
+      -s) session_days="$2"; shift 2 ;;
+      *)
+        log error "qoder_cli_prune: unknown argument $1"
+        return "${RETURN_FAILURE:-1}"
+        ;;
+    esac
+  done
+
+  local home="${QODER_CLI_HOME}"
+  local tmp="${QODER_CLI_TMPDIR}"
+  if [[ ! -d "${home}" ]]; then
+    log error "qoder_cli_prune: qodercli home not found: ${home}"
+    return "${RETURN_FAILURE:-1}"
+  fi
+
+  local n_tx n_logs n_sessions n_marks n_natives
+  n_tx=$(find "${home}/projects" -name "*.jsonl" -mtime +"${session_days}" 2>/dev/null | wc -l)
+  n_logs=$(find "${home}/logs/runs" -mindepth 1 -maxdepth 1 -type d -mtime +"${log_days}" 2>/dev/null | wc -l)
+  n_sessions=$(find "${home}/logs/sessions" -mindepth 1 -maxdepth 1 -type d -mtime +"${session_days}" 2>/dev/null | wc -l)
+  n_marks=$(find "${tmp}" -maxdepth 1 -name "qoder-*-cwd" -mtime +"${tmp_days}" 2>/dev/null | wc -l)
+
+  # 原生缓存按版本分目录（qodercli-natives-v<ver>-<user>）：保留 mtime 最新的一组
+  local keep_prefix=""
+  local newest=""
+  if [[ -d "${tmp}" ]]; then
+    # shellcheck disable=SC2012  # 版本目录名仅由字母数字与点组成，无空白风险
+    newest=$(ls -td "${tmp}"/qodercli-natives-* 2>/dev/null | head -1)
+  fi
+  if [[ -n "${newest}" ]]; then
+    keep_prefix=$(basename "${newest}" | sed -n 's/^\(qodercli-natives-v[0-9][0-9.]*\)-.*/\1/p')
+  fi
+  if [[ -n "${keep_prefix}" ]]; then
+    n_natives=$(find "${tmp}" -maxdepth 1 -name "qodercli-natives-*" ! -name "${keep_prefix}-*" 2>/dev/null | wc -l)
+  else
+    n_natives=0
+  fi
+
+  if [[ "${apply}" -eq 1 ]]; then
+    find "${home}/projects" -name "*.jsonl" -mtime +"${session_days}" -delete 2>/dev/null
+    find "${home}/logs/runs" -mindepth 1 -maxdepth 1 -type d -mtime +"${log_days}" -exec rm -rf {} + 2>/dev/null
+    find "${home}/logs/sessions" -mindepth 1 -maxdepth 1 -type d -mtime +"${session_days}" -exec rm -rf {} + 2>/dev/null
+    find "${tmp}" -maxdepth 1 -name "qoder-*-cwd" -mtime +"${tmp_days}" -delete 2>/dev/null
+    if [[ -n "${keep_prefix}" ]]; then
+      find "${tmp}" -maxdepth 1 -name "qodercli-natives-*" ! -name "${keep_prefix}-*" -exec rm -rf {} + 2>/dev/null
+    fi
+  fi
+
+  local mode="dry-run"
+  [[ "${apply}" -eq 1 ]] && mode="applied"
+  printf 'qodercli_prune: session_transcripts=%s run_logs=%s session_dirs=%s tmp_markers=%s stale_natives=%s (%s)\n' \
+    "${n_tx}" "${n_logs}" "${n_sessions}" "${n_marks}" "${n_natives}" "${mode}"
+  return "${RETURN_SUCCESS:-0}"
 }
 
 # ---------------------------------------------------------------------------
