@@ -323,24 +323,41 @@ function dump_stack() {
   local current=$$
   local indent=""
   local count=50
+  local cmdline parent
+  local frame=""
 
-  local cmdline="$(cat /proc/${current}/cmdline | tr '\000' ' ')"
-  local parent="$(grep PPid /proc/${current}/status | awk '{ print $2; }')"
-  local frame="${indent}${BOLD_RED}[${current}]:${cmdline}${CLEAR}\n"
-
+  # Linux 读 /proc；macOS 等 BSD 没有 /proc，退化到 ps（无需 root）
   while [ ${count} -gt 0 ]; do
-    current=${parent}
-    indent="  ${indent}"
-    count=$((count - 1))
+    if [ -r "/proc/${current}/status" ]; then
+      cmdline=$(tr '\000' ' ' <"/proc/${current}/cmdline" 2>/dev/null)
+      parent=$(awk '/^PPid:/ { print $2; }' "/proc/${current}/status" 2>/dev/null)
+    else
+      cmdline=$(ps -o command= -p "${current}" 2>/dev/null)
+      cmdline="${cmdline#"${cmdline%%[![:space:]]*}"}"
+      parent=$(ps -o ppid= -p "${current}" 2>/dev/null | tr -d '[:space:]')
+    fi
 
-    cmdline=$(cat /proc/${current}/cmdline | tr '\000' ' ')
-    parent=$(grep PPid /proc/${current}/status | awk '{ print $2; }')
-    frame="${frame}${indent}[${current}]:${cmdline}\n"
-    if [ "${current}" == "1" ]; then
+    if [ -z "${cmdline}" ] && [ -z "${parent}" ]; then
+      [ -z "${frame}" ] && log warn "dump_stack: cannot inspect process ${current}"
       break
     fi
+
+    frame="${frame}${indent}[${current}]:${cmdline}\n"
+    if [ "${current}" = "1" ]; then
+      break
+    fi
+    if [ -z "${parent}" ] || [ "${parent}" = "0" ]; then
+      break
+    fi
+
+    indent="  ${indent}"
+    current=${parent}
+    count=$((count - 1))
   done
-  log color "${frame}"
+
+  if [ -n "${frame}" ]; then
+    log color "${frame}"
+  fi
 }
 
 function spin() {
