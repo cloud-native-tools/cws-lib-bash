@@ -213,8 +213,13 @@ function ssh_ping() {
   # Use batch mode and disable all interactive authentication methods
   # RemoteCommand=none / RequestTTY=no: neutralize host-level RemoteCommand
   # directives (e.g. interactive login wrappers), otherwise ssh aborts with
-  # "Cannot execute command-line and remote command." and the host looks offline
-  if ssh -n -o BatchMode=yes \
+  # "Cannot execute command-line and remote command." and the host looks offline.
+  # Probe with a stdout marker instead of `exit`: a remote login script that
+  # returns non-zero after authentication (e.g. a stale .bashrc source) would
+  # otherwise turn a reachable host into a false offline.
+  local marker="__SSH_PING_OK__"
+  local output
+  output=$(ssh -n -o BatchMode=yes \
     -o ConnectTimeout=5 \
     -o PasswordAuthentication=no \
     -o PubkeyAuthentication=yes \
@@ -227,7 +232,8 @@ function ssh_ping() {
     -o RemoteCommand=none \
     -o RequestTTY=no \
     -F ${config_file} \
-    ${host_name} $@ exit >/dev/null 2>&1; then
+    ${host_name} $@ "printf %s ${marker}" 2>/dev/null)
+  if [[ "${output}" == *"${marker}"* ]]; then
     return ${RETURN_SUCCESS}
   else
     return ${RETURN_FAILURE}
