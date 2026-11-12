@@ -1,0 +1,170 @@
+{
+  "receiptVersion": 1,
+  "runId": "20261112T091554Z-aaae2112",
+  "mode": "apply",
+  "status": "completed",
+  "startedAt": "2026-11-12T09:15:54Z",
+  "finishedAt": "2026-11-12T09:15:56Z",
+  "workspace": "/storage/project/cloud-native-tools/cws-lib-bash",
+  "resumedFrom": null,
+  "source": {
+    "stampFile": ".specify/source.json",
+    "frameworkCommit": "a4339ba1915b365bbe255416aef780df73f5f28d",
+    "stampedAt": "20261112T091516Z",
+    "reason": null
+  },
+  "target": {
+    "cliVersion": "0.0.22",
+    "frameworkCommit": "a4339ba1915b365bbe255416aef780df73f5f28d",
+    "origin": "embedded"
+  },
+  "outcome": "applied",
+  "exitCode": 0,
+  "items": [
+    {
+      "id": "60d0f805b1c6",
+      "dimension": "anchor-layout",
+      "target": ".specify/memory/constitution.md",
+      "current": "legacy-location",
+      "expected": "moved-to: .specify/constitution.md",
+      "disposition": "archive",
+      "mechanism": "relocate",
+      "evidence": [
+        "scripts/python/anchor-layout-migrate.py#--action check"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/constitution.md",
+      "status": "done",
+      "reason": null
+    },
+    {
+      "id": "85c961149303",
+      "dimension": "anchor-layout",
+      "target": ".specify/memory/features.md",
+      "current": "legacy-location",
+      "expected": "moved-to: .specify/features.md",
+      "disposition": "archive",
+      "mechanism": "relocate",
+      "evidence": [
+        "scripts/python/anchor-layout-migrate.py#--action check"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/features.md",
+      "status": "done",
+      "reason": null
+    },
+    {
+      "id": "6ae8d4727ecf",
+      "dimension": "anchor-layout",
+      "target": ".specify/memory/glossary.md",
+      "current": "legacy-location",
+      "expected": "moved-to: .specify/glossary.md",
+      "disposition": "archive",
+      "mechanism": "relocate",
+      "evidence": [
+        "scripts/python/anchor-layout-migrate.py#--action check"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/glossary.md",
+      "status": "done",
+      "reason": null
+    },
+    {
+      "id": "00111d0e2eca",
+      "dimension": "mirror-consistency",
+      "target": ".specify/scripts/bash/search-todo.sh",
+      "current": "extra file (no installed source)",
+      "expected": "absent (archived, recoverable)",
+      "disposition": "archive",
+      "mechanism": "archive",
+      "evidence": [
+        "strict mirror pair: .specify/scripts"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/search-todo.sh",
+      "status": "done",
+      "reason": null
+    },
+    {
+      "id": "40a278583277",
+      "dimension": "mirror-consistency",
+      "target": ".specify/scripts/bash/update-feature-index.sh",
+      "current": "extra file (no installed source)",
+      "expected": "absent (archived, recoverable)",
+      "disposition": "archive",
+      "mechanism": "archive",
+      "evidence": [
+        "strict mirror pair: .specify/scripts"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/update-feature-index.sh",
+      "status": "done",
+      "reason": null
+    },
+    {
+      "id": "bc6e896f2c24",
+      "dimension": "mirror-consistency",
+      "target": ".specify/scripts/python/docs-utils.py",
+      "current": "extra file (no installed source)",
+      "expected": "absent (archived, recoverable)",
+      "disposition": "archive",
+      "mechanism": "archive",
+      "evidence": [
+        "strict mirror pair: .specify/scripts"
+      ],
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/python/docs-utils.py",
+      "status": "done",
+      "reason": null
+    }
+  ],
+  "archives": [
+    {
+      "path": ".specify/memory/constitution.md",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/constitution.md",
+      "change": "relocated",
+      "digest": "657c908467efe3cd58af3f34997e2a4f864982378aff069576a14515590ddfad"
+    },
+    {
+      "path": ".specify/memory/features.md",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/features.md",
+      "change": "relocated",
+      "digest": "34917e51cdeb73d76257ceca7029fa51d4427f5493e1206f1877f338f8942123"
+    },
+    {
+      "path": ".specify/memory/glossary.md",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/glossary.md",
+      "change": "relocated",
+      "digest": "974b4e55e6a773c984343e47238345bf9551e1193ac5fc5c8da86ebb0d804575"
+    },
+    {
+      "path": ".specify/scripts/bash/search-todo.sh",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/search-todo.sh",
+      "change": "archived",
+      "digest": "997d5170da3db2ac88aed636be52b28a79524b87a71a6151b8ad1848fedf74bc"
+    },
+    {
+      "path": ".specify/scripts/bash/update-feature-index.sh",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/update-feature-index.sh",
+      "change": "archived",
+      "digest": "0078cb22d22b588837b564d639713e6a7baf0c331808943039c4d6db990cf04c"
+    },
+    {
+      "path": ".specify/scripts/python/docs-utils.py",
+      "archiveTo": ".specify/archive/migrate/20261112T091554Z-aaae2112/scripts/python/docs-utils.py",
+      "change": "archived",
+      "digest": "a7e6d6bb4844b7fff3466f06ccf437acb2bff38a976aa6272d09431ef0127c64"
+    }
+  ],
+  "recover": [
+    "move .specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/constitution.md back to .specify/memory/constitution.md",
+    "move .specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/features.md back to .specify/memory/features.md",
+    "move .specify/archive/migrate/20261112T091554Z-aaae2112/anchor-layout/memory/glossary.md back to .specify/memory/glossary.md",
+    "restore .specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/search-todo.sh -> .specify/scripts/bash/search-todo.sh",
+    "restore .specify/archive/migrate/20261112T091554Z-aaae2112/scripts/bash/update-feature-index.sh -> .specify/scripts/bash/update-feature-index.sh",
+    "restore .specify/archive/migrate/20261112T091554Z-aaae2112/scripts/python/docs-utils.py -> .specify/scripts/python/docs-utils.py"
+  ],
+  "notes": [],
+  "pointers": [
+    {
+      "topic": "goal-team-archive-migration",
+      "ownerCommand": "/speckit.goal",
+      "ownerEngine": "scripts/python/goal-utils.py --action migrate-archive",
+      "note": "goal/team archive migration is owned by /speckit.goal (migrate-archive); specify migrate neither detects nor disposes it"
+    }
+  ]
+}
