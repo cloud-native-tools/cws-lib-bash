@@ -1,4 +1,5 @@
 export ECS_META_URL="http://100.100.100.200/latest"
+export ECS_META_TOKEN_TTL=${ECS_META_TOKEN_TTL:-21600}
 
 # Retrieves the VPC ID of the current ECS instance
 function ecs_vpc_id() {
@@ -43,6 +44,155 @@ function ecs_private_ip() {
 # Gets the public/elastic IPv4 address of the current instance
 function ecs_public_ip() {
   curl_fetch ${ECS_META_URL}/meta-data/eipv4
+}
+
+# Requests an IMDSv2 token used to harden metadata requests (reinforced mode)
+# TTL is expressed in seconds and must stay within 1~21600
+function ecs_metadata_token() {
+  local ttl_seconds=${1:-${ECS_META_TOKEN_TTL}}
+  case "${ttl_seconds}" in
+    '' | *[!0-9]*)
+      log error "Token TTL must be an integer between 1 and 21600 seconds, got [${ttl_seconds}]"
+      return ${RETURN_FAILURE:-1}
+      ;;
+  esac
+  local ttl_value=$((10#${ttl_seconds}))
+  if [ "${ttl_value}" -lt 1 ] || [ "${ttl_value}" -gt 21600 ]; then
+    log error "Token TTL must be an integer between 1 and 21600 seconds, got [${ttl_seconds}]"
+    return ${RETURN_FAILURE:-1}
+  fi
+  curl_fetch -X PUT -H "X-aliyun-ecs-metadata-token-ttl-seconds: ${ttl_value}" ${ECS_META_URL}/api/token
+}
+
+# Fetches a metadata path, optionally authenticated by an IMDSv2 token
+function ecs_metadata_get() {
+  local path=${1}
+  local token=${2}
+  if [ -n "${token}" ]; then
+    curl_fetch -H "X-aliyun-ecs-metadata-token: ${token}" "${ECS_META_URL}/${path}"
+  else
+    curl_fetch "${ECS_META_URL}/${path}"
+  fi
+}
+
+# Gets the HTTP status code of a metadata path, optionally authenticated by an IMDSv2 token
+# Uses curl_fetch so the short metadata connect timeout applies
+function ecs_metadata_status() {
+  local path=${1}
+  local token=${2}
+  if [ -n "${token}" ]; then
+    curl_fetch -o /dev/null -w "%{http_code}" -H "X-aliyun-ecs-metadata-token: ${token}" "${ECS_META_URL}/${path}"
+  else
+    curl_fetch -o /dev/null -w "%{http_code}" "${ECS_META_URL}/${path}"
+  fi
+}
+
+# Lists the RAM role names granted to the current ECS instance (404 when none)
+function ecs_ram_roles() {
+  ecs_metadata_get "meta-data/ram/security-credentials/" "${1}"
+}
+
+# Gets the single RAM role name granted to the current ECS instance (empty when none)
+function ecs_ram_role_name() {
+  ecs_ram_roles "${1}" | head -n 1
+}
+
+# Checks whether a RAM role has been granted to the current ECS instance
+function ecs_ram_role_exists() {
+  local status
+  status=$(ecs_metadata_status "meta-data/ram/security-credentials/" "${1}")
+  if [ "${status}" = "200" ]; then
+    return ${RETURN_SUCCESS}
+  else
+    return ${RETURN_FAILURE}
+  fi
+}
+
+# Gets the STS credentials as JSON for the granted instance RAM role
+function ecs_ram_credentials() {
+  local role=${1}
+  local token=${2}
+  if [ -z "${role}" ]; then
+    role=$(ecs_ram_role_name "${token}")
+  fi
+  if [ -z "${role}" ]; then
+    log error "No RAM role is granted to this ECS instance"
+    return ${RETURN_FAILURE:-1}
+  fi
+  ecs_metadata_get "meta-data/ram/security-credentials/${role}" "${token}"
+}
+
+# Gets one STS credential field of the instance RAM role
+# Supported fields: AccessKeyId, AccessKeySecret, SecurityToken, Expiration, LastUpdated, Code
+function ecs_ram_field() {
+  local field=${1}
+  local role=${2}
+  local token=${3}
+
+  case "${field}" in
+    AccessKeyId | AccessKeySecret | SecurityToken | Expiration | LastUpdated | Code) ;;
+    *)
+      log error "Unsupported field [${field}], expected one of: AccessKeyId AccessKeySecret SecurityToken Expiration LastUpdated Code"
+      return ${RETURN_FAILURE:-1}
+      ;;
+  esac
+
+  if ! have jq; then
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local credentials
+  credentials=$(ecs_ram_credentials "${role}" "${token}")
+  if [ -z "${credentials}" ]; then
+    return ${RETURN_FAILURE:-1}
+  fi
+  echo "${credentials}" | jq -r ".${field} // empty"
+}
+
+# Prints export statements for the instance RAM role STS credentials
+# Usage: eval "$(ecs_ram_env [role] [token])"
+function ecs_ram_env() {
+  local role=${1}
+  local token=${2}
+
+  if ! have jq; then
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  if [ -z "${role}" ]; then
+    role=$(ecs_ram_role_name "${token}")
+  fi
+
+  local credentials
+  credentials=$(ecs_ram_credentials "${role}" "${token}")
+  if [ -z "${credentials}" ]; then
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local code
+  code=$(echo "${credentials}" | jq -r '.Code // empty')
+  if [ -n "${code}" ] && [ "${code}" != "Success" ]; then
+    log error "Metadata service returned code [${code}] for RAM role [${role}]"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  local fields
+  fields=$(echo "${credentials}" | jq -r '[.AccessKeyId // empty, .AccessKeySecret // empty, .SecurityToken // empty, .Expiration // empty] | @tsv')
+  local access_key_id access_key_secret security_token expiration
+  IFS=$'\t' read -r access_key_id access_key_secret security_token expiration <<<"${fields}"
+
+  if [ -z "${access_key_id}" ] || [ -z "${access_key_secret}" ] || [ -z "${security_token}" ]; then
+    log error "Incomplete STS credentials for RAM role [${role}]"
+    return ${RETURN_FAILURE:-1}
+  fi
+
+  printf '# ECS instance RAM role [%s], expires at %s\n' "${role}" "${expiration:-unknown}"
+  printf 'export ALIBABA_CLOUD_ACCESS_KEY_ID="%s"\n' "${access_key_id}"
+  printf 'export ALIBABA_CLOUD_ACCESS_KEY_SECRET="%s"\n' "${access_key_secret}"
+  printf 'export ALIBABA_CLOUD_SECURITY_TOKEN="%s"\n' "${security_token}"
+  printf 'export ALICLOUD_ACCESS_KEY="%s"\n' "${access_key_id}"
+  printf 'export ALICLOUD_SECRET_KEY="%s"\n' "${access_key_secret}"
+  printf 'export ALICLOUD_SECURITY_TOKEN="%s"\n' "${security_token}"
 }
 
 # Gets the path to cloud-init instance data
@@ -98,7 +248,7 @@ function ecs_detect_endpoints() {
   local root_url=${1:-${ECS_META_URL}}
   if curl_available ${root_url}; then
     for resource in $(curl_fetch ${root_url}); do
-      if [ "${resource}" = "user-data" ] || [ "${resource}" = "pkcs7" ]; then
+      if [ "${resource}" = "user-data" ] || [ "${resource}" = "pkcs7" ] || [ "${resource}" = "ram" ]; then
         continue
       fi
       if [ "${resource}" = "source-address" ] || [ "${resource}" = "vpc-cidr-block" ] || [ "${resource}" = "vswitch-cidr-block" ]; then
