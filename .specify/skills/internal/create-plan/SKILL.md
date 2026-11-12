@@ -7,6 +7,9 @@ skill_id: "<SKILL:.specify/skills/internal/create-plan/SKILL.md>"
 
 # create-plan
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Turn a validated requirements specification into the implementation planning artifact set:
@@ -64,7 +67,7 @@ BRANCH. For single quotes in args like "I'm Groot", use escape syntax: e.g
 
 ### Step 3 — Load context
 
-Read FEATURE_SPEC, `.specify/memory/constitution.md`, and processed `$ARGUMENTS` context.
+Read FEATURE_SPEC, `.specify/constitution.md`, and processed `$ARGUMENTS` context.
 Load the IMPL_PLAN template (already copied).
 
 - Check if `SPECS_DIR/research.md` exists. If so, read it.
@@ -87,7 +90,7 @@ Follow the structure in the IMPL_PLAN template to:
   - Incorporate relevant background information from `$ARGUMENTS`
   - Incorporate findings from `research.md` if available
 - Fill Constitution Check section by **dynamically deriving** the principle table from
-  `.specify/memory/constitution.md`:
+  `.specify/constitution.md`:
   1. Parse every heading matching `### <numeral>. <name>` (Roman or Arabic) in the order
      they appear.
   2. Preserve any `(NON-NEGOTIABLE)` / `(MANDATORY)` annotation verbatim in the row
@@ -126,6 +129,14 @@ Follow the structure in the IMPL_PLAN template to:
     Gate's execution-verify rule owns that requirement.
 - Re-evaluate Constitution Check post-design
 
+### Step 4.5 — Concurrency of this stage (default-concurrent)
+
+The plan stage is an execution body under the framework concurrency obligation (`.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation — the one authored text; this step references it, never restates it). Concretely:
+
+- **Partition**: the stage's work is partitioned into its units (research, the design artifacts, the feature-registry update, the post-generation verification) before an execution shape is chosen; the replayable partition rule is `decompose-plan-v1`.
+- **Default concurrent**: independent units with file-level, pairwise-disjoint write domains run concurrently whenever a legal process carrier is available and the budget allows (the fork/subprocess carriers defined in the obligation's owner; the host-internal in-process path is not a carrier). A serial shape MUST name a reason code from `.specify/shared/declarations/facts/serial-reason.yaml` with its declared evidence form.
+- **Record the reading**: the stage records its own `requested` / `effective` / `effective_reason` triple in the plan's execution record (`not_evaluated` where intervals are absent). The fields, the codes and the slot/reserve values live in `.specify/shared/declarations/facts/` — read them, never restate them here.
+
 ### Step 5 — Plan integrity gate + stop and report
 
 Before finishing, verify the filled IMPL_PLAN contains (a) **no** residual
@@ -140,14 +151,14 @@ path, and generated artifacts.
 
 The `/speckit.plan` command automatically integrates with the feature tracking system:
 
-- If a `.specify/memory/features.md` file exists, this skill will:
+- If a `.specify/features.md` file exists, this skill will:
   - Detect the current feature directory (format: `.specify/specs/[REQUIREMENTS_KEY]/`)
   - Extract the feature ID from the directory name
-  - Update the corresponding feature entry in `.specify/memory/features.md`:
+  - Update the corresponding feature entry in `.specify/features.md`:
     - **Bound-but-unregistered Feature**: if the spec's `Related Feature` names a Feature
       ID that has NO row yet in `features.md` (e.g. the binding was decided at
       `/speckit.clarify` but never registered), first CREATE the row and the
-      `.specify/memory/features/<ID>.md` detail from
+      `.specify/features/<ID>.md` detail from
       `.specify/templates/feature-details-template.md` — then advance status. Do not
       leave the create-vs-advance branch implicit or skip registration because the ID is
       already written into the spec.
@@ -157,15 +168,15 @@ The `/speckit.plan` command automatically integrates with the feature tracking s
       owned by `/speckit.implement`.
     - Keep the specification path unchanged
     - Update the "Last Updated" date
-  - Automatically stage the changes to `.specify/memory/features.md` for git commit
+  - Automatically stage the changes to `.specify/features.md` for git commit
 
 In addition, **the plan phase MUST review the Feature list**:
 
 - Check whether this plan introduces new Features or deprecates/merges existing Features.
 - Ensure functional/non-functional Feature classification remains consistent.
 - If there are changes, the following must be updated synchronously:
-  - `.specify/memory/features/<ID>.md`
-  - `.specify/memory/features.md`
+  - `.specify/features/<ID>.md`
+  - `.specify/features.md`
 - Record the "key changes / notes" corresponding to this plan in the Feature detail.
 
 This integration ensures that all feature planning activities are properly tracked and
@@ -178,9 +189,9 @@ linked to their corresponding entries in the project's feature index.
    - **Project Docs**: consult `README.md` and pull `docs/` content as targeted excerpts
      for the areas this plan touches — do NOT read all files in `docs/` wholesale.
    - **Feature Memory**: project the feature index with
-     `grep -E '^\| [0-9]{3}' .specify/memory/features.md` (ID/name/status rows) and read
+     `grep -E '^\| [0-9]{3}' .specify/features.md` (ID/name/status rows) and read
      ONLY the detail file(s) of the bound/related Feature(s) under
-     `.specify/memory/features/` — do NOT read the whole directory; escalate per the
+     `.specify/features/` — do NOT read the whole directory; escalate per the
      discipline doc's ladder when a row genuinely needs more depth.
    - **Codebase exploration pass**: before filling the template, run a dedicated
      exploration pass (use an Explore subagent when available) over the code the plan
@@ -314,7 +325,7 @@ After generating all Phase 1 artifacts (especially contract documents under
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -324,3 +335,4 @@ After generating all Phase 1 artifacts (especially contract documents under
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:create-plan" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

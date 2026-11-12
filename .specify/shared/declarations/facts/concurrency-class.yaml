@@ -1,0 +1,58 @@
+# 093 — [[STR-001]] the closed declaration-class table (feature: concurrency-by-default).
+#
+# The one machine-read owner of: the closed class member set, the class's semantic name ([[STR-002]]),
+# each class's `obligation` / `unit_form` / `owner_anchor`, and the FR-004 decision rule that assigns a
+# body to a class. Read through `.specify/scripts/python/declaration_reader.py` (block-subset/v1 only).
+#
+# Why the rule lives here and not in the engine (C-004): the engine may enumerate bodies and look rows
+# up, but it MUST NOT carry a class name, a root-to-class branch or the member set as constants. A body
+# is assigned exactly one class; a body the rule cannot decide is `uncovered` and red, never a catch-all.
+fact: concurrency-class
+kind: mapping
+statement:
+  semantic_name: 并发类别
+  classes:
+    - name: concurrent-by-default
+      applies_to:
+        - skills
+        - commands
+      obligation: must-concurrent
+      unit_form: work-package
+      owner_anchor: .specify/shared/definitions/subagent-definitions.md#class-concurrent-by-default
+    - name: partition-required
+      applies_to:
+        - teams
+        - anchoring
+      obligation: must-concurrent
+      unit_form: target-or-seat-group
+      owner_anchor: .specify/shared/definitions/subagent-definitions.md#class-partition-required
+    - name: serial-only
+      applies_to:
+        - agents
+      obligation: may-serial
+      unit_form: executor-run
+      owner_anchor: .specify/shared/definitions/subagent-definitions.md#class-serial-only
+  decision_rule:
+    - root_id: skills
+      produced_shape: work-package
+      class: concurrent-by-default
+    - root_id: commands
+      produced_shape: command-run
+      class: concurrent-by-default
+    - root_id: teams
+      produced_shape: seat-group
+      class: partition-required
+    - root_id: anchoring
+      produced_shape: target
+      class: partition-required
+    - root_id: agents
+      produced_shape: executor-run
+      class: serial-only
+  obligation_values:
+    - must-concurrent
+    - may-serial
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_class_table.py
+former_carriers: []
+note: "Class design, recorded once here because no earlier artifact had fixed it: concurrent-by-default covers the bodies that partition their own duty (skills, commands); partition-required covers the bodies whose unit set IS the product (goal targets, team seats) so a one-unit run is a recorded decision; serial-only covers the agent definitions, whose own advance is a single executor run (measured 2026-11-09: none of the 17 definitions carries a dispatch tool, 14 forbid dispatching in prose), with the serial condition named by pointer to serial-reason.yaml rather than restated, and the class re-openable only by revising this fact (C-047). The decision rule keys on (root_id, produced_shape); produced_shape uses the run-time unit vocabulary of data-model.md E-1 (work-package, command-run, target, seat-group, executor-run), so a root whose members ever resolve to two shapes is decided by its shape row, and a pair matching no row is uncovered and red. owner_anchor sections are authored by the implement rows that write the class obligations; the anchor fragment is the section id to create."

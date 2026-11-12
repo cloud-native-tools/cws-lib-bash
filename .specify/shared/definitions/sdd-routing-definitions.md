@@ -5,7 +5,7 @@
 | # | 事实 | 本文件落点 |
 |---|------|-----------|
 | F-1 | 五项声明输入的封闭取值域 | § Inputs |
-| F-2 | 三值裁决表（`[[STR-004]]` / `[[STR-005]]` / `[[STR-006]]`） | § Verdict table |
+| F-2 | 三值裁决表（`sdd` / `direct` / `adjudicate`） | § Verdict table |
 | F-3 | 固定优先级 | § Precedence |
 | F-4 | 理由码词表（封闭） | § Reason codes |
 
@@ -13,7 +13,7 @@
 
 **机读面**: 唯一的读取者是只读 stdlib 引擎 `.specify/scripts/python/sdd-route.py`（动作 `route` / `authorize` / `golden`）。它在运行时解析本文件，MUST NOT 自带第二份取值域、裁决表、优先级或理由码；引擎的接口与退出码归 `contracts/routing-decision.md` C-28 所有。
 
-**字面量登记处**: `[[STR-001]]` … `[[STR-010]]` 的取值与语义 owner 是本特性切片的 `requirements.md` § Shared Strings；本文件以 `[[STR-NNN]]` 引用其语义，不另立第二张字面量表。
+**字面量登记处**: `[[STR-001]]` … `[[STR-011]]` 的取值与语义 owner 是合并后的父规格 `.specify/specs/074-goal-team-sdd-unification/requirements.md` § Shared Strings（原切片登记处为其被合并前的投影）；本文件以 `[[STR-NNN]]` 引用其语义，不另立第二张字面量表。
 
 **不在本文件（只给指针，不复述）**:
 
@@ -25,7 +25,7 @@
 | 驱动的阶段名册、状态脊、哨兵、U0–U6 | `.specify/skills/sdd-loop-driver/SKILL.md` |
 | 反嵌套义务与其派发前探针 | `.specify/shared/definitions/subagent-definitions.md` § Dispatch-Time Governance Obligation；`.specify/skills/internal/run-agent/SKILL.md` |
 | 中立元数据键集（`[[STR-001]]` 的取值域与缺省） | `src/specify_cli/__init__.py` `NEUTRAL_AGENT_METADATA_KEYS` |
-| `team.md` frontmatter schema（`[[STR-010]]` 块映射） | `.specify/skills/internal/create-team/references/create-mode.md` § Persisted `team.md` schema |
+| `team.md` frontmatter schema（`[[STR-011]]` 块映射） | `.specify/skills/internal/create-team/references/create-mode.md` § Persisted `team.md` schema |
 
 ## Hierarchy
 
@@ -36,7 +36,9 @@
 3. **Agent** 执行一条职责（duty）；职责是路由与授权的计量单位——一次裁决对应一条职责，而不是一个文件或一次提交。
 4. **SDD 运行**（`sdd-loop-driver`）是从属执行路径：它由**已获有效授权的 Agent** 启动，为一条职责产出 SDD 工件链，并在 review 完成后交回 handoff。
 
-**边界**: 任何 SDD 运行 MUST NOT 创建、重绑、改范围或终止 Goal、Target、Team 或 roster。下层不得改写上层的定义；需要改变上层的动作 MUST 返回给上层执行者（Goal 侧归 `/speckit.goal`，Team 侧归 `/speckit.team` 的既有写线），而不是在运行内就地改写。层级不新增结构字段、不新增强制绑定。
+**边界**: 下层不得改写上层的定义。**一次 SDD 运行 MUST NOT 创建/重绑/改范围/终止共享档案中的既有定义**——需要改变既有定义的动作 MUST 返回给上层执行者（Goal 侧归 `/speckit.goal`，Team 侧归 `/speckit.team` 的既有写线），而不是在运行内就地改写。层级不新增结构字段、不新增强制绑定。
+
+**平行线 carve-out（追加）**: 上句治理的是**共享档案中已有的定义**，不是禁止运行拥有定义。一次运行——SDD 运行与命令运行同规——MAY 创建归本次运行所有的定义并写入两条档案层：goal 档案 `.specify/anchoring/<slug>/goal.md`、team 档案 `.specify/teams/<slug>/team.md`；归属由绑定记录回答，其构成与取值域归 `.specify/shared/definitions/goal-definitions.md` § The Binding Record，team 侧归 `.specify/skills/internal/create-team/references/conceptual-model.md` § The Team Definition and the Binding Model——本段只是路由层的 carve-out，不复述任何 value domain。哪些命令运行 MAY 创建定义由声明层与 goal 引擎的 `command-family` 动作判定，本段不设第二份清单。
 
 ## Direct modification
 
@@ -66,7 +68,7 @@
 - **引导与维护不同于开发流程**：`sdd-project-setup` 与 `sdd-house-keeping` 是框架的引导与维护路径，它们各自有既定职责，MUST NOT 被读作「轻量的 SDD 运行」，也 MUST NOT 取代开发流程。
 - **只有驱动构成 SDD 调用**：在嵌套入口契约下（`.specify/skills/sdd-loop-driver/references/nested-invocation.md`），只有 `sdd-loop-driver` 的调用算作一次 SDD 调用。
 - **无 `.specify/` 结构的目标项目走引导路径**：当一次被分流为 SDD 的变更落到尚无 `.specify/` 结构的目标项目时，路由是**引导路径**（`sdd-project-setup`），MUST NOT 把 SDD 分流降级为直接修改——降级会让该变更永久失去工件链与 handoff，而这两件正是它被分流为 SDD 的原因。
-- **引导与维护派发子代理时适用同一有效授权谓词**：当 `sdd-project-setup` 或 `sdd-house-keeping` 派发子代理时，该派发与一次 SDD 调用适用**同一个**有效授权谓词——同一个键 `[[STR-001]]` 的两个半边（Agent 定义能力 AND 席位策略，席位侧载体为 `[[STR-010]]` 块映射），按 (team, seat) 解析，可执行形态是 `python3 .specify/scripts/python/sdd-route.py --action authorize`。谓词不是第二个谓词，其义务位点归 `.specify/shared/definitions/subagent-definitions.md` § Dispatch-Time Governance Obligation。
+- **引导与维护派发子代理时适用同一有效授权谓词**：当 `sdd-project-setup` 或 `sdd-house-keeping` 派发子代理时，该派发与一次 SDD 调用适用**同一个**有效授权谓词——同一个键 `[[STR-001]]` 的两个半边（Agent 定义能力 AND 席位策略，席位侧载体为 `[[STR-011]]` 块映射），按 (team, seat) 解析，可执行形态是 `python3 .specify/scripts/python/sdd-route.py --action authorize`。谓词不是第二个谓词，其义务位点归 `.specify/shared/definitions/subagent-definitions.md` § Dispatch-Time Governance Obligation。
 
 ## Inputs
 
@@ -179,7 +181,7 @@
 
 ## Verdict record
 
-裁决记录的字段面归 `.specify/specs/074a-authorized-routing/data-model.md` E4，本文件不复述字段表；本文件固定两件事，二者都是本切片可判定的面（C-27）：
+裁决记录的字段面归 `.specify/specs/074-goal-team-sdd-unification/slices/074a-authorized-routing/data-model.md` E4，本文件不复述字段表；本文件固定两件事，二者都是本切片可判定的面（C-27）：
 
 - **载体**：本切片的裁决记录落在 **Agent 执行证据**里。嵌套运行的 handoff 与调用方的结果**按稳定路径引用同一条记录**，不复算——外层读到的就是该职责实际据以行动的那条裁决。
 - **时间戳由记录侧承载、引擎不自造**：引擎 MUST NOT 读时钟（同一输入两次求值必须逐字节一致，C-24）。`recorded_at` 缺省为 `null`，由调用方以 `--recorded-at` 传入，或在写入证据时补齐；引擎只把它原样放进载荷。

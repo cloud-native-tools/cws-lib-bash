@@ -1,0 +1,47 @@
+# 093 — [[STR-008]] the five enumeration roots and the class each may receive members from.
+#
+# The one machine-read owner of the execution-body scope closed set (FR-001, FR-003). Every root is a
+# PATH PATTERN, never a member count (V-4, R-6): a count frozen here would go stale on the next skill
+# added, and the drift would be invisible. Read through `.specify/scripts/python/declaration_reader.py`.
+#
+# The three derived projection trees and the two spec-local layers are excluded here, in the same entry
+# as the roots they project (C-005): a projection tree enumerated as a root double-counts its source.
+fact: executor-enumeration-roots
+kind: mapping
+statement:
+  roots:
+    - root_id: skills
+      pattern: skills/{internal,external}/<name>/
+      class: concurrent-by-default
+      excluded_layers:
+        - .specify/skills/
+        - .github/skills/
+    - root_id: commands
+      pattern: .specify/templates/commands/<stem>.md
+      class: concurrent-by-default
+      excluded_layers:
+        - .claude/commands/
+        - .qoder/commands/
+        - .opencode/command/
+        - .github/prompts/
+    - root_id: agents
+      pattern: agents/*.agent.md
+      class: serial-only
+      excluded_layers:
+        - .specify/agents/templates/
+        - .github/agents/
+    - root_id: teams
+      pattern: .specify/teams/<slug>/
+      class: partition-required
+      excluded_layers:
+        - .specify/specs/<id>/team/
+    - root_id: anchoring
+      pattern: .specify/anchoring/<slug>/
+      class: partition-required
+      excluded_layers:
+        - .specify/specs/<id>/goal/
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_class_table.py
+former_carriers: []
+note: "Exactly five roots. The exclusions are the mirror discipline's own projections (C-005, FR-031): `.specify/skills/` is the flat runtime projection of skills/{internal,external}/ (measured 2026-11-09: the flat layer holds the 16 external projections plus the nested internal/ directory), the per-tool command directories (.claude/commands/, .qoder/commands/, .opencode/command/, .github/prompts/) are generated from .specify/templates/commands/ (measured 2026-11-09: 29 copies in .github/prompts too), `.specify/agents/templates/` and `.github/agents/` are agent-definition projections, and `.github/skills/` projects the .specify/skills/ layer. The two spec-local layers are 085 projections, never roots: a spec-scope goal lives under .specify/specs/<id>/goal/<slug>/ and a spec-scope team under .specify/specs/<id>/team/. `class` names the single candidate class of that root; the class table's decision rule still owns the assignment (C-004), so the engine reads both facts and stores neither as a constant."

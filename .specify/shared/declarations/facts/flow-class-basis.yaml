@@ -1,0 +1,17 @@
+# Batch 1, row 5 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the `basis` closed set. The order is part of the value because the
+# ledger's `basis` column and the mixed-oracle invariant name members by position
+# (`mixed-oracle` is member 2). The engine reads it through `.specify/scripts/python/declaration_reader.py`;
+# the carrier reaches it by `.specify/shared/declarations/facts/flow-class-basis.yaml#/statement`.
+fact: flow-class-basis
+kind: closed-set
+statement:
+  - behavior-oracle
+  - reader-oracle
+  - mixed-oracle
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+former_carriers:
+  - .specify/shared/definitions/flow-class-definitions.md
+note: "Both faces agreed before migration (BASIS_VALUES and the carrier's basis table), so the authority order picked the code-side value with nothing to correct."

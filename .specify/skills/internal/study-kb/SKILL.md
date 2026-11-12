@@ -1,0 +1,117 @@
+---
+name: study-kb
+description: 知识库调查——围绕一个研究问题,系统检索项目自有知识库(history 主题知识、memory 长期/会话记忆、docs 树、features 注册表与详情、specs 制品、glossary/register/constitution),逐条建立带路径与日期状态的证据,区分"现役事实"与"历史记录",产出可索引报告与覆盖度评估。Use when the user mentions "study kb", "study-kb", "知识库调查", "知识库调研", "查项目知识库", "项目内调研", "history/memory/docs 综合检索", "knowledge base research", "what do we know about", "已有决策", "历史教训", "之前是怎么做的", "项目记忆", "study-kb".
+skill_id: "<SKILL:.specify/skills/internal/study-kb/SKILL.md>"
+classification: internal
+---
+
+# study-kb — 知识库调查
+
+单一目标:回答一个研究问题,**只用项目自己的知识库**作证据来源,产出一份可索引报告。核心判据是**现役 vs 历史**:历史/会话记录描述"当时",不是"现在";引用前必须对现役 owner 复核。
+
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+## Workspace & inputs
+
+- **问题输入**:`$ARGUMENTS` 或调用方给出的研究问题、时间范围、必须覆盖的知识域。
+- **`$WORK_DIR`**:宿主项目根,必须是 Spec Kit 项目(存在 `$WORK_DIR/.specify/`);本技能**只读**全部知识库,不修改任何条目。
+- **`$STUDY_ARCHIVE`**:报告落点,缺省 `<宿主项目根>/.specify/studies/<question-slug>-kb/`;调用方可显式指定。
+- **`$STORES`**(可选):限定检索的知识域子集(见 Step 2 的封闭清单),未给的域在报告中列为"未覆盖",不得假装检索过。
+
+## Workflow
+
+### Step 1 — Scope(问题定型)
+
+- 一句话写出:问题、服务的决策、回答到什么程度算够。
+- 拆 3–7 个可核查子问题;为每个子问题标注它最可能落在哪个知识域(见 Step 2)。
+- 标注时效要求:问"当前如何"还是"历史上如何"——两者证据策略不同。
+
+### Step 2 — Inventory(知识域盘点)
+
+封闭清单,逐域判断相关性并记录是否检索:
+
+| 知识域 | 路径 | 性质 | 检索方式 |
+|--------|------|------|----------|
+| 主题知识 | `.specify/history/`(`README.md` 索引 + `00-…` 跨域教训 + 分主题文件) | 蒸馏后的历史知识 | 主题索引 → 定向读取 |
+| 长期记忆 | `.specify/memory/knowledge/` | 沉淀的项目知识 | `python3 .specify/scripts/python/memory-utils.py --action recall --query "<q>" --format json` |
+| 会话记忆 | `.specify/memory/session/` | 短期、按日期 | 同上引擎(含该 scope)或定向读取 |
+| 开发文档 | `docs/` | 现役文档 | 文档树 → 定向读取 |
+| 特性注册表 | `.specify/features.md` + `.specify/features/` | 现役状态 | 逐行/逐文件读取 |
+| 规格制品 | `.specify/specs/**`(requirements/plan/tasks/research/test-evidence) | 现役+历史交错 | 定向读取 |
+| 词汇/登记 | `.specify/glossary.md`、`.specify/register.md` | 现役登记 | 直接读取 |
+| 治理 | `.specify/constitution.md`、`.specify/workflow/` | 现役规则 | 直接读取 |
+
+- 引擎优先:固定检索/匹配交给确定性引擎(memory-utils 的 recall);文件类知识用**固定字符串**定向搜索(遵循 `.specify/shared/guidelines/agent-anti-patterns.md`,不做未转义正则、不以文本命中当存在性断言)。
+- summary-first:先读索引/摘要,再按需升级为定向读取(`.specify/shared/guidelines/token-efficiency.md`)。
+
+### Step 3 — Extract(取证)
+
+- 每条证据记:`路径`(含小节/锚点)、条目日期(如有)、性质(`now` / `dated` / `superseded`)、支撑的原文要点。
+- 日期记录(.specify/history/、session、评审记录、审计证据)默认 `dated`;要作为"当前状态"引用,必须回到其点名的现役 owner 复核,复核结果随证据一起记录。
+
+### Step 4 — Cross-check(交叉与裁决)
+
+- 同一事实多个条目冲突时,按权威顺序裁决:现行代码/现役 owner 文件 > 更新的登记 > 历史记录;裁决理由写进报告。
+- 只存在于历史记录的结论,标注"最后记录于 <日期>,现状未复核",不得当作现役事实。
+- 检索为空也是结论:记录"该域无相关证据",列入 Gaps,不臆造。
+
+### Step 5 — Compose(汇编)
+
+写 `$STUDY_ARCHIVE/report.md`,结构固定:
+
+```markdown
+# 知识库调查报告:<问题>
+## Question & Decision      问题、服务的决策、完成标准
+## Coverage                 逐域:已检索/跳过(理由)/无证据;使用的引擎与查询
+## Findings
+### <子问题 1>
+- 结论:<一句话>
+- 证据:<路径#锚点>(日期:…;性质:now|dated|superseded)
+- 现役复核:<复核的 owner 路径与结果,或"无需复核">
+## Conflicts & Superseded  冲突并列 + 裁决理由;被推翻的旧记录
+## Answer                   直接回答主问题(只引用上文证据)
+## Gaps                     知识库未覆盖、需要 study-code/study-online/用户补充的部分
+## Lookup Guide             "再问某类问题时去哪找"的索引
+```
+
+### Step 6 — Report & archive
+
+- 交付前自检:每条结论有路径;Coverage 与 Gaps 一致(跳过≠无证据);`dated` 结论均带复核状态。
+- 报告路径与 3–5 条关键结论返回给调用方。
+
+## Output Requirements
+
+- **证据密度**:结论 → 路径(含锚点) → 日期/性质,三段齐全。
+- **现役诚实**:历史记录不伪装为现状;未复核就说未复核。
+- **可索引**:固定标题 + Lookup Guide,供后续追问快速反查。
+- 默认中文(跟随用户语言)。
+
+## Boundaries
+
+- **与 memory-recall 的分工**:memory-recall 是任务进行中的轻量检索与注入;本技能是产出完整报告的全域调查。检索引擎复用,报告产物不重复。
+- **与 study-code / study-online 的分工**:项目内知识归本技能;自身代码实现归 `study-code`;外部世界归 `study-online`。三者可被同一研究编排组合调用,但证据来源不混写。
+- **只读红线**:不修改 history/memory/docs/specs 任何条目;报告只落 `$STUDY_ARCHIVE`。
+- **Shared conventions stay pointers**:token 效率与反模式清单归各自 owner,本技能只引用。
+
+## Self-Improvement Contract
+
+- Canonical owner: `.specify/skills/internal/study-kb/`(镜像 `.specify/skills/internal/study-kb/` 由 sync-mirrors 生成,不手改)
+- Own-run observation: 各知识域的命中/空率、`dated` 结论的复核失败次数、Gaps 中被证明其实存在的遗漏、调用方追问形态
+- Mutation route: `improve-skills`(知识域清单、现役复核判据、报告结构的修订均走此路由)
+- Validation route: 纪律类修订按 create-skills 压力测试法 RED-GREEN;知识域清单变更需同步本表与 Step 2
+- Comparison signal: 同类问题的"遗漏域数 ↓、历史误报现役数 ↓、二次追问次数 ↓"
+- Escalation boundary: 引擎缺陷(memory-utils recall 失效等)记为 `skill:study-kb` 反馈条目并点名引擎,不修改本技能的判据
+
+## Wrap-up
+
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
+
+**Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
+
+1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "skill:study-kb" --unit-type skill --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
+   尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
+2. Exec Quant — `python3 .specify/scripts/python/exec-quant.py --action collect --unit-id "skill:study-kb" --unit-type skill`；source args when available: `--run-id <RUN_ID>`
+3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:study-kb" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
+4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
+5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

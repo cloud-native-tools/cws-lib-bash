@@ -2,7 +2,7 @@
 <!--
   ============================================================
   复现附录（Reproduction Appendix）— 保留本注释块，交付时按需更新
-  - 打开本文件即可渲染：无构建步骤；CDN 模式需联网，split/vendored 模式离线可用
+  - 打开本文件即可渲染：无构建步骤；D3 取自团队自建渲染服务的固定版本资产，服务不可达时回退同目录 vendor/ 副本（不访问公网）
   - 数据维护：单文件模式改下方 const data；split 模式改同目录 data-*.js
     · nodes / links / rels / cells 数组分别对应图面的节点、连线、矩阵格
     · 修改后刷新浏览器即重新渲染
@@ -16,7 +16,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>D3.js Visualization</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <!-- D3 运行库取自团队自建渲染服务的固定版本资产（不访问公网）；
+       服务不可达时回退到交付目录内的 vendor/d3.v7.min.js（从该服务取回后随交付保留）。详见 d3js.md。 -->
+  <script src="http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js"></script>
+  <script>window.d3 || document.write('<script src="vendor/d3.v7.min.js"><\/script>');</script>
   <style>
     /* INLINE-VERBATIM: .specify/skills/draw-diagram/assets/delivery.css
        页面骨架样式（背景/卡片/标题/正文/图框/复现附录/暗色/打印）的唯一 owner 是上面那个文件。
@@ -54,7 +57,7 @@
   <details class="repro-appendix">
     <summary>复现附录：如何修改数据与重新渲染</summary>
     <ul>
-      <li>打开本文件即可渲染，无构建步骤；CDN 模式需联网，vendored 模式离线可用。</li>
+      <li>打开本文件即可渲染，无构建步骤；D3 取自自建渲染服务，服务不可达时回退同目录 <code>vendor/d3.v7.min.js</code>（不访问公网）。</li>
       <li>数据位置：单文件模式位于下方 <code>const data</code>；split 模式位于同目录 <code>data-*.js</code>（nodes / links / rels / cells 对应图面各部分）。</li>
       <li>修改数据后刷新浏览器即重新渲染；手工坐标图请同步更新文件头坐标规则并跑校验。</li>
       <li>数据溯源：依据 <code>&lt;架构描述文件&gt; v&lt;版本&gt;（&lt;YYYY-MM-DD&gt;）</code>。</li>

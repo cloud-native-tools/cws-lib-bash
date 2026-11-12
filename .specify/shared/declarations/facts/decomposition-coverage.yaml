@@ -1,0 +1,44 @@
+# 093 — [[STR-007]] per-stage decomposition coverage and its relation to the state spine.
+#
+# The one machine-read owner of "which stages decompose, and by what default" (FR-029, FR-034, C-009).
+# Read through `.specify/scripts/python/declaration_reader.py` by the coverage action and the driver surfaces.
+#
+# Relation to the three spine keys: this entry is the OWNER; `decomposition` (feature-level opt-out),
+# `decomposition_stages` (the per-stage map) and the stage slot cap are run-scoped PROJECTIONS read at
+# dispatch. A fourth place that assigns "which stages decompose" is a defect, not a convenience.
+fact: decomposition-coverage
+kind: mapping
+statement:
+  stages:
+    - stage: requirements
+      coverage: auto
+    - stage: clarify
+      coverage: auto
+    - stage: plan
+      coverage: auto
+    - stage: tasks
+      coverage: auto
+    - stage: checklist
+      coverage: auto
+    - stage: analyze
+      coverage: on
+      concurrency_source: stage-team-configuration-or-agent_concurrency_requested
+    - stage: implement
+      coverage: auto
+    - stage: review
+      coverage: auto
+  coverage_values:
+    - auto
+    - on
+    - off
+  single_package_decision_required: true
+  spine_relation:
+    decomposition: projection of this entry, feature-level opt-out
+    decomposition_stages: projection of this entry, per-stage coverage
+    decomposition_slot_cap: projection of concurrency-slot-and-reserve.yaml slot_cap_default
+  fourth_source_of_stage_coverage: defect
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_high_order.py
+former_carriers: []
+note: "The re-judgment FR-029 requires: the previous built-in defaults enabled plan/implement/review and left analyze/clarify/requirements/tasks/checklist off; every stage with concurrent units now defaults to `auto` (decompose when the gate admits and the benefit test holds, otherwise a recorded single-package decision), so no stage can stay serial by an unstated default. `analyze` is the dated FR-034 override: it decomposes by default at N-way concurrency, and N is read at dispatch from the stage team configuration or the spine's `agent_concurrency_requested`, never frozen into this entry. `off` remains a legitimate value only as an explicit, recorded per-stage decision, and the feature-level `decomposition: off` is the hard opt-out projected onto the spine. The values enumerated earlier in decomposition-model.md § 20.1 are projections that this entry supersedes; that section converges by revision during implementation."

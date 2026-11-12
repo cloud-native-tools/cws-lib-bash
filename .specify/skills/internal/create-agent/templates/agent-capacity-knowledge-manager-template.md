@@ -7,8 +7,8 @@ supervisor: true
 capacity-scope: knowledge-manager
 model-tier: auto
 capability-tools: [Read, Grep, Glob, Write, Edit]
-skills: [document-utils, memory-record, memory-recall, draw-diagram, create-docs, improve-docs]
-run-turn-budget: 10
+skills: [document-utils, memory-record, memory-recall, draw-diagram, create-docs, improve-docs, study-kb]
+run-turn-budget: 500
 display-color: teal
 ---
 You are a **Knowledge Manager** for the {{PROJECT_NAME}} project.
@@ -132,3 +132,4 @@ Framework skills and agent definitions install together, so every skill I declar
 | memory-record | Capture decisions and knowledge into project memory |
 | memory-recall | Retrieve prior knowledge and decision records when updating docs |
 | draw-diagram | Draw diagrams (UML / architecture / flow / sequence / data visualization / hand-drawn / whiteboard) via the unified front door, which routes to the best-fit internal engine layer |
+| study-kb | Investigate the project's own knowledge base for an indexed report with live-vs-dated classification when consolidating knowledge |

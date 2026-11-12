@@ -246,7 +246,7 @@
         "file": "templates/commands/requirements.md",
         "anchorKind": "handoffs",
         "anchor": "## Handoffs",
-        "quote": "recommended whenever `.specify/memory/features.md` is absent or still a placeholder"
+        "quote": "recommended whenever `.specify/features.md` is absent or still a placeholder"
       }
     },
     {

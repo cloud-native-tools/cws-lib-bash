@@ -12,7 +12,7 @@
 | ② | 非 root 运行用户存在性 | `ssh <alias> "id <run-user>"` | uid≠0 = ok；不存在或 uid=0 = fail |
 | ③ | 子代理 CLI 可用性与版本 | `ssh <alias> "su - <run-user> -c '<cli> --version'"` | 版本串 = ok（版本号记录进凭证）；不在 PATH = fail |
 | ④ | 大语言模型配置（**已解析配置**） | 在**目标项目侧**运行 `python3 .specify/scripts/python/execution-config.py --action resolve --agent <slug> [与派发相同的 inline 拓扑/覆盖输入；external 派发至少含 --mode external] --workspace-root <project-dir> --format json`（远端经既有 `ssh` 族在目标项目侧执行） | exit 0 且 `config_id` 非空 = ok；external 派发还要求 `requires_external=true`。失败 = **uncertain → 列待补清单**（按引擎消息补齐字段：model / effort / context 等；默认层缺失指向 `specify init`） |
-| ⑤ | spec-kit 框架可用性（目标项目侧） | `ssh <alias> "su - <run-user> -c 'cd <project-dir> && test -d .specify && test -f .specify/memory/constitution.md && cat .specify/source.json 2>/dev/null'"` | 在位 = ok；缺失/退化 = **fail → handoff sdd-project-setup**（见下） |
+| ⑤ | spec-kit 框架可用性（目标项目侧） | `ssh <alias> "su - <run-user> -c 'cd <project-dir> && test -d .specify && test -f .specify/constitution.md && cat .specify/source.json 2>/dev/null'"` | 在位 = ok；缺失/退化 = **fail → handoff sdd-project-setup**（见下） |
 
 ## 失败处置链（软协同）
 

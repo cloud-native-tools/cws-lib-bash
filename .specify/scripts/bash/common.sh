@@ -1,31 +1,75 @@
 #!/usr/bin/env bash
 # Common functions and variables for all scripts
 
-# Source shared environment configurations
-[ -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ] && source "${CWS_LIB_BASH_HOME}/bin/cws_bash_env"
+# ---------------------------------------------------------------------------------------
+# Script-interface surface (feature 086). Everything below the guard is this file's BODY and
+# runs only when the file is executed, never when it is sourced: sourcing is how every other
+# script in this directory obtains these helpers, so a sourcing that ran the body would be the
+# wrong act twice over — it would also end the caller, because the dependency check below exits.
+#
+# The guard sits ahead of the host-library load and of that dependency check, or `--help` would
+# be answered by a non-zero exit instead of by the usage and its labels.
+#
+# That this file HAS an entry point is measured, not assumed: run without a flag, it loads the
+# host shell library, checks the dependency and returns 0 — the same work it does for every
+# caller, in a subshell, so that a missing dependency is reported without ending the caller.
+#
+# Authority: .specify/shared/definitions/script-interface-definitions.md sections 3 and 4.
+# ---------------------------------------------------------------------------------------
 
-check_dependency() {
-  if ! command -v git &> /dev/null; then
-    echo "Error: git is not installed." >&2
-    return 1
-  fi
+# The executable half: what this file does when it is run.
+_script_interface_library_body() {
+  # Source shared environment configurations
+  [ -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ] && source "${CWS_LIB_BASH_HOME}/bin/cws_bash_env"
 
-  if [ -z "${CWS_LIB_BASH_HOME}" ]; then
-    echo "Error: CWS_LIB_BASH_HOME environment variable is not set." >&2
-    return 1
-  fi
+  check_dependency() {
+    if ! command -v git &> /dev/null; then
+      echo "Error: git is not installed." >&2
+      return 1
+    fi
 
-  if [ ! -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ]; then
-    echo "Error: cws-lib-bash is not correctly installed. File not found: ${CWS_LIB_BASH_HOME}/bin/cws_bash_env" >&2
-    return 1
-  fi
+    if [ -z "${CWS_LIB_BASH_HOME}" ]; then
+      echo "Error: CWS_LIB_BASH_HOME environment variable is not set." >&2
+      return 1
+    fi
 
-  return 0
-}
+    if [ ! -f "${CWS_LIB_BASH_HOME}/bin/cws_bash_env" ]; then
+      echo "Error: cws-lib-bash is not correctly installed. File not found: ${CWS_LIB_BASH_HOME}/bin/cws_bash_env" >&2
+      return 1
+    fi
 
-if ! check_dependency; then
+    return 0
+  }
+
+  if ! check_dependency; then
     echo "Dependency check failed. Initializing dependencies are required." >&2
     exit 1
+  fi
+}
+
+# The guard block every applicable script carries: at file scope, ahead of the body and ahead of
+# every write. It answers `-h`, `--help` and `--version` (exit 0) and rejects an undeclared `-*`
+# token (exit 2) before anything else happens. The library provides the scan; this consumer only
+# declares its own surface and which kind of file it is.
+_SCRIPT_INTERFACE_READ_IN=1
+SCRIPT_INTERFACE_LIB="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/script-interface.sh"
+# Direct execution only: when this file is SOURCED, "$@" belongs to the caller and must never be
+# read here, or a caller passing --help would be answered and ended by its own helper library.
+if [ -f "$SCRIPT_INTERFACE_LIB" ]; then
+    # shellcheck source=/dev/null
+    . "$SCRIPT_INTERFACE_LIB"
+    # The guard answers for THIS file only when THIS file is the program. When it is sourced,
+    # "$@" belongs to the caller: reading it here would answer the caller's flags and end it.
+    if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+        script_interface_guard entry
+        script_interface_guard define name="$0" \
+            usage="(no options; sourceable helper library)" \
+            effects="defines helper functions only; sourcing it writes nothing" \
+            codes="0 the library was sourced; 1 a host dependency is missing; 2 an unrecognized option" \
+            writes=--help \
+            --
+        script_interface_guard guard "$@"
+    fi
 fi
 
 
@@ -124,7 +168,7 @@ get_feature_paths() {
   # Extract REQUIREMENT_ID from branch name (NOT feature name)
   # Branch name format: NNN-requirement-name (e.g., 003-speckit-agents-command)
   # This is the requirement/spec key identifier, NOT the feature name
-  # Feature metadata (ID, name) must be retrieved from .specify/memory/features.md
+  # Feature metadata (ID, name) must be retrieved from .specify/features.md
   local requirement_id=""
   if [[ $current_branch =~ ^([0-9]+)- ]]; then
       requirement_id="${BASH_REMATCH[1]}"
@@ -326,4 +370,11 @@ ensure_utf8_locale() {
   fi
 }
 
-
+# The library-link: run the body when this file is executed; publish the helpers listed here when
+# it is sourced. The list is this file's public surface — nothing else crosses the subshell, and a
+# helper added below without being listed here is not published.
+_script_interface_library_link \
+  check_feature_branch get_feature_dir find_feature_dir_by_prefix get_feature_paths \
+  git_repo_root git_current_branch is_git_repo gitignore_add_pattern gitignore_ensure_exists escape_sed \
+  check_file check_dir safe_quote validate_input is_valid_utf8 validate_skill_name \
+  create_skill_structure report_error report_success ensure_utf8_locale check_dependency

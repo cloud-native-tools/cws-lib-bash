@@ -83,6 +83,12 @@ probe_defs_path = _probe_utils.probe_defs_path
 resolve_probe = _probe_utils.resolve_probe
 _CUSTOM_UNIT_RE = _probe_utils._CUSTOM_UNIT_RE
 
+# The declaration layer's single read entry (feature 084). Import-qualified, so a plain import works:
+# every consumer is invoked as `python3 <dir>/this-file.py`, which puts this directory on sys.path.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
+
 FEEDBACK_SUBDIR = Path(".specify") / "memory" / "feedback"
 PACKAGES_DIRNAME = "packages"
 STATE_DIRNAME = "state"
@@ -90,7 +96,11 @@ STATE_DIRNAME = "state"
 # source for the three store scalars, and deleted on first mutation.
 INDEX_NAME = "index.json"
 STORE_NAME = "feedback"
-DEFAULT_THRESHOLD = 10
+# Feature 084, batch 1 row 1: the prompt threshold is a declaration-layer fact. This engine carries no
+# copy of the value — it reads `.specify/shared/declarations/facts/feedback-prompt-threshold.yaml` through the
+# shared read entry, and a project without the layer is labelled rather than defaulted (FR-012 /
+# C-049: the compatibility path MUST NOT be readable as a pass).
+THRESHOLD_FACT = "feedback-prompt-threshold"
 NO_OP_POINT = "No significant optimization points identified this run."
 DIST_NAME = "specify-cli"
 
@@ -112,11 +122,42 @@ class FeedbackError(ValueError):
 # --------------------------------------------------------------------------- #
 # Helpers (pure)
 # --------------------------------------------------------------------------- #
+_NOW_OVERRIDE: Optional[str] = None
+
+
+def set_now_option(value: Optional[str]) -> None:
+    """Apply the optional injected clock (--now) for this invocation.
+
+    ``value=None`` restores the real clock, so an invocation without the option is
+    byte-identical to the pre-change engine. A value must be a canonical
+    second-granularity UTC stamp (``YYYY-MM-DDTHH:MM:SSZ``) — the engine's stored
+    form — otherwise the invocation is rejected with a named error.
+    """
+    global _NOW_OVERRIDE
+    if value is None:
+        _NOW_OVERRIDE = None
+        return
+    try:
+        parsed = datetime.strptime(value, "%Y-%m-%dT%H:%M:%SZ")
+    except (ValueError, TypeError):
+        raise FeedbackError(
+            f"--now: cannot parse {value!r} — expected YYYY-MM-DDTHH:MM:SSZ")
+    if parsed.strftime("%Y-%m-%dT%H:%M:%SZ") != value:
+        raise FeedbackError(
+            f"--now: {value!r} is not a canonical second-granularity UTC stamp "
+            "(expected YYYY-MM-DDTHH:MM:SSZ)")
+    _NOW_OVERRIDE = value
+
+
 def now_iso() -> str:
+    if _NOW_OVERRIDE is not None:
+        return _NOW_OVERRIDE
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
 def timestamp_id() -> str:
+    if _NOW_OVERRIDE is not None:
+        return _NOW_OVERRIDE.replace("-", "").replace(":", "")
     return datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
 
 
@@ -149,7 +190,40 @@ def should_prompt(count: int, threshold: int) -> bool:
     return count >= threshold
 
 
-def resolve_threshold(explicit: Optional[int], stored: Optional[int]) -> int:
+def should_prompt_or_degrade(count: int, threshold: Optional[int]) -> bool:
+    """`should_prompt` with the degraded read pinned to "do not prompt" (FR-012 / C-049).
+
+    ``threshold is None`` means the declaration layer could not be read (a legacy project). Prompting on
+    a value nobody can point at would be exactly the silent default FR-012 forbids, so the reading
+    degrades to "do not prompt" and the caller puts the `declaration-absent` label on its output line.
+
+    The predicate itself stays byte-identical: `tests/contract/test_client_metrics.py` C-42 pins
+    ``should_prompt``'s source text because the threshold-combination rule is a 055-era contract that this
+    migration must not re-shape. The degradation therefore lives here, beside it, not inside it.
+    """
+    if threshold is None:
+        return False
+    return should_prompt(count, threshold)
+
+
+def declared_threshold() -> Tuple[Optional[int], Optional[str]]:
+    """`(value, label)` for the declared prompt threshold.
+
+    The value comes from the declaration layer through the shared read entry — never from a constant in
+    this file (there is none). ``label`` is the `declaration-absent` instance when the layer or the fact
+    is missing, and ``None`` when the read succeeded; a caller puts it on its output line so a degraded
+    read is visible rather than read as a pass (C-049).
+    """
+    repo = declaration_reader.find_repo(Path(__file__).resolve())
+    try:
+        fact = declaration_reader.load_fact(repo, THRESHOLD_FACT)
+        return int(str(fact["body"]["statement"]).strip()), None
+    except (declaration_reader.DeclarationError, KeyError, TypeError, ValueError):
+        return None, declaration_reader.absent_label(THRESHOLD_FACT)
+
+
+def resolve_threshold(explicit: Optional[int], stored: Optional[int]) -> Optional[int]:
+    """explicit > env > stored > the declaration layer. No inline default survives this chain."""
     if explicit is not None:
         return explicit
     env = os.environ.get("SPECKIT_FEEDBACK_THRESHOLD")
@@ -160,7 +234,20 @@ def resolve_threshold(explicit: Optional[int], stored: Optional[int]) -> int:
             pass
     if stored is not None:
         return stored
-    return DEFAULT_THRESHOLD
+    return declared_threshold()[0]
+
+
+def threshold_label() -> Optional[str]:
+    """The `declaration-absent` label when the layer cannot be read, else ``None`` (FR-012)."""
+    return declared_threshold()[1]
+
+
+def with_threshold_label(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """Carry the degraded-wiring label on the output line, never as a pass (C-049)."""
+    label = threshold_label()
+    if label:
+        payload["threshold_label"] = label
+    return payload
 
 
 def resolve_workspace_root(explicit: Optional[str]) -> Path:
@@ -437,7 +524,7 @@ def load_index(workspace_root: Path) -> Dict[str, Any]:
         "store": STORE_NAME,
         "updated": None,
         "threshold": (state["threshold"] if state["threshold"] is not None
-                      else DEFAULT_THRESHOLD),
+                      else declared_threshold()[0]),
         "count_since_submission": state["count_since_submission"],
         "submitted_at": state["submitted_at"],
         "entries": state["entries"],
@@ -810,15 +897,15 @@ def action_record(args: argparse.Namespace) -> Dict[str, Any]:
     if existing:
         rel = (FEEDBACK_SUBDIR / existing["file"]).as_posix()
         count = state["count_since_submission"]
-        return {
+        return with_threshold_label({
             "id": existing.get("id", ""),
             "path": rel,
             "duplicate": True,
             "count_since_submission": count,
             "threshold": threshold,
-            "should_prompt": should_prompt(count, threshold),
+            "should_prompt": should_prompt_or_degrade(count, threshold),
             "migrated": False,
-        }
+        })
 
     created = now_iso()
     slug = unit_slug(unit_id)
@@ -861,15 +948,15 @@ def action_record(args: argparse.Namespace) -> Dict[str, Any]:
     migrated = migrate_legacy_index(workspace_root)
     count = state["count_since_submission"] + 1
     rel = (FEEDBACK_SUBDIR / filename).as_posix()
-    return {
+    return with_threshold_label({
         "id": entry_id,
         "path": rel,
         "duplicate": False,
         "count_since_submission": count,
         "threshold": threshold,
-        "should_prompt": should_prompt(count, threshold),
+        "should_prompt": should_prompt_or_degrade(count, threshold),
         "migrated": migrated,
-    }
+    })
 
 
 def action_status(args: argparse.Namespace) -> Dict[str, Any]:
@@ -878,16 +965,16 @@ def action_status(args: argparse.Namespace) -> Dict[str, Any]:
     threshold = resolve_threshold(args.threshold, state["threshold"])
     count = state["count_since_submission"]
     entries = state["entries"]
-    return {
+    return with_threshold_label({
         "count_since_submission": count,
         "threshold": threshold,
-        "should_prompt": should_prompt(count, threshold),
+        "should_prompt": should_prompt_or_degrade(count, threshold),
         "total_entries": len(entries),
         "submitted_at": state["submitted_at"],
         "legacy_remaining": sum(1 for e in entries if not e.get("probe")),
         "external_count": sum(1 for e in entries if e.get("kind") == "external"),
         "legacy": state["legacy"],
-    }
+    })
 
 
 def action_list(args: argparse.Namespace) -> Dict[str, Any]:
@@ -2534,6 +2621,8 @@ def render_text(action: str, payload: Dict[str, Any]) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Spec Kit feedback-as-files engine")
+    _sig_configure(parser)
+
     parser.add_argument(
         "--action",
         required=True,
@@ -2586,6 +2675,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="dispose: optional introspection ref "
                              "(introspection-<ts>#F-<nn>)")
     parser.add_argument("--workspace-root", default=None)
+    parser.add_argument("--now", default=None,
+                        help="inject a fixed UTC clock for every now_iso() / "
+                             "timestamp_id() reading in this invocation: "
+                             "YYYY-MM-DDTHH:MM:SSZ (second granularity); absent "
+                             "= the real clock, byte-identical")
     parser.add_argument("--unit", default=None,
                         help="client-metrics: optional unit filter "
                              "(custom:<owner>/<name>); without it all client "
@@ -2704,11 +2798,36 @@ def warn_anchor_mismatch(action: str, args: argparse.Namespace) -> None:
     )
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv: Optional[List[str]] = None) -> int:
+    _sig_guard(argv, declared=['--action', '--package', '--report-file', '--include-introspection', '--confirm', '--lifecycle-point', '--plan-file', '--dry-run', '--slice', '--kind', '--disposition', '--id', '--to', '--reason', '--ref', '--workspace-root', '--now', '--unit', '--unit-id', '--unit-type', '--run-id', '--review', '--review-file', '--points', '--points-file', '--partial', '--feature', '--feature-id', '--notes', '--threshold', '--since', '--limit', '--contains', '--all', '--set', '--format'])  # answer --version / reject an undeclared option
     parser = build_parser()
     args = parser.parse_args(argv)
     warn_anchor_mismatch(args.action, args)
     try:
+        set_now_option(args.now)
         payload = _ACTIONS[args.action](args)
     except FeedbackError as exc:
         print(f"error: {exc}", file=sys.stderr)

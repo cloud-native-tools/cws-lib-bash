@@ -11,7 +11,7 @@ Do not confuse it with an **AI agent CLI** (Claude Code, Codex CLI, Qoder CLI, �
 ## Source of truth — no registration table
 
 - **Definition records**: `.specify/memory/tools/<name>.md` — one file per tool; the single authoritative source. A tool exists iff its record file exists.
-- **Discovery inventories**: `.specify/tools/{system,shell,project}.json` — machine-generated (system binaries, shell functions, project scripts); never hand-edit them. Regeneration path and the unrelated `.specify/memory/tools.md` MCP index: `.specify/shared/definitions/tool-definitions.md`.
+- **Discovery inventories**: `.specify/tools/{system,shell,project}.json` — machine-generated (system binaries, shell functions, project scripts); never hand-edit them. The MCP-server index is carried below in § Helper Tools Index (maintenance owner: `.specify/shared/definitions/tool-definitions.md`).
 - Spec Kit maintains **no tool registry** in `instructions.md`; completeness is guaranteed by the filesystem (records + regenerated inventory), not by table rows.
 
 ## Lifecycle
@@ -19,3 +19,9 @@ Do not confuse it with an **AI agent CLI** (Claude Code, Codex CLI, Qoder CLI, �
 - **Define / create**: the `create-tools` skill (definition-first: mandatory fields come from the user; discovery only bootstraps a Draft).
 - **Improve / promote**: the `improve-tools` skill (source/contract correction, rule hardening, alias/rename, Draft → Verified).
 - **Reuse gate**: before writing script code for a complex or repeatable action, look for an existing Tool under `.specify/memory/tools/` and reuse it — see `.specify/shared/workflow/tool-reuse-gate.md` (Constitution Principle XII). No Tool for the capability? Writing the code is the expected outcome.
+
+---
+
+## Helper Tools Index
+
+> Machine-maintained MCP-server index (owner: `shared/definitions/tool-definitions.md`); the project instance carries the actual entries below this scaffold.

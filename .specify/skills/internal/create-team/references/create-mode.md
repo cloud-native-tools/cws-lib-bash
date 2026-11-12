@@ -50,13 +50,18 @@ When the user's input names an **already-defined goal**, create runs through thi
 
 ## Persisted `team.md` schema
 
-Each persistent team owns a **directory** `.specify/teams/<slug>/` (no per-tool symlink — framework-internal). The definition is stored at `.specify/teams/<slug>/team.md`; per-run reports accumulate under `.specify/teams/<slug>/runs/`:
+Each persistent team owns a **directory** under the one team archive layer `.specify/teams/` (concept owner: `references/conceptual-model.md` § The Team Definition and the Binding Model; a spec directory holds no current team definition — a leftover spec-local tree is a migration source only). The definition is stored at `<team-root>/<slug>/team.md` with `<team-root>` = `.specify/teams`; per-run reports accumulate under `<team-root>/<slug>/runs/`:
 
 ```markdown
 ---
 name: <display name>
 slug: <kebab-slug>
 description: <one-line label>
+binding:                       # required — the ownership record; key meanings, value
+  owner: <value>               #   domains and origin semantics are owned by
+  owner_id: <value>            #   .specify/shared/definitions/goal-definitions.md § The Binding Record
+  origin: <value>
+lifecycle_state: active | archived   # optional; absent = active; archived teams are refused by run-team
 goal: <overall final objective + success criteria / threshold>
 goal_slug: <kebab-slug>        # optional — the GOAL's identity; distinct from `slug` (the team's identity). See references/summary-mapping.md
 focus_target: T-<nnn>         # optional (042) — the team's default focus Target under the bound goal;
@@ -82,18 +87,32 @@ seats:                         # optional (074a) — per-seat SDD invocation pol
     sdd-invocation: <value>    #   the same key the agent definition carries; value set and
                                #   absent-entry default are owned by NEUTRAL_AGENT_METADATA_KEYS
                                #   (src/specify_cli/__init__.py) — cited, never restated here
+stage_seats:                   # optional (085) — canonical SDD stage -> seats + max_parallel; block map ONLY
+  requirements:                #   keys are the eight canonical SDD stages; never an SDD stage name
+    seats: [<seat-slug>, ...]  #   in the Team Stage dimension
+    max_parallel: 1            #   positive int; MUST NOT exceed the run's effective concurrency
+  plan:
+    seats: [<seat-slug>, ...]
+    max_parallel: 6
 members:
   - agent: <slug-or-template-id>
-    role: <role>
+    role: <role>                 # the literal `reporter` marks the reporter seat (087); any other value is an ordinary member
     lifecycle: persistent | temporary
     # territory: [...]        # parallel
     # blockedBy: [...]        # serial
+    # --- reporter seat only (087) — present on the row whose role is `reporter` ---
+    # reporting-territory:
+    #   read: [<path-or-glob>, ...]   # what the seat observes: the run's state surfaces
+    #   write: [<path>]               # the ONE stream artifact the seat writes; nothing else
+    # reporting-cadence: default | <explicit duration>   # `default` = the cadence defined once in
+    #                                                    # .specify/shared/guidelines/progress-reporting.md
 config:
   # pattern-specific block (parallelism / DAG / loop settings)
   # optimization goals: optimization_target (single target path), or co_targets
   # (coordinated multi-target optimization — list of target paths + the layering
   # principle stating which kind of content belongs to which target; see
   # references/optimization-goals.md)
+  reporting-reason: <value>    # only when the reporter seat is omitted — see RS-05 below
   summary:                     # optional — omit the block entirely and summary is still ENABLED (opt-out)
     enabled: true
     every: 5                   # refresh once per N phase boundaries; continuous default 5, bounded patterns 1
@@ -133,6 +152,11 @@ config:
 - `territory` is the **team-level** coverage declaration and applies to all four patterns (the member-level Territory Division lifted one level up). An absent key means **undeclared** — never conflated with an empty scope. Path entries are normalised (brace-expanded, canonicalised) before comparison. Among teams sharing one `goal_slug`, no two `write` scopes may intersect (read overlap is allowed); a write intersection is a **contested area** that must be resolved to a single owner or a forbidden-write entry. The refresh only **detects and proposes** a re-division — a human ratifies it and the agreed scopes are written back into each `team.md`, never into the goal directory.
 - `config.summary` tunes the periodic summary refresh (enable/disable, cadence, delivery directory, interactivity). Omitting the block leaves the summary **enabled** with the pattern's default cadence — `continuous` defaults to every 5th cycle, never every cycle.
 - `seats` is the **seat-side carrier** of the SDD invocation policy (074a): a block map keyed by seat slug, each entry carrying the same key the agent definition carries. Its closed value set and its absent-key default are owned by `NEUTRAL_AGENT_METADATA_KEYS` in `src/specify_cli/__init__.py` (the routing owner cites the same key set) — cited here, never restated. Rules: **(a) block style only** — a flow-style map (`seats: {…}`) is malformed input that the flow refuses with the seat named, never parses "as well as it can"; **(b) roster closure** — every key MUST resolve to a roster member (`members[].agent`, `members[].role`, or an instantiated seat slug); an entry matching no member is reported as **dangling**, never silently ignored, and neither case degrades to allow; **(c) absent means deny** — an absent map, an absent entry for the seat, and an absent key inside the entry all resolve to the owner's absent-key default; **(d) no back-fill** — an existing team without the key keeps byte-identical behaviour, and neither create nor modify adds it on its own; **(e) resolution is by `(team, seat)`** — the executable form is `python3 .specify/scripts/python/sdd-route.py --action authorize`, whose authorization probe record is the carrier of the resolution.
+- `binding`, `goal_slug`, `handoff_ref`, and `lifecycle_state` are the current keys. The binding record's meaning is owned by `.specify/shared/definitions/goal-definitions.md` § The Binding Record; `lifecycle_state` declares the team's own pair (`active` / `archived`, owned by `references/conceptual-model.md` § The Team Definition and the Binding Model) — absent means `active`, and `archived` is refused by `run-team` and requires an explicit modify to revive.
+- `stage_seats` is an optional (085) block map keyed only by the eight canonical SDD stages. Each entry carries `seats[]` (each resolving to a roster member) and a positive `max_parallel` that MUST NOT exceed the run's effective concurrency. The Team's own `Stage` dimension remains `executor`/`evaluator`/`optimizer`; SDD stage names MUST NOT be used there. Absent `stage_seats` preserves the pre-085 behavior byte for byte.
 - `members` MUST resolve to `.specify/agents/{templates,instances}/<slug>.agent.md` (instance wins on filename collision) or a seat instantiated by this flow (create-agent delegation, kind instance, ALL frame placeholders resolved, `team-scope: <team-slug>` set — the framework-only seat-provenance key, never rendered to tools); same-slug collisions are disclosed and the seat halted, never silently overwritten; unresolved members are surfaced as broken references. After `team.md` and the seat instances land, the create flow runs `specify render-agents --ai <tool>` (render-mode tools: qoder/claude/copilot/opencode) so seats reach the host registration surface; render-trigger failure MUST be disclosed, never silently skipped. 存量团队经一次 modify 即可让席位上注册面。
 - `config` MUST match `pattern`.
+- **The reporter seat (087)** is expressed as a row of the existing `members[]` list whose `role` is the literal `reporter` — roster membership has exactly one expression point, so the schema MUST NOT gain a parallel top-level `reporter:` block. The row's two seat-specific keys are `reporting-territory` (a `read` list plus a `write` list holding the one stream artifact the seat owns) and `reporting-cadence` (an explicit duration, or the literal `default` meaning the cadence defined once in `.specify/shared/guidelines/progress-reporting.md`). The seat's cardinality is **at most one**: two or more `role: reporter` rows is a defect, never a richer roster. The seat's agent resolves to the shipped Agent Template `agents/reporter.agent.md` (mirror `.specify/agents/templates/reporter.agent.md`).
+- **RS-05 · the runtime-omission condition (FR-021)** — the reporter seat may be omitted only when **both** facts hold: **every lane of the run is executed by the orchestrating session itself**, **and** the whole run is expected to finish **inside one cadence interval**. Joined conjunctively, the two facts are one condition; under it the **orchestrating session carries the reporting duty itself** and the omission is recorded as `config.reporting-reason: all-lanes-in-session-single-interval`, so a reader can tell a recorded omission from a forgotten seat. The other accepted value, `host-cannot-host-reporter`, records the case where the host provides no surface for the seat at all. The value set is closed — any other value is a defect. This condition MUST NOT be widened by a per-team judgement: outside those two conjunctive facts a reporter seat is required, and "this team is small" / "this team reports informally" are not widening grounds.
+- **Seat-guard call site** — after `team.md` is written and before it is presented, the create flow runs `python3 ${SKILL_HOME}/scripts/validate-roster.py <team-root>/<slug>/team.md`: exit `0` = the obligation is satisfied (seat present, or a recorded reason), exit `1` = one named defect printed on one line naming the seat and the team slug (`absent-seat`, `unresolvable-agent`, `two-seats`, or `out-of-domain-reason`), exit `2` = input error. A non-zero exit is disclosed in the execution report and the defect is fixed before presenting — the guard is a step of this procedure, not a separate command.
 - Every persisted team MUST contain `## Self-Improvement Contract` exactly once. A one-shot team MUST NOT claim subject identity.

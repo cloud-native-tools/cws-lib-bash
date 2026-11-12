@@ -634,7 +634,7 @@ LEGACY_SKILL_NAMES = (
     "manage-project", "mcp-creator", "mysql-utils", "notebooklm-utils",
     "organize-agents", "pdf-utils", "playwright-utils", "postgres-utils",
     "pptx-utils", "refresh-mcp-tools", "sdd-workflow", "skill-creator",
-    "theme-creator", "thought-experiment-verifier", "visualize-project",
+    "theme-creator", "think-skills", "thought-experiment-verifier", "visualize-project",
     "web-test", "xlsx-utils",
 )
 
@@ -694,7 +694,7 @@ def check_legacy_install_residue(root: Path) -> list:
             if (root / rel).is_file():
                 findings.append(_finding(
                     "stale-residue", rel,
-                    "旧代 git-workflow 状态文件:新模型状态面在 docs/git-workflow.md——"
+                    "旧代 git-workflow 状态文件:新模型状态面在 .specify/workflow/git.md——"
                     "归档本文件,并经 git-utils 技能 bootstrap 核对分支状态已迁移",
                     disposition="archive"))
     legacy_tools = root / ".specify" / "tools"
@@ -1048,6 +1048,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="sanitize-utils.py",
         description="Framework material hygiene engine (Feature 047, requirement 045).",
     )
+    _sig_configure(parser)
+
     parser.add_argument("--action", default=None,
                         help="engine action to run (collect/record/status/apply)")
     parser.add_argument("--workspace-root", default=".", help="workspace root (default: cwd)")
@@ -1059,7 +1061,31 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--action', '--workspace-root', '--format', '--file', '--plan', '--roots'])  # answer --version / reject an undeclared option
     parser = build_parser()
     args = parser.parse_args(argv)
     root = Path(args.workspace_root).resolve()

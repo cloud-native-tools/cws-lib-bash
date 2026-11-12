@@ -69,6 +69,8 @@ watchbeat 是**驱动侧写入、本引擎只读消费**的观察标记，字段
 
 ## Stage Artifact Map
 
+> **取值 owner 是 `.specify/shared/declarations/facts/driver-stage-artifacts.yaml#/statement`**（`stages` / `implement_code_pathspec`），`.specify/scripts/loop-state.py` 经共享读取入口取用；下表是该声明的渲染，逐项一致由契约测试钉住（`C-50`）。改映射先改声明，本文件与引擎不得各自成为第二个来源。
+
 本表镜像 `.specify/scripts/loop-state.py` 的 `STAGE_ARTIFACTS`，逐项一致由契约测试钉住。路径相对解析后的 `spec_dir`；`owned_paths[]` 是**条件产物**：存在才进入提交路径集合，缺失不判不完整。
 
 | 阶段 | `artifacts[]` | `owned_paths[]` | `commit_required` | `no_change_allowed` |

@@ -7,6 +7,9 @@ classification: internal
 
 # create-team
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Create and run an **agent team**: organize multiple Agents into a **collaborative structure** (parallel dispatch, serial chain, self-iterating iteration loop, or long-lived continuous operating loop), persist it as a reusable `.specify/teams/<slug>/team.md`, and **execute** it directly after a disclosed preview — 可逆动作自动执行(判据:`.specify/shared/guidelines/confirmation-gates.md`),持续循环类保留其分级门控。This skill owns both **defining** a team and **running** it, and is the single source of truth for the multi-agent Conceptual Model (see `references/conceptual-model.md`).
@@ -18,6 +21,19 @@ The multi-agent Conceptual Model (Role × Stage × Type + Team/Loop, the Team Su
 The capacity vs. responsibility boundary — which template set defines an agent's capacity and which defines its team-scoped responsibility — is `references/capacity-vs-responsibility.md`.
 
 The **goal** concept is defined authoritatively in `references/goal.md`. When a goal's theme is **optimization**, classify it per `references/optimization-goals.md`.
+
+## Command Family Gate (which commands may create a goal/team)
+
+Whether the invoking command run may own a goal/team is decided by the declared class axis, never by a per-command list kept here (contract C-74): ask the engine with `python3 .specify/scripts/python/goal-utils.py command-family --command <stem> --json` and read `in_family` from its answer. The action resolves the class through `flow-class-check.py --action lookup --unit-id /speckit.<stem>` and reports `source: ledger` = in family, `source: default` = not in family; a degraded lookup exits 2 and is never read as a family membership. This skill carries no second whitelist.
+
+## Handoff Contract (designer → construction crew, 094)
+
+Complex work is handed to a crew through `<spec-dir>/handoff.md`, whose shape and rules are authored once in [`references/handoff-contract-template.md`](references/handoff-contract-template.md) — cite it, never restate it.
+
+- **Production** — the `tasks` stage produces the contract only after `python3 .specify/scripts/python/goal-utils.py handoff-decision --tasks <spec-dir>/tasks.md --json` returns `handoff`; `plan` never produces one and `implement` consumes it (C-68).
+- **Key discipline** — `goal_slug` and `team_slug` are validated against `.specify/anchoring/<goal_slug>/goal.md` and `.specify/teams/<team_slug>/team.md` through the engine; an unresolvable key is refused at creation with `handoff-dangling-key` (exit 2) naming the key, and the reverse `handoff_ref` on both definitions is written by the engine's binding action — never by the contract file alone (C-58/C-59).
+- **Territory** — on activation the contract's `## Territory` expands into the `territory.write` of every team bound to that `goal_slug` as an explicit `improve-team` modification, one record per team; `requirements.md`, `tasks.md`, `verification.md` and `handoff.md` stay in `territory.forbidden`, and the refusal is mechanical via [`.specify/scripts/territory-check.py`](.specify/scripts/territory-check.py) (C-61/C-62).
+- **Writeback** — the crew delivers one record per completed task under `<spec-dir>/writeback/<T-NNN>.yaml`; the task table stays spec-side (C-65/C-67).
 
 ## Team Definition & Persistence (create mode)
 
@@ -31,7 +47,10 @@ Produce a team from a user **goal** and persist it as `.specify/teams/<slug>/tea
 4. **Build the roster** — a Role × Stage × Type matrix; judge `Type` by operating object (`references/conceptual-model.md`). Member resolution: prefer existing agents under `.specify/agents/{templates,instances}/`; for a seat with no persistent definition, perform **seat instantiation (席位实例化)** — delegate to `create-agent` (kind: instance) to instantiate the seat from its stage frame, resolving ALL frame placeholders and setting `team-scope: <team-slug>` (the framework-only seat-provenance key; no `capacity-scope` for stage-frame seats); a same-slug collision with an existing persistent definition MUST be disclosed and that seat halted, never silently overwritten.
 5. **Build the pattern config** — parallelism/territories, DAG/blockedBy, iteration thresholds, or continuous operating config.
 6. **直接落盘并呈现** — **直接写入** `team.md`(不设阻塞式停等),随后呈现 goal + roster + pattern 与修改途径(`/speckit.team` modify / `improve-team`),按执行报告约定收尾。
+   > **Reporter-seat obligation (087)**: the persisted roster MUST carry the reporting seat — a `members[]` row whose `role` is the literal `reporter`, written as `reporting-territory` (read list + the one write list for its stream artifact) plus `reporting-cadence` — unless the runtime-omission condition of [`references/create-mode.md`](references/create-mode.md) § Schema notes (RS-05) holds, in which case `config.reporting-reason` records which of the two accepted values applies. The seat is a roster row, never a parallel `reporter:` block. Before presenting, run the seat guard: `python3 ${SKILL_HOME}/scripts/validate-roster.py .specify/teams/<slug>/team.md` — exit `0` = satisfied (seat present or reason recorded), exit `1` = one named defect on one line (fix it before presenting), exit `2` = input error (disclose it). Rule source: [`references/create-mode.md`](references/create-mode.md) § Schema notes; the procedure is a step of create, not a separate command.
 7. **渲染触发** — `team.md` 与席位实例落盘后,直接执行 `specify render-agents --ai <当前宿主工具>` 使席位到达宿主注册面(渲染模式工具:qoder/claude/copilot/opencode);stats 摘要(rendered/backups/unmapped)进执行报告;渲染触发失败 MUST 披露原因并作为流程异常上送,不得静默跳过。存量团队经一次 modify 即可让席位上注册面。
+
+**Member class and stated concurrency capability (成员类别与并发能力声明)**: every `members[]` row MUST carry a **class** drawn from `.specify/shared/declarations/facts/concurrency-class.yaml` (a pointer — the class table is never copied here), and the team MUST state **how many of its members can run concurrently**; that statement MUST be derivable from the member classes and the slot cap read at execution time (`.specify/shared/declarations/facts/concurrency-slot-and-reserve.yaml`), never asserted independently. The team MUST NOT be instantiated with more concurrent members than the statement supports: the roster step reads each member's dispatch-capability verdict (the capability judgement reads the existing `capability-tools` frontmatter key — no new key is introduced) and **reports the reduction** when it applies. Per-seat **territories are judged at binding time** — intersecting or undeclared territories are red before any run (`references/conceptual-model.md` § Seat territories judged at binding time).
 
 `goal_slug` identifies the **goal**, not the team slug; it is a different axis from `slug` (the team's identity). See `references/goal.md` and `references/summary-mapping.md`.
 
@@ -63,6 +82,8 @@ First activation: declare the summary mechanism has activated and the cadence no
 ## Nested SDD Runs
 ```
 
+`## Execution Detail` MUST 内含派发映射表 —— 每个被派发的执行体一行,列恰为 `label` | `role` | `dispatch_duty` | `workspace` | `parent`。`role` 取值恰为 `subagent` / `superagent`(`dual-role` 从不出现在该列);`dispatch_duty` 取值恰为 `granted` / `not-granted`。列与行形态由本节拥有;角色语义与值域归 `.specify/shared/definitions/superagent-definitions.md` § The Relative Role / § Role Edges(按指针)。不得为此新增顶层段 —— 映射表是 `## Execution Detail` 的必备内容。
+
 ### Verification(必填段,本节为该口径的唯一真源)
 
 `## Verification` 是**必填**段:run 报告的验证结论 MUST 是**可复算的口径**,不是散文自评 —— 有界 pattern(parallel / serial / iteration)与 continuous 一律适用,continuous 的独立验证者纪律(`references/operating-loops.md` §6)叠加在本节之上,不替代它。三条口径:
@@ -77,9 +98,9 @@ Stage 级批量判定的实读证据下限由 `references/patterns.md` § Serial
 
 每个 run 报告 MUST 在既有必填段之后**末尾追加**一个嵌套段,标题字面量逐字为 `## Nested SDD Runs`(不得改写、不得改变标题层级、不得并入其它段)。该段对**每次运行**强制 —— 有界 pattern(parallel / serial / iteration)与 continuous 一律适用,与该次运行是否真的发生过嵌套 SDD 调用无关。既有必填段的名称、次序与内容义务逐字不变;MUST NOT 省略该段,省略即判违约。
 
-- **每次调用一行**: 一行恰好五个字段 —— `outcome`、`artifact paths`、`evidence paths`、`routing-verdict reference`、`anomalies`。`outcome` 取自三值封闭集 `[[STR-004]]` / `[[STR-005]]` / `[[STR-006]]`;第四值、自由文本或空值一律非法。
+- **每次调用一行**: 一行恰好五个字段 —— `outcome`、`artifact paths`、`evidence paths`、`routing-verdict reference`、`anomalies`。`outcome` 取自三值封闭集 `completed` / `blocked` / `failed`;第四值、自由文本或空值一律非法。
 - **无嵌套调用**: MUST 在段内显式声明「本次无嵌套 SDD 调用」,不是省略整段 —— 即便正确内容本是 none,省略仍是违约。
-- **路径以路径携带**: artifact / evidence 只写路径,段内 MUST NOT 内联工件正文;`[[STR-005]]` / `[[STR-006]]` 的嵌套运行 MUST NOT 改写成成功语气 —— 它们原样上抛。
+- **路径以路径携带**: artifact / evidence 只写路径,段内 MUST NOT 内联工件正文;`blocked` / `failed` 的嵌套运行 MUST NOT 改写成成功语气 —— 它们原样上抛。
 - **routing-verdict reference**: 指向 `074a` 在 Agent 执行证据里记录的那条裁决(`.specify/scripts/python/sdd-route.py` 是该记录的产生者),段内只承载**引用**:MUST NOT 复制输入集、裁决表或理由码词表,MUST NOT 重算。记录不可定位时记 `missing`,外层 MUST NOT 重算或补写。
 - **handoff 字段集按引用读取**: 封闭字段集归 `.specify/skills/sdd-loop-driver/references/nested-invocation.md`;交接未携带的字段按缺失记录,MUST NOT 用调用方叙述补齐;交接缺 integration identity 即为 incomplete handoff,外层 MUST NOT 据此报成功。
 - **与 `## Verification` 并列**: 嵌套段是 `## Verification` 的**同级段**,不是替代 —— 嵌套运行自己的验证证据不解除外层运行的验证义务,外层运行的验证标准照旧适用。
@@ -186,10 +207,11 @@ All patterns share file-path-only handoffs, progress tracking, structured result
 
 | Path | Contents |
 |------|----------|
-| `${SKILL_HOME}/references/` | `conceptual-model.md`, `capacity-vs-responsibility.md`, `goal.md`, `optimization-goals.md`, `operating-loops.md`, `team-presets.md`, `summary-mapping.md`, `create-mode.md`, `patterns.md`, `execution-guide.md` |
+| `${SKILL_HOME}/references/` | `conceptual-model.md`, `capacity-vs-responsibility.md`, `goal.md`, `optimization-goals.md`, `operating-loops.md`, `team-presets.md`, `summary-mapping.md`, `create-mode.md`, `patterns.md`, `execution-guide.md`, `handoff-contract-template.md` |
 | `${SKILL_HOME}/templates/` | team-supervisor role template, the three EEI stage templates, the parallel/serial/triad orchestration templates, `agent-workflow-schema.md` |
 | `${SKILL_HOME}/templates/teams/` | Predefined team shapes: `capability-arena.md` (skill/command/subagent 竞技场), `project-cluster.md` (跨项目协作集群) |
 | `${SKILL_HOME}/scripts/match-team-preset.py` | Deterministic preset matcher — returns ranked JSON with a `confidence` verdict |
+| `${SKILL_HOME}/scripts/territory-check.py` | Territory refusal surface — may a crew seat write this path? (094 handoff contract) |
 
 ## Agent-Specific Configuration
 
@@ -246,7 +268,7 @@ A persisted `team.md` is an Execution Subject; a one-shot team and individual me
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -256,3 +278,4 @@ A persisted `team.md` is an Execution Subject; a one-shot team and individual me
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:create-team" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

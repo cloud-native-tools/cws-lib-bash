@@ -13,7 +13,10 @@ different owners and so do their claimed subsets:
                 (`.specify/shared/definitions/contract-clause-definitions.md`); per-form counts are
                 owned by that spec's `notes/clause-form-census.md` and are NOT restated here
                 claimed   the `[green: <contract>#<clause>]` declarations on that spec's own
-                tasks.md rows, parsed by validate-tasks.py so the mention/fence rules have
+                tasks.md rows — including the retained declarations inside a C-022
+                `Superseded pre-split record` block (owner: `.specify/shared/workflow/
+                acceptance-hardening.md` § Superseded pre-split records retain their
+                claims) — parsed by validate-tasks.py so the mention/fence rules have
                 one implementation
   FR lane       universe  the `FR-nnn` definition rows of that spec's requirements.md, read
                 outside fenced blocks and inline code spans
@@ -543,7 +546,31 @@ def _print_human(report, list_named: bool) -> None:
     print(f"status: {report['status']}")
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--spec-dir', '--corpus-root', '--baseline', '--json', '--list-named', '--freeze'])  # answer --version / reject an undeclared option
     parser = argparse.ArgumentParser(
         prog="account-clause-coverage.py",
         description="Account clause and FR coverage for a feature spec as set differences "
@@ -552,6 +579,8 @@ def main(argv=None) -> int:
         epilog="Exit codes: 0 = covered beyond the frozen baseline, 1 = uncovered items or "
                "uncovered FRs, 2 = input error including a missing baseline file.",
     )
+    _sig_configure(parser)
+
     parser.add_argument("target", nargs="?",
                         help="the spec directory, or any file inside it (its spec dir is "
                              "derived by walking up to the nearest requirements.md/contracts)")

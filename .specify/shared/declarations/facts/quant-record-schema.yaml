@@ -1,0 +1,90 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the execution-quantification record's schema: its schema version, the
+# closed provenance / unit-type / resolution vocabularies, the eleven config-group fields, and the
+# per-action argument manifest. The engine `.specify/scripts/python/exec-quant.py` reads it through
+# `.specify/scripts/python/declaration_reader.py`; the carrier reaches it by
+# `.specify/shared/declarations/facts/quant-record-schema.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's constants and the carrier's class
+# registration agreed on 2026-11-05.
+#
+# Carrier correction: the roster names `.specify/shared/definitions/probe-definitions.md` as this row's
+# carrier, and that file does register the `exec-quant` class — but it does not state the schema
+# version, the vocabularies or the field lists (measured 2026-11-05: none of `SCHEMA_VERSION`,
+# `PROVENANCES`, `CONFIG_FIELDS` appears there). The fact's second face is the test-pinned literal
+# (`tests/contract/test_exec_quant_engine.py` and its siblings), which FR-006 (ii) counts as a face;
+# the definition document is recorded as a `consumers` entry — a carrier that now points here —
+# rather than as a former carrier that never held the value.
+fact: quant-record-schema
+kind: record-schema
+statement:
+  schema_version: 2
+  provenances:
+    - measured
+    - carried
+    - user-given
+    - configured
+  unit_types:
+    - command
+    - skill
+    - custom-unit
+    - agent
+  resolutions:
+    - explicit
+    - adopted
+    - synthesized
+  agent_resolutions:
+    - resolved
+    - ambiguous
+    - unresolved
+  config_fields:
+    - config_id
+    - source_chain
+    - method_requested
+    - method_resolved
+    - mode
+    - cli
+    - model
+    - reasoning_effort
+    - context_window
+    - extra_flags
+    - snapshot
+  arg_manifest:
+    collect:
+      required:
+        - "--unit-id"
+      source:
+        - "--run-id"
+    list-records:
+      required: []
+      source:
+        - "--since"
+        - "--format"
+    score:
+      required:
+        - "--unit-id"
+        - "--run-id"
+        - "--score"
+      source:
+        - "--note"
+    collect-dispatch:
+      required:
+        - "--unit-id"
+        - "--run-id"
+        - "--snapshot"
+        - "--config-id"
+      source: []
+    args-manifest:
+      required: []
+      source: []
+    aggregate:
+      required: []
+      source:
+        - "--workspace-root"
+        - "--format"
+consumers:
+  - .specify/scripts/python/exec-quant.py
+  - .specify/shared/definitions/probe-definitions.md
+former_carriers: []
+note: "Every sequence here is ordered: `config_fields` is the write order of the eleven config-group fields (061 C-EQ-04), and the argument manifest's `required` / `source` lists are the order a caller reads them. `arg_manifest` is the closed per-action face the manifest action reports; a new action is a contract change, not a local addition. The values themselves are unchanged from the pre-migration engine constants — this row moves their home, not their content."

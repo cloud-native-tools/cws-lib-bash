@@ -1,27 +1,38 @@
 <!-- AUTO-GENERATED from templates/commands/sanitize.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
+> **Concurrency obligation（执行义务，按指针抵达）**: this command is an execution body — consider concurrency first, default to it when the class and capability allow, and, when serial, name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## User Input
 
 ```text
 $ARGUMENTS
 ```
 
-Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as command parameters, not standalone instructions. 可选参数:`--lane materials|retention|renumber|all`(默认 materials;retention 只跑记录消费回收 lane;renumber 只跑序号重排 lane)、`--roots <csv>`(限定资料根子集,部分扫描不自动收敛)、`check`(仅检查,不进入清理提示)。
+Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user-input-protocol.md). Treat as command parameters, not standalone instructions. 可选参数:`--lane materials|retention|renumber|layout|all`(默认 materials;retention 只跑记录消费回收 lane;renumber 只跑序号重排 lane;layout 只跑锚点布局收敛 lane)、`--roots <csv>`(限定资料根子集,部分扫描不自动收敛)、`--auto-reversible`(与 check/cleanup 正交:自动执行 repair/dismiss 与 archive-not-delete 等可逆处置,以及 git 干净前提下的重复编号重排;含真正 delete 的计划仍走单批确认)、`check`(仅检查,不进入清理提示;带 `--auto-reversible` 时仅自动执行可逆处置)。
 
 ## Glossary
 
-Consult the project glossary (`.specify/memory/glossary.md`) and apply the protocol in `.specify/shared/workflow/glossary.md`: correct recorded homophone/confusable variants before acting; propose new terms at wrap-up with user confirmation.
+Consult the project glossary (`.specify/glossary.md`) and apply the protocol in `.specify/shared/workflow/glossary.md`: correct recorded homophone/confusable variants before acting; propose new terms at wrap-up with user confirmation.
 
 ## Delegation
 
-框架资料卫生治理的完整执行流:检测过期残留与冗余、运行确定性正确性检查、持久化 pending 发现,经用户确认后按两级判据清理并出具执行报告。另含记录消费回收 lane:对 exec-quant/feedback/session 原始记录执行 scan → distill(回执) → plan → apply;以及序号重排 lane:并发/并行线路各自从同一基数取号,合流后可能留下两个制品同占一个号,该 lane 以确定性引擎扫描四类编号家族、产出重排映射与引用清单,经单批次确认后机械执行并重扫校验。materials lane 的七阶段流程(Preflight → Collect → Judge → Present → Confirm → Apply → Wrap-up)、retention lane 的 R1–R5、renumber lane 的 N1–N5 与全部行为红线均委派给一个 internal 技能;本命令只保留入口、参数解析与收尾生命周期。
+框架资料卫生治理的完整执行流:检测过期残留与冗余、运行确定性正确性检查、持久化 pending 发现,按两级判据清理(可逆处置自动执行、不可逆删除/归档前置确认)并出具执行报告。另含记录消费回收 lane:对 exec-quant/feedback/session 原始记录执行 scan → distill(回执) → plan → apply;以及序号重排 lane:并发/并行线路各自从同一基数取号,合流后可能留下两个制品同占一个号,该 lane 以确定性引擎扫描四类编号家族、产出重排映射与引用清单,经单批次确认后机械执行并重扫校验;以及布局收敛 lane:旧世代锚点布局(`.specify/memory/` 下的五个锚点、`.specify/features/<NNN>.md` 详情)收敛到当前锚点布局(`.specify/` 根锚点、`<NNN>-<slug>.md` 详情),引擎只做重命名、拒绝覆盖既存目标、从不删除,并输出调用方需更新的引用路径清单。materials lane 的七阶段流程(Preflight → Collect → Judge → Present → Confirm → Apply → Wrap-up)、retention lane 的 R1–R5、renumber lane 的 N1–N5、layout lane 的 L1–L4 与全部行为红线均委派给一个 internal 技能;本命令只保留入口、参数解析与收尾生命周期。
 
-- **Skill**: `sanitize-materials` — runtime path `.specify/skills/internal/sanitize-materials/SKILL.md`(materials 引擎:`.specify/scripts/python/sanitize-utils.py`;retention 引擎:`.specify/scripts/python/record-retention.py`;renumber 引擎:`.specify/scripts/python/renumber-utils.py`;发现 schema/合并语义/门控判据以引擎输出与 `--help` 为准)。
-- **Inputs**: `$ARGUMENTS` 解析出的参数(见上;`--lane` 选择 lane;`--roots` 部分扫描不自动收敛;`check` 止于 Present 不进入 Confirm);glossary 锚定先行。
-- **Outputs**: materials 的发现台账与清理计划(`.specify/memory/sanitize/`);retention 的摘要、回执、计划与回收审计(`.specify/memory/retention/`);renumber 的重排计划、裁定登记与重排审计(`.specify/memory/renumber/`);用户确认破坏性计划后为已执行清理/回收/重排 + 三要素执行报告(执行内容 / 变更工件 / 修改途径)。
+- **Skill**: `sanitize-materials` — runtime path `.specify/skills/internal/sanitize-materials/SKILL.md`(materials 引擎:`.specify/scripts/python/sanitize-utils.py`;retention 引擎:`.specify/scripts/python/record-retention.py`;renumber 引擎:`.specify/scripts/python/renumber-utils.py`;layout 引擎:`.specify/scripts/python/anchor-layout-migrate.py`;发现 schema/合并语义/门控判据以引擎输出与 `--help` 为准)。
+- **Inputs**: `$ARGUMENTS` 解析出的参数(见上;`--lane` 选择 lane;`--roots` 部分扫描不自动收敛;`--auto-reversible` 自动执行可逆处置;`check` 止于 Present 不进入 Confirm，带 `--auto-reversible` 时只自动执行可逆处置);glossary 锚定先行。
+- **Outputs**: materials 的发现台账与清理计划(`.specify/memory/sanitize/`);retention 的摘要、回执、计划与回收审计(`.specify/memory/retention/`);renumber 的重排计划、裁定登记与重排审计(`.specify/memory/renumber/`);layout 的迁移计划(引擎输出,无独立台账)与调用方需更新的引用路径清单;可逆处置自动执行;不可逆破坏性计划经用户确认后为已执行清理/回收/重排/迁移 + 三要素执行报告(执行内容 / 变更工件 / 修改途径)。
+
+## Residual probe (goal/team residuals — read-only)
+
+除材料治理外,本命令还承载一条**只读**的 goal/team 残余读数面:对仍存在于 `.specify/specs/*/goal|team/` 的未迁移定义运行一次残余探测——`python3 .specify/scripts/python/goal-utils.py probe-residual`(动作、旗标与载荷结构归引擎的动作表 `--help`;档案层概念归 `.specify/shared/definitions/goal-definitions.md` § Archive Layers)。
+
+- 读数**逐字**呈现(per-kind counts 与路径清单),不加工、不归档、不进入材料发现台账。
+- 残余**不是**当前定义:不得被当作档案定义读取或列出,它们只是待迁移余额。
+- 本命令 MUST NOT 调用迁移或写入档案——迁移的唯一入口是 `/speckit.goal` 的 `migrate-archive` 模式;本命令不提供迁移模式,也不因运行探测而触发迁移。
+- 运行临时区 `.specify/.tmp/` 不是档案层:既不进读数,也不进报告。
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.sanitize" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
    尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
@@ -30,6 +41,7 @@ Consult the project glossary (`.specify/memory/glossary.md`) and apply the proto
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
 6. Docs Sync Eval — `.specify/shared/workflow/docs-step.md` § "Evaluation procedure (the embedded step points here)"
+7. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"
 
 ## Handoffs
 

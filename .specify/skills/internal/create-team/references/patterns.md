@@ -110,6 +110,7 @@ Per-Agent Payload:
 | `incremental_landing` | **必填** — 该席位的落盘形态:一次性落盘写 `single`;分批落盘写「本 stage 由 N 次派发累积:N=<数>,依据=<`outputs` 目录文件计数>」并给出每批边界。「逐步推进」一类不可判定的话不合格(粒度纪律见 § Serial Chain → Stage granularity discipline) |
 | `model_hint` | Suggested model tier (light / standard / heavy) |
 | `fast_fail_clause` | The fast-fail injection clause, byte-identical to its owner literal in `.specify/shared/guidelines/fast-fail.md` § 子代理派发注入 — carried, never re-typed here |
+| `role_fields` | The seven downlink role fields every governed dispatch carries — `parent_identity`, `child_label`, `role_declaration`, `dispatch_duty`, `depth_position`, `authority_ref`, `return_channel` — carried by reference to `.specify/shared/definitions/superagent-definitions.md` § The super↔sub Protocol (semantics and value domains owned there; `dual-role` never appears in `role_declaration`) |
 
 Context Isolation Rules:
 - NO conversation history passed to child agents

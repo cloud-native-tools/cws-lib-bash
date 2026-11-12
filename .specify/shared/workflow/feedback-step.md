@@ -166,7 +166,7 @@ source `.specify/scripts/python/run-determination.py`) owns the record schema, e
 the program branches on, the routing-bit derivation (`derive_trigger_feedback`) and the
 CLI flag set. No invocation is written out here on purpose: the parser generates the
 engine's own `--help`, so a flag list copied into prose could only drift. The record *is*
-the 改点 — term owner `.specify/memory/glossary.md`. The four red lines and the
+the 改点 — term owner `.specify/glossary.md`. The four red lines and the
 never-solicit rule at the top of this file govern everything below unchanged and are not
 restated here.
 
@@ -365,5 +365,8 @@ workaround applied. This is a read-only aid — it never gates execution.
 - **Complex commands**: `--unit-id "/speckit.<command>"`, `--unit-type command`.
 - **External custom units** (host-project skills/agents/commands with an injected `ext-*` probe): `--unit-id custom:<owner>/<name>`, `--unit-type custom-unit`. Entries stay host-project-local (never packaged upstream) — see `/speckit.feedback` § Probe Injection.
 - **Simple commands** (`agents`, `constitution`, `feature`): omit this step entirely. This list is *derived* from the complexity criterion at the top of this file — when a command gains or loses script invocations, or starts or stops producing or consuming another flow's artifact, re-derive the list rather than editing it alone.
-- The engine store lives at `.specify/memory/feedback/`; threshold defaults to `10`
-  (`--threshold` / `SPECKIT_FEEDBACK_THRESHOLD`).
+- The engine store lives at `.specify/memory/feedback/`; the threshold's default **value** is owned by
+  `.specify/shared/declarations/facts/feedback-prompt-threshold.yaml#/statement` — this carrier states no number
+  of its own. `--threshold` and `SPECKIT_FEEDBACK_THRESHOLD` still override it, and a project whose
+  declaration layer is absent gets `declaration-absent: feedback-prompt-threshold` on the engine's output
+  line instead of a silent default.

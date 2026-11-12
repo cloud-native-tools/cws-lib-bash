@@ -1,0 +1,38 @@
+# Batch 2, the remaining mapping-shaped row (contracts/migration-batches.contract.md C-044).
+#
+# The one machine-read copy of the Acceptance Reality Check's two closed vocabularies: the
+# `final_path` count record (six status buckets plus the total key, in the order the record renders)
+# and the checker's verdict values. The engine `.specify/scripts/python/closure-acceptance-check.py` reads it
+# through `.specify/scripts/python/declaration_reader.py` — `final_path_counts()` builds the record from these
+# buckets and the verdict is selected from `verdicts`, so neither is spelled in the engine again; the
+# carriers reach it by `.specify/shared/declarations/facts/arc-verdict-mapping.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `FINAL_PATH_BUCKETS` plus the `"block"` / `"accept"`
+# comparison and both carriers' seven-key enumeration named the same seven keys and the same two
+# verdicts on 2026-11-05; nothing had drifted, so `note` records the agreement.
+#
+# Slug: the roster row is spelled `ARC verdict mapping` in prose. `data-model.md` E-1 requires the
+# grounded name to be kebab-case and to equal the filename stem, so the slug is `arc-verdict-mapping`;
+# the roster row keeps its prose spelling and this line records the transliteration.
+fact: arc-verdict-mapping
+kind: mapping
+statement:
+  final_path_buckets:
+    - pass
+    - blocked
+    - deferred
+    - partial
+    - fail
+    - unknown
+  final_path_total_key: total
+  final_path_unknown_key: unknown
+  verdicts:
+    - accept
+    - block
+consumers:
+  - .specify/scripts/python/closure-acceptance-check.py
+  - .specify/skills/internal/review-sdd-process/SKILL.md
+former_carriers:
+  - .specify/templates/review-template.md
+  - .specify/templates/commands/review.md
+note: "Order is part of the value: the record renders the six buckets in this order and the total last, and `verdicts` is read as (accept, block) so the exit-code mapping stays `accept` → EXIT_ACCEPT. `unknown` is a bucket of its own because an SC with no status row is a reading, not a pass; `partial` is a measured status and counts as itself. The checkers' criteria are NOT here: which conditions produce `block` is the owner doc's judgement and stays in the engine, because C-051 forbids a migration from moving a frozen gate's criteria or exit codes. Carrier correction: `.specify/skills/internal/review-sdd-process/SKILL.md` never carried the bucket or verdict literals (measured 2026-11-05: `grep -c 'ARC_[A-Z]*\\|final_path'` on its pre-change bytes = 0), so it is a `consumers` entry — a carrier that now points here — and not a `former_carrier`. Slug correction: the roster's prose spelling `ARC verdict mapping` is transliterated to the kebab-case grounded name the data model requires."

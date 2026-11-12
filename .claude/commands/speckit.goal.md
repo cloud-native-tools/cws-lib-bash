@@ -1,4 +1,6 @@
 <!-- AUTO-GENERATED from templates/commands/goal.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
+> **Concurrency obligation（执行义务，按指针抵达）**: this command is an execution body — consider concurrency first, default to it when the class and capability allow, and, when serial, name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## User Input
 
 ```text
@@ -9,31 +11,35 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 
 ## Positioning
 
-`/speckit.goal` is the **sole authoring entry** for project-level goal definitions. No skill, script, or other command may write into the goal archive **directly** — the goal engine (`goal-utils.py`) is its sole writing path, whether driven by this entry or carried as delegated logic behind it.
+`/speckit.goal` is the **sole authoring entry** for goal definitions in the goal archive (the archive layers are owned by `.specify/shared/definitions/goal-definitions.md` § Archive Layers). No skill, script, or other command may write into that store **directly** — the goal engine (`goal-utils.py`) is its sole writing path, whether driven by this entry or carried as delegated logic behind it. The same entry is the **only command entry** for the one-time migration of spec-local goal/team trees into the unified archive (`migrate-archive` mode); `/speckit.sanitize` offers only the read-only residual probe.
 
 ## Glossary
 
-Consult `.specify/memory/glossary.md` and apply `.specify/shared/workflow/glossary.md`: map recorded homophone/confusable variants to canonical terms before acting, surfacing each correction. At wrap-up propose new project-specific terms (`origin=auto`, `status=proposed`); non-conflicting terms are written directly and merged into the wrap-up report (non-blocking) — only conflicts/overwrites of user entries still pause.
+Consult `.specify/glossary.md` and apply `.specify/shared/workflow/glossary.md`: map recorded homophone/confusable variants to canonical terms before acting, surfacing each correction. At wrap-up propose new project-specific terms (`origin=auto`, `status=proposed`); non-conflicting terms are written directly and merged into the wrap-up report (non-blocking) — only conflicts/overwrites of user entries still pause.
 
 ## Outline
 
-一次调用 = 委派 **`manage-goal`** 技能执行全部目标操作。Goal 的概念(构成、生命周期、与 Requirement 的边界、判据权威性、单一定位、团队绑定)定义于 `.specify/shared/definitions/goal-definitions.md`,确定性规则(身份文法、三段结构、生命周期表、变更历史、档案枚举)在引擎 `.specify/scripts/python/goal-utils.py` —— 均以技能与该两处为单一事实源,本模板引用而不复述。
+一次调用 = 委派 **`manage-goal`** 技能执行全部目标操作。Goal 的概念(构成、生命周期、档案层、与 Requirement 的边界、判据权威性、单一定位、团队绑定)定义于 `.specify/shared/definitions/goal-definitions.md`,确定性规则(身份文法、三段结构、生命周期表、变更历史、档案枚举)在引擎 `.specify/scripts/python/goal-utils.py` —— 均以技能与该两处为单一事实源,本模板引用而不复述。
 
-**Delegation (mandatory)**: load `.specify/skills/internal/manage-goal/SKILL.md` and execute per its Workflow。六模式(`create` / `view` / `modify` / `targets` / `migrate` / `coordinate`)的模式表、读写分组与退出码裁决、唯一破坏性写(`criteria --clear` 需用户明示批准)、`create` 四要素访谈、执行顺序与 Boundaries 全部由该技能承载。
+**Delegation (mandatory)**: load `.specify/skills/internal/manage-goal/SKILL.md` and execute per its Workflow。七模式(`create` / `view` / `modify` / `targets` / `migrate` / `migrate-archive` / `coordinate`)的模式表、读写分组与退出码裁决、唯一破坏性写(`criteria --clear` 需用户明示批准)、`create` 四要素访谈、执行顺序与 Boundaries 全部由该技能承载。
+
+**`migrate-archive` mode**: the one-time move of spec-local goal/team definitions into the unified archive, both kinds in one explicit call, archive-not-delete (a source tree is archived, never deleted). It is explicit and never invoked implicitly by a run; `/speckit.sanitize` only renders the read-only residual reading. The mode's flags, receipt shape and exit codes are owned by the engine's action table (`python3 .specify/scripts/python/goal-utils.py --help`); this template restates none of them.
+
+**Scope**: pass `--scope` and `--spec-dir <path>` through to the goal engine. The closed scope value set, what each member names, and the archive layers are owned by `.specify/shared/definitions/goal-definitions.md` § Archive Layers — this template cites that owner and enumerates none of it. `--spec-dir` is accepted for `origin` resolution and `auto` validity only; it never decides where a definition lands. The path rule is owned by `goal-utils.py resolve-scope`; this template cites it and defines none of it.
 
 ### 技能输入(本命令解析 `$ARGUMENTS` 后传入)
 
-- Intent:六模式之一,可选 goal-slug / team-slug;歧义回退只读的 `view`;模式每次运行披露。
+- Intent:七模式之一,可选 goal-slug / team-slug;歧义回退只读的 `view`;模式每次运行披露。
 - Glossary 前置已由本命令完成(见上)。
 
 ### 技能产出
 
-- `.specify/goal/<goal-slug>/goal.md`(仅经引擎写入;其余写入均直接执行,按执行报告呈现,事后经 `/speckit.goal` modify 修改)与受影响 `team.md`(migrate / coordinate 经用户批准后)。
+- 定义文件本身—— 写 `.specify/anchoring/<slug>/goal.md`(goal 档案层;仅经引擎写入;其余写入均直接执行,按执行报告呈现,事后经 `/speckit.goal` modify 修改)——与受影响 `team.md`(migrate / coordinate 经用户批准后)。
 - `coordinate` 的领地重划分提案(批准前不写入);收尾执行报告。
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.goal" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
    尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
@@ -42,6 +48,7 @@ Consult `.specify/memory/glossary.md` and apply `.specify/shared/workflow/glossa
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
 6. Docs Sync Eval — `.specify/shared/workflow/docs-step.md` § "Evaluation procedure (the embedded step points here)"
+7. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"
 
 ## Handoffs
 

@@ -1,0 +1,30 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the history manifest's schema: the file name the incremental read and
+# write agree on, the three top-level keys, and the per-session entry key the incremental run writes.
+# The engine `.specify/scripts/python/history-utils.py` reads it through
+# `.specify/scripts/python/declaration_reader.py` (`_manifest_path()`, `read_manifest()`, `write_manifest()`),
+# so neither the file name nor a key is spelled in the engine again; the carrier reaches it by
+# `.specify/shared/declarations/facts/history-manifest-schema.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's `.manifest.json`, its default record
+# `{"version": 1, "tool": None, "sessions": {}}` and the carrier's three mentions of
+# `.manifest.json` named the same shape on 2026-11-05, so nothing had drifted.
+fact: history-manifest-schema
+kind: record-schema
+statement:
+  manifest_file: .manifest.json
+  manifest_keys:
+    - version
+    - tool
+    - sessions
+  sessions_key: sessions
+  session_entry_keys:
+    - processed_at
+  schema_version: 1
+consumers:
+  - .specify/scripts/python/history-utils.py
+former_carriers:
+  - .specify/skills/internal/manage-history/SKILL.md
+  - .specify/templates/commands/history.md
+note: "`sessions_key` is spelled separately from the `manifest_keys` roster because the incremental read addresses that one key by name (it is the set of already-distilled session ids), not by position. The record is written with `ensure_ascii=False` and two-space indent, which is a rendering rule and not part of this schema. `history-categories` is NOT here: it measured `no-machine-fact` and its removal is recorded in contracts/migration-batches.contract.md § Facts outside the roster — the carrier keeps the five category names as prose. Carrier correction: the roster row names `.specify/skills/internal/manage-history/SKILL.md`, and measured 2026-11-05 the command template `.specify/templates/commands/history.md` also named the manifest file and its durable-output role, so it is a second `former_carrier` pointed in the same change. Two further mentions are measured and deliberately not pointed: `.specify/templates/gitignore-specify-template` lists the path as a git-ignore entry (a path listing, not the schema's value) and `docs/reference/commands/history.md` is this repository's development documentation, which is not a distributed carrier. Residue recorded rather than absorbed: both carriers still print the manifest path inside a sample of the engine's own `locate` JSON output — a rendered instance of an emitted path, not a second owner of the schema — and that reading is reported to the review stage."

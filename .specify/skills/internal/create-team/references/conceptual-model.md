@@ -1,6 +1,6 @@
 # Conceptual Model: Role × Stage × Type + Team/Loop
 
-**Owner**: the team domain (`create-team` / `/speckit.team`). This file is the **single source of truth** for the multi-agent conceptual model (FR-011, FR-012, SC-006). Single-agent skills (`create-agent`, `improve-agent`) MUST link here rather than re-defining any part of this model.
+**Owner**: the team domain (`create-team` / `/speckit.team`). This file is the **single source of truth** for the multi-agent conceptual model (FR-011, FR-012, SC-006) and for the **team side of the binding model** — the team's binding application, its lifecycle value pair, `handoff_ref`, and the construction-crew notion. The **binding record's meaning** (its keys, value domains, `origin` semantics) and the goal-side lifecycle are owned by `.specify/shared/definitions/goal-definitions.md` § Archive Layers / § The Binding Record; this file cites them by path and section and must not restate them. Single-agent skills (`create-agent`, `improve-agent`) MUST link here rather than re-defining any part of this model.
 
 ## The three orthogonal dimensions
 
@@ -64,6 +64,17 @@ So the practical rule when building a roster: decide **what the member writes to
 - **Team (static structure)** — a **Role × Stage × Type** matrix describing the roster: which agents participate, in what role, at what stage, and of what type. This is what a persisted team's `## Static Structure` section renders.
 - **Loop (dynamic structure)** — the runtime collaboration pattern: how the roster executes (parallel / serial / iteration / continuous), its parallelism/DAG/iteration/operating settings, and the execution flow (dispatch → handoff → loop edges). This is what a persisted team's `## Dynamic Structure` section renders.
 
+## Seat territories judged at binding time (席位写领地,绑定期判定)
+
+A seat's **territory** — the path set it may write and read — is a property of the static structure, and it is judged when the roster is **bound**, not left for the run to avoid collisions at runtime. The judgement is a gate of the create-team roster step; `run-team` re-checks it before dispatch.
+
+- **Undeclared is red.** Every seat MUST declare its territory. A seat with no territory declaration is `territory-undeclared` and red — it MUST NOT be read as "no territory, therefore no intersection". (Measured 2026-11-09 in this repository: 2 of the 12 team definitions declare no territory anywhere in their tree.)
+- **Intersection is red before any run.** Two seats' write territories MUST NOT intersect (`territory-intersect`); a declared shared read-only resource is the only permitted overlap.
+- **File-level, not directory-level.** A territory is a file-level path set (the same form as a unit's write domain); a directory-level entry declares a region rather than a path set and is red for that reason.
+- **Capability bounds the roster.** The team is not instantiated with more concurrent members than its stated concurrency capability supports; the instantiation step reads the per-agent capability verdict (from the existing `capability-tools` frontmatter key) and reports the reduction when it applies.
+
+The obligation's three-part statement, the class table and the slot/reserve values are reached by pointer — `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation and `.specify/shared/declarations/facts/` ([[STR-001]]/[[STR-008]] class and roots entries, `concurrency-slot-and-reserve.yaml`); this section restates none of their values.
+
 ## The Team Supervisor (single Meta role)
 
 - **Team Supervisor** is the single **Meta role** — Meta at all stages, and it never performs real project tasks.
@@ -88,6 +99,20 @@ The team domain has **four** collaboration patterns. Each encodes a different **
 
 - **temporary** — a worker/stage agent instantiated for a single run from a stage/worker template; discarded when the run ends. Lives only in the orchestrator's context.
 - **persistent** — a reusable agent stored at `.specify/agents/templates/<slug>.agent.md` (role Template) or `.specify/agents/instances/<slug>.agent.md` (Instance) and symlinked into each supported tool.
+
+## The Team Definition and the Binding Model
+
+A team is a **persisted definition** in the one team archive layer: `.specify/teams/<slug>/team.md`, with its run reports accumulating under `.specify/teams/<slug>/runs/`. There is no second team store: a spec directory holds no current team definition, and a leftover spec-local tree is a migration source only. The binding record's meaning — its three keys, their value domains, `origin` semantics and the goal-side lifecycle — is owned by `.specify/shared/definitions/goal-definitions.md` § Archive Layers / § The Binding Record; this section owns the team's side of that model and restates none of the goal side's value domains.
+
+- **Binding on a team.** A team definition carries the same binding record every goal carries (written only by the engine / `create-team` persistence path, never hand-edited). Ownership and writability are answered by that record, never by where the file sits. The team's own binding says which run created it, independently of whether the goal it serves has since been bound by another line.
+- **`goal_slug` — identity, not content.** A team serves exactly one goal by declaring `goal_slug`; the binding is N teams : 1 goal, and the team stores the identity reference only — never a copy of the goal's objective or criteria. Several teams bound to one goal are a legal, first-class shape.
+- **`handoff_ref` — the reverse key.** When a spec-side handoff contract hands construction work to this team, the team definition carries `handoff_ref`, a spec-dir-relative path back to that contract. It is written by the engine's binding action; the contract and the two definitions form a three-way key pair. The contract's shape is owned by `.specify/skills/internal/create-team/references/handoff-contract-template.md`.
+- **Team lifecycle.** The team's lifecycle is its own pair — `active` / `archived` — never the goal's three values. An `archived` team is refused by `run-team`; reviving it is an explicit modify, never a side effect.
+- **The construction crew (施工队).** A team bound to a goal under an active handoff contract is the **construction crew** of the design-vs-construction split: the spec side keeps design authority (`requirements.md`, `tasks.md`, `verification.md` and the contract itself are spec-side writes), the crew executes inside its declared territory and writes back one record per completed task. The two lines are peers; neither requires the other, and the handoff is the only documented collaboration shape.
+- **Creation timing** is read from `.specify/shared/declarations/facts/goal-team-handoff-threshold.yaml`: a direct run creates no team, a handoff run creates it after `tasks` U4, and a command run declares its creation moment in its command template. This section does not restate the threshold or the timing labels.
+- **Stage dimension is not the SDD stage roster**: the Team's own `Stage` values remain `executor` / `evaluator` / `optimizer`. The canonical SDD stages exist only as `stage_seats` keys, each carrying its seats and `max_parallel`.
+- **Dynamic roster**: the number and type of agents per stage are implementation details decided by the work-package benefit test, effective concurrency, and checkpoint evidence. No fixed per-stage count is a contract.
+- **One definition per slug**: multiple runs append `runs/` and checkpoints rather than creating new team directories.
 
 ## Template home
 

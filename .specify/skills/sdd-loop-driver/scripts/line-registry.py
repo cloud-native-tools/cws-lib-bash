@@ -43,7 +43,18 @@ LINE_ID_RE = re.compile(r"^[a-z0-9][A-Za-z0-9-]{7,63}$")
 RUN_ID_RE = re.compile(r"^r[0-9]{8}T[0-9]{6}Z-[0-9a-f]{4}$")
 SLUG_RE = re.compile(r"[^a-z0-9]+")
 
-STATE_VALUES = {"active", "waiting", "stalled", "completed", "orphaned", "stale", "closed"}
+# The line state set is a closed eight-value domain. `blocked` (081, FR-017) is the closure
+# verdict's landing state: a line whose feature did not pass the closure judgement. It is
+# deliberately absent from ACTIVE_STATES (it occupies no concurrency slot and is not an active
+# entry) and from HOLDING_STATES (it holds no lease, no reservation and no ownership claim —
+# entering it clears holder_line_id / waiting_reason / queued_at and releases the lease, exactly
+# as `closed` does). It is recoverable by design, so it MUST NOT join the terminal guard set
+# `{closed, stale, orphaned}`; the recovery path is `update --state active`, which passes the
+# ownership gate like every other path into `active`. The state set has never had a
+# never-regress rule and this value adds none.
+STATE_VALUES = {
+    "active", "waiting", "stalled", "completed", "orphaned", "stale", "closed", "blocked",
+}
 ACTIVE_STATES = {"active", "waiting"}
 HOLDING_STATES = {"active", "completed"}
 EVENT_VALUES = {
@@ -58,6 +69,8 @@ DEFAULT_LOCK_TIMEOUT = 10.0
 DEFAULT_PORT_START = 39000
 DEFAULT_BLOCK_SIZE = 20
 DEFAULT_CONCURRENCY_CAP = 4
+DEFAULT_AGENT_CONCURRENCY_CAP = 24
+LINE_ROLES = {"root", "coordinator", "agent-write"}
 RUNTIME_RECORD_DIRS = (
     Path(".specify") / "memory" / "feedback",
     Path(".specify") / "memory" / "session",
@@ -429,6 +442,15 @@ def validate_entry(entry: dict) -> dict:
     validate_line_id(entry["line_id"])
     validate_run_id(entry["run_id"])
     validate_state(entry["state"])
+    if entry.get("line_role") is not None:
+        require(entry["line_role"] in LINE_ROLES,
+                f"line_role must be one of {sorted(LINE_ROLES)}")
+    if entry.get("parent_line_id"):
+        require(entry.get("line_role") == "agent-write",
+                "a child line requires line_role=agent-write")
+    if entry.get("line_role") == "agent-write":
+        require(bool(entry.get("parent_line_id")),
+                "line_role=agent-write requires parent_line_id")
     _check_abs(entry["project_dir"], "project_dir")
     _check_abs(entry["repo_root"], "repo_root")
     state = entry["state"]
@@ -440,6 +462,10 @@ def validate_entry(entry: dict) -> dict:
             require(bool(entry.get("holder_line_id")), "ownership-overlap waiting requires holder_line_id")
     if state == "closed":
         require(bool(entry.get("closed_at")), "closed requires closed_at")
+    if state == "blocked":
+        # `blocked` carries the reason it must be lifted, so a blocked line is never a bare label.
+        require(bool(entry.get("blocked_at")), "blocked requires blocked_at")
+        require(bool(entry.get("blocked_reason")), "blocked requires blocked_reason")
     if entry.get("remote") is not None:
         _validate_remote(entry["remote"])
     if entry.get("integration_result") is not None:
@@ -537,6 +563,16 @@ def fail_from(exc: EngineError) -> int:
 # ---------------------------------------------------------------- actions: lifecycle
 
 
+def _child_count(reg: Path, parent_line_id: str) -> int:
+    count = 0
+    for path in reg.glob("*.json"):
+        other = read_json(path)
+        if (other.get("parent_line_id") == parent_line_id
+                and other.get("state") in {"active", "waiting"}):
+            count += 1
+    return count
+
+
 def action_register(ctx: Context) -> int:
     args = ctx.args
     ensure_registry_dir(ctx.reg)
@@ -569,6 +605,31 @@ def action_register(ctx: Context) -> int:
         "updated_at": at,
         "run_history": [],
     }
+    if args.parent_line_id:
+        require(args.line_role in (None, "agent-write"),
+                "a child line requires line_role=agent-write")
+        parent_id = validate_line_id(args.parent_line_id)
+        parent = ctx.load(parent_id)
+        require(parent.get("parent_line_id") is None,
+                "the parent line must not itself be a child (depth is exactly one)")
+        require(parent.get("line_role") in (None, "root", "coordinator"),
+                "the parent line must be a root or coordinator line")
+        cap = int(os.environ.get("SPECIFY_AGENT_CONCURRENCY_CAP",
+                                 DEFAULT_AGENT_CONCURRENCY_CAP))
+        if _child_count(ctx.reg, parent_id) >= cap:
+            raise EngineError(
+                EXIT_HELD,
+                f"agent-concurrency-cap: parent {parent_id} already has "
+                f"{_child_count(ctx.reg, parent_id)} active/waiting child lines (cap {cap})",
+                line_id=line_id, parent_line_id=parent_id,
+            )
+        require(bool(args.write_line),
+                "a child line requires --write-line (own worktree and branch)")
+        entry["parent_line_id"] = parent_id
+        entry["line_role"] = "agent-write"
+        entry["agent_cap"] = cap
+    elif args.line_role:
+        entry["line_role"] = args.line_role
     if args.worktree_path:
         entry["worktree_path"] = str(Path(args.worktree_path).expanduser().resolve())
     if args.branch:
@@ -668,6 +729,19 @@ def _apply_update(entry: dict, args: argparse.Namespace) -> None:
         if args.state == "active":
             for key in ("waiting_reason", "holder_line_id", "queued_at"):
                 entry.pop(key, None)
+        if args.state == "blocked":
+            # `blocked` holds nothing: same cleanup as `closed`, plus the reason it must be
+            # lifted (a blocked line is recoverable, so the reason is the way back). The lease
+            # and the stage reservations are released by `action_update`, which is the only
+            # layer holding the registry path.
+            require(bool(args.reason),
+                    "entering blocked requires --reason (recorded as blocked_reason)")
+            entry["blocked_at"] = now_iso()
+            entry["blocked_reason"] = args.reason
+            entry["last_event"] = "blocked"
+            for key in ("waiting_reason", "holder_line_id", "queued_at"):
+                entry.pop(key, None)
+            entry["lease"] = None
     for pid_field, token_field in (
         ("runner_pid", "runner_start_token"),
         ("cli_pid", "cli_start_token"),
@@ -708,6 +782,18 @@ def _apply_update(entry: dict, args: argparse.Namespace) -> None:
             entry.setdefault("ready_for_merge_at", now_iso())
         else:
             entry.pop("ready_for_merge_at", None)
+    # The invariant is asserted at the same validation point as `merge_ready ⇒ completed`, not
+    # left implicit in that prerequisite: a `completed` line which is already `merge_ready` and is
+    # then asked to become `blocked` would keep the flag and land in a state the invariant
+    # forbids. The remedy is the recorded order — `integration-record --result failed` clears
+    # `merge_ready`, and the transition follows it (GW-03).
+    if entry.get("state") == "blocked" and entry.get("merge_ready") is not None \
+            and _parse_bool(entry["merge_ready"]):
+        raise EngineError(
+            EXIT_USAGE,
+            "state=blocked with merge_ready=true is not admissible: record the failed result "
+            "first (integration-record clears merge_ready), then transition the line to blocked",
+        )
 
 
 def _parse_bool(raw) -> bool:
@@ -761,9 +847,20 @@ def action_update(ctx: Context) -> int:
                 require(getattr(args, key) == data_previous.get(key),
                         f"{key} is immutable once set")
         if data.get("state") == "active" and previous_state != "active":
-            require(previous_state in {"waiting", "stalled"},
+            # `blocked` is admitted here on purpose: it is the recovery path FR-017 / A6 item 7
+            # names ("update --state active"), and this is the single line where the state set's
+            # new value and the recovery path meet. `promote-waiting` is NOT that path — it keeps
+            # requiring `state == "waiting"`, so a blocked line cannot revive itself that way.
+            require(previous_state in {"waiting", "stalled", "blocked"},
                     f"cannot transition from {previous_state!r} to active; "
                     "closed/stale/orphaned/completed are not revivable")
+            if previous_state == "blocked":
+                # SV-15: recovery carries the reason it was lifted, so the block/recover pair
+                # leaves a readable trail rather than a silent flip back.
+                require(bool(args.reason),
+                        "recovering a blocked line requires --reason (recorded as unblock_reason)")
+                data["unblock_reason"] = args.reason
+                data["unblocked_at"] = now_iso()
             # Every path into active must pass the ownership gate, not just
             # ownership-check / promote-waiting (P0-01 bypass found in review).
             if _entry_released(ctx, data):
@@ -785,7 +882,14 @@ def action_update(ctx: Context) -> int:
         elif data.get("spine_path"):
             check_spine_consistency(data, data["spine_path"])
 
-    return emit(ctx.mutate(line_id, mutate))
+    previous = {"state": entry.get("state")}
+    updated = ctx.mutate(line_id, mutate)
+    if updated.get("state") == "blocked" and previous["state"] != "blocked":
+        # Releasing the lease and the stage reservations is a registry-level operation, so it
+        # lives here rather than in `_apply_update` — the same split `action_deregister` uses for
+        # `closed`. Without it a blocked line pins its waiters the way a leaked lease does.
+        _release_resources_for_line(ctx.reg, line_id, reason="blocked")
+    return emit(updated)
 
 
 def action_deregister(ctx: Context) -> int:
@@ -803,6 +907,9 @@ def action_deregister(ctx: Context) -> int:
                 return
             entry["state"] = "stale"
             entry.setdefault("stale_at", now_iso())
+            # `stale_from_state` records *where the line came from*, so it carries whichever value
+            # the set holds — `blocked` included (081 A6 item 8). It needs no domain of its own:
+            # STATE_VALUES is its enumeration, and no second list is added for this field.
             entry["stale_from_state"] = previous
             entry["last_event"] = "stale-marked"
             return
@@ -1571,6 +1678,7 @@ def action_promote_waiting(ctx: Context) -> int:
     active = [
         read_json(path) for path in ctx.reg.glob("*.json")
         if read_json(path).get("line_id") != line_id
+        and not read_json(path).get("parent_line_id")
         and read_json(path).get("state") == "active"
         and read_json(path).get("stage")
     ]
@@ -1764,7 +1872,7 @@ def action_allocate_resources(ctx: Context) -> int:
         other = read_json(path)
         if other.get("line_id") == line_id:
             continue
-        if other.get("state") == "active" and other.get("stage"):
+        if other.get("state") == "active" and other.get("stage") and not other.get("parent_line_id"):
             others.append(other)
     if len(others) >= cap:
         def mark_waiting(data):
@@ -2423,6 +2531,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--state")
     parser.add_argument("--manifest")
     parser.add_argument("--write-line", action="store_true", default=False)
+    parser.add_argument("--parent-line-id", default=None,
+                        help="parent line for a child agent-write line (depth 1)")
+    parser.add_argument("--line-role", choices=sorted(LINE_ROLES), default=None,
+                        help="root | coordinator | agent-write")
     parser.add_argument("--stage")
     parser.add_argument("--last-event")
     parser.add_argument("--driver-session")
@@ -2513,6 +2625,121 @@ def main(argv: list[str] | None = None) -> int:
     except (OSError, ValueError) as exc:
         return fail_from(RegistryIOError(resolve_registry_dir(), str(exc)))
 
+
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_VERSION_SOURCE = "pyproject.toml"
+_VERSION_QUOTES = chr(39) + chr(34)
+_MAX_UPWARD_LEVELS = 12
+
+
+def _bridge_version(start):
+    _here = start.resolve()
+    for _ in range(_MAX_UPWARD_LEVELS + 1):
+        if (_here / _VERSION_SOURCE).is_file() and (_here / ".git").exists():
+            try:
+                _text = (_here / _VERSION_SOURCE).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                return "unknown"
+            _in_project = False
+            for _raw in _text.splitlines():
+                _line = _raw.strip()
+                if not _line or _line.startswith("#"):
+                    continue
+                if _line.startswith("[") and _line.endswith("]"):
+                    _in_project = _line == "[project]"
+                    continue
+                if not _in_project:
+                    continue
+                _key, _sep, _value = _line.partition("=")
+                if _sep and _key.strip() == "version":
+                    _value = _value.strip()
+                    if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in _VERSION_QUOTES:
+                        _value = _value[1:-1]
+                    return _value or "unknown"
+            return "unknown"
+        if _here.parent == _here:
+            return "unknown"
+        _here = _here.parent
+    return "unknown"
+
+def _bridge_main():
+    import sys as _bridge_sys
+    from pathlib import Path as _bridge_path
+
+    _argv = list(_bridge_sys.argv[1:])
+    if "--version" not in _argv:
+        return
+    if "--" in _argv and _argv.index("--version") > _argv.index("--"):
+        return
+    _invoked = _bridge_sys.argv[0] if _bridge_sys.argv[0] else "."
+    _name = _bridge_path(_invoked).name or "script"
+    print("%s %s" % (_name, _bridge_version(_bridge_path(_invoked).resolve().parent)))
+    raise SystemExit(0)
+
+
+_bridge_main()
+del _bridge_main
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its executable form by
+# `.specify/scripts/python/script_interface_cli.py`. This block owns no rule of its own.)
+import sys as _sig_sys
+import pathlib as _sig_pathlib
+
+_SIG_OWNER = _sig_pathlib.Path(__file__).resolve().parent
+while not ((_SIG_OWNER / 'pyproject.toml').is_file()
+           and (_SIG_OWNER / '.git').exists()) and _SIG_OWNER.parent != _SIG_OWNER:
+    _SIG_OWNER = _SIG_OWNER.parent
+_SIG_OWNER = str(_SIG_OWNER / 'scripts' / 'python')
+if _SIG_OWNER not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_OWNER)
+
+_SIG_SCRIPT = '.specify/skills/sdd-loop-driver/scripts/line-registry.py'
+_SIG_DECLARED = ('--action', '--active', '--all', '--at', '--base-sha', '--block-size', '--branch', '--cap', '--clarified', '--cli', '--cli-pid', '--cli-start-token', '--commit', '--dest', '--driver-session', '--evidence-ref', '--format', '--heartbeat-path', '--holder-line-id', '--host', '--label', '--last-event', '--line-id', '--line-role', '--log-path', '--manifest', '--mark', '--merge-ready', '--message', '--meta-json', '--override', '--owned-paths', '--parent-line-id', '--pid', '--port-range-start', '--probe-json', '--project-dir', '--prompt-path', '--queued-at', '--ready-for-merge-at', '--reason', '--remote', '--repo-root', '--resources', '--result', '--run-id', '--runner-pid', '--runner-start-token', '--session', '--spine', '--stage', '--start-token', '--state', '--status-path', '--ttl', '--waiting-reason', '--worktree', '--worktree-path', '--worktree-retained', '--write-line')
+_SIG_HELP = (
+    'usage: line-registry.py [options]\n'
+    'options:\n'
+    '  --action\n  --active\n  --all\n  --at\n  --base-sha\n  --block-size\n  --branch\n  --cap\n  --clarified\n  --cli\n  --cli-pid\n  --cli-start-token\n  --commit\n  --dest\n  --driver-session\n  --evidence-ref\n  --format\n  --heartbeat-path\n  --holder-line-id\n  --host\n  --label\n  --last-event\n  --line-id\n  --line-role\n  --log-path\n  --manifest\n  --mark\n  --merge-ready\n  --message\n  --meta-json\n  --override\n  --owned-paths\n  --parent-line-id\n  --pid\n  --port-range-start\n  --probe-json\n  --project-dir\n  --prompt-path\n  --queued-at\n  --ready-for-merge-at\n  --reason\n  --remote\n  --repo-root\n  --resources\n  --result\n  --run-id\n  --runner-pid\n  --runner-start-token\n  --session\n  --spine\n  --stage\n  --start-token\n  --state\n  --status-path\n  --ttl\n  --waiting-reason\n  --worktree\n  --worktree-path\n  --worktree-retained\n  --write-line\n'
+    '  -h, --help    print this help and exit\n'
+    '  --version     print the script name and the framework version, then exit\n'
+    +
+    'side-effects:' + ' ' + 'writes only through the options it documents; a flag-only invocation writes nothing' + '\n'
+    +
+    'exit-codes:' + ' ' + '0 success; 1 a documented check failed; 2 argument or environment error' + '\n'
+)
+
+
+def _sig_guard(argv):
+    # Answer the flags and reject an undeclared option before any parsing or write.
+    # RULES are asked of the owner (script_interface_cli.guard_argv), never restated:
+    # the declared vocabulary and the flag forms are its, and C-9 (a recognized option
+    # never rescues an unrecognized one) is its judgement. What stays local is the help
+    # BODY, because its operand sentence is this script's own.
+    try:
+        import script_interface_cli as _sig  # noqa: E402 -- deferred: a copied script may lack it
+    except ImportError:  # skill-local or sandbox copy: the module's own parser still runs
+        return list(argv)
+    line = list(argv)
+    try:
+        _sig.guard_argv(line, declared=_SIG_DECLARED)
+    except SystemExit as answered:  # what guard_argv raises; _sig_sys.exit IS SystemExit
+        if answered.code == 0:
+            raise
+        # The owner prints the rejection line and this script's help body is appended after
+        # it, so the reader sees the vocabulary and not only the refusal.
+        _sig_sys.stderr.write(_SIG_HELP)
+        raise _sig_sys.exit(answered.code)
+    stop = line.index('--') if '--' in line else len(line)
+    if '-h' in line[:stop] or '--help' in line[:stop]:
+        _sig_sys.stdout.write(_SIG_HELP)
+        raise _sig_sys.exit(0)
+    return line
+
+if __name__ == "__main__":
+    _sig_sys.argv = [_sig_sys.argv[0]] + _sig_guard(_sig_sys.argv[1:])
+# script-interface:86:end
 
 if __name__ == "__main__":
     sys.exit(main())

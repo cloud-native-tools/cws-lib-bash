@@ -32,7 +32,7 @@ import sys
 import time
 
 SCHEMA_VERSION = 1
-STAGES = ("plan", "implement", "review", "analyze", "clarify")
+STAGES = ("plan", "implement", "review", "analyze", "clarify", "requirements", "tasks")
 DECISIONS = ("decomposed", "single-package", "disabled", "fallback")
 GATE_VERDICTS = ("admit", "single-package", "no-gate-run")
 RULES = (
@@ -40,6 +40,8 @@ RULES = (
     "decompose-implement-v1",
     "decompose-review-v1",
     "decompose-investigation-v1",
+    "decompose-requirements-v1",
+    "decompose-tasks-v1",
 )
 PATTERNS = ("parallel", "serial", "iteration")
 KINDS = ("read-only", "write")
@@ -298,7 +300,7 @@ def _schema_check_package(package, plan_stage, index):
         ),
         ("depends_on", lambda value: isinstance(value, list) and _is_string_list(value)),
         ("parallel_safe", lambda value: isinstance(value, bool)),
-        ("max_turns", lambda value: _is_int(value) and value > 0),
+        ("max_turns", lambda value: _is_int(value) and 0 < value <= 500),
         ("bounded_by", lambda value: isinstance(value, dict)),
         ("acceptance", lambda value: isinstance(value, list) and bool(value)),
         ("sentinel", _is_text),
@@ -433,6 +435,9 @@ def validate_plan_schema(plan, stage, stage_attempt=None):
     for field, predicate in required:
         if field not in plan or not predicate(plan[field]):
             findings.append(_finding("schema-missing", None, "plan.%s" % field))
+
+    if "write_isolation" in plan and plan["write_isolation"] not in ("shared-tree", "worktree"):
+        findings.append(_finding("schema-missing", None, "plan.write_isolation"))
 
     if plan.get("stage") != stage:
         findings.append(
@@ -1052,6 +1057,94 @@ def _read_territory(package, repo_root):
     return _path_set(package.get("read_only_paths"), repo_root)
 
 
+def _is_directory_level_entry(raw, repo_root):
+    """A write-domain entry is directory-level when it names a materialized region.
+
+    The preflight gate judges the workspace as materialized: an entry that contains
+    a glob metacharacter, or that resolves to an existing directory under the repo,
+    declares a directory region and is red. An entry that does not resolve to an
+    existing directory is treated as a declared (future) file path.
+    """
+    if any(character in raw for character in "*?["):
+        return True
+    return os.path.isdir(_normalize_repo_path(raw, repo_root))
+
+
+def _is_declared_directory_entry(raw, repo_root):
+    """A write-domain entry is directory-level by its declared form as well.
+
+    The plan gate judges the declaration before the workspace materializes: a
+    trailing path separator is the declaration's own directory marker, alongside
+    the glob and existing-directory forms.
+    """
+    if raw.endswith(("/", os.sep)):
+        return True
+    return _is_directory_level_entry(raw, repo_root)
+
+
+def _declared_write_domain_findings(packages, graph, slot_cap, repo_root):
+    """FR-012's file-level form for units that can actually run concurrently.
+
+    A directory-level domain is red where it can mislead the overlap judgement: the
+    unit is a write unit, the plan admits concurrency (slot_cap >= 2) and the unit
+    has at least one independent peer. A plan that cannot execute a pair
+    concurrently judges no overlap, so the retained 070 plan semantics hold there.
+    """
+    findings = []
+    if not (_is_int(slot_cap) and slot_cap >= 2):
+        return findings
+    for package in packages:
+        if package.get("kind") != "write":
+            continue
+        wp_id = package["wp_id"]
+        peers = [other["wp_id"] for other in packages if other["wp_id"] != wp_id]
+        if not any(_independent(graph, wp_id, peer) for peer in peers):
+            continue
+        for raw in package.get("owned_paths") or []:
+            if _is_text(raw) and _is_declared_directory_entry(raw, repo_root):
+                findings.append(
+                    _finding(
+                        "write-domain-directory",
+                        wp_id,
+                        "write domain entry is a directory-level region, not a "
+                        "file-level path: %s" % raw,
+                    )
+                )
+    return findings
+
+
+def _write_domain_findings(packages, repo_root):
+    """WG-15 unit-level form: a non-read-only unit needs a non-empty file-level domain."""
+    findings = []
+    for package in packages:
+        if package.get("kind") != "write":
+            continue
+        wp_id = package["wp_id"]
+        raw_paths = [
+            raw for raw in (package.get("owned_paths") or []) if _is_text(raw)
+        ]
+        if not raw_paths:
+            findings.append(
+                _finding(
+                    "write-domain-empty",
+                    wp_id,
+                    "non-read-only unit declares no write domain",
+                )
+            )
+            continue
+        for raw in raw_paths:
+            if _is_directory_level_entry(raw, repo_root):
+                findings.append(
+                    _finding(
+                        "write-domain-directory",
+                        wp_id,
+                        "write domain entry is a directory-level region, not a "
+                        "file-level path: %s" % raw,
+                    )
+                )
+    return findings
+
+
 def _concurrent_candidates(packages, graph, slot_cap):
     """Read-only packages that can overlap an independent peer under the slot cap."""
     if not (_is_int(slot_cap) and slot_cap >= 2):
@@ -1088,6 +1181,7 @@ def _append_unique(findings, finding):
 def _preflight_findings(plan, packages, graph, manifest, slot_ceiling, repo_root):
     """WG-14 manifest coverage/forbidden, WG-15 territories, WG-16 slot cap/isolation."""
     findings = []
+    findings.extend(_write_domain_findings(packages, repo_root))
     for package in packages:
         wp_id = package["wp_id"]
         owned = _write_territory(package, repo_root)
@@ -1685,7 +1779,7 @@ def _emit(record, json_out):
     print(text)
 
 
-def _plan_findings(plan, args, attempt, base_plan_hash, amendments):
+def _plan_findings(plan, args, attempt, base_plan_hash, amendments, repo_root):
     findings = validate_plan_schema(plan, args.stage, attempt)
     schema_failed = any(
         finding["code"] == "schema-missing" for finding in findings
@@ -1696,10 +1790,15 @@ def _plan_findings(plan, args, attempt, base_plan_hash, amendments):
     if not findings and isinstance(packages, list):
         graph_findings, layers = _graph_findings(packages)
         findings.extend(graph_findings)
+        graph = _known_dependency_graph(packages)
         findings.extend(_output_findings(plan, packages))
         findings.extend(_kind_findings(packages))
         findings.extend(_bounded_findings(packages))
-        graph = _known_dependency_graph(packages)
+        findings.extend(
+            _declared_write_domain_findings(
+                packages, graph, plan.get("slot_cap"), repo_root
+            )
+        )
         findings.extend(_pattern_findings(plan, packages, graph))
         findings.extend(_amendment_hash_findings(base_plan_hash, amendments))
         recomputed = canonical_plan_hash(plan)
@@ -1812,7 +1911,7 @@ def run(args):
         )
 
     findings, layers, graph, schema_failed, recomputed = _plan_findings(
-        plan, args, attempt, base_plan_hash, amendments
+        plan, args, attempt, base_plan_hash, amendments, repo_root
     )
     if args.check == "preflight" and not schema_failed:
         findings.extend(
@@ -1873,6 +1972,121 @@ def main(argv=None):
         print("wp-gate: input error: %s" % exc, file=sys.stderr)
         return 2
 
+
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_VERSION_SOURCE = "pyproject.toml"
+_VERSION_QUOTES = chr(39) + chr(34)
+_MAX_UPWARD_LEVELS = 12
+
+
+def _bridge_version(start):
+    _here = start.resolve()
+    for _ in range(_MAX_UPWARD_LEVELS + 1):
+        if (_here / _VERSION_SOURCE).is_file() and (_here / ".git").exists():
+            try:
+                _text = (_here / _VERSION_SOURCE).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                return "unknown"
+            _in_project = False
+            for _raw in _text.splitlines():
+                _line = _raw.strip()
+                if not _line or _line.startswith("#"):
+                    continue
+                if _line.startswith("[") and _line.endswith("]"):
+                    _in_project = _line == "[project]"
+                    continue
+                if not _in_project:
+                    continue
+                _key, _sep, _value = _line.partition("=")
+                if _sep and _key.strip() == "version":
+                    _value = _value.strip()
+                    if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in _VERSION_QUOTES:
+                        _value = _value[1:-1]
+                    return _value or "unknown"
+            return "unknown"
+        if _here.parent == _here:
+            return "unknown"
+        _here = _here.parent
+    return "unknown"
+
+def _bridge_main():
+    import sys as _bridge_sys
+    from pathlib import Path as _bridge_path
+
+    _argv = list(_bridge_sys.argv[1:])
+    if "--version" not in _argv:
+        return
+    if "--" in _argv and _argv.index("--version") > _argv.index("--"):
+        return
+    _invoked = _bridge_sys.argv[0] if _bridge_sys.argv[0] else "."
+    _name = _bridge_path(_invoked).name or "script"
+    print("%s %s" % (_name, _bridge_version(_bridge_path(_invoked).resolve().parent)))
+    raise SystemExit(0)
+
+
+_bridge_main()
+del _bridge_main
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its executable form by
+# `.specify/scripts/python/script_interface_cli.py`. This block owns no rule of its own.)
+import sys as _sig_sys
+import pathlib as _sig_pathlib
+
+_SIG_OWNER = _sig_pathlib.Path(__file__).resolve().parent
+while not ((_SIG_OWNER / 'pyproject.toml').is_file()
+           and (_SIG_OWNER / '.git').exists()) and _SIG_OWNER.parent != _SIG_OWNER:
+    _SIG_OWNER = _SIG_OWNER.parent
+_SIG_OWNER = str(_SIG_OWNER / 'scripts' / 'python')
+if _SIG_OWNER not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_OWNER)
+
+_SIG_SCRIPT = '.specify/skills/sdd-loop-driver/scripts/wp-gate.py'
+_SIG_DECLARED = ('--check', '--json-out', '--manifest', '--plan-json', '--repo', '--slot-cap-ceiling', '--spine', '--stage', '--stage-attempt', '--wp-attempt', '--wp-id')
+_SIG_HELP = (
+    'usage: wp-gate.py [options]\n'
+    'options:\n'
+    '  --check\n  --json-out\n  --manifest\n  --plan-json\n  --repo\n  --slot-cap-ceiling\n  --spine\n  --stage\n  --stage-attempt\n  --wp-attempt\n  --wp-id\n'
+    '  -h, --help    print this help and exit\n'
+    '  --version     print the script name and the framework version, then exit\n'
+    +
+    'side-effects:' + ' ' + 'writes only through the options it documents; a flag-only invocation writes nothing' + '\n'
+    +
+    'exit-codes:' + ' ' + '0 success; 1 a documented check failed; 2 argument or environment error' + '\n'
+)
+
+
+def _sig_guard(argv):
+    # Answer the flags and reject an undeclared option before any parsing or write.
+    # RULES are asked of the owner (script_interface_cli.guard_argv), never restated:
+    # the declared vocabulary and the flag forms are its, and C-9 (a recognized option
+    # never rescues an unrecognized one) is its judgement. What stays local is the help
+    # BODY, because its operand sentence is this script's own.
+    try:
+        import script_interface_cli as _sig  # noqa: E402 -- deferred: a copied script may lack it
+    except ImportError:  # skill-local or sandbox copy: the module's own parser still runs
+        return list(argv)
+    line = list(argv)
+    try:
+        _sig.guard_argv(line, declared=_SIG_DECLARED)
+    except SystemExit as answered:  # what guard_argv raises; _sig_sys.exit IS SystemExit
+        if answered.code == 0:
+            raise
+        # The owner prints the rejection line and this script's help body is appended after
+        # it, so the reader sees the vocabulary and not only the refusal.
+        _sig_sys.stderr.write(_SIG_HELP)
+        raise _sig_sys.exit(answered.code)
+    stop = line.index('--') if '--' in line else len(line)
+    if '-h' in line[:stop] or '--help' in line[:stop]:
+        _sig_sys.stdout.write(_SIG_HELP)
+        raise _sig_sys.exit(0)
+    return line
+
+if __name__ == "__main__":
+    _sig_sys.argv = [_sig_sys.argv[0]] + _sig_guard(_sig_sys.argv[1:])
+# script-interface:86:end
 
 if __name__ == "__main__":
     sys.exit(main())

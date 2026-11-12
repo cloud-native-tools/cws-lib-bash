@@ -1,0 +1,21 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the memory scopes: the closed two-value set a record's `--scope` may
+# carry. The engine `.specify/scripts/python/memory-utils.py` reads it through
+# `.specify/scripts/python/declaration_reader.py` (`SCOPES`), so the scope validation and the `--scope all`
+# expansion both come from here; the carriers reach it by
+# `.specify/shared/declarations/facts/memory-types.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `SCOPES` and both carriers named the same two scopes
+# in the same order on 2026-11-05, so nothing had drifted and `note` records the agreement.
+fact: memory-types
+kind: closed-set
+statement:
+  - session
+  - knowledge
+consumers:
+  - .specify/scripts/python/memory-utils.py
+former_carriers:
+  - .specify/skills/internal/memory-record/SKILL.md
+  - .specify/skills/internal/memory-recall/SKILL.md
+note: "Order is part of the value only in the sense that `--scope all` expands in this order; membership is the judgement. The two carriers keep their runtime path names (`.specify/memory/session/`, `.specify/memory/knowledge/`) because a store path is not a restatement of the scope set — the set itself is no longer enumerated as a domain in either skill. Measured 2026-11-05 and recorded rather than re-pointed: `docs/reference/skills/memory.md` still names both scopes, as the *roles* of the two tiers and in a `--scope` usage row. That page is this repository's development documentation (not distributed, not a candidate unit), and the tier roles are the judgement it owns; the residual mention is reported to the review stage instead of being absorbed into a pointer here. `.specify/shared/workflow/runtime-mode.md` names the same two words only as a store path (`.specify/memory/session|knowledge/`) — a path, not the domain."

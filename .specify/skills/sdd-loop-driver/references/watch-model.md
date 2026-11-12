@@ -4,7 +4,7 @@
 >
 > 适用对象：远程/本地子代理进程、异步脚本、阶段日志、心跳、退出记录，以及多线并行时的批量监听。
 >
-> **适用边界**：本文档的信号源、窗口、正证据与 watcher 判定适用于外部 CLI 派发（远端拓扑，或显式外部本地派发）。本地原生子代理由宿主运行时托管，U3 是一次同步调用——不产生退出记录/PID/心跳，不适用本模型，也不得为它创建 runner/FIFO。
+> **适用边界**：本文档的信号源、窗口、正证据与 watcher 判定适用于**进程承载**的派发——远端拓扑、显式外部本地派发，以及**本地 fork 承载**（同族 `qodercli` 子进程经 `.specify/skills/sdd-loop-driver/scripts/stage-runner.sh`）：fork 子进程与远端 runner 同规，由同一组信号（退出记录/哨兵/PID/心跳/派生日志）、同一正证据和同一哨兵判定监听。宿主内建 in-process subagent 路径 **BANNED**，不是派发承载，也不得为它创建 runner/FIFO。
 
 ## 0. 不变量（Invariants）
 
@@ -24,7 +24,7 @@
 | **Poll（轮询）** | 周期性重复采样 | **回退形态**：无法阻塞等待时使用；不是缺省 |
 | **Observe（观察）** | 读取日志/心跳/退出记录，不做判定 | watcher 内部动作，或 U3 的证据采集 |
 | **Watch window（监听窗口）** | 一次阻塞调用的最长持续时间 | `--window`；到期返回 `RUNNING`，驱动者立即重入下一窗口 |
-| **Stage deadline（阶段期限）** | 阶段开始时间 + 阶段超时（缺省 90 分钟） | 唯一产生 `TIMEOUT` 的判据；入口可覆盖 |
+| **Stage deadline（阶段期限）** | 阶段开始时间 + 阶段超时（缺省 180 分钟） | 唯一产生 `TIMEOUT` 的判据；入口可覆盖 |
 | **Deadline grace（期限宽限）** | 阶段期限之后继续采样、等待晚完成证据的窗口 | `--deadline-grace`（缺省 120s）；晚到的 status/sentinel 重判为 DONE/FAILED；宽限到期仍无终态才返回 `TIMEOUT` |
 
 ## 2. Watch Target 与信号源

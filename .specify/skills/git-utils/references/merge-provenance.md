@@ -35,7 +35,7 @@ the Verification column names how to check it again.
 | 2 | Health-check branch structure, sync state, and exclusion rules | `references/health-check-commands.md` | walk the Phase-2 checks against a repo holding a managed block | verified |
 | 3 | Directed convergence: rebase sync, selective merge, force-with-lease push | `references/execute-commands.md` | walk operations A–G; confirm the pre/post subroutine markers | verified |
 | 4 | Per-branch file exclusion via `.gitexcludes` | `references/gitexcludes-subroutine.md` | confirm every sync/merge command routes through the subroutine | verified |
-| 5 | Single-source branch state in the managed block of `docs/git-workflow.md` | `references/instructions-lookup.md` | locate/create rules present; block machine-written, never hand-edited | verified |
+| 5 | Single-source branch state in the managed block of `.specify/workflow/git.md` | `references/instructions-lookup.md` | locate/create rules present; block machine-written, never hand-edited | verified |
 | 6 | Diagnose known branch-workflow failures | `references/troubleshooting.md` | each source Known-Issue row present with its remedy | verified |
 
 ## Source: git-fleet

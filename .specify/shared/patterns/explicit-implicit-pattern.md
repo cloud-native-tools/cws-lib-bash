@@ -66,7 +66,7 @@ Associative signals are the **boundary tier**: they resolve semantically today p
 - **vs defaults/config**: defaults decide when there is *no* user signal; this pattern decides when there *is* one. They compose — explicit rule > implicit inference > default.
 - **vs vocabulary validation (词汇表校验, reconcile-pattern optional component)**: vocabulary validation corrects *words* (homophones, typos) before meaning is interpreted; this pattern routes *interpreted intent* to a target. They compose in that order: validate vocabulary, then resolve routing.
 - **vs semantic routing (语义路由, reconcile-pattern optional component)**: semantic routing is a static intent→target table; this pattern generalizes it with precedence, a confidence gate, and the promotion loop. A reconcile skill's semantic-routing table is a natural *route artifact* for this pattern.
-- **vs the glossary (`.specify/memory/glossary.md`)**: the glossary pins *term spellings/meanings*; a route artifact pins *signal → target mappings*. An association confirmed at X4 may also deserve a glossary entry if it names a concept, not just routes one.
+- **vs the glossary (`.specify/glossary.md`)**: the glossary pins *term spellings/meanings*; a route artifact pins *signal → target mappings*. An association confirmed at X4 may also deserve a glossary entry if it names a concept, not just routes one.
 
 **判定口诀 (rule of thumb)**: 输入要落到唯一目标、匹配表写不全、还得靠语义猜 → 显隐规则模式；猜完了要记得问一句"要不要写进路由表" → 收敛闭环成立。
 

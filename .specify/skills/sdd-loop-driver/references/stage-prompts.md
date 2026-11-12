@@ -4,7 +4,7 @@
 
 ## Stage Prompt Skeleton（三段骨架，每阶段一次）
 
-每阶段把以下三段完整指令交给阶段子代理：远端外部派发写入提示词文件（`prompt-<line>-<stage>.md`）；本地原生派发直接作为 Agent/Task 提示词（无需落盘）。阶段名替换 `<STAGE>`。
+每阶段把以下三段完整指令交给阶段子代理：远端外部派发写入提示词文件（`prompt-<line>-<stage>.md`）；本地 **fork 承载**经 `.specify/scripts/stage-runner.sh` 以 stdio/提示词文件传入（形态见 `dispatch-recipes.md`；同族 `qodercli` 子进程），异构 agent 走 **subprocess 承载**（该 agent 自身 CLI 的独立子进程）。阶段名替换 `<STAGE>`。
 
 **红线（反嵌套拓扑）**：提示词是子代理的**全部输入**，三段骨架之外不得夹带驱动机制本身——反嵌套义务真源已上收 run-agent 派发治理（不引用驱动/循环技能、不指示加载技能、不含循环逻辑；派发前拦截），本行保留提醒并引用、不复述义务全文（analyze C-28）。
 
@@ -13,7 +13,7 @@
 ```text
 你在推进 <project> 的无人值守 SDD 特性开发，当前阶段：<STAGE>。
 - 项目终态权威文档：<target-state-doc>（所有取舍以它为准）
-- 项目宪法：<project>/.specify/memory/constitution.md（合规底线）
+- 项目宪法：<project>/.specify/constitution.md（合规底线）
 - 上一阶段完成提交：<prev-stage-commit-hash>（续作基线）
 - 当前断点判定：<breakpoint-verdict>（从状态脊恢复时必填）
 - 状态脊：STATE_SPINE_PATH=<state_spine_path>（U0 入口声明；缺失即快速失败）
@@ -24,7 +24,7 @@
 
 **类别四元组的派发纪律**（owner：`contracts/driver-integration.md` C-001…C-003；本段只规定派发什么，不复制类别判据）：
 
-- **唯一载体**：提示词是类别的唯一载体（环境变量不被远端子代理继承）；本地原生子代理与远端 CLI 两种拓扑**同规**——四元组一律写在第①段，两种拓扑逐字相同。
+- **唯一载体**：提示词是类别的唯一载体（环境变量不被远端子代理继承）；**fork 承载**（本地同族 `qodercli` 子进程经 `stage-runner.sh`）与 **subprocess 承载**（异构 agent 自身 CLI 的独立子进程）两种拓扑**同规**——四元组一律写在第①段，两种拓扑逐字相同；宿主内建 in-process subagent 路径 **BANNED**，不作为派发承载。
 - **取值来源**：唯一来源是该线 `requirements.md` 的**声明行**，经同一解析入口在**每次阶段派发前**解析一次；状态脊中的类别行只是带日期的观测，MUST NOT 充当**取值来源**；重入时重新解析并与观测比对，不一致记 `re-baseline` 事件并更新观测。
 - **缺键即缺陷**：缺任一元组键（`flow_class=` / `source=` / `marker=` / `error=`）即判**派发构造缺陷**，U4 不放行。阶段**子代理** MUST NOT 自行**推断**、补默认或按介质猜测类别——它既没有声明面，也没有解析入口。
 - **`error` 位值域**：`error` 的值域恰为 `owner-unavailable` / `-` 两项——`-` = 无错误位，`owner-unavailable` = 降级。**降级有三种原因，标签只有一个**：owner 不可解析、调用方无法执行引擎、解析以退出码 2 报输入缺失（spec 目录或其 `requirements.md` 不存在 / 不可读；`flow-class-check.py` 对该路径同样打 `owner-unavailable`，原因写 `detail`）。**不要**把 `invalid-unit-id` 写进载荷——它只属于「键不属于任何已登记键族」的调用方缺陷，阶段永远不会用它构造键。`declaration-absent` 是 advisory 发现码，MUST NOT 进入**载荷**（否则「作者未声明」会被读成一种错误）。
@@ -38,6 +38,7 @@
 - 仓库既有脏文件不提交不还原。
 - 不要 push（除非明确授权）——远程推送属破坏性操作。
 - 只推进当前阶段；下一阶段由主代理派发，不要自行越阶段。
+- 测试执行唯一入口是 `.specify/scripts/bash/run-tests.sh`（缺省 xdist 形态 `-n <effective> --dist load`；测试路径与其余参数原样转交，单测调试同样走 runner）；派发 brief MUST NOT 包含直接调用解释器级测试命令（裸测试 CLI 或 `-m` 模块入口）。
 ```
 
 > 上列前四条为 G5 默认纪律的**逐字纪律行**（对齐框架 fast-fail 与 confirmation-gates 两份判据文件的英文真源；执行侧以本文件的行文为准，不解析框架文档）。
@@ -62,7 +63,7 @@ analyze 等声明只读的阶段沿用同一三段骨架，但第①/②段 MUST
 
 ## U3 统一监听与驱动者生命周期（Watch Protocol）
 
-监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。**本地原生调用是一次同步阻塞调用，返回即终止判定；下列窗口/轮询/重入规则仅用于外部 CLI 派发。**
+监听规则本体见 `watch-model.md`；本段只规定驱动者的行为。**进程承载（fork / subprocess）的派发按下列窗口/轮询/重入规则监听——fork 子进程与远端 runner 同规；宿主内建 in-process 路径不是派发承载。**
 
 - **合法等待**：在有界长轮询窗口内等待（一次工具调用跑 `watch-target.sh --window N`），终止判定或窗口到期即返回；`RUNNING` → 立即重入下一窗口，**不在 agent 侧 sleep、不按固定 cadence 空转**。每个窗口携带字面量 `--iter <run_id>-w<NN>`（`NN` 递增），避免宿主把同参数连续调用判成重复/卡死（owner：`watch-model.md` §3.2）。
 - **非法等待**：独立 `sleep N` 回合；挂起监视器后结束驱动者会话「等待通知/恢复」——在会话式宿主（subagent 结束即停摆）中这意味着循环静默死亡，直接违反 Hard Requirement 1 与 5。唯一例外：宿主已被探针证明通知会自动恢复**同一运行**（`watch-model.md` §6）；此时原生通知只能作唤醒补充，每次唤醒仍做一次快照判定。
@@ -161,7 +162,7 @@ skipped; only the checklist quality-list step is absent.
 
 ```text
 TEST BUDGET: before the first task, run exactly one full suite:
-  bash .specify/scripts/bash/run-tests.sh --names-out <spec-dir>/baseline-failed.txt
+  bash .specify/scripts/bash/run-tests.sh --full --names-out <spec-dir>/baseline-failed.txt
 Write the E2 baseline row into the state-spine fence at STATE_SPINE_PATH
 (seq=1, slot=baseline, stage=implement, selection_basis=full-suite, command,
 rc, passed/failed, failed_names_path, evidence_ptr; merge_source/merged_at=na
@@ -202,7 +203,7 @@ from the completeness denominator.
 ```text
 TEST BUDGET CLOSURE: after review passes and before merge, run the closure full
 suite:
-  bash .specify/scripts/bash/run-tests.sh --names-out <spec-dir>/final-failed.txt
+  bash .specify/scripts/bash/run-tests.sh --full --names-out <spec-dir>/final-failed.txt
 Compare by name: comm -13 baseline-failed.txt final-failed.txt. Append the E2
 closure row to the SAME state spine (baseline_compare must be the name-level
 diff; never a count comparison), then audit:
@@ -274,8 +275,8 @@ sleep turn and do not start any resident service.
 
 ### 缺省值（入口参数可覆盖）
 
-- 阶段超时缺省 **90 分钟**（单阶段数十分钟量级的实测基础；入口可覆盖）。
-- 同阶段重试上限缺省 **2 次**（两振停滞先例；入口可覆盖）。
+- 阶段超时缺省 **180 分钟**（1M-context 运行档下的校准值；入口可覆盖）。
+- 同阶段重试上限缺省 **3 次**（1M-context 运行档下的校准值；入口可覆盖）。
 - 预算（budget）与节奏（cadence）：预算降级沿用 on_80pct report-only / on_100pct halt 形态；cadence 仅指**回退形态（间隔轮询）**的检查频率，缺省长轮询窗口不使用固定 cadence（见 `watch-model.md` §4–§5）。
 
 ### 处置程序
@@ -300,6 +301,7 @@ sleep turn and do not start any resident service.
 
 - **程序**：U0 入口声明时、U2 派发前、U3 收到终止判定时、U4 校验后、U5 停线时**先写状态、后做动作**——续环与重入只读状态脊，零上下文可接手；循环 MUST NOT 依赖会话记忆。
 - **重入**：任何新会话接手该线时，从状态脊读取断点判定与已试次数，先跑一次 `watch-target.sh --once` 快照；终止判定在即按 U4/U5 续环，否则从对应阶段续跑或恢复监听窗口。
+- **观察者记录节**：observer 记录节由 driver 追加写入状态脊，键与形状的唯一 owner 是 `.specify/skills/sdd-loop-driver/SKILL.md` § SDD Observer；本节只给指针，不复述其键集。
 
 ## Line Registration, Envelope & Message Ingress（线路登记、归属与消息入口，064）
 
@@ -320,7 +322,7 @@ python3 <skill-dir>/scripts/line-registry.py --action register --line-id <line> 
 
 - status / pid / heartbeat 行尾携带 `line=<id> run=<id> stage=<stage> event=<type>`；
 - 日志旁路 `log-<line>-<stage>.log.meta.jsonl`（append-only，单写者）承载 `log-start` / `log-terminal`，终止条含 `sentinel_seen` 与 `exit`；
-- 提示词旁路 `prompt-<line>-<stage>.md.meta.json` 在派发前写入；
+- 提示词旁路 `prompt-<line>-<stage>.md.meta.json` 在派发前写入，并携带 `role_edge` 对象 —— 七个下行角色字段 `parent_identity` / `child_label` / `role_declaration` / `dispatch_duty` / `depth_position` / `authority_ref` / `return_channel`（语义与值域归 `.specify/shared/definitions/superagent-definitions.md` § The super↔sub Protocol；`dual-role` 从不出现在 `role_declaration`）；
 - **日志正文零改动**：哨兵字面量与「最后非空行」判定不变；不得在哨兵后追加信封。
 
 ### 消息入口程序（驱动侧）
@@ -451,6 +453,7 @@ CLI 行为知识的唯一落点是 `references/cli/`（schema owner：`reference
 
 ### U6 收尾（生命周期）
 
+- 特性线闭合处的 **closure 判定**由集成序列的质量门给出：`.specify/scripts/python/closure-acceptance-check.py` 在该线闭合时运行一次，`block` 把该线标 `blocked`（先在 `completed` 态记录 `integration-record --result failed` 的命名原因，随后转态——线不是也不得再是 `completed`）。判定时点是**特性线闭合**：一条线承载一个特性的全部切片，MUST NOT 被读作「每个切片合并都要过一次 closure 判定」——切片合并由 review 门判定。封闭原因集、退出码与 `final_path` 形态的真源：`.specify/shared/workflow/acceptance-hardening.md` § Closure Verdict（按路径 + 章节锚引用，本文件不复述）。
 - U6 在 `integration_result`（merged|failed）记录之后执行；只读线阶段完成直接 U6；写线集成前显式放弃以 `last_event=abandoned` 关闭。
 - U6 注销 Registry（`closed` + `closed_at`）、释放 reservation 与 lease、按保留策略归档证据；不得留下 `active` 残留。
 - worktree 的移除只由集成序列在合并成功后执行；未合并（failed/放弃）时保留并置 `worktree_retained=true`。
@@ -459,7 +462,7 @@ CLI 行为知识的唯一落点是 `references/cli/`（schema owner：`reference
 
 ### 本地拓扑（本地简报先行）
 
-项目在本机时：runner 直接以本地项目为工作目录（无 ssh/su 层）；**需求上下文先写成简报文件**（如 `~/tmp/<project>/<topic>-sdd-brief.md`），子代理提示词只说「先完整阅读简报，再执行 /speckit.requirements」——文件承载的上下文比内联进提示词更稳（不失真、可复查、可复用）。
+项目在本机时：runner 直接以本地项目为工作目录（无 ssh/su 层）；**需求上下文先写成简报文件**（`<repo>/.specify/.tmp/sdd-loop/tmp/<line_id>/brief-<topic>.md`；HR11 唯一落点），子代理提示词只说「先完整阅读简报，再执行 /speckit.requirements」——文件承载的上下文比内联进提示词更稳（不失真、可复查、可复用）。
 
 ### 构建固化变体（按角色分线）
 

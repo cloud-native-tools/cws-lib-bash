@@ -1,0 +1,28 @@
+# 093 — [[STR-011]] the single coordinator-dispatch adjudication surface (T-004, F-093-003).
+#
+# This entry registers the QUESTION and its value domain. It does NOT answer it: the verdict is an owner
+# decision, and this feature MUST NOT write a verdict the owner did not supply (C-016). Consumers that
+# need a verdict read `statement.verdict`; while it is not one of `allowed_values`, the correct reading
+# is owner-unavailable (exit 2) with no default (C-039, SM-5) — the fail-closed window C-072 relies on.
+#
+# The observable contradiction this surface exists for (F-093-003, measured 2026-11-09): all 17 agent
+# definitions state "Never dispatch another agent" and none lists a dispatch tool, yet 092's plan
+# declared six concurrent packages.
+fact: coordinator-dispatch-verdict
+kind: mapping
+statement:
+  decision_state: unadjudicated
+  allowed_values:
+    - allow
+    - forbid
+  authority: .specify/register.md#F-093-003
+  consequence:
+    allow: coordinators gain a dispatch tool and FR-021(a) becomes satisfiable for them
+    forbid: dispatch responsibility belongs to the driver or main agent and FR-021(b) is required
+  entry_condition: the owner supplies one value from allowed_values, recorded against this entry
+  absent_reading: owner-unavailable with exit 2, never a default
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_dispatch_capability.py
+former_carriers: []
+note: "The verdict value is deliberately absent. C-016 has two MUSTs — carry a value from {allow, forbid}, and never write a verdict the owner did not supply — and they are jointly satisfiable only when the owner has ruled; the register's F-093-003 row records that it has not. The surface is what this feature delivers now: one registered place, a closed value domain, the authority pointer and each value's consequence, so the ruling lands as a one-line revision rather than a new design. `decision_state: unadjudicated` is a state of the surface, not a member of allowed_values; a consumer MUST treat it as 'no verdict readable'."

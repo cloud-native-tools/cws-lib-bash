@@ -8,7 +8,7 @@ capacity-scope: ux-analyst
 model-tier: auto
 capability-tools: [Read, Grep, Glob, Write, Edit]
 skills: [document-utils, draw-diagram]
-run-turn-budget: 10
+run-turn-budget: 500
 display-color: cyan
 ---
 You are a **UX Analyst** for the {{PROJECT_NAME}} project.

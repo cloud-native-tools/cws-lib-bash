@@ -41,10 +41,13 @@ Checks performed:
                   cannot leave that contract green at its own phase (warning;
                   compares the same `order` counter blockedBy uses — this script
                   has no numeric phase index and MUST NOT grow one)
-  green-clause-collision  two rows claim the same contract clause, i.e. the
-                  clause partition (条款分区 (Clause Partition),
-                  `.specify/memory/glossary.md`) was cut over the same clause
-                  twice (warning)
+  green-clause-collision  two rows claim the same contract clause. A `[green:]`
+                  tag is a red-first marker — the row that first turns that
+                  clause green; a claimed clause belongs to one row, while a
+                  feature MAY claim a strict subset of its contract clauses, so
+                  unclaimed clauses are admissible and every claim resolves once
+                  (warning; the clause partition, 条款分区 (Clause Partition),
+                  `.specify/glossary.md`, is scoped to claimed clauses)
   green-path-divergence  one TEST path is claimed green by two rows at two
                   different green points, so the pair cannot each be the row that
                   turns that file green (warning; scoped to test paths because an
@@ -78,6 +81,13 @@ PHASE_HEADING = re.compile(r"^##\s+Phase\b(.*)$", re.IGNORECASE)
 USER_STORY_PHASE = re.compile(r"User Story", re.IGNORECASE)
 DOD_HEADING = re.compile(r"^##\s+Definition of Done\b", re.IGNORECASE)
 NEXT_H2 = re.compile(r"^##\s")
+# C-022's supersede rendering keeps disposed pre-split rows as `> ` quoted records
+# under this heading. The quotation removes them from the current plan (no open-row,
+# blockedBy, [P] or phase checks), while their `[green:]` claims stay the named
+# attribution of clauses delivered by the slices: coverage accounting counts them,
+# so a split merge never turns a fully claimed parent contract into a residual.
+SUPERSEDED_HEADING = re.compile(r"^##\s+Superseded pre-split record\s*$", re.IGNORECASE)
+SUPERSEDED_ROW = re.compile(r"^>\s*- \[([ xX>~])\]\s+(\S+)(.*)$")
 PARALLEL_MARKER = re.compile(r"(?<!\S)\[P\](?!\S)")
 # path-like tokens: contains a slash, or a filename with a common extension
 PATH_TOKEN = re.compile(
@@ -259,11 +269,13 @@ def validate(path: Path, claims_out: list | None = None):
 
     tasks = {}          # id -> {line, phase, parallel, write_paths, pointer_paths, order}
     claims = []         # parsed [green:] attributions, in row order
+    superseded_claims = []   # retained claims from the C-022 quoted records
     claim_view = None   # fence-blanked + code-span-stripped lines, built on first need
     order = 0
     phase_name = None
     phase_is_story = False
     in_dod = False
+    in_superseded = False
     prev_was_task = False
 
     for lineno, line in enumerate(lines, start=1):
@@ -280,6 +292,36 @@ def validate(path: Path, claims_out: list | None = None):
                     f"{lineno}: dod-format: checkbox syntax inside Definition of Done "
                     f"(use `- DoD-N:` prefix): {line.strip()[:80]}"
                 )
+        if SUPERSEDED_HEADING.match(line):
+            in_superseded, phase_name, phase_is_story = True, None, False
+            prev_was_task = False
+            continue
+        if in_superseded:
+            if re.match(r"^##\s", line):
+                in_superseded = False
+                # fall through: this H2 is handled by the ordinary section tracking
+            else:
+                m_sup = SUPERSEDED_ROW.match(line)
+                if m_sup and "[green:" in line:
+                    if claim_view is None:
+                        extractor = _clause_extract()
+                        claim_view = [
+                            extractor.strip_code_spans(text)
+                            for text in extractor.strip_fences(lines)
+                        ]
+                    row_claims, _rest = _strip_claims(
+                        claim_view[lineno - 1], m_sup.group(3))
+                    for contract_file, clause_id in row_claims:
+                        superseded_claims.append({
+                            "contract_file": contract_file,
+                            "clause_id": clause_id,
+                            "task_id": m_sup.group(2),
+                            "phase": "Superseded pre-split record",
+                            "line": lineno,
+                            "order": order,
+                        })
+                prev_was_task = False
+                continue
         m_phase = PHASE_HEADING.match(line)
         if m_phase:
             phase_name = m_phase.group(0).strip()
@@ -377,6 +419,11 @@ def validate(path: Path, claims_out: list | None = None):
 
     if not tasks:
         errors.append(f"0: no task rows found in {path} (expected `- [ ] T<NNN> ...` lines)")
+        if claims_out is not None:
+            # A file whose rows are ALL superseded still carries its retained claims.
+            claims_out.extend({
+                k: claim[k] for k in ("contract_file", "clause_id", "task_id", "phase")
+            } for claim in superseded_claims)
         return errors, warnings
 
     # --- blockedBy resolvability -----------------------------------------
@@ -496,8 +543,10 @@ def validate(path: Path, claims_out: list | None = None):
                     f"at its own phase; move the earlier clause's row up or re-cut the partition"
                 )
 
-        # one clause claimed by two rows: the clause partition was cut over it twice
-        # (条款分区 (Clause Partition), `.specify/memory/glossary.md`)
+        # one clause claimed by two rows: a claimed clause belongs to one row, while
+        # a feature MAY claim a strict subset of its contract clauses — the clause
+        # partition (条款分区 (Clause Partition), `.specify/glossary.md`) is
+        # scoped to the clauses a feature actually claims
         first_claim = {}
         for claim in sorted(resolved, key=lambda c: c["order"]):
             key = (claim["resolved"], claim["clause_id"])
@@ -508,9 +557,11 @@ def validate(path: Path, claims_out: list | None = None):
             warnings.append(
                 f"{previous['line']}: green-clause-collision: {previous['task_id']} "
                 f"(line {previous['line']}) and {claim['task_id']} (line {claim['line']}) both "
-                f"claim {claim['contract_file']}#{claim['clause_id']} — one clause belongs to "
-                f"one row, so re-cut the partition (条款分区 (Clause Partition), "
-                f".specify/memory/glossary.md) rather than dropping one of the two claims"
+                f"claim {claim['contract_file']}#{claim['clause_id']} — a claimed clause "
+                f"belongs to one row; a feature MAY claim a strict subset of its contract "
+                f"clauses, so keep one claim and drop the other (条款分区 (Clause Partition) "
+                f"is scoped to claimed clauses, .specify/glossary.md) rather than "
+                f"silencing the conflict"
             )
 
         # one write target claimed green at two different points by two rows: the pair
@@ -544,9 +595,12 @@ def validate(path: Path, claims_out: list | None = None):
                     )
 
     if claims_out is not None:
+        # Superseded pre-split records are history, so their claims skip the four
+        # green-* checks above; they are still the named attribution of delivered
+        # clauses, so coverage accounting (account-clause-coverage.py) receives them.
         claims_out.extend({
             k: claim[k] for k in ("contract_file", "clause_id", "task_id", "phase")
-        } for claim in claims)
+        } for claim in claims + superseded_claims)
 
     # stable file order: each entry starts with "<lineno>: "
     errors.sort(key=lambda e: int(e.split(":", 1)[0]))
@@ -554,19 +608,53 @@ def validate(path: Path, claims_out: list | None = None):
     return errors, warnings
 
 
-def main(argv=None) -> int:
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI surface; `main()` parses through the same object the contract suite reads."""
     parser = argparse.ArgumentParser(
         prog="validate-tasks.py",
         description="Deterministic structural validator for a feature's tasks.md "
                     "(row format, ID uniqueness, blockedBy resolvability, [P] "
                     "parallel safety, story-label placement, DoD format, and the "
-                    "four green-point attribution checks).",
+                    "four green-point attribution checks). A [green:] tag is a "
+                    "red-first marker: a claimed clause belongs to one row, and a "
+                    "feature MAY claim a strict subset of its contract clauses.",
         epilog="Exit codes: 0 = no errors (warnings possible), 1 = errors found, "
                "2 = file missing / no task rows.",
     )
+    _sig_configure(parser)
+
     parser.add_argument("tasks_md", help="path to the tasks.md file to validate")
     parser.add_argument("--json", action="store_true",
                         help="emit a machine-readable JSON report instead of text")
+    return parser
+
+
+def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--json'])  # answer --version / reject an undeclared option
+    parser = build_parser()
     args = parser.parse_args(argv)
 
     path = Path(args.tasks_md)

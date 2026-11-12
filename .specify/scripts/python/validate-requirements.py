@@ -28,6 +28,18 @@ least two spaces before each description are load-bearing, not cosmetic):
                   not counted as carrying one
   dup-id          an id defined twice is an error, reported separately from ref-resolvable:
                   the two have opposite remedies (delete one, or add the missing definition)
+  path-marker     every Success Criterion definition line carries `**Path**: final` or
+                  `**Path**: supporting` as its LAST token, exactly once, and an `execution`-class
+                  feature carries at least one `final` path. Owner of the rule: the `## Success
+                  Criteria` `Path` contract in `.specify/shared/workflow/acceptance-hardening.md` § Closure
+                  Verdict. Judged only on a spec that DECLARES its flow class
+                  (`**Flow Class**: execution|expression` in the header block), and the reason is
+                  **scope, not decidability**: the closure checker resolves an undeclared class to
+                  `execution` (the strict side, 077 FR-004), so the class is always namable — what
+                  this label declines is applying a new format rule to the whole existing corpus.
+                  Every requirements.md in the checkout that carries no declaration would then be
+                  reported as a format violation, which is a migration decision this rule does not
+                  contain.
 
 Skeleton criterion (checker-form C-12 — a semantic judgement, so it is written down here
 rather than left to the reader): an artifact is skeleton-only when a requirement row still
@@ -51,6 +63,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import clause_extract  # noqa: E402  (one implementation of the code-span/fence rules)
+import declaration_reader  # noqa: E402  (the declaration layer's one read entry, same directory)
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -63,7 +76,8 @@ STATUS_UNPARSABLE = "unparsable"
 STATUS_EMPTY = "empty"
 STATUS_SKELETON = "skeleton"
 
-LABELS = ("id-contiguous", "doc-order", "ref-resolvable", "marker-count", "dup-id")
+LABELS = ("id-contiguous", "doc-order", "ref-resolvable", "marker-count", "dup-id",
+          "path-marker")
 
 DEFINITION_RE = re.compile(r"^- \*\*(FR|SC)-(\d+)([a-z]?)\*\*")
 STR_ROW_RE = re.compile(r"^\|\s*`(STR-\d+)`\s*\|")
@@ -74,6 +88,72 @@ MARKER_RE = re.compile(r"(?<!`)\[NEEDS CLARIFICATION:")
 PLACEHOLDER_RE = re.compile(r"\[(?!NEEDS)[A-Z][A-Z_ ]{3,}\]|\[placeholder\]")
 CLARIFICATIONS_HEADING_RE = re.compile(r"^##\s+Clarifications")
 HEADING_RE = re.compile(r"^#{1,6}\s")
+
+# --- the `Path` marker (Feature 081; owner: .specify/shared/workflow/acceptance-hardening.md) -------- #
+# The marker is a line attribute, not a second table: both this checker and the closure checker
+# anchor on the definition-line prefix and read the trailing token, so no separate list has to be
+# kept in sync with the Success Criteria rows.
+PATH_MARKER_RE = re.compile(r"\*\*Path\*\*")
+PATH_TOKEN_RE = re.compile(r"\*\*Path\*\*\s*:\s*(\S+)\s*$")
+FLOW_CLASS_RE = re.compile(r"^\*\*Flow Class\*\*\s*:\s*(\S+)\s*$")
+# `EXECUTION_CLASS` is derived below from the `flow-class-classes` declaration; the literal that
+# used to sit here was the second copy of the class axis (review 084 blocking #1).
+
+#: Feature 084, batch 1 row 9: the `Path` closed set is a declaration-layer fact
+#: (`.specify/shared/declarations/facts/success-criterion-path-values.yaml`). This checker carries no copy of
+#: the member set — it reads it through the shared read entry, so a third value added to the
+#: declaration changes what this rule refuses with no edit here, and a second tuple anywhere is the
+#: defect the declaration exists to make impossible.
+PATH_FACT = "success-criterion-path-values"
+
+
+def _declared_path_values():
+    """`(values, label)` for the `Path` closed set; `((), <STR-014 instance>)` when unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), PATH_FACT)["body"]
+        values = body.get("statement")
+        if not isinstance(values, list) or not values:
+            raise ValueError("statement is not a non-empty sequence")
+        return tuple(str(value) for value in values), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return (), declaration_reader.absent_label(PATH_FACT)
+
+
+PATH_VALUES, PATH_VALUES_LABEL = _declared_path_values()
+PASS_PATH = PATH_VALUES[0] if PATH_VALUES else "final"
+
+
+def _declared_flow_classes():
+    """`(values, label)` for the `flow-class-classes` closed set; `((), <STR-014>)` when unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), "flow-class-classes")["body"]
+        values = body.get("statement")
+        if not isinstance(values, list) or not values:
+            raise ValueError("statement is not a non-empty sequence")
+        return tuple(str(value) for value in values), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return (), declaration_reader.absent_label("flow-class-classes")
+
+
+FLOW_CLASSES, FLOW_CLASSES_LABEL = _declared_flow_classes()
+EXECUTION_CLASS = FLOW_CLASSES[0] if FLOW_CLASSES else "execution"
+if FLOW_CLASSES_LABEL:
+    sys.stderr.write("%s\n" % FLOW_CLASSES_LABEL)
+
+
+class DomainUnavailable(Exception):
+    """The `Path` closed set cannot be read, so the `path-marker` rule cannot be judged.
+
+    Raised only when the artifact declares a flow class — a spec outside the closure system never
+    needs the domain, so its judgement is unaffected by a missing declaration layer (FR-012). The
+    caller renders :attr:`label` and maps it to an input error: a degraded read is never a pass.
+    """
+
+    def __init__(self, label):
+        super().__init__(label)
+        self.label = label
 
 
 class Finding:
@@ -263,6 +343,88 @@ def check_marker_count(raw_lines):
     return findings
 
 
+def _flow_class(lines):
+    """The spec's declared flow class, or None when it declares none.
+
+    Read from the header block's `**Flow Class**: <value>` line. Declaration only: this checker
+    never infers a class from the content, because the closure rule's exemption is mechanical
+    (`expression` is exempt from the `final >= 1` floor) and an inferred class would make the
+    exemption a judgement call.
+    """
+    for line in lines:
+        m = FLOW_CLASS_RE.match(line)
+        if m:
+            return m.group(1)
+    return None
+
+
+def check_path_marker(lines, defs, name):
+    """Every SC definition line carries exactly one `**Path**` marker, as its last token."""
+    findings = []
+    if _flow_class(lines) is None:
+        return findings  # outside the closure system — see this label's docstring scope note
+    if not PATH_VALUES:
+        # FR-012 / FR-013: the member set is a declaration and the layer is unreadable here. Judging
+        # against an empty domain would refuse every value (a false red); skipping the rule would read
+        # as a pass. The run therefore stops on the `declaration-absent` label, never on a traceback.
+        raise DomainUnavailable(PATH_VALUES_LABEL)
+    sc_rows = [(n, ln, lines[ln - 1]) for prefix, digits, n, suffix, ln in defs
+               if prefix == "SC" and not suffix and len(digits) == 3]
+    has_final = False
+    # A marker that could not be read leaves its criterion's path unknown, so the class rule's
+    # input is incomplete. Emitting the derived class finding as well would report one root cause
+    # twice and point the author at the wrong line.
+    parsed_cleanly = True
+    for n, ln, line in sc_rows:
+        label = "SC-%03d" % n
+        occurrences = len(PATH_MARKER_RE.findall(line))
+        if occurrences == 0:
+            parsed_cleanly = False
+            findings.append(Finding(
+                ln, "path-marker",
+                "%s in %s carries no `**Path**` marker — every success criterion states whether "
+                "it proves the feature's main user journey (`**Path**: final`) or is supporting "
+                "evidence (`**Path**: supporting`), written as the last token of its line"
+                % (label, name)))
+            continue
+        if occurrences > 1:
+            parsed_cleanly = False
+            findings.append(Finding(
+                ln, "path-marker",
+                "%s in %s carries %d `**Path**` markers — the marker occurs exactly once per "
+                "line; a second one is a defect, not a choice"
+                % (label, name, occurrences)))
+            continue
+        token = PATH_TOKEN_RE.search(line)
+        if token is None:
+            parsed_cleanly = False
+            findings.append(Finding(
+                ln, "path-marker",
+                "%s in %s carries its `**Path**` marker somewhere other than the last token — "
+                "write `**Path**: final` or `**Path**: supporting` at the end of the line, so a "
+                "parser needs no sentence analysis" % (label, name)))
+            continue
+        value = token.group(1)
+        if value not in PATH_VALUES:
+            parsed_cleanly = False
+            findings.append(Finding(
+                ln, "path-marker",
+                "%s in %s declares `**Path**: %s`, outside the closed two-value domain (`final` / "
+                "`supporting`); the value decides whether the criterion can refuse a verdict, so "
+                "a third value has no meaning to fall back on" % (label, name, value)))
+            continue
+        if value == PASS_PATH:
+            has_final = True
+    if sc_rows and parsed_cleanly and not has_final and _flow_class(lines) == EXECUTION_CLASS:
+        findings.append(Finding(
+            sc_rows[0][1], "path-marker",
+            "%s declares `**Flow Class**: execution` but no success criterion is on the `final` "
+            "path — an `execution` feature MUST carry at least one `final`-path criterion, "
+            "otherwise it has nothing that could make it acceptable however honest its "
+            "`supporting` rows are" % name))
+    return findings
+
+
 def _skeleton(raw_lines, lines, defs):
     """Skeleton = the template was never filled in. Two shapes, both narrow on purpose so a real
     spec is never mistaken for one: a placeholder inside the first few lines (the title/header
@@ -307,6 +469,7 @@ def validate(path):
         "dup-id": check_dup_id(defs),
         "ref-resolvable": check_ref_resolvable(raw_lines, lines, defs, str_rows),
         "marker-count": check_marker_count(raw_lines),
+        "path-marker": check_path_marker(lines, defs, p.name),
     }
     findings = [f for label in LABELS for f in buckets[label]]
     checks = [{"label": label, "status": "fail" if buckets[label] else "pass",
@@ -315,16 +478,51 @@ def validate(path):
     return status, findings, checks, scanned
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--json'])  # answer --version / reject an undeclared option
     parser = argparse.ArgumentParser(
         prog="validate-requirements.py",
         description="Judge the structural propositions of a requirements.md artifact.",
     )
+    _sig_configure(parser)
+
     parser.add_argument("path", help="the requirements.md to check")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
     args = parser.parse_args(argv if argv is not None else sys.argv[1:])
 
-    status, findings, checks, scanned = validate(args.path)
+    try:
+        status, findings, checks, scanned = validate(args.path)
+    except DomainUnavailable as absent:
+        # FR-012 / FR-013: the value domain this run would judge against is a declaration and the
+        # layer is unreadable, so the verdict is an input error carrying the absent label — free
+        # text, not a seventh label, and never a green result.
+        print(absent.label, file=sys.stderr)
+        print("validate-requirements: refusing to judge the `path-marker` rule against an absent "
+              "closed set (declaration layer unreadable)", file=sys.stderr)
+        return EXIT_INPUT
     errors = sum(1 for f in findings if f.severity == "error")
     warnings = sum(1 for f in findings if f.severity == "warning")
 

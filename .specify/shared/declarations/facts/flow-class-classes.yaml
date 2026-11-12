@@ -1,0 +1,22 @@
+# Batch 1, row 4 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the flow-class closed set — its membership AND its order, because the
+# axis is ordered: the first member is the default class an undeclared unit takes. The engine
+# `.specify/scripts/python/flow-class-check.py` reads it through `.specify/scripts/python/declaration_reader.py`; the
+# carrier reaches it by `.specify/shared/declarations/facts/flow-class-classes.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `CLASS_VALUES` and the carrier's 机器键 line named the
+# same two values in the same order on 2026-11-05, so nothing had drifted.
+fact: flow-class-classes
+kind: closed-set
+statement:
+  - execution
+  - expression
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+  - .specify/scripts/python/validate-requirements.py
+  - .specify/scripts/python/closure-acceptance-check.py
+  - .specify/skills/sdd-loop-driver/scripts/pre-analyze-check.py
+former_carriers:
+  - .specify/shared/definitions/flow-class-definitions.md
+note: "Order is part of the value: member 0 is the default class for an undeclared unit (FR-009's default `execution`), so the declaration is an ordered closed set and the engine unpacks it instead of re-spelling the two names."

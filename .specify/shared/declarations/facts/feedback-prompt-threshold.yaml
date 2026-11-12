@@ -1,0 +1,19 @@
+# Batch 1, row 1 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the feedback prompt threshold. The engine
+# `.specify/scripts/python/feedback-utils.py` reads this through `.specify/scripts/python/declaration_reader.py`; the
+# carrier `.specify/shared/workflow/feedback-step.md` reaches it by the pointer
+# `.specify/shared/declarations/facts/feedback-prompt-threshold.yaml#/statement`.
+#
+# Authority order (`.specify/shared/definitions/harness-triple-definitions.md` § 迁移时的权威取值顺序):
+# code > generated > authored. Both faces read `10` on 2026-11-05, so nothing had drifted and the
+# `note` records the agreement rather than a correction.
+fact: feedback-prompt-threshold
+kind: threshold
+statement: 10
+consumers:
+  - .specify/scripts/python/feedback-utils.py
+former_carriers:
+  - .specify/shared/workflow/feedback-step.md
+  - docs/reference/skills/feedback.md
+note: "The two faces agreed before migration (feedback-utils.py's DEFAULT_THRESHOLD = 10 and feedback-step.md's \"threshold defaults to `10`\"), so the authority order picked 10 with nothing to correct."

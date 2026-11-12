@@ -18,8 +18,8 @@
 
 | id | 判据 | 机械证据 |
 |----|------|----------|
-| (a) | FR 定义行数 8–30（含端点），任务行数 10–40（含端点） | `requirements.md` 行匹配 `^- **FR-[0-9]{3}**:`（owner: requirements.md FR-003(a)）；`tasks.md` 行匹配 `^- \[[ xX]\] T[0-9]{3}`（窄模式，准入唯一）。SC 行、说明行、分组标题不计入。 |
-| (b) | 宪法零改动 | `git diff --name-only <base>..HEAD` 不含 `.specify/memory/constitution.md` |
+| (a) | FR 定义行数 8–120（含端点），任务行数 10–160（含端点） | `requirements.md` 行匹配 `^- **FR-[0-9]{3}**:`（owner: requirements.md FR-003(a)）；`tasks.md` 行匹配 `^- \[[ xX]\] T[0-9]{3}`（窄模式，准入唯一）。SC 行、说明行、分组标题不计入。 |
+| (b) | 宪法零改动 | `git diff --name-only <base>..HEAD` 不含 `.specify/constitution.md` |
 | (c) | 不新增可执行引擎、CLI 命令/模板、技能、外部依赖、网络服务或模型 API | 引擎/模板/依赖清单路径保守超集扫描 + 新增代码中的网络/模型调用痕迹；`skills/external/` 新增路径视为新技能 |
 | (d) | 不涉及安全/隐私敏感面 | 路径或新增行命中认证授权、凭据/密钥、删除/迁移、发布/外传、确认门判据即拒绝 |
 | (e) | 单线单分支且无并发线触碰同一交付路径 | `lines.manifest` 恰一条本线记录，分支等于 `--expected-branch` 与当前分支；语法 owner 为 `data-model.md` E1 §「lines.manifest 行语法」 |
@@ -88,10 +88,14 @@ FL-01…FL-10 由 `tests/contract/test_sdd_loop_driver_efficiency.py` 的 `test_
 
 | 槽位 | 时点 | 程序 |
 |------|------|------|
-| `baseline` | implement 起点（首个任务前） | `run-tests.sh --names-out <spec-dir>/baseline-failed.txt`，按名称捕获失败名单 |
-| `closure` | `review` 通过之后、合并之前，由驱动或独立校验单元执行 | `run-tests.sh --names-out <spec-dir>/final-failed.txt`，`comm -13` 名称级比较 |
+| `baseline` | implement 起点（首个任务前） | `run-tests.sh --full --names-out <spec-dir>/baseline-failed.txt`，按名称捕获失败名单 |
+| `closure` | `review` 通过之后、合并之前，由驱动或独立校验单元执行 | `run-tests.sh --full --names-out <spec-dir>/final-failed.txt`，`comm -13` 名称级比较 |
 
 implement 内 MUST NOT 再运行第二次全量套件；其内部回归比较义务由收口槽位承担。槽内重跑记 `in-slot-rerun`，不另开槽。
+
+**证据路径拼写（本节唯一 owner）**：两个槽位名单文件的唯一拼写是 `<spec-dir>/baseline-failed.txt` 与 `<spec-dir>/final-failed.txt`（即上表的 `--names-out` 落点）。085 的 `test-evidence/full-suite-final-failed.txt` 与 086 的 `test-evidence/{baseline,final}-failed.txt` 是**历史指针**——它们是各自带日期的记录，不是本条 owner 拼写的第二种合法形态；引用时按该路径读旧记录，新运行 MUST NOT 沿用这两种形态。
+
+**closure 名单的命名规则**：同一 spec 目录出现多个 closure 名单时，收口读数 MUST 取文件名带轮次、且轮次最新的那一个（如 `final-failed-r2.txt` … `final-failed-r6.txt`）；无轮次的 `final-failed.txt` MUST NOT 作为缺省收口读数——它若滞留更早轮次的读数，MUST 在台账或证据中标注为**旧读数**并指向轮次文件。实例（088）：closure 读数是 `.specify/specs/088-speckit-visualization/final-failed-r6.txt`（27 个失败名称；台账行 `.specify/state/088-speckit-visualization.md` 的 `slot=closure` seq=2），同目录 `final-failed.txt` 是 r1 旧读数（58 个名称），不得当作收口读数。
 
 ### 2.2 台账与证据分工
 
@@ -294,8 +298,8 @@ PD-01…PD-10 由 `tests/contract/test_sdd_loop_driver_efficiency.py` 的 `test_
 
 | 决策点 | 输入 | 触发 `split-required` 的条件 |
 |--------|------|------------------------------|
-| plan 入口（requirements U4 后、plan 派发前） | `requirements.md` | FR 定义行数 > 30 |
-| tasks U4（tasks 产物后、analyze 派发前） | `requirements.md` + `tasks.md` | FR 定义行数 > 30，或任务行数 > 40 |
+| plan 入口（requirements U4 后、plan 派发前） | `requirements.md` | FR 定义行数 > 120 |
+| tasks U4（tasks 产物后、analyze 派发前） | `requirements.md` + `tasks.md` | FR 定义行数 > 120，或任务行数 > 160 |
 
 FR 定义行 = `^- \*\*FR-[0-9]{3}\*\*:`；任务行 = `^- \[[ xX>~]\] T[0-9]{3}`（宽模式，含 `[>]`/`[~]`）。上限与快车道中型区间端点一致（`FR_MAX`/`TASK_MAX`），数值 owner 是 `.specify/scripts/decomposition-check.py` 的 `FR_CEILING`/`TASK_CEILING` 常量；契约测试钉住二者相等。
 
@@ -310,9 +314,10 @@ decomposition-check.py --mode plan|tasks --requirements F [--tasks F] [--json-ou
 ### 5.3 `split-required` 处置
 
 1. 驱动 MUST NOT 派发后续阶段（plan 或 analyze）；在状态脊写入拆分记录：`measured`（FR/任务实测数）、`reasons[]`、`ceilings`、`proposed_slices[]`（每个切片给出名称、FR 范围或主题、预估规模）与 `base_commit`。
-2. 拆分粒度为**特性切片**：每个切片 MUST 自身落入 8–30 FR / 10–40 任务的区间，并各自拥有独立的 spec 目录与注册表绑定（`Related Feature` 仍指向同一特性）。
+2. 拆分粒度为**特性切片**：每个切片 MUST 自身落入 8–120 FR / 10–160 任务的区间，并各自拥有独立的 spec 目录与注册表绑定（`Related Feature` 仍指向同一特性）。
 3. 拆分记录经用户或上游流程确认后，驱动按切片顺序逐条走完整链；MUST NOT 在同一线并行推进多个切片。
 4. 拆分是**范围决策**：驱动 MUST NOT 自行删除、合并或重排需求来规避上限；无法在保留原意的前提下拆分时按四要素上送。
+5. 拆分产生的切片在收尾时必须经 `/speckit.seal` 完成 merge-back、分片归档与终态判定（收尾义务与判据 owner：`SKILL.md` § The Loop U6 的 Split closure 与 `references/dispatch-recipes.md` Recipe 8；本节不复述）。
 
 ### 5.4 边界
 
@@ -331,6 +336,8 @@ decomposition-check.py --mode plan|tasks --requirements F [--tasks F] [--json-ou
 analyze 是跨产物一致性的最后防线，不是第一次检查。requirements / plan / tasks 三个阶段的 U4 MUST 在派发下一阶段（plan / tasks / analyze）之前运行 `.specify/scripts/pre-analyze-check.py`，把可机械判定的漂移挡在 analyze 之前。预检通过是 analyze 派发的前置条件；预检失败 MUST NOT 派发 analyze。
 
 ### 6.2 检查项
+
+> **检查名封闭集与每阶段必需文件集的 owner 是 `.specify/shared/declarations/facts/driver-gate-roster.yaml#/statement`**（`checks` / `stages`），引擎经共享读取入口取用；下表只描述各判据的内容与严重度，不复述该集合的所有权，新增/改名以声明为准。
 
 | 检查 | 判据 | 严重度 |
 |------|------|--------|

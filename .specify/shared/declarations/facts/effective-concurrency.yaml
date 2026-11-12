@@ -1,0 +1,35 @@
+# 093 — [[STR-005]] the single concurrency reading and its interval-overlap computation.
+#
+# The one machine-read owner of the reading's three fields, the `not_evaluated` literal and the
+# computation behind `effective` (FR-008, T-002). Read through `.specify/scripts/python/declaration_reader.py`.
+# It MUST NOT declare a second concurrency metric (C-007): a dispatched count, a configured value, a
+# width-sum ratio or a neighbouring run's number are not readings.
+fact: effective-concurrency
+kind: record-schema
+statement:
+  semantic_name: 生效并发度
+  fields:
+    - name: requested
+      type: integer
+      meaning: the declared concurrency for the run
+    - name: effective
+      type: integer-or-not_evaluated
+      meaning: the maximum overlap count of the units' dispatch/settle intervals
+    - name: effective_reason
+      type: string
+      meaning: why effective is below min(slot_cap, ceiling, remaining budget)
+  value_domain: integer | not_evaluated
+  not_evaluated_literal: not_evaluated
+  computation: max-interval-overlap
+  interval_fields:
+    - dispatched_at
+    - settled_at
+  interval_form: half-open, dispatched_at inclusive and settled_at exclusive
+  tie_break: at equal epoch seconds a settle is applied before a dispatch, so touching intervals do not overlap
+  missing_interval_rule: any dispatched unit without an interval makes effective the literal not_evaluated
+  triple_rule: requested, effective and effective_reason are recorded together, never one or two alone
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_units.py
+former_carriers: []
+note: "The computation is the maximum simultaneous overlap count, not the sum of interval widths divided by total duration (T-002): the width-sum form rewards long tails and reads a serial run with one long unit as concurrent. The half-open interval and the settle-before-dispatch tie-break are the arithmetic's only tie-break; both are here so the engine applies them rather than choosing. A unit dispatched more than once contributes each attempt as its own interval. `not_evaluated` is a literal, never 0 and never an estimate; the triple rule is FR-008's third sentence and is judged by the reading action, not restated in the engine."

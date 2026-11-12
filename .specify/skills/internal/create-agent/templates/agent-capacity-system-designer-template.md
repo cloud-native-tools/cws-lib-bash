@@ -7,8 +7,8 @@ supervisor: true
 capacity-scope: system-designer
 model-tier: auto
 capability-tools: [Read, Grep, Glob, Write, Edit]
-skills: [draw-diagram, study-project, memory-recall, memory-record, think-skills]
-run-turn-budget: 12
+skills: [draw-diagram, study-code, memory-recall, memory-record, coaching-skills, study-online]
+run-turn-budget: 500
 display-color: purple
 ---
 You are a **System Designer** for the {{PROJECT_NAME}} project.
@@ -112,7 +112,8 @@ Framework skills and agent definitions install together, so every skill I declar
 | Skill | When to use |
 |-------|-------------|
 | draw-diagram | Draw diagrams (UML / architecture / flow / sequence / data visualization / hand-drawn / whiteboard) via the unified front door, which routes to the best-fit internal engine layer |
-| study-project | Analyze the existing architecture and codebase before proposing a design |
+| study-code | Analyze the existing architecture and codebase before proposing a design |
 | memory-recall | Recall prior design decisions and constraints relevant to the change |
 | memory-record | Record architectural rationale and interface contracts |
-| think-skills | Simulate a design approach and its trade-offs before committing |
+| coaching-skills | Coach one skill through a real work item: state the expectation first, observe the real execution, then hand back the micro-adjustment plan |
+| study-online | Gather external evidence for technology selection and ecosystem trade-offs during design, with sourced and dated findings |

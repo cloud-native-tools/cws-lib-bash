@@ -32,16 +32,19 @@ read-only validation subagent.**
   detection agents and the validators MUST be **disjoint sets** (owner:
   `.specify/shared/workflow/objective-analysis-gate.md` rule 5) — a detector validating its
   own finding is the self-review this pass exists to remove.
-- **Dispatch carrier.** The wave dispatches **workers, never sessions**, and selects its carrier
-  per `.specify/shared/definitions/subagent-definitions.md` § Mode Selection: the native subagent
-  tool when the executing runtime exposes one; **external read-only CLI (`qodercli -p` /
-  `claude -p`) when the analyzing executor is itself a non-nesting subagent** — one process per
-  finding, run in parallel, command shape in
-  `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 7. Host session-creation APIs
-  (`create_chat_session`, `fork_chat_session`, or any equivalent) are **PROHIBITED** for this wave:
-  they create a user-visible standard conversation per validator, inherit the orchestrator's model
-  and permission mode, and have no bounded scope or result contract. This exception is scoped to
-  the validation wave; stage dispatch keeps its local-topology rule.
+- **Dispatch carrier.** The wave dispatches **workers, never sessions**, through one of the two legal
+  process carriers owned by `.specify/shared/definitions/subagent-definitions.md` § Three Execution
+  Modes: the **fork carrier** for same-family agents (a separate `qodercli` child process through
+  `.specify/skills/sdd-loop-driver/scripts/stage-runner.sh` — prompt via stdin, stream-json output,
+  sentinel-judged completion) and the **subprocess carrier** for heterogeneous agents (an independent
+  child process of the agent's own CLI; this is the read-only **external read-only CLI** form — its
+  allowlist and `--no-session-persistence` flags stay unchanged) — one process per finding, run in
+  parallel, command shape in `.specify/shared/workflow/external-dispatch-recipes.md` § Recipe 7. The
+  **host-internal in-process subagent path MUST NOT be used as a carrier** — neither a default nor a
+  degradation option. Host session-creation APIs (`create_chat_session`, `fork_chat_session`, or any equivalent) are **PROHIBITED** for this wave: they create a user-visible standard conversation per
+  validator, inherit the orchestrator's model and permission mode, and have no bounded scope or
+  result contract. This exception is scoped to the validation wave; stage dispatch keeps its
+  local-topology carrier rule (fork / subprocess per FR-035).
 - **Read-only proof.** Launch every external validator with write tools disabled and session
   persistence off. After the wave, `git status --porcelain` in the analyzed repository MUST be
   unchanged; any change invalidates the wave (fast fail) regardless of the verdicts returned.

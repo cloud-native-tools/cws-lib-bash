@@ -23,21 +23,54 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
+
 KIND = "speckit.record-retention"
 SCHEMA_VERSION = 1
 RETENTION_REL = Path(".specify") / "memory" / "retention"
-DEFAULT_GRACE_DAYS = 30
+
+#: Feature 084, batch 3 (C-045): the default grace window and the store roster are one
+#: declaration-layer fact. The two `_FALLBACK` values below are the **FR-012 compatibility value** for
+#: a tree with no declaration layer; when the declaration is readable they are never consulted.
+RETENTION_FACT = "memory-retention-thresholds"
+DEFAULT_GRACE_DAYS_FALLBACK = 30
+STORES_FALLBACK = ("exec-quant", "feedback", "run-determination", "session-note")
+
+
+def declared_mapping(slug):
+    """`(statement, label)` for one mapping-shaped fact; `({}, <STR-014 instance>)` when unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), slug)["body"]
+        statement = body.get("statement")
+        if not isinstance(statement, dict) or not statement:
+            raise ValueError("statement is not a non-empty mapping")
+        return dict(statement), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return {}, declaration_reader.absent_label(slug)
+
+
+_RETENTION_DECLARED, RETENTION_LABEL = declared_mapping(RETENTION_FACT)
+try:
+    DEFAULT_GRACE_DAYS = int(str(_RETENTION_DECLARED.get("grace_days", "")).strip())
+except (TypeError, ValueError):
+    DEFAULT_GRACE_DAYS = DEFAULT_GRACE_DAYS_FALLBACK
+_DECLARED_STORES = _RETENTION_DECLARED.get("stores")
+STORES = (tuple(str(value) for value in _DECLARED_STORES)
+          if isinstance(_DECLARED_STORES, list) and _DECLARED_STORES else STORES_FALLBACK)
+if not _RETENTION_DECLARED:
+    DEFAULT_GRACE_DAYS = DEFAULT_GRACE_DAYS_FALLBACK
+    STORES = STORES_FALLBACK
 
 STORE_EXEC_QUANT = "exec-quant"
 STORE_FEEDBACK = "feedback"
 STORE_RUN_DETERMINATION = "run-determination"
 STORE_SESSION_NOTE = "session-note"
-STORES = (
-    STORE_EXEC_QUANT,
-    STORE_FEEDBACK,
-    STORE_RUN_DETERMINATION,
-    STORE_SESSION_NOTE,
-)
+# `STORES` is derived from the declaration above, not spelled here: the four names below are the
+# per-store dispatch keys the retention lifecycle addresses (they select a store's entry builder),
+# while the roster's membership is the declared value.
 
 STATUS_ELIGIBLE = "eligible"
 STATUS_TOO_YOUNG = "too-young"
@@ -1054,6 +1087,7 @@ ARG_MANIFEST = {
 
 def action_args_manifest(args: argparse.Namespace) -> Dict[str, Any]:
     parser = build_parser()
+
     live = {opt for action in parser._actions for opt in action.option_strings}
     manifest: Dict[str, Any] = {}
     for action_name in ACTIONS:
@@ -1079,6 +1113,8 @@ def action_args_manifest(args: argparse.Namespace) -> Dict[str, Any]:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Record retention engine (consume -> receipt -> retire)")
+    _sig_configure(parser)
+
     parser.add_argument("--action", choices=list(ACTIONS), required=True)
     parser.add_argument("--workspace-root", default=None)
     parser.add_argument("--stores", default="all")
@@ -1098,7 +1134,31 @@ def _emit(payload: Dict[str, Any], fmt: str) -> None:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
+    _sig_guard(argv, declared=['--action', '--workspace-root', '--stores', '--grace-days', '--promotions', '--plan', '--plan-out', '--allow-unversioned', '--format'])  # answer --version / reject an undeclared option
     args = build_parser().parse_args(argv)
     try:
         if args.action == "scan":

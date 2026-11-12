@@ -13,6 +13,104 @@
 # cannot terminate the stage.  Read-only with respect to the project tree.
 #
 # Exit codes: the CLI child's exit code, or 2 for usage errors.
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_script_interface_guard() {
+    _sig_name="${0##*/}"
+    _sig_stop=0
+    for _sig_arg in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_arg" in
+            --) _sig_stop=1 ;;
+            -h|--help) return 0 ;;
+            --version)
+                _sig_dir="$(dirname -- "$0")"
+                case "$_sig_dir" in /*) ;; *) _sig_dir="./$_sig_dir" ;; esac
+                _sig_ver="unknown"
+                _sig_level=0
+                while [ -d "$_sig_dir" ] && [ "$_sig_level" -le 12 ]; do
+                    if [ -f "$_sig_dir/pyproject.toml" ] && [ -e "$_sig_dir/.git" ]; then
+                        _sig_ver="$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$_sig_dir/pyproject.toml" 2>/dev/null | head -n 1)"
+                        [ -n "$_sig_ver" ] || _sig_ver="unknown"
+                        break
+                    fi
+                    if [ "$_sig_dir" = "/" ]; then break; fi
+                    _sig_dir="$(dirname -- "$_sig_dir")"
+                    _sig_level=$((_sig_level + 1))
+                done
+                printf '%s %s\n' "$_sig_name" "$_sig_ver"
+                exit 0 ;;
+        esac
+    done
+    return 0
+}
+_script_interface_guard "$@"
+
+usage() {
+  cat <<'EOF'
+run-stage.sh — detached stage runner (writes four-piece evidence + registry)
+
+  run-stage.sh --line-id ID --run-id RUN --stage STAGE \
+               --registry DIR --command CMD \
+               --pid-file P --status-file S --log L --heartbeat H \
+               --engine FILE \
+               [--worktree DIR] [--prompt FILE] [--sentinel STAGE-DONE] \
+               [--deadline-epoch E] [--engine-python PY] \
+               [--heartbeat-interval N]
+
+The command's stdout/stderr are appended to --log.  On exit the runner writes
+`exit=<rc> at=<epoch> sentinel=<0|1> line= run= stage= event=status` atomically.
+EOF
+}
+
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its bash half by
+# `.specify/scripts/bash/script-interface.sh` and `.specify/scripts/python/sync-mirrors.py`. No rule of its own.)
+_sig_usage() {
+    _si_body="$(usage 2>&1)"
+    printf '%s
+' "$_si_body"
+    case "$_si_body" in *'side-effects:'*) ;; *) printf '%s
+' 'side-effects: writes only through the options it documents; a flag-only invocation writes nothing' ;; esac
+    case "$_si_body" in *'exit-codes:'*) ;; *) printf '%s
+' 'exit-codes: 0 success; 1 a documented check failed; 2 argument or environment error' ;; esac
+}
+
+_sig_answers() {
+    _sig_want=""
+    _sig_stop=0
+    for _sig_tok in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_tok" in
+            --) _sig_stop=1 ;;
+            -h|--help) [ -n "$_sig_want" ] || _sig_want=help ;;
+            --version) [ -n "$_sig_want" ] || _sig_want=version ;;
+            -*)
+                case " --cli-pid --command --deadline-epoch --engine --engine-python --heartbeat --heartbeat-interval --heartbeat-path --last-event --line-id --log --pid-file --prompt --registry --run-id --runner-pid --sentinel --stage --status-file --status-path --worktree " in
+                    *" $_sig_tok "*) ;;
+                    *)
+                        if [ -z "" ]; then
+                            printf 'error: unrecognized option: %s\n' "$_sig_tok" >&2
+                            _sig_usage >&2
+                            exit 2
+                        fi
+                        ;;
+                esac
+                ;;
+        esac
+    done
+    case "$_sig_want" in
+        help) _sig_usage; exit 0 ;;
+    esac
+    return 0
+}
+
+_sig_answers "$@"
+set -u
+# script-interface:86:end
+
 
 set -u
 

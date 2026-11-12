@@ -352,6 +352,12 @@ single-target resolution and do not loop the full workflow N times blindly. Run 
    rewrites.
 4. Verify mirror/write-through **once at the end** for the whole batch (e.g. `diff -rq`).
 
+The mechanism/policy judgement (step 2's survey question) runs **once for the whole batch**, at
+batch scope: reconcile every named skill's referenced environment files against its body in the
+same pass, and let the `policy source missing or ambiguous` candidate enter each skill's frozen
+list from that one pass. It is **not repeated per skill** as an extra loop, and the body carries
+only the pointer to this section.
+
 A batch that repeatedly fails on speculative rewrites should be restarted in this minimal-edit
 shape rather than retried harder.
 

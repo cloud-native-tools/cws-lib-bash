@@ -47,47 +47,111 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from urllib.parse import urlparse
 
-ACTIONS = ("collect", "list-records", "score", "collect-dispatch", "args-manifest", "aggregate")
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
 
-# Argument manifest (063 C-22): per-action required/source classification.
-# "required" = flags this engine itself validates as required for the action;
-# "source" = this engine's DECLARED run-evidence input set (undeclared = []).
-# `--action args-manifest` verifies every listed flag against build_parser()'s
-# LIVE option strings before emitting — the parser stays the single source of
-# truth; the compile-embeds renderer consumes this and holds no table of its
-# own (063 C-21). Note: `collect` synthesizes a run-id when absent (existing
-# 059 semantics, untouched by 063 C-24 — that clause is scoped to
-# run-determination's (unit_id, run_id) lock), so --run-id is declared SOURCE,
-# not required.
-# 068 C-18: `aggregate` adds zero required flags — its input face is the
-# ambient --workspace-root plus the presentation flag --format (json default).
-ARG_MANIFEST = {
-    "collect": {"required": ["--unit-id"], "source": ["--run-id"]},
-    "list-records": {"required": [], "source": ["--since", "--format"]},
-    "score": {"required": ["--unit-id", "--run-id", "--score"],
-              "source": ["--note"]},
-    "collect-dispatch": {"required": ["--unit-id", "--run-id", "--snapshot",
-                                      "--config-id"],
-                         "source": []},
-    "args-manifest": {"required": [], "source": []},
-    "aggregate": {"required": [], "source": ["--workspace-root", "--format"]},
+# --------------------------------------------------------------------------- #
+# The record's schema — a declaration-layer fact (Feature 084, batch 3; C-045)
+# --------------------------------------------------------------------------- #
+# The schema version, the four closed vocabularies, the eleven config-group fields and the per-action
+# argument manifest are owned by `.specify/shared/declarations/facts/quant-record-schema.yaml#/statement` and
+# read here through the shared read entry, so none of them is spelled in this engine again. The
+# `_QUANT_FALLBACK` mapping below is the **FR-012 compatibility value** for a tree with no declaration
+# layer; when the declaration is readable it is never consulted (no double read).
+QUANT_FACT = "quant-record-schema"
+_QUANT_FALLBACK = {
+    "schema_version": 2,
+    "provenances": ["measured", "carried", "user-given", "configured"],
+    "unit_types": ["command", "skill", "custom-unit", "agent"],
+    "resolutions": ["explicit", "adopted", "synthesized"],
+    "agent_resolutions": ["resolved", "ambiguous", "unresolved"],
+    "config_fields": ["config_id", "source_chain", "method_requested", "method_resolved", "mode",
+                      "cli", "model", "reasoning_effort", "context_window", "extra_flags",
+                      "snapshot"],
+    "arg_manifest": {
+        "collect": {"required": ["--unit-id"], "source": ["--run-id"]},
+        "list-records": {"required": [], "source": ["--since", "--format"]},
+        "score": {"required": ["--unit-id", "--run-id", "--score"], "source": ["--note"]},
+        "collect-dispatch": {"required": ["--unit-id", "--run-id", "--snapshot", "--config-id"],
+                             "source": []},
+        "args-manifest": {"required": [], "source": []},
+        "aggregate": {"required": [], "source": ["--workspace-root", "--format"]},
+    },
 }
 
+
+def _declared_quant_schema():
+    """`(statement, label)`; the labelled compatibility value when the declaration is unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), QUANT_FACT)["body"]
+        statement = body.get("statement")
+        if not isinstance(statement, dict) or not statement:
+            raise ValueError("statement is not a non-empty mapping")
+        return dict(statement), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return dict(_QUANT_FALLBACK), declaration_reader.absent_label(QUANT_FACT)
+
+
+def _declared_roster(statement, key):
+    """One closed roster from the declared statement; the fallback roster when the key is unusable."""
+    values = statement.get(key)
+    if not isinstance(values, list) or not values:
+        values = _QUANT_FALLBACK[key]
+    return tuple(str(value) for value in values)
+
+
+def _declared_arg_manifest(statement):
+    """`{action: {"required": [...], "source": [...]}}`; the fallback table when the shape is unusable."""
+    declared = statement.get("arg_manifest")
+    if not isinstance(declared, dict) or not declared:
+        return dict(_QUANT_FALLBACK["arg_manifest"])
+    manifest = {}
+    for action, spec in declared.items():
+        if not isinstance(spec, dict):
+            return dict(_QUANT_FALLBACK["arg_manifest"])
+        required = spec.get("required")
+        source = spec.get("source")
+        if not isinstance(required, list) or not isinstance(source, list):
+            return dict(_QUANT_FALLBACK["arg_manifest"])
+        manifest[str(action)] = {"required": [str(flag) for flag in required],
+                                 "source": [str(flag) for flag in source]}
+    return manifest
+
+
+_QUANT_SCHEMA, QUANT_LABEL = _declared_quant_schema()
+try:
+    SCHEMA_VERSION = int(_QUANT_SCHEMA.get("schema_version"))
+except (TypeError, ValueError):
+    SCHEMA_VERSION = int(_QUANT_FALLBACK["schema_version"])
+PROVENANCES = _declared_roster(_QUANT_SCHEMA, "provenances")
+UNIT_TYPES = _declared_roster(_QUANT_SCHEMA, "unit_types")
+RESOLUTIONS = _declared_roster(_QUANT_SCHEMA, "resolutions")
+AGENT_RESOLUTIONS = _declared_roster(_QUANT_SCHEMA, "agent_resolutions")
+CONFIG_FIELDS = _declared_roster(_QUANT_SCHEMA, "config_fields")
+ARG_MANIFEST = _declared_arg_manifest(_QUANT_SCHEMA)
+
+ACTIONS = ("collect", "list-records", "score", "collect-dispatch", "args-manifest", "aggregate")
+
+# The argument manifest's per-action `required` / `source` classification is declared, not spelled
+# here: "required" = flags this engine itself validates as required for the action; "source" = this
+# engine's DECLARED run-evidence input set (undeclared = []). `--action args-manifest` verifies every
+# listed flag against build_parser()'s LIVE option strings before emitting — the parser stays the
+# single source of truth; the compile-embeds renderer consumes this and holds no table of its own
+# (063 C-21). Note: `collect` synthesizes a run-id when absent (existing 059 semantics, untouched by
+# 063 C-24 — that clause is scoped to run-determination's (unit_id, run_id) lock), so --run-id is
+# declared SOURCE, not required. 068 C-18: `aggregate` adds zero required flags — its input face is
+# the ambient --workspace-root plus the presentation flag --format (json default).
+
 KIND = "speckit.exec-quant"  # [[STR-001]]
-SCHEMA_VERSION = 2
 NOT_EVALUATED = "not_evaluated"  # [[STR-002]]
-PROVENANCES = ("measured", "carried", "user-given", "configured")
-UNIT_TYPES = ("command", "skill", "custom-unit", "agent")
-RESOLUTIONS = ("explicit", "adopted", "synthesized")
-AGENT_RESOLUTIONS = ("resolved", "ambiguous", "unresolved")
 
 SNAPSHOT_KIND = "speckit.execution-config-snapshot"
 SNAPSHOT_SCHEMA_VERSION = 1
 
-#: Exactly the 11 config-group fields (061 C-EQ-04). Order is the write order.
-CONFIG_FIELDS = ("config_id", "source_chain", "method_requested", "method_resolved",
-                 "mode", "cli", "model", "reasoning_effort", "context_window",
-                 "extra_flags", "snapshot")
+# `CONFIG_FIELDS` (the eleven config-group fields, 061 C-EQ-04, in write order) is derived from its
+# declaration at the top of this file; no tuple is spelled here.
 
 #: plan D2 single adjudication: adoption window for a same-unit determination
 #: record when the caller passes no --run-id (bounded against stale binding).
@@ -1372,6 +1436,8 @@ USAGE_LINE = ("usage: exec-quant.py --action {" + ",".join(ACTIONS) + "} "
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="exec-quant.py", allow_abbrev=False)
+    _sig_configure(parser)
+
     parser.add_argument("--workspace-root", default=None)
     parser.add_argument("--action", required=True,
                         choices=["collect", "list-records", "score",
@@ -1415,9 +1481,37 @@ def action_args_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv: Optional[List[str]] = None) -> int:
+    _sig_guard(argv, declared=['--workspace-root', '--action', '--unit-id', '--unit-type', '--run-id', '--score', '--note', '--since', '--snapshot', '--config-id', '--format'])  # answer --version / reject an undeclared option
     parser = build_parser()
     args = parser.parse_args(argv)
+    # FR-012 / FR-013: a tree without the declaration layer keeps working on the labelled
+    # compatibility value — the label is a reading of the wiring, never a pass.
+    if QUANT_LABEL:
+        print(QUANT_LABEL, file=sys.stderr)
     try:
         if args.action == "collect":
             return action_collect(args)

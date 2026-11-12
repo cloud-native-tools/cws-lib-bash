@@ -1,0 +1,27 @@
+# Batch 1, row 2 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the evidenceState closed set: its membership, its order and its
+# cardinality. The engine `.specify/scripts/python/evidence-utils.py` reads it through
+# `.specify/scripts/python/declaration_reader.py`; the carriers reach it by
+# `.specify/shared/declarations/facts/evidence-seven-states.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `evidence-utils.py`'s `SEVEN_STATES` and the two
+# carriers listed in `former_carriers` read the same seven names in the same order on 2026-11-05, so
+# nothing had drifted.
+fact: evidence-seven-states
+kind: closed-set
+statement:
+  - Present
+  - Wired
+  - Exercised
+  - Outcome-supported
+  - Missing
+  - Unobserved
+  - Not applicable
+consumers:
+  - .specify/scripts/python/evidence-utils.py
+  - .specify/skills/internal/collect-evidence/SKILL.md
+former_carriers:
+  - .specify/skills/internal/collect-evidence/references/evidence-discipline.md
+  - .specify/shared/guidelines/better-harness.md
+note: "Both faces agreed before migration (evidence-utils.py's SEVEN_STATES and evidence-discipline.md's table listed the same seven names in the same order), so the authority order picked the code-side value with nothing to correct. The states' semantics stay with the carriers; this file owns only the closed set."

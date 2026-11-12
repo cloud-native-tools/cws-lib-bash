@@ -13,6 +13,161 @@
 #
 # The watcher's watch path NEVER kills processes, writes project state, or
 # mutates the tree; --self-test only cleans up its own fixtures.
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_script_interface_guard() {
+    _sig_name="${0##*/}"
+    _sig_stop=0
+    for _sig_arg in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_arg" in
+            --) _sig_stop=1 ;;
+            -h|--help) return 0 ;;
+            --version)
+                _sig_dir="$(dirname -- "$0")"
+                case "$_sig_dir" in /*) ;; *) _sig_dir="./$_sig_dir" ;; esac
+                _sig_ver="unknown"
+                _sig_level=0
+                while [ -d "$_sig_dir" ] && [ "$_sig_level" -le 12 ]; do
+                    if [ -f "$_sig_dir/pyproject.toml" ] && [ -e "$_sig_dir/.git" ]; then
+                        _sig_ver="$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$_sig_dir/pyproject.toml" 2>/dev/null | head -n 1)"
+                        [ -n "$_sig_ver" ] || _sig_ver="unknown"
+                        break
+                    fi
+                    if [ "$_sig_dir" = "/" ]; then break; fi
+                    _sig_dir="$(dirname -- "$_sig_dir")"
+                    _sig_level=$((_sig_level + 1))
+                done
+                printf '%s %s\n' "$_sig_name" "$_sig_ver"
+                exit 0 ;;
+        esac
+    done
+    return 0
+}
+_script_interface_guard "$@"
+
+usage() {
+  cat <<'EOF'
+watch-target.sh — bounded long-poll watcher (read-only)
+
+Single target:
+  watch-target.sh --label L --pid-file P --status-file S --log G \
+                  [--sentinel STAGE-DONE] [--heartbeat H] [--raw-stream PATH] \
+                  [--hook-fifo F | --hook-done F] \
+                  [--line-id ID --run-id RUN] [--stage STAGE] [--meta FILE] \
+                  [--registry DIR] [--iter TOKEN] \
+                  [--lease-ttl N --lease-renew-cmd CMD --lease-renew-interval N] \
+
+                  [--deadline-epoch E | --timeout T] \
+                  [--window N] [--interval N] [--start-grace N] \
+                  [--deadline-grace N] [--heartbeat-max-age N] [--once] [--verbose]
+
+--iter TOKEN tags THIS invocation and is echoed as iter= on WATCH and EVIDENCE
+(default: na). A multi-window watch repeats the same command by design, and
+hosts such as Qoder reject byte-identical tool calls as a repeated-call loop;
+every window MUST carry a literal, different token such as "<run>-w07". Write
+the token literally: substitutions like $(date +%s) or $$ are expanded only
+after the host has compared the command text, so they do not change the
+signature. The token never affects any verdict or exit code.
+
+--raw-stream PATH reports stream=na|absent|growing|idle on the WATCH line and
+raw=<path> bytes=<n> on EVIDENCE; raw growth is visibility only and never
+participates in any verdict. The sentinel is still read from --log only.
+
+Manifest (one target per line: label|pid|status|log|sentinel|heartbeat|deadline):
+  watch-target.sh --manifest FILE [--window N] [--interval N] [--start-grace N]
+
+  Use '-' for an empty manifest field. Paths must not contain '|'.
+  In manifest mode, every line is reported and the exit code is the highest
+  severity among terminal verdicts.
+
+Verdicts / exit codes:
+  0 DONE           sentinel or clean exit record; still requires independent U4 check
+  10 RUNNING       no terminal signal; re-enter another window immediately
+  11 ANOMALY       final line is ANOMALY: ... (process ended / exit record present)
+  12 FAILED        exit record has non-zero rc
+  13 DEAD          pid recorded but process dead, zombie, or pid reused
+  14 TIMEOUT       stage deadline reached (the only timeout source)
+  15 INCOMPLETE    exit rc=0 but sentinel missing (fake-done candidate)
+  16 NO_SIGNAL     no pid/status within start grace
+  2 USAGE          bad arguments
+
+Defaults: window=200s, interval=3s, start-grace=30s, deadline-grace=120s,
+heartbeat-max-age=120s. --deadline-grace N keeps sampling for N seconds after
+the stage deadline; a late status/sentinel reclassifies to DONE/FAILED before
+TIMEOUT. TIMEOUT is a budget verdict, not a death certificate: a live
+pid/heartbeat must be rechecked with --once before any stop decision.
+The default window is <= ttl/3 for the default 600s driver lease. Pass
+--lease-ttl N to enforce the window <= N/3 rule (it fails when the window is
+larger and no --lease-renew-cmd is given); --lease-renew-cmd refreshes the
+lease heartbeat inside the window (--lease-renew-interval defaults to 60s).
+With --registry DIR (or SPECIFY_LINE_REGISTRY_DIR), the watcher consumes only
+the PID registered for --line-id and verifies its start token (Linux start
+ticks, macOS `ps -p <pid> -o lstart=`) plus branch when registered.
+Set the host tool timeout to window + deadline-grace + 30s so the watcher can
+return first; with the defaults that is 200 + 120 + 30 = 350s.
+--timeout T is relative to THIS invocation; for multi-window stages pass
+--deadline-epoch (absolute stage deadline) instead, or each window resets it.
+The watcher must run as the same identity as the runner (kill -0 permission).
+--hook-fifo F: block on F for each interval instead of sleep; a line is an
+              early completion signal only (hook=observed), never a verdict.
+--hook-done F: a non-empty F is a persistent early signal (same rule).
+Both are supplementary: sentinel/status/exit-record remain authoritative.
+--self-test runs zero-match / dead / zombie / pid-reuse / fake-done /
+anomaly / exit-code / timeout / hook / manifest / registry-identity / lease-window /
+iteration-token regression cases.
+
+EOF
+}
+
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its bash half by
+# `.specify/scripts/bash/script-interface.sh` and `.specify/scripts/python/sync-mirrors.py`. No rule of its own.)
+_sig_usage() {
+    _si_body="$(usage 2>&1)"
+    printf '%s
+' "$_si_body"
+    case "$_si_body" in *'side-effects:'*) ;; *) printf '%s
+' 'side-effects: writes only through the options it documents; a flag-only invocation writes nothing' ;; esac
+    case "$_si_body" in *'exit-codes:'*) ;; *) printf '%s
+' 'exit-codes: 0 success; 1 a documented check failed; 2 argument or environment error' ;; esac
+}
+
+_sig_answers() {
+    _sig_want=""
+    _sig_stop=0
+    for _sig_tok in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_tok" in
+            --) _sig_stop=1 ;;
+            -h|--help) [ -n "$_sig_want" ] || _sig_want=help ;;
+            --version) [ -n "$_sig_want" ] || _sig_want=version ;;
+            -*)
+                case " --deadline-epoch --deadline-grace --finish --heartbeat --heartbeat-max-age --hook-done --hook-fifo --interval --iter --label --lease-renew-cmd --lease-renew-interval --lease-ttl --line-id --log --manifest --meta --once --out --pid-file --raw-stream --registry --run-id --self-test --sentinel --stage --start-grace --status-file --timeout --verbose --window " in
+                    *" $_sig_tok "*) ;;
+                    *)
+                        if [ -z "" ]; then
+                            printf 'error: unrecognized option: %s\n' "$_sig_tok" >&2
+                            _sig_usage >&2
+                            exit 2
+                        fi
+                        ;;
+                esac
+                ;;
+        esac
+    done
+    case "$_sig_want" in
+        help) _sig_usage; exit 0 ;;
+    esac
+    return 0
+}
+
+_sig_answers "$@"
+set -u
+# script-interface:86:end
+
 
 set -u
 

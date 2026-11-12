@@ -105,8 +105,14 @@ Rows come from the **Phase-1 source inventory**, not from the source's table of 
   script that now serves it. The method and flow are allowed to differ from the source's; that
   is the whole premise of a restructure. What is not allowed is a capability with nowhere to go.
 - **Verification**: how a later reader checks this row — a runnable command, a probe
-  invocation, or a concrete scenario to walk through. An empty cell is a finding: a checklist
-  whose items cannot be checked is a description.
+  invocation, or a concrete scenario to walk through. The same cell MAY also state the row's
+  **layer attribution** — whether the inherited capability is mechanism-side (reusable logic
+  that belongs in the target's skill assets) or policy-side (an environment binding the caller
+  supplies) — as prose inside the existing cell, judged against
+  `.specify/shared/definitions/mechanism-policy-definitions.md` § Boundary Test. The attribution never
+  becomes a new column and never a second record table, and it is not a substitute for the
+  check itself. An empty cell is a finding: a checklist whose items cannot be checked is a
+  description.
 - **Capability with no destination**: that is a Phase-3 mapping gap. Fix the merge; do not
   record the gap as `dropped` to make the table complete.
 

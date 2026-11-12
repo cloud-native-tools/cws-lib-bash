@@ -77,7 +77,48 @@ def match(path: str, patterns: list[str]) -> str | None:
     return None
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper ships beside the engine; a copied tree may lack it
+    from script_interface_cli import fill_help_labels  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a skill-local or sandbox copy still runs its action
+    def fill_help_labels(text, **_kwargs):
+        return text
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
+
+_HELP = """usage: gate-check.py <path> [...] | --stdin
+options:
+  -h, --help     print this help and exit
+  --version      print <script-name> <framework-version> and exit
+  --stdin        read the candidate paths from standard input, one per line
+side-effects: none; reads the gate file and the named paths and writes nothing
+exit-codes: 0 all paths allowed; 1 at least one path requires confirmation; 2 at least one
+  path is denied or an option is undeclared; 3 the gate file is missing or unparsable
+"""
+
+
 def main() -> int:
+    # `declared` is this script's own vocabulary: `--stdin` is the one option its hand-rolled
+    # loop accepts, and stating it here is what keeps the guard from refusing a legal token.
+    _sig_guard(declared=["--stdin"])  # answer --version / reject an undeclared option
+    if any(a in ("-h", "--help") for a in sys.argv[1:]):
+        print(fill_help_labels(_HELP), end="")
+        return 0
     args = sys.argv[1:]
     if "--stdin" in args:
         args.remove("--stdin")

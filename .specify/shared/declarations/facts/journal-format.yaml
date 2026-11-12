@@ -1,0 +1,91 @@
+# Feature 096 (contracts/journal-format.contract.md C-01).
+#
+# The one machine-read copy of the sdd-observer journal's spelling face: the journal filename, the
+# title template, the five header keys, the nine entry columns in order, the sixteen closed event
+# classes with their minimum persistent evidence, the two retention classes, the ten pointer kinds,
+# the missing-value placeholder and the escaping rule. The engine `.specify/scripts/python/journal-utils.py`
+# reads it through `.specify/scripts/python/declaration_reader.py`; the carrier reaches it by
+# `.specify/shared/declarations/facts/journal-format.yaml#/statement`.
+#
+# Deliberately NOT registered in `.specify/shared/declarations/contract.yaml` (plan R-05): the 094 C-86
+# closed-set pin stays intact and the fact is read by file through the declaration reader.
+#
+# Written in the allowed YAML subset (contracts/declaration-schema.contract.md C-008): block
+# mappings, block sequences, scalars, comments, two-space indentation. No flow collections
+# (except the empty forms), no anchors, no aliases, no tags, no multiple documents, no block scalars.
+fact: journal-format
+kind: record-schema
+statement:
+  journal_filename: journal.md
+  title_template: "# SDD Journal — <spec-key>"
+  header_keys:
+    - line_id
+    - run_id
+    - spec
+    - observer_instance
+    - created_at
+  entry_columns:
+    - seq
+    - observed_at
+    - event_at
+    - stage
+    - event
+    - command
+    - artifact
+    - exit
+    - evidence
+  event_classes:
+    - name: line-start
+      min_persistent: 1
+    - name: line-terminal
+      min_persistent: 1
+    - name: stage-start
+      min_persistent: 0
+    - name: stage-end
+      min_persistent: 0
+    - name: stage-verdict
+      min_persistent: 0
+    - name: checkpoint
+      min_persistent: 1
+    - name: commit
+      min_persistent: 1
+    - name: anomaly
+      min_persistent: 0
+    - name: stall
+      min_persistent: 1
+    - name: retry
+      min_persistent: 0
+    - name: dispatch
+      min_persistent: 0
+    - name: artifact-write
+      min_persistent: 1
+    - name: observer-start
+      min_persistent: 1
+    - name: observer-settle
+      min_persistent: 1
+    - name: observer-gap
+      min_persistent: 1
+    - name: observer-error
+      min_persistent: 0
+  retention_classes:
+    - persistent
+    - runtime
+  pointer_kinds:
+    - spine
+    - log
+    - status
+    - pid
+    - heartbeat
+    - meta
+    - checkpoint
+    - artifact
+    - commit
+    - triplet
+  missing_placeholder: "-"
+  escaping:
+    pipe_escape: '\|'
+    newline_replacement: ' '
+consumers:
+  - .specify/scripts/python/journal-utils.py
+former_carriers: []
+note: "Every sequence here is ordered: header_keys is the header's key order, entry_columns is the nine-column table order, event_classes is the closed set E-6 declares, and pointer_kinds is the closed kind set E-7 declares. Growth of the event set or the pointer kinds is a revision of this file, never an inline invention by a consumer. The escaping block fixes C-11: a literal pipe inside a value is written as pipe_escape, and newlines or carriage returns collapse to newline_replacement."

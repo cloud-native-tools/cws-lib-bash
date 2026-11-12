@@ -1,0 +1,27 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044, row `driver-stage-sequence`).
+#
+# The one machine-read copy of the loop driver's stage sequence: the eight stages a dispatch loop
+# advances through, in order. The engine `.specify/skills/sdd-loop-driver/scripts/loop-state.py`
+# reads it through `.specify/scripts/python/declaration_reader.py` and orders its `STAGE_ARTIFACTS` table by
+# it instead of re-spelling the order; the carrier reaches it by
+# `.specify/shared/declarations/facts/driver-stage-sequence.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's `STAGE_ARTIFACTS` key order and the
+# carrier's stage-chain line named the same eight stages in the same order on 2026-11-05, so nothing
+# had drifted and the code-side value stands uncorrected.
+fact: driver-stage-sequence
+kind: ordered-operator-table
+statement:
+  - requirements
+  - clarify
+  - plan
+  - tasks
+  - checklist
+  - analyze
+  - implement
+  - review
+consumers:
+  - .specify/skills/sdd-loop-driver/scripts/loop-state.py
+former_carriers:
+  - .specify/skills/sdd-loop-driver/SKILL.md
+note: "Order is part of the value: the engine's stage table is re-ordered by this sequence at import time, and the driver advances by that order, so a reordered statement is a behaviour change rather than a cosmetic edit. The table's rows (`artifacts` / `owned_paths` / `commit_required` / `no_change_allowed`) stay the engine's own content and are the separate `driver-stage-artifacts` fact; this declaration owns the order only."

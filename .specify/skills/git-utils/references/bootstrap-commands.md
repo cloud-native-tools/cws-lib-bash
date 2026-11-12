@@ -4,10 +4,10 @@ Phase 0（遗留配置迁移）与 Phase 1（模型选择、分支检测、创�
 
 ## 遗留配置迁移
 
-分支信息现在只存在于专用状态文件 `${SKILL_WORKDIR}/docs/git-workflow.md` 的 Git Workflow 托管块中（写入规则见 [instructions-lookup.md](./instructions-lookup.md)），本技能**不再生成独立工作流文档**。执行任何模式前，若检测到任一遗留来源，把其分支映射提取出来填入托管块：
+分支信息现在只存在于专用状态文件 `${SKILL_WORKDIR}/.specify/workflow/git.md` 的 Git Workflow 托管块中（写入规则见 [instructions-lookup.md](./instructions-lookup.md)），本技能**不再生成独立工作流文档**。执行任何模式前，若检测到任一遗留来源，把其分支映射提取出来填入托管块：
 
 ```bash
-for legacy in "${SKILL_WORKDIR}/.specify/memory/git-workflow.md" "${SKILL_WORKDIR}/.specify/git-workflow.md"; do
+for legacy in "${SKILL_WORKDIR}/.specify/memory/git-workflow.md" "${SKILL_WORKDIR}/.specify/git-workflow.md" "${SKILL_WORKDIR}/docs/git-workflow.md"; do
   [ -f "$legacy" ] || continue
   echo "legacy config found: $legacy"
   sed -n '/^---$/,/^---$/p' "$legacy" \
@@ -19,7 +19,7 @@ done
 把提取到的 `main_branch` / `pre_branch` / `dev_branch` 写入块的 `Workflow model` 声明行（三层）与 MAIN / PRE / DEV 行，并刷新 `Last updated`（旧格式块无声明行，迁移时补上）。
 
 - 迁移完成后，遗留文件即为**冗余数据源**：在报告中列出其路径并建议用户删除或归档，**不要自动删除**（可能含用户手写的补充内容，删除不可逆）。
-- 旧版 instructions.md 内联的 `## Git Workflow` 块也是遗留来源：把其中分支表迁入 `docs/git-workflow.md` 托管块后，将 instructions.md 中该节替换为指向新文件的指针句（由 `/speckit.instructions` 收敛，不要手改整份文件）。
+- 旧版 instructions.md 内联的 `## Git Workflow` 块也是遗留来源：把其中分支表迁入 `.specify/workflow/git.md` 托管块后，将 instructions.md 中该节替换为指向新文件的指针句（由 `/speckit.instructions` 收敛，不要手改整份文件）。
 - 若 instructions 文件的 Documentation Map 仍有指向 `.specify/git-workflow.md` 或 `.specify/memory/git-workflow.md` 的引用行，删除该行——已无独立文档可引用。
 
 ## 分支检测
@@ -85,6 +85,6 @@ git add .gitexcludes && git commit -m "chore: init .gitexcludes for PRE"
 
 ## 写入 Git Workflow 块
 
-用 `${SKILL_HOME}/assets/git-workflow-block.md` 填充分支名、tracking 与日期，整文件渲染写入 `${SKILL_WORKDIR}/docs/git-workflow.md`。文件不存在时按模板创建（含文件头说明 + 托管块）；标记内替换规则与读取命令：见 [instructions-lookup.md](./instructions-lookup.md)。
+用 `${SKILL_HOME}/assets/git-workflow-block.md` 填充分支名、tracking 与日期，整文件渲染写入 `${SKILL_WORKDIR}/.specify/workflow/git.md`。文件不存在时按模板创建（含文件头说明 + 托管块）；标记内替换规则与读取命令：见 [instructions-lookup.md](./instructions-lookup.md)。
 
-`docs/git-workflow.md` 位于文档空间根层——它是机器维护的状态文件而非文档页，不要在文档空间再添加引用行或副本。
+`.specify/workflow/git.md` 位于文档空间根层——它是机器维护的状态文件而非文档页，不要在文档空间再添加引用行或副本。

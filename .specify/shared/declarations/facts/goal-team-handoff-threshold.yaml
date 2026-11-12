@@ -1,0 +1,25 @@
+# Feature 094, contract `contracts/command-family-and-declarations.md` C-79 / C-80 / C-81;
+# tasks row T053 (initial value ruling N-1).
+#
+# The one machine-read copy of the handoff threshold: a task-count metric with an
+# exclusive boundary ("complex iff task count > threshold"; equality is simple), plus the
+# creation-timing pair because one decision answers both questions (C-80). Changing
+# either value is a one-file edit; no engine constant, driver sentence or command
+# template may carry the number (C-82).
+#
+# Consumers read this through `.specify/scripts/python/declaration_reader.py`; the engine
+# `.specify/scripts/python/goal-utils.py` (`handoff-decision` action) is the only consumption
+# point. An absent or unregistered fact exits 2 as `owner-unavailable`, never a built-in
+# default (C-81, C-83).
+fact: goal-team-handoff-threshold
+kind: threshold
+statement:
+  metric: task-count
+  threshold: 10
+  boundary: exclusive
+  on_direct: none
+  on_handoff: after-tasks-u4
+consumers:
+  - .specify/scripts/python/goal-utils.py
+former_carriers: []
+note: "Initial declared value per tasks.md ruling N-1: the threshold equals the implement-package sizing target already in force (a per-package target near ten, ceiling sixteen), so it is one declared number rather than a second invented one."

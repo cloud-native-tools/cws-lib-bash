@@ -6,6 +6,25 @@ Executes the WI-14 per-line sequence for every runnable entry of
 integration-record -> archive-runtime -> `git worktree remove` (never --force).
 Mirrors run once per batch, after all lines, never per line (WI-11).
 
+The quality gate defaults to the closure checker (`closure-acceptance-check.py`,
+081 / GW-03): the judgement runs at the **feature line's closure** — one line
+carries a feature's whole slice set, so this step judges once per line and never
+per slice merge; slice merges are the review gate's. The spec directory is read
+from the registry row, never inferred from the branch: the line's `branch` yields
+the feature id (its leading three digits), `.specify/features.md` under the
+line's worktree yields the `Spec Path` cell for that id, and the directory is that
+cell joined to the worktree (the gate runs with `cwd` = the worktree). A branch
+without a feature id, a missing registry row, an empty or `-` `Spec Path` cell and
+a resolved directory that does not exist are input errors — recorded as
+`closure-input-error` while the line stays `completed`, never silently skipped and
+never replaced by an invented `.specify/specs/<branch>`. Only the checker's exit 1
+(a `block`) records `closure-blocked` and lands the line `blocked`; the failed
+result is recorded **while the line is still `completed`**, because
+`integration-record` refuses anything else, and only then does the transition
+follow. `--gate-cmd` keeps overriding the command, and a caller-supplied gate keeps
+its own historical `quality-gate` reason — it is not the closure verdict, so it
+must not borrow the closure vocabulary.
+
 Stdlib only.  Exit codes: 0 all merged, 2 usage/validation, 3 one or more
 lines failed or the batch mirror failed.
 """
@@ -14,6 +33,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -22,6 +43,20 @@ EXIT_OK = 0
 EXIT_USAGE = 2
 EXIT_FAILED = 3
 SKILL_SCRIPTS = Path(__file__).resolve().parent
+
+CHECKER_REL = ".specify/scripts/python/closure-acceptance-check.py"
+FEATURES_REL = Path(".specify") / "features.md"
+FEATURE_ID_RE = re.compile(r"^(\d{3})")
+#: Cells that carry no content; a dash is how the registry spells "nothing here".
+EMPTY_CELLS = ("", "-", "--", "—", "–")
+
+REASON_CLOSURE_BLOCKED = "closure-blocked"
+REASON_CLOSURE_INPUT_ERROR = "closure-input-error"
+REASON_QUALITY_GATE = "quality-gate"
+
+
+class GateInputError(Exception):
+    """The feature line's spec directory cannot be resolved. Exit-2 class (GW-03)."""
 
 
 def run(cmd, cwd=None, env=None):
@@ -76,7 +111,103 @@ def _mark_retained(reg: Path, line_id: str) -> None:
     engine(reg, "update", "--line-id", line_id, "--worktree-retained", "true")
 
 
-def integrate_line(repo: Path, trunk: str, reg: Path, archive: Path, entry: dict, gate_cmd: str | None) -> dict:
+# ---------------------------------------------------------------- the closure gate (GW-03)
+
+
+def feature_id_of(branch: str) -> str:
+    """The feature id is the branch's leading three digits — nothing else infers it."""
+    match = FEATURE_ID_RE.match(branch or "")
+    if not match:
+        raise GateInputError(
+            "branch %r carries no leading three-digit feature id (line branch)" % (branch,)
+        )
+    return match.group(1)
+
+
+def registry_spec_path_cell(registry: Path, feature_id: str) -> str:
+    """The `Spec Path` cell of the registry row whose `ID` is the feature id."""
+    if not registry.is_file():
+        raise GateInputError("feature registry not found: %s" % registry)
+    header = None
+    for raw in registry.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = raw.strip()
+        if not line.startswith("|"):
+            header = None
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if header is None:
+            header = cells
+            continue
+        if all(set(cell) <= set("-: ") for cell in cells):
+            continue  # the separator row
+        if "ID" not in header or "Spec Path" not in header:
+            continue
+        if len(cells) <= max(header.index("ID"), header.index("Spec Path")):
+            continue
+        if cells[header.index("ID")] != feature_id:
+            continue
+        return cells[header.index("Spec Path")]
+    raise GateInputError(
+        "no registry row with ID=%r in %s" % (feature_id, registry)
+    )
+
+
+def resolve_spec_dir(entry: dict, worktree: Path) -> Path:
+    """The feature line's spec directory: registry row → `Spec Path` cell → the worktree."""
+    line_id = entry.get("line_id")
+    feature_id = feature_id_of(entry.get("branch") or "")
+    cell = registry_spec_path_cell(worktree / FEATURES_REL, feature_id)
+    if cell.strip() in EMPTY_CELLS:
+        raise GateInputError(
+            "registry row ID=%s carries an empty Spec Path cell (line %s)"
+            % (feature_id, line_id)
+        )
+    candidate = Path(cell.strip())
+    if not candidate.is_absolute():
+        # The gate runs with cwd = the worktree, so a repository-relative cell is joined to the
+        # worktree — never to the driver's own directory.
+        candidate = worktree / candidate
+    spec_dir = candidate if candidate.is_dir() else candidate.parent
+    if not spec_dir.is_dir():
+        raise GateInputError(
+            "spec directory not found for feature %s: %s (line %s)"
+            % (feature_id, spec_dir, line_id)
+        )
+    return spec_dir
+
+
+def build_gate_cmd(worktree: Path, spec_dir: Path) -> str:
+    """The checker invocation, spelled the way the other two call sites spell it."""
+    relative = os.path.relpath(spec_dir, worktree)
+    return "python3 %s --spec-dir %s" % (CHECKER_REL, shlex.quote(relative))
+
+
+def _quality_gate(reg: Path, wt: Path, entry: dict, gate_cmd: str,
+                  closure_gate: bool):
+    """The one gate execution site. Returns a failed result, or None when the gate passes."""
+    gate = run(["bash", "-c", gate_cmd], cwd=wt)
+    if gate.returncode == 0:
+        return None
+    line_id = entry["line_id"]
+    detail = (gate.stdout + gate.stderr).strip()[-2000:]
+    if closure_gate and gate.returncode == 1:
+        # `block` at the feature line's closure. The order is a constraint, not a style:
+        # `integration-record` refuses a line that is not `completed`, so the failed result is
+        # recorded while the line is still completed — which also clears `merge_ready` — and the
+        # transition to `blocked` follows it. Marking first loses both the reason and the result.
+        _record_failed(reg, line_id, REASON_CLOSURE_BLOCKED)
+        engine(reg, "update", "--line-id", line_id, "--state", "blocked",
+               "--reason", REASON_CLOSURE_BLOCKED)
+        return _result(line_id, "failed", reason=REASON_CLOSURE_BLOCKED, detail=detail)
+    reason = REASON_CLOSURE_INPUT_ERROR if closure_gate and gate.returncode == 2 else REASON_QUALITY_GATE
+    # Exit 2 is an input error, not a quality failure: record the distinct reason and leave the
+    # line's state alone — it is neither marked `blocked` nor moved anywhere else.
+    _record_failed(reg, line_id, reason)
+    return _result(line_id, "failed", reason=reason, detail=detail)
+
+
+def integrate_line(repo: Path, trunk: str, reg: Path, archive: Path, entry: dict,
+                   gate_cmd: str | None) -> dict:
     line_id = entry["line_id"]
     worktree = entry.get("worktree_path")
     if not worktree:
@@ -98,14 +229,18 @@ def integrate_line(repo: Path, trunk: str, reg: Path, archive: Path, entry: dict
         _record_failed(reg, line_id, "rebase")
         return _result(line_id, "failed", reason="rebase", detail=rebased.stderr.strip())
 
-    if gate_cmd:
-        gate = run(["bash", "-c", gate_cmd], cwd=wt)
-        if gate.returncode != 0:
-            _record_failed(reg, line_id, "quality-gate")
-            return _result(
-                line_id, "failed", reason="quality-gate",
-                detail=(gate.stdout + gate.stderr).strip()[-2000:],
-            )
+    closure_gate = gate_cmd is None
+    if closure_gate:
+        try:
+            spec_dir = resolve_spec_dir(entry, wt)
+        except GateInputError as exc:
+            _record_failed(reg, line_id, REASON_CLOSURE_INPUT_ERROR)
+            return _result(line_id, "failed", reason=REASON_CLOSURE_INPUT_ERROR,
+                           detail=str(exc))
+        gate_cmd = build_gate_cmd(wt, spec_dir)
+    failed = _quality_gate(reg, wt, entry, gate_cmd, closure_gate)
+    if failed is not None:
+        return failed
 
     head = git(wt, "rev-parse", "HEAD")
     if head.returncode != 0:
@@ -232,6 +367,121 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps(summary, sort_keys=True))
     return EXIT_OK if summary["ok"] else EXIT_FAILED
 
+
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_VERSION_SOURCE = "pyproject.toml"
+_VERSION_QUOTES = chr(39) + chr(34)
+_MAX_UPWARD_LEVELS = 12
+
+
+def _bridge_version(start):
+    _here = start.resolve()
+    for _ in range(_MAX_UPWARD_LEVELS + 1):
+        if (_here / _VERSION_SOURCE).is_file() and (_here / ".git").exists():
+            try:
+                _text = (_here / _VERSION_SOURCE).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                return "unknown"
+            _in_project = False
+            for _raw in _text.splitlines():
+                _line = _raw.strip()
+                if not _line or _line.startswith("#"):
+                    continue
+                if _line.startswith("[") and _line.endswith("]"):
+                    _in_project = _line == "[project]"
+                    continue
+                if not _in_project:
+                    continue
+                _key, _sep, _value = _line.partition("=")
+                if _sep and _key.strip() == "version":
+                    _value = _value.strip()
+                    if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in _VERSION_QUOTES:
+                        _value = _value[1:-1]
+                    return _value or "unknown"
+            return "unknown"
+        if _here.parent == _here:
+            return "unknown"
+        _here = _here.parent
+    return "unknown"
+
+def _bridge_main():
+    import sys as _bridge_sys
+    from pathlib import Path as _bridge_path
+
+    _argv = list(_bridge_sys.argv[1:])
+    if "--version" not in _argv:
+        return
+    if "--" in _argv and _argv.index("--version") > _argv.index("--"):
+        return
+    _invoked = _bridge_sys.argv[0] if _bridge_sys.argv[0] else "."
+    _name = _bridge_path(_invoked).name or "script"
+    print("%s %s" % (_name, _bridge_version(_bridge_path(_invoked).resolve().parent)))
+    raise SystemExit(0)
+
+
+_bridge_main()
+del _bridge_main
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its executable form by
+# `.specify/scripts/python/script_interface_cli.py`. This block owns no rule of its own.)
+import sys as _sig_sys
+import pathlib as _sig_pathlib
+
+_SIG_OWNER = _sig_pathlib.Path(__file__).resolve().parent
+while not ((_SIG_OWNER / 'pyproject.toml').is_file()
+           and (_SIG_OWNER / '.git').exists()) and _SIG_OWNER.parent != _SIG_OWNER:
+    _SIG_OWNER = _SIG_OWNER.parent
+_SIG_OWNER = str(_SIG_OWNER / 'scripts' / 'python')
+if _SIG_OWNER not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_OWNER)
+
+_SIG_SCRIPT = '.specify/skills/sdd-loop-driver/scripts/integrate-lines.py'
+_SIG_DECLARED = ('--archive', '--gate-cmd', '--lines', '--mirror-cmd', '--registry', '--repo', '--trunk')
+_SIG_HELP = (
+    'usage: integrate-lines.py [options]\n'
+    'options:\n'
+    '  --archive\n  --gate-cmd\n  --lines\n  --mirror-cmd\n  --registry\n  --repo\n  --trunk\n'
+    '  -h, --help    print this help and exit\n'
+    '  --version     print the script name and the framework version, then exit\n'
+    +
+    'side-effects:' + ' ' + 'writes only through the options it documents; a flag-only invocation writes nothing' + '\n'
+    +
+    'exit-codes:' + ' ' + '0 success; 1 a documented check failed; 2 argument or environment error' + '\n'
+)
+
+
+def _sig_guard(argv):
+    # Answer the flags and reject an undeclared option before any parsing or write.
+    # RULES are asked of the owner (script_interface_cli.guard_argv), never restated:
+    # the declared vocabulary and the flag forms are its, and C-9 (a recognized option
+    # never rescues an unrecognized one) is its judgement. What stays local is the help
+    # BODY, because its operand sentence is this script's own.
+    try:
+        import script_interface_cli as _sig  # noqa: E402 -- deferred: a copied script may lack it
+    except ImportError:  # skill-local or sandbox copy: the module's own parser still runs
+        return list(argv)
+    line = list(argv)
+    try:
+        _sig.guard_argv(line, declared=_SIG_DECLARED)
+    except SystemExit as answered:  # what guard_argv raises; _sig_sys.exit IS SystemExit
+        if answered.code == 0:
+            raise
+        # The owner prints the rejection line and this script's help body is appended after
+        # it, so the reader sees the vocabulary and not only the refusal.
+        _sig_sys.stderr.write(_SIG_HELP)
+        raise _sig_sys.exit(answered.code)
+    stop = line.index('--') if '--' in line else len(line)
+    if '-h' in line[:stop] or '--help' in line[:stop]:
+        _sig_sys.stdout.write(_SIG_HELP)
+        raise _sig_sys.exit(0)
+    return line
+
+if __name__ == "__main__":
+    _sig_sys.argv = [_sig_sys.argv[0]] + _sig_guard(_sig_sys.argv[1:])
+# script-interface:86:end
 
 if __name__ == "__main__":
     sys.exit(main())

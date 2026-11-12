@@ -1,0 +1,18 @@
+# Batch 1, row 8 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the class-neutral category closed set (§ 类中立清单). The engine refuses
+# a row whose `category` is outside it, so the refusal's membership test resolves here rather than
+# against a second tuple; the carrier reaches it by
+# `.specify/shared/declarations/facts/flow-class-neutral-categories.yaml#/statement`.
+fact: flow-class-neutral-categories
+kind: closed-set
+statement:
+  - memory
+  - feedback
+  - evidence
+  - session
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+former_carriers:
+  - .specify/shared/definitions/flow-class-definitions.md
+note: "Both faces agreed before migration (NEUTRAL_CATEGORIES and the carrier's § 类中立清单 rows), so the authority order picked the code-side value with nothing to correct."

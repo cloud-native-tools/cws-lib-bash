@@ -30,8 +30,10 @@ references/stage-prompts.md § Stall Handling.
 
 Thresholds and evidence semantics mirror `watch-target.sh` (R-03/R-05): the
 four-piece files are space envelopes, the sentinel is the last non-empty log
-line == "<STAGE>-DONE", and watcher verdict codes (10-16) are data recorded in
-watch_verdict.exit_code, never reused as this CLI's code.
+line == the render of the declaration-layer fact `driver-completion-sentinels`
+(`.specify/shared/declarations/facts/driver-completion-sentinels.yaml#/statement`), and
+watcher verdict codes (10-16) are data recorded in watch_verdict.exit_code,
+never reused as this CLI's code.
 
 Exit codes: 0 / 1 / 2 only (see --help).
 
@@ -60,9 +62,9 @@ WATCHER_EXIT_CODES = "10-16"  # data only; owner: watch-target.sh --help
 REFUSAL_OWNER = {"recover": "065c", "check-spine": "065b"}
 
 # retry_limit default — owner: references/stage-prompts.md § Stall Handling
-# ("同阶段重试上限缺省 2 次"). Contract test pins this constant to the owner
+# ("同阶段重试上限缺省 3 次"). Contract test pins this constant to the owner
 # literal; do not change it here without the owner document.
-RETRY_LIMIT_DEFAULT = 2
+RETRY_LIMIT_DEFAULT = 3
 
 LOOP_STATES = [
     "RUNNING", "DONE", "INCOMPLETE", "ANOMALY", "FAILED", "DEAD", "TIMEOUT",
@@ -82,13 +84,124 @@ FORMS_065A = [
 ]
 
 # ---------------------------------------------------------------------------
+# Declaration layer (Feature 084, batch 2 rows of C-044)
+#
+# Four values this engine used to spell inline are declaration-layer facts:
+#
+#   driver-stage-sequence       .specify/shared/declarations/facts/driver-stage-sequence.yaml#/statement
+#   driver-stage-artifacts      .specify/shared/declarations/facts/driver-stage-artifacts.yaml#/statement
+#   driver-completion-sentinels .specify/shared/declarations/facts/driver-completion-sentinels.yaml#/statement
+#
+# All three are read through the one shared entry (`.specify/scripts/python/declaration_reader.py`), so editing
+# a declaration changes this engine's behaviour with no edit here, and a second copy of any of these
+# values in this file is the defect the layer exists to make impossible (`C-047` steps 3–5).
+#
+# Degradation (`FR-012` / `C-049`): this engine is read-only and MUST NOT raise on a layer it cannot
+# read — a project that never received the declarations keeps evaluating. The absent fact is
+# therefore *labelled* on stderr and the pre-migration table/render/order stands; a degraded read is
+# never silent and never a pass.
+# ---------------------------------------------------------------------------
+
+READ_ENTRY_REL = Path("scripts") / "python" / "declaration_reader.py"
+STAGE_SEQUENCE_FACT = "driver-stage-sequence"
+STAGE_ARTIFACTS_FACT = "driver-stage-artifacts"
+SENTINEL_FACT = "driver-completion-sentinels"
+
+
+def declaration_entry():
+    """The declaration layer's read entry, located from this file's own resolved path.
+
+    The engine exists in three physical copies — the framework source, this repository's mirror and a
+    client project's `.specify/` — so the walk resolves each copy to its **own** layer: the nearest
+    ancestor carrying `.specify/scripts/python/declaration_reader.py` is the layer that invocation belongs to,
+    and a nested tree cannot misdirect it. Read-only: nothing is written, and the import happens only
+    once, at module load.
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / READ_ENTRY_REL
+        if candidate.is_file():
+            directory = str(candidate.parent)
+            if directory not in sys.path:
+                sys.path.insert(0, directory)
+            import declaration_reader
+            return declaration_reader
+    return None
+
+
+DECLARATIONS = declaration_entry()
+_LABELLED_FACTS = set()
+
+
+def label_absent(slug):
+    """Print the `STR-014` instance for a fact this engine could not read, once per slug.
+
+    The text comes from the layer's own `absent_label` so no second copy of the code is spelled here;
+    with the layer itself unreachable the note degrades to free text, which is all that path can
+    honestly report (`FR-013` lets the degraded wording be free).
+    """
+    if slug in _LABELLED_FACTS:
+        return
+    _LABELLED_FACTS.add(slug)
+    if DECLARATIONS is not None:
+        note = DECLARATIONS.absent_label(slug)
+    else:
+        note = "declaration layer unreachable: %s" % slug
+    sys.stderr.write("loop-state: %s\n" % note)
+
+
+def declared_statement(slug):
+    """`statement` of one fact declaration, or `None` when unreadable (labelled, never raised)."""
+    if DECLARATIONS is None:
+        label_absent(slug)
+        return None
+    try:
+        return DECLARATIONS.load_fact(
+            DECLARATIONS.find_repo(Path(__file__).resolve()), slug)["body"].get("statement")
+    except (DECLARATIONS.DeclarationError, TypeError, ValueError):
+        label_absent(slug)
+        return None
+
+
+def declared_sequence(slug):
+    """`statement` as an ordered sequence; an unreadable or malformed one is empty, and labelled."""
+    values = declared_statement(slug)
+    if not isinstance(values, list) or not values:
+        label_absent(slug)
+        return ()
+    return tuple(str(value) for value in values)
+
+
+def declared_mapping(slug):
+    """`statement` as a mapping; an unreadable or malformed one is empty, and labelled."""
+    values = declared_statement(slug)
+    if not isinstance(values, dict) or not values:
+        label_absent(slug)
+        return {}
+    return dict(values)
+
+
+#: The driver's stage order and the sentinel's shape. An empty read is `FR-012`'s compatibility path
+#: (labelled above), which the two consumers below honour instead of substituting a second copy.
+STAGE_SEQUENCE = declared_sequence(STAGE_SEQUENCE_FACT)
+SENTINEL_SHAPE = declared_mapping(SENTINEL_FACT)
+SENTINEL_PATTERN = str(SENTINEL_SHAPE.get("pattern") or "").strip()
+SENTINEL_TRANSFORM = str(SENTINEL_SHAPE.get("transform") or "").strip().lower()
+
+
+# ---------------------------------------------------------------------------
 # Stage artifact map (C-50/C-51/C-52)
 #
-# Runtime owner of "stage -> artifacts[] / owned_paths[] / commit_required /
-# no_change_allowed". Paths are relative to the resolved spec_dir; implement
-# expresses completeness through code/test commit evidence and has no file
-# artifact. references/state-awareness.md §Stage Artifact Map mirrors this table
-# item by item (contract test pins the five dimensions).
+# The value is "stage -> artifacts[] / owned_paths[] / commit_required / no_change_allowed",
+# owned by the `driver-stage-artifacts` declaration and read through the shared entry. Paths are
+# relative to the resolved spec_dir; implement expresses completeness through code/test commit
+# evidence and has no file artifact. references/state-awareness.md §Stage Artifact Map mirrors the
+# effective table item by item (contract test pins the five dimensions).
+#
+# The literal below is `FR-012`'s compatibility value: it is used only when the declaration cannot be
+# read (labelled on stderr), and it also stays the greppable assignment the isomorphism contract test
+# parses for the roster owner's stage keys — so it MUST keep its literal shape even though the
+# declaration is the authority. Its **order** is the `driver-stage-sequence` declaration's, applied
+# below; the order is never this literal's own claim.
 # ---------------------------------------------------------------------------
 
 IMPLEMENT_CODE_PATHSPEC = [
@@ -146,6 +259,89 @@ STAGE_ARTIFACTS = {
         "no_change_allowed": False,
     },
 }
+
+# ---------------------------------------------------------------------------
+# The map's authority: the `driver-stage-artifacts` declaration, when it is readable.
+#
+# A declared row is used only if it is a *complete* four-dimension row and the declared stage set
+# matches the literal's — a half-row or a tenth stage would change what "complete" means for a live
+# snapshot, so either one is reported and the literal stands rather than being half-overwritten.
+# `commit_required` / `no_change_allowed` are compared by identity downstream (`is True` / `is False`
+# in the envelope and in 065's contract test), so the declared scalars are coerced to real booleans
+# here: the declaration spells them as `true` / `false` and the subset parser hands back strings.
+# ---------------------------------------------------------------------------
+
+_FLAG_VALUES = {"true": True, "yes": True, "false": False, "no": False}
+
+
+def declared_flag(value):
+    """One declared boolean as a real `bool`, or `None` when the value is not a boolean."""
+    if isinstance(value, bool):
+        return value
+    flag = _FLAG_VALUES.get(str(value).strip().lower())
+    return flag
+
+
+def declared_artifact_row(value):
+    """One declared stage row normalized to the table's four dimensions, or `None` when malformed."""
+    if not isinstance(value, dict):
+        return None
+    row = {}
+    for key in ("artifacts", "owned_paths"):
+        item = value.get(key)
+        if not isinstance(item, list):
+            return None
+        row[key] = [str(entry) for entry in item]
+    for key in ("commit_required", "no_change_allowed"):
+        flag = declared_flag(value.get(key))
+        if flag is None:
+            return None
+        row[key] = flag
+    return row
+
+
+def apply_declared_artifacts():
+    """`(rows, code_pathspec)` — the declaration's when it is usable, the literal's otherwise."""
+    statement = declared_mapping(STAGE_ARTIFACTS_FACT)
+    declared = statement.get("stages")
+    if not isinstance(declared, dict) or not declared:
+        return STAGE_ARTIFACTS, IMPLEMENT_CODE_PATHSPEC
+    rows = {}
+    for stage, value in declared.items():
+        row = declared_artifact_row(value)
+        if row is None:
+            sys.stderr.write(
+                "loop-state: %s: stage %r is not a complete four-dimension row; "
+                "the inline table stands\n" % (STAGE_ARTIFACTS_FACT, stage))
+            return STAGE_ARTIFACTS, IMPLEMENT_CODE_PATHSPEC
+        rows[str(stage)] = row
+    if set(rows) != set(STAGE_ARTIFACTS):
+        sys.stderr.write(
+            "loop-state: %s names %d stage(s) (%s) but this engine carries %d (%s); "
+            "the inline table stands\n"
+            % (STAGE_ARTIFACTS_FACT, len(rows), ", ".join(sorted(rows)),
+               len(STAGE_ARTIFACTS), ", ".join(sorted(STAGE_ARTIFACTS))))
+        return STAGE_ARTIFACTS, IMPLEMENT_CODE_PATHSPEC
+    pathspec = statement.get("implement_code_pathspec")
+    if not isinstance(pathspec, list) or not pathspec:
+        pathspec = IMPLEMENT_CODE_PATHSPEC
+    return rows, [str(entry) for entry in pathspec]
+
+
+STAGE_ARTIFACTS, IMPLEMENT_CODE_PATHSPEC = apply_declared_artifacts()
+
+# The declared stage sequence orders the rows above; with today's declarations the order is unchanged
+# (both faces named the same eight stages in the same order on 2026-11-05), so this is the ordering
+# the table always had, now taken from its owner. A key set that does not match the declaration is a
+# wiring defect and says so instead of being swallowed — the engine still evaluates on the order it
+# carries, because a read-only snapshot may not invent a stage the table has no row for.
+if STAGE_SEQUENCE and set(STAGE_SEQUENCE) == set(STAGE_ARTIFACTS):
+    STAGE_ARTIFACTS = {stage: STAGE_ARTIFACTS[stage] for stage in STAGE_SEQUENCE}
+elif STAGE_SEQUENCE:
+    sys.stderr.write(
+        "loop-state: %s names %d stage(s) (%s) but STAGE_ARTIFACTS carries %d (%s); order not applied\n"
+        % (STAGE_SEQUENCE_FACT, len(STAGE_SEQUENCE), ", ".join(STAGE_SEQUENCE),
+           len(STAGE_ARTIFACTS), ", ".join(STAGE_ARTIFACTS)))
 
 # ---------------------------------------------------------------------------
 # Derived loop_state mapping — MIRROR of requirements.md FR-004 (the single
@@ -584,7 +780,7 @@ def watcher_defaults_from_help(watch_script):
     return defaults
 
 
-def resolve_thresholds(args, watch_script):
+def resolve_thresholds(args, watch_script, spine=None):
     # C-16: explicit -> `watch-target.sh --help` -> unknown. The help probe is
     # skipped when every threshold was given explicitly: it would be a pointless
     # invocation of the watcher script (observable side effect).
@@ -601,6 +797,9 @@ def resolve_thresholds(args, watch_script):
         "watch-target-help" if defaults else "unknown"
     )
     value_state = "known" if (explicit_any or defaults) else "unknown"
+    spine_retry = spine_field(spine, "retry_limit") if isinstance(spine, dict) else None
+    if not isinstance(spine_retry, int):
+        spine_retry = None
     return {
         "source": source,
         "value_state": value_state,
@@ -612,7 +811,7 @@ def resolve_thresholds(args, watch_script):
         if args.heartbeat_max_age is not None
         else defaults.get("heartbeat-max-age"),
         "retry_limit": args.retry_limit if args.retry_limit is not None
-        else RETRY_LIMIT_DEFAULT,
+        else (spine_retry if spine_retry is not None else RETRY_LIMIT_DEFAULT),
     }
 
 
@@ -623,9 +822,21 @@ def resolve_thresholds(args, watch_script):
 # ---------------------------------------------------------------------------
 
 def sentinel_literal(stage):
+    """The completion sentinel for `stage`, rendered from the `driver-completion-sentinels` fact.
+
+    The template and the stage-name transform are the declaration's (`pattern` / `transform`), so the
+    literal exists once in the repository. The fallback below is `FR-012`'s compatibility path, taken
+    only when the declaration cannot be read at all — and that read has already been labelled on
+    stderr by :func:`declared_mapping`, so it is a degraded reading, never a silent second definition.
+    """
     if not stage:
         return None
-    return "%s-DONE" % str(stage).upper()
+    name = str(stage)
+    if SENTINEL_TRANSFORM == "uppercase":
+        name = name.upper()
+    if SENTINEL_PATTERN:
+        return SENTINEL_PATTERN.replace("{stage}", name)
+    return "%s-DONE" % name.upper()
 
 
 def four_piece_paths(state_dir, line_id, stage):
@@ -2034,7 +2245,6 @@ def do_probe_snapshot(args):
     paths = {"state_dir": None, "spec_dir": None, "repo": None, "spine": None,
              "probe": str(probe_path), "registry_dir": None,
              "registry_path": None}
-    threshold_set = resolve_thresholds(args, None)
     remote_unreachable = shape == "unreachable"
 
     if remote_unreachable:
@@ -2075,6 +2285,7 @@ def do_probe_snapshot(args):
         stage = (args.stage or registry.get("stage")
                  or artifacts.get("stage"))
 
+    threshold_set = resolve_thresholds(args, None, spine)
     # Probe evidence carries its own freshness: no local reader runs, so the
     # view is built from the probe signals alone (C-13).
     view = build_view(signals, set(), spine, threshold_set, now)
@@ -2138,7 +2349,7 @@ def do_snapshot(args, parser):
     paths, registry, raw_registry = resolve_paths(args)
     spine = read_spine(paths)
     stage = args.stage or registry.get("stage")
-    threshold_set = resolve_thresholds(args, args.watch_script)
+    threshold_set = resolve_thresholds(args, args.watch_script, spine)
     fp = four_piece_paths(paths["state_dir"] if paths["state_dir"] else None,
                           args.line_id, stage)
 
@@ -2866,7 +3077,7 @@ def do_self_test(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(
+    parser = _sig_configure(argparse.ArgumentParser(
         prog="loop-state.py",
         description="Read-only loop state snapshot engine (Feature 065 / slice "
                     "065a): one call aggregates spine, Registry, four-piece "
@@ -2874,7 +3085,7 @@ def build_parser():
                     "verdict into a single JSON envelope.",
         epilog=HELP_EPILOG,
         formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    ))
     parser.add_argument("--action", choices=["snapshot", "recover", "check-spine"],
                         default="snapshot")
     parser.add_argument("--self-test", action="store_true", dest="self_test",
@@ -2924,6 +3135,128 @@ def main(argv=None):
         do_snapshot(args, parser)
     fail_usage("unreachable action: %s" % args.action)
 
+
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_VERSION_SOURCE = "pyproject.toml"
+_VERSION_QUOTES = chr(39) + chr(34)
+_MAX_UPWARD_LEVELS = 12
+
+
+def _bridge_version(start):
+    _here = start.resolve()
+    for _ in range(_MAX_UPWARD_LEVELS + 1):
+        if (_here / _VERSION_SOURCE).is_file() and (_here / ".git").exists():
+            try:
+                _text = (_here / _VERSION_SOURCE).read_text(encoding="utf-8")
+            except (OSError, UnicodeDecodeError):
+                return "unknown"
+            _in_project = False
+            for _raw in _text.splitlines():
+                _line = _raw.strip()
+                if not _line or _line.startswith("#"):
+                    continue
+                if _line.startswith("[") and _line.endswith("]"):
+                    _in_project = _line == "[project]"
+                    continue
+                if not _in_project:
+                    continue
+                _key, _sep, _value = _line.partition("=")
+                if _sep and _key.strip() == "version":
+                    _value = _value.strip()
+                    if len(_value) >= 2 and _value[0] == _value[-1] and _value[0] in _VERSION_QUOTES:
+                        _value = _value[1:-1]
+                    return _value or "unknown"
+            return "unknown"
+        if _here.parent == _here:
+            return "unknown"
+        _here = _here.parent
+    return "unknown"
+
+def _bridge_main():
+    import sys as _bridge_sys
+    from pathlib import Path as _bridge_path
+
+    _argv = list(_bridge_sys.argv[1:])
+    if "--version" not in _argv:
+        return
+    if "--" in _argv and _argv.index("--version") > _argv.index("--"):
+        return
+    _invoked = _bridge_sys.argv[0] if _bridge_sys.argv[0] else "."
+    _name = _bridge_path(_invoked).name or "script"
+    print("%s %s" % (_name, _bridge_version(_bridge_path(_invoked).resolve().parent)))
+    raise SystemExit(0)
+
+
+_bridge_main()
+del _bridge_main
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its executable form by
+# `.specify/scripts/python/script_interface_cli.py`. This block owns no rule of its own.)
+import sys as _sig_sys
+import pathlib as _sig_pathlib
+
+_SIG_OWNER = _sig_pathlib.Path(__file__).resolve().parent
+while not ((_SIG_OWNER / 'pyproject.toml').is_file()
+           and (_SIG_OWNER / '.git').exists()) and _SIG_OWNER.parent != _SIG_OWNER:
+    _SIG_OWNER = _SIG_OWNER.parent
+_SIG_OWNER = str(_SIG_OWNER / 'scripts' / 'python')
+if _SIG_OWNER not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_OWNER)
+
+_SIG_SCRIPT = '.specify/skills/sdd-loop-driver/scripts/loop-state.py'
+_SIG_DECLARED = ('--action', '--deadline-grace', '--heartbeat-max-age', '--line-id', '--out', '--probe', '--repo', '--retry-limit', '--self-test', '--spec-dir', '--spine', '--stage', '--start-grace', '--state-dir', '--watch-script')
+_SIG_HELP = (
+    'usage: loop-state.py [options]\n'
+    'options:\n'
+    '  --action\n  --deadline-grace\n  --heartbeat-max-age\n  --line-id\n  --out\n  --probe\n  --repo\n  --retry-limit\n  --self-test\n  --spec-dir\n  --spine\n  --stage\n  --start-grace\n  --state-dir\n  --watch-script\n'
+    '  -h, --help    print this help and exit\n'
+    '  --version     print the script name and the framework version, then exit\n'
+    +
+    'side-effects:' + ' ' + 'writes only through the options it documents; a flag-only invocation writes nothing' + '\n'
+    +
+    'exit-codes:' + ' ' + '0 success; 1 a documented check failed; 2 argument or environment error' + '\n'
+)
+
+
+def _sig_guard(argv):
+    # Answer the flags and reject an undeclared option before any parsing or write.
+    # RULES are asked of the owner (script_interface_cli.guard_argv), never restated:
+    # the declared vocabulary and the flag forms are its, and C-9 (a recognized option
+    # never rescues an unrecognized one) is its judgement. What stays local is the help
+    # BODY, because its operand sentence is this script's own.
+    try:
+        import script_interface_cli as _sig  # noqa: E402 -- deferred: a copied script may lack it
+    except ImportError:  # skill-local or sandbox copy: the module's own parser still runs
+        return list(argv)
+    line = list(argv)
+    try:
+        _sig.guard_argv(line, declared=_SIG_DECLARED)
+    except SystemExit as answered:  # what guard_argv raises; _sig_sys.exit IS SystemExit
+        if answered.code == 0:
+            raise
+        # The owner prints the rejection line and this script's help body is appended after
+        # it, so the reader sees the vocabulary and not only the refusal.
+        _sig_sys.stderr.write(_SIG_HELP)
+        raise _sig_sys.exit(answered.code)
+    # `--help` is NOT answered here: the argparse body owns the authoritative help (it names
+    # the --action choices). The guard's body is the rejection vocabulary.
+    return line
+
+
+def _sig_configure(parser):
+    # Add the two help labels the parser cannot give itself (owner: script_interface_cli).
+    try:
+        import script_interface_cli as _sig  # noqa: E402 -- deferred: a copied script may lack it
+    except ImportError:
+        return parser
+    return _sig.configure_parser(parser)
+
+if __name__ == "__main__":
+    _sig_sys.argv = [_sig_sys.argv[0]] + _sig_guard(_sig_sys.argv[1:])
+# script-interface:86:end
 
 if __name__ == "__main__":
     main()

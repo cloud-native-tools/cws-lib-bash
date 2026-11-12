@@ -20,6 +20,12 @@ Design boundaries that are contractually enforced, not stylistic:
     (C-21); no flow name is hard-coded here — they are seed data.
   * No network capability is imported (C-19); state is project-local.
   * Without --probe, no artifact file is opened (C-13).
+  * Phase-2 situation dispatch (056 registry subscription): once the turn's
+    telemetry and state are durable, the kind=engine handlers subscribed at
+    `@point:situation` are invoked as their own published engine scripts —
+    registry declarations, never a slash command or skill, so C-21's
+    boundary holds. The dispatcher skips its own action set (no recursion) and
+    is non-blocking: failures become notes, never exit codes.
 
 Usage:
   python3 trigger-utils.py --action <action> [options]
@@ -59,16 +65,93 @@ SEED_CANDIDATES = (
     Path("templates") / "proactive-trigger-seed.json",
 )
 FEEDBACK_ENGINE = Path(".specify") / "scripts" / "python" / "feedback-utils.py"
+PROBE_ENGINE_SIBLING = "probe-utils.py"
+PROBE_REGISTRY_RELPATH = Path(".specify") / "shared" / "definitions" / "probe-definitions.md"
+HANDLER_TIMEOUT_SECONDS = 60
 
-SCHEMA_VERSION = 1
-DEFAULT_CONFIG = {
-    "enabled": True,
-    "threshold": 3,
-    "telemetryWindow": 200,
-    "probeBudgetPct": 20,
-    "minSample": 5,
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
+
+# --------------------------------------------------------------------------- #
+# The state file's schema — a declaration-layer fact (Feature 084, batch 3; C-045)
+# --------------------------------------------------------------------------- #
+# The schema version, the default config, the closed action/response sets and the default threshold are
+# owned by `.specify/shared/declarations/facts/trigger-state-schema.yaml#/statement` and read here through the
+# shared read entry, so none of them is spelled in this engine again. The `_TRIGGER_FALLBACK` mapping
+# below is the **FR-012 compatibility value** for a tree with no declaration layer; when the
+# declaration is readable it is never consulted (no double read).
+TRIGGER_FACT = "trigger-state-schema"
+_TRIGGER_FALLBACK = {
+    "schema_version": 1,
+    "default_config": {"enabled": True, "threshold": 3, "telemetryWindow": 200,
+                       "probeBudgetPct": 20, "minSample": 5},
+    "actions": ["init", "assess", "record", "record-manual", "status", "rules", "reset", "config",
+                "tune", "tune-apply", "rotate"],
+    "responses": ["accepted", "declined", "ignored"],
+    "threshold_default": 3,
 }
-THRESHOLD_DEFAULT = 3
+
+
+def _declared_trigger_schema():
+    """`(statement, label)`; the labelled compatibility value when the declaration is unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), TRIGGER_FACT)["body"]
+        statement = body.get("statement")
+        if not isinstance(statement, dict) or not statement:
+            raise ValueError("statement is not a non-empty mapping")
+        return dict(statement), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return dict(_TRIGGER_FALLBACK), declaration_reader.absent_label(TRIGGER_FACT)
+
+
+def _declared_roster(statement, key):
+    """One closed roster from the declared statement; the fallback roster when the key is unusable."""
+    values = statement.get(key)
+    if not isinstance(values, list) or not values:
+        values = _TRIGGER_FALLBACK[key]
+    return tuple(str(value) for value in values)
+
+
+_TRIGGER_SCHEMA, TRIGGER_LABEL = _declared_trigger_schema()
+try:
+    SCHEMA_VERSION = int(_TRIGGER_SCHEMA.get("schema_version"))
+except (TypeError, ValueError):
+    SCHEMA_VERSION = int(_TRIGGER_FALLBACK["schema_version"])
+try:
+    THRESHOLD_DEFAULT = int(str(_TRIGGER_SCHEMA.get("threshold_default")).strip())
+except (TypeError, ValueError):
+    THRESHOLD_DEFAULT = int(_TRIGGER_FALLBACK["threshold_default"])
+
+
+def _coerce_like(value, sample):
+    """One declared scalar as the type its fallback twin has (the subset parser yields strings)."""
+    text = str(value).strip()
+    if isinstance(sample, bool):
+        return text.lower() in ("true", "1", "yes")
+    if isinstance(sample, int):
+        try:
+            return int(text)
+        except (TypeError, ValueError):
+            return sample
+    return text
+
+
+_declared_config = _TRIGGER_SCHEMA.get("default_config")
+if isinstance(_declared_config, dict) and _declared_config:
+    # Key order and types come from the fallback record (the seed's shape); the values come from the
+    # declaration, so a changed seed value lands here without an engine edit.
+    DEFAULT_CONFIG = {}
+    for key, sample in _TRIGGER_FALLBACK["default_config"].items():
+        DEFAULT_CONFIG[key] = _coerce_like(_declared_config[key], sample) \
+            if key in _declared_config else sample
+    for key in sorted(set(_declared_config) - set(_TRIGGER_FALLBACK["default_config"])):
+        DEFAULT_CONFIG[key] = _declared_config[key]
+else:
+    DEFAULT_CONFIG = dict(_TRIGGER_FALLBACK["default_config"])
+#: The clamp floor and the environment override name are this engine's own wiring, not the fact: the
+#: declaration owns the default threshold, the floor is a guard against a caller-set value of 0/1.
 THRESHOLD_FLOOR = 2
 THRESHOLD_ENV = "SPECKIT_TRIGGER_THRESHOLD"
 
@@ -78,13 +161,16 @@ PAYLOAD_MAX_LINES = 60
 PAYLOAD_MAX_CHARS = 2000
 STATUS_TEXT_MAX_LINES = 30
 
-# C-9: closed action enumeration.
-ACTIONS = (
-    "init", "assess", "record", "record-manual", "status", "rules",
-    "reset", "config", "tune", "tune-apply", "rotate",
-)
-
-RESPONSES = ("accepted", "declined", "ignored")
+# C-9: the closed action enumeration and the closed response set are derived from their declaration
+# above; no tuple is spelled here.
+# FR-012 compatibility literal, kept in the tuple shape the probe action-set validator and its
+# contract test parse statically (One Source of Truth's allowed "literal pinned in a test"). The
+# declaration is the owner and overrides this value whenever it is readable.
+ACTIONS = ("init", "assess", "record", "record-manual", "status", "rules", "reset", "config",
+           "tune", "tune-apply", "rotate")
+if _declared_roster(_TRIGGER_SCHEMA, "actions"):
+    ACTIONS = _declared_roster(_TRIGGER_SCHEMA, "actions")
+RESPONSES = _declared_roster(_TRIGGER_SCHEMA, "responses")
 PROPOSAL_KINDS = ("tighten", "suppress", "add-rule", "extend-vocabulary")
 PROPOSAL_STATES = ("proposed", "ratified", "applied", "rejected")
 RULE_STATES = ("active", "suppressed", "promoted")
@@ -732,6 +818,71 @@ def next_event_id(events: list) -> str:
     return f"{stamp}-{seq:02d}"
 
 
+def _resolve_owner_script(root: Path, owner: str):
+    """`behavior_owner` as an executable script: framework-source face first, then
+    the runtime face (downstream projects only carry `.specify/`)."""
+    for candidate in (root / owner, root / ".specify" / owner):
+        if candidate.is_file():
+            return candidate
+    return None
+
+
+def dispatch_situation_handlers(root: Path) -> list:
+    """Phase-2 `@point:situation` dispatch (056 registry subscription).
+
+    The registry's Handler/HandlerBinding rows are the subscription; this engine is
+    the situation point's dispatcher. After the telemetry row is durably written,
+    every kind=engine handler subscribed at `@point:situation` is invoked as its own
+    published engine script — except a handler whose action belongs to THIS engine's
+    own closed set (that is the situation assess handler itself; skipping it keeps
+    the dispatch non-recursive).
+
+    Non-blocking: every failure (registry absent, query failure, handler crash,
+    timeout) is recorded as a note — the assess exit code and telemetry are never
+    affected. This is also where C-21's "the engine never executes a flow" boundary
+    stays intact: dispatch targets are registry-declared engines, never a
+    slash command or skill."""
+    notes: list = []
+    registry = root / PROBE_REGISTRY_RELPATH
+    probe = Path(__file__).resolve().parent / PROBE_ENGINE_SIBLING
+    if not registry.is_file() or not probe.is_file():
+        return notes
+    try:
+        query = subprocess.run(
+            [sys.executable, str(probe), "--action", "handlers",
+             "--point", "situation", "--kind", "engine", "--format", "json",
+             "--workspace-root", str(root)],
+            capture_output=True, text=True, timeout=HANDLER_TIMEOUT_SECONDS)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return [f"situation-handler query failed: {type(exc).__name__}"]
+    if query.returncode != 0:
+        return [f"situation-handler query rc={query.returncode}"]
+    try:
+        handlers = json.loads(query.stdout).get("handlers", [])
+    except ValueError:
+        return ["situation-handler query returned non-JSON"]
+    for handler in handlers:
+        action = str(handler.get("action", "")).strip("`")
+        owner = str(handler.get("behavior_owner", ""))
+        handler_id = str(handler.get("handler_id", "?"))
+        if not action or action in ACTIONS:
+            continue  # h-situation-assess is this dispatcher itself
+        script = _resolve_owner_script(root, owner)
+        if script is None:
+            notes.append(f"situation-handler {handler_id}: owner not found ({owner})")
+            continue
+        try:
+            proc = subprocess.run(
+                [sys.executable, str(script), "--action", action],
+                cwd=str(root), capture_output=True, text=True,
+                timeout=HANDLER_TIMEOUT_SECONDS)
+            state = "ok" if proc.returncode == 0 else f"rc={proc.returncode}"
+        except (OSError, subprocess.SubprocessError) as exc:
+            state = f"failed ({type(exc).__name__})"
+        notes.append(f"situation-handler {handler_id}: {state}")
+    return notes
+
+
 def action_assess(root: Path, args) -> tuple:
     errors, warnings, notes, semantic = [], [], [], []
     signals = list(args.signal or [])
@@ -847,6 +998,10 @@ def action_assess(root: Path, args) -> tuple:
             "suggested": True, "ts": row["ts"],
         }
     write_index_atomic(root, state)
+
+    # 056 phase-2: the situation point's engine handlers run after the turn's own
+    # telemetry and state are durable (non-blocking; failures land in notes only).
+    notes.extend(dispatch_situation_handlers(root))
 
     rendered = json.dumps(payload, ensure_ascii=False, indent=2)
     if len(rendered) > PAYLOAD_MAX_CHARS or len(rendered.splitlines()) > PAYLOAD_MAX_LINES:
@@ -1405,6 +1560,8 @@ def build_parser() -> argparse.ArgumentParser:
         prog="trigger-utils.py",
         description="Proactive flow trigger engine (deterministic half).",
     )
+    _sig_configure(parser)
+
     parser.add_argument("--action", required=True, choices=list(ACTIONS))
     parser.add_argument("--format", default="json", choices=["text", "json"])
     parser.add_argument("--workspace", default=None)
@@ -1453,7 +1610,31 @@ def emit(env: dict, fmt: str) -> None:
         sys.stdout.write(json.dumps(env, ensure_ascii=False, indent=2) + "\n")
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--action', '--format', '--workspace', '--session', '--turn-id', '--stage', '--signal', '--probe', '--compliance-done', '--rule', '--response', '--flow', '--threshold', '--enabled', '--window', '--probe-budget', '--proposal', '--reason', '--all', '--min-sample'], unknown_exit=EXIT_USAGE)  # answer --version / reject an undeclared option at this engine's documented usage exit
     parser = build_parser()
     try:
         args = parser.parse_args(argv)
@@ -1464,6 +1645,10 @@ def main(argv=None) -> int:
         return EXIT_USAGE
 
     root = resolve_root(args.workspace)
+    # FR-012 / FR-013: a tree without the declaration layer keeps working on the labelled
+    # compatibility value — the label is a reading of the wiring, never a pass.
+    if TRIGGER_LABEL:
+        print(TRIGGER_LABEL, file=sys.stderr)
     handler = HANDLERS.get(args.action)
     if handler is None:  # pragma: no cover - argparse choices already guard this
         emit(envelope(args.action, root, ["identifier-malformed"], [], [], [], {}),

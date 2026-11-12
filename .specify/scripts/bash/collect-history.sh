@@ -10,56 +10,85 @@
 #   collect-history.sh --action manifest-update --tool claude --sids-file <f> --json
 
 # Load common helpers for Unicode support and shared functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/common.sh" ]; then
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/common.sh"
-  ensure_utf8_locale || true
-else
-  echo "Failed to load common.sh, spec-kit framework not installed correctly" >&2
-  exit 1
+
+# script-interface: the sourceable guard block (086) lives in script-interface.sh
+# It sits above this script's own parsing and above `source common.sh`: a shared
+# library's top-level checks would otherwise turn `--help` into a non-zero exit, and
+# the flags must win over any write. Authority: .specify/shared/definitions/
+# script-interface-definitions.md section 4.
+SCRIPT_INTERFACE_LIB="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/script-interface.sh"
+if [ -f "$SCRIPT_INTERFACE_LIB" ]; then
+    # shellcheck source=/dev/null
+    . "$SCRIPT_INTERFACE_LIB"
+    script_interface_guard entry
+    script_interface_guard define name="$0" \
+        usage="[--action ACTION] [--tool TOOL] [--json] [--project DIR] [--sids-file FILE]" \
+        effects="forwards to history-utils.py, which writes under .specify/history/ when the action is a writing one; the flags write nothing" \
+        codes="0 answered; non-zero from history-utils.py (2 an input error); 2 an unrecognized option" \
+        writes=--action \
+        -- --action --tool --json --project --sids-file --show-toplevel
+    script_interface_guard guard "$@"
 fi
 
-set -e
+main() {
 
-# Resolve repo root (git first, then by script location)
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-  ROOT_DIR=$(git rev-parse --show-toplevel)
-else
-  case "$SCRIPT_DIR" in
-    */.specify/scripts/bash)
-      ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
-      ;;
-    *)
-      ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-      ;;
-  esac
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/common.sh" ]; then
+      # shellcheck source=/dev/null
+      source "$SCRIPT_DIR/common.sh"
+      ensure_utf8_locale || true
+    else
+      echo "Failed to load common.sh, spec-kit framework not installed correctly" >&2
+      exit 1
+    fi
+
+    set -e
+
+    # Resolve repo root (git first, then by script location)
+    if git rev-parse --show-toplevel >/dev/null 2>&1; then
+      ROOT_DIR=$(git rev-parse --show-toplevel)
+    else
+      case "$SCRIPT_DIR" in
+        */.specify/scripts/bash)
+          ROOT_DIR="$(cd "$SCRIPT_DIR/../../.." && pwd)"
+          ;;
+        *)
+          ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+          ;;
+      esac
+    fi
+
+    # Prefer the runtime python copy under .specify, fall back to the source tree
+    SPECIFY_PY_DIR="$ROOT_DIR/.specify/scripts/python"
+    if [ -f "$SPECIFY_PY_DIR/history-utils.py" ]; then
+      PY_SCRIPTS_DIR="$SPECIFY_PY_DIR"
+    else
+      PY_SCRIPTS_DIR="$ROOT_DIR/scripts/python"
+    fi
+
+    HISTORY_UTILS_SCRIPT="$PY_SCRIPTS_DIR/history-utils.py"
+
+    if [ ! -f "$HISTORY_UTILS_SCRIPT" ]; then
+      echo "history-utils.py not found (looked in $PY_SCRIPTS_DIR)" >&2
+      exit 1
+    fi
+
+    # Pick a python interpreter
+    PY_BIN="${PYTHON:-python3}"
+    command -v "$PY_BIN" >/dev/null 2>&1 || PY_BIN=python
+
+    # Always pin the project root so the engine resolves paths deterministically,
+    # unless the caller already specified one.
+    case " $* " in
+      *" --project "*) PROJECT_ARGS=() ;;
+      *)               PROJECT_ARGS=(--project "$ROOT_DIR") ;;
+    esac
+
+    exec "$PY_BIN" "$HISTORY_UTILS_SCRIPT" "${PROJECT_ARGS[@]}" "$@"
+
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
 fi
-
-# Prefer the runtime python copy under .specify, fall back to the source tree
-SPECIFY_PY_DIR="$ROOT_DIR/.specify/scripts/python"
-if [ -f "$SPECIFY_PY_DIR/history-utils.py" ]; then
-  PY_SCRIPTS_DIR="$SPECIFY_PY_DIR"
-else
-  PY_SCRIPTS_DIR="$ROOT_DIR/scripts/python"
-fi
-
-HISTORY_UTILS_SCRIPT="$PY_SCRIPTS_DIR/history-utils.py"
-
-if [ ! -f "$HISTORY_UTILS_SCRIPT" ]; then
-  echo "history-utils.py not found (looked in $PY_SCRIPTS_DIR)" >&2
-  exit 1
-fi
-
-# Pick a python interpreter
-PY_BIN="${PYTHON:-python3}"
-command -v "$PY_BIN" >/dev/null 2>&1 || PY_BIN=python
-
-# Always pin the project root so the engine resolves paths deterministically,
-# unless the caller already specified one.
-case " $* " in
-  *" --project "*) PROJECT_ARGS=() ;;
-  *)               PROJECT_ARGS=(--project "$ROOT_DIR") ;;
-esac
-
-exec "$PY_BIN" "$HISTORY_UTILS_SCRIPT" "${PROJECT_ARGS[@]}" "$@"

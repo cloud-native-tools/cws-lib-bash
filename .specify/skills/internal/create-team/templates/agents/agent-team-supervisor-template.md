@@ -7,7 +7,7 @@ supervisor: true
 role-scope: team-supervisor
 model-tier: auto
 capability-tools: [Read, Grep, Glob, Bash, Write, Edit]
-run-turn-budget: 20
+run-turn-budget: 500
 display-color: red
 ---
 You are the **Team Supervisor** for the {{PROJECT_NAME}} project.

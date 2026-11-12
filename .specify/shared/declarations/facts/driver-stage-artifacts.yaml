@@ -1,0 +1,79 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044, row `driver-stage-artifacts`).
+#
+# The one machine-read copy of the loop driver's stage artifact map: per stage, the required
+# artifacts, the conditional owned paths, the commit obligation and whether a no-change outcome is
+# allowed — plus implement's code/test pathspec, which is the one stage whose completeness is commit
+# evidence rather than a file. The engine `.specify/skills/sdd-loop-driver/scripts/loop-state.py`
+# reads it through `.specify/scripts/python/declaration_reader.py`; the carrier reaches it by
+# `.specify/shared/declarations/facts/driver-stage-artifacts.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's `STAGE_ARTIFACTS` table and the carrier's
+# § Stage Artifact Map listed the same eight rows with the same four dimensions on 2026-11-05, so the
+# rows themselves did not drift; the carrier attribution did (see `note`).
+fact: driver-stage-artifacts
+kind: mapping
+statement:
+  stages:
+    requirements:
+      artifacts:
+        - requirements.md
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: false
+    clarify:
+      artifacts:
+        - requirements.md
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: true
+    plan:
+      artifacts:
+        - plan.md
+        - data-model.md
+        - contracts/
+        - quickstart.md
+        - feature-ref.md
+      owned_paths:
+        - research.md
+      commit_required: true
+      no_change_allowed: false
+    tasks:
+      artifacts:
+        - tasks.md
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: false
+    checklist:
+      artifacts:
+        - checklists/
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: false
+    analyze:
+      artifacts: []
+      owned_paths: []
+      commit_required: false
+      no_change_allowed: true
+    implement:
+      artifacts: []
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: false
+    review:
+      artifacts:
+        - review.md
+      owned_paths: []
+      commit_required: true
+      no_change_allowed: false
+  implement_code_pathspec:
+    - src/
+    - skills/
+    - .specify/scripts/
+    - tests/
+    - .specify/templates/
+    - agents/
+consumers:
+  - .specify/skills/sdd-loop-driver/scripts/loop-state.py
+former_carriers:
+  - .specify/skills/sdd-loop-driver/references/state-awareness.md
+note: "Row order is not part of this statement: the order is the `driver-stage-sequence` fact's, and the engine applies it to these rows. `implement` carries empty `artifacts` on purpose — its completeness is commit evidence over `implement_code_pathspec`, never a file. `owned_paths` are conditional (present ⇒ in the commit path set, absent ⇒ not incomplete). Roster correction: C-044's carrier column said `same carrier` (SKILL.md), but SKILL.md's § References states it only cites the references' sections and never restates their tables; the table measured on 2026-11-05 lives in `references/state-awareness.md` § Stage Artifact Map (which also re-spells the code pathspec in its 读表要点), so that is the corrected carrier. That mirror stays: `tests/contract/test_loop_state_contract.py` pins it to the engine row by row, so it is a test-pinned duplicate rather than a free-floating second face, and deleting it is 065's contract change, not this batch's. The engine keeps its literal table as the FR-012 degradation value and takes these rows when the declaration is readable, because `tests/contract/test_isomorphism_map.py` parses that literal as the roster owner's stage keys."

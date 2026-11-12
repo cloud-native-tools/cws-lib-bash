@@ -7,6 +7,9 @@ skill_id: "<SKILL:.specify/skills/internal/implement-feature/SKILL.md>"
 
 # implement-feature
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Turn the current feature's `tasks.md` into a **completed, verified, committed
@@ -175,9 +178,12 @@ and everything after it (including a `git commit`) never happens while the check
 reports success. Use `;`, or append `|| true`, and confirm the chain's tail actually
 executed.
 
-**Test runs**: prefer the canonical runner `.specify/scripts/bash/run-tests.sh` (resolves the
-pytest interpreter once, pipe-safe) for baseline and regression tasks instead of ad-hoc
-`python -m pytest | tail` pipelines whose exit codes mask interpreter failures.
+**Test runs — the runner is the only entry**: every test execution in this skill MUST go through
+`.specify/scripts/bash/run-tests.sh` (its default is the parallel form `-n <effective> --dist load`; test
+paths and further arguments are forwarded to the framework — single-test debugging included, it
+MUST NOT be used as a reason to bypass the runner). Direct interpreter-level test commands (the
+bare test CLI or its `-m` module entry) are forbidden here, and a pipeline that pipes test output
+is forbidden because it masks the exit code.
 **Baseline captures names, not just counts**: record the baseline with
 `--names-out <spec-dir>/baseline-failed.txt` and re-run regression the same way, so
 zero-new-failures is proven by `comm -13 baseline current` instead of count archaeology.
@@ -190,8 +196,8 @@ unanchored baseline produces refactor-unrelated false diffs that need a live con
 experiment to attribute.
 
 **Assert suite collection, not just totals**: when a task expects a specific suite to
-run, verify that suite's collection count (`pytest --collect-only -q <path>`) is non-zero
-/ matches intent — pytest only collects `test_*.py` by default, so suites named otherwise
+run, verify that suite's collection count (`bash .specify/scripts/bash/run-tests.sh <path> --collect-only -q`) is non-zero
+/ matches intent — the test framework only collects `test_*.py` by default, so suites named otherwise
 (e.g. `contract_*.py`) are silently skipped while the total pass count stays green.
 
 **Runnable-runner probe**: a baseline whose collection fails (e.g.
@@ -258,6 +264,12 @@ All tasks `[X]` or `[~]` (no `[ ]` remaining). Features match spec. Tests pass.
   **run scope** — it resets to zero at the start of every run (it is never a cross-run
   total), and its current value is written into `verification.md` so a resumed run reads
   the real count instead of inheriting a stale one.
+- **Closure verdict re-validation** (the status-liberating judgement): re-run
+  `python3 .specify/scripts/python/closure-acceptance-check.py --spec-dir <REQUIREMENTS_DIR>` against the
+  tree this gate is about to close, exactly as Step 9 states it. A verdict read earlier in the run
+  is a measurement of an older tree, not evidence about this one — and the four conditions it
+  answers are owned by `.specify/shared/workflow/acceptance-hardening.md`, not by this step.
+
 - **Gate-premise decay** (named action): when a premise a gate item or DoD row rests on —
   a frozen SHA, a line number, a count — is falsified by measurement, re-reference the
   premise, measure the new form **more strictly, never more loosely**, and annotate the
@@ -315,6 +327,17 @@ Pre-Status-Flip Gate. Populate `REQUIREMENTS_DIR/verification.md` from
 `SC-NNN_status` vocabulary, so draw every status from the set it declares and MUST NOT
 narrow it to a subset (a gate or DoD row reading `pass|deferred` silently forbids an
 honest `partial`).
+
+- **Closure verdict — the status-landing judgement**: before the flip, run
+  `python3 .specify/scripts/python/closure-acceptance-check.py --spec-dir <REQUIREMENTS_DIR>` from the
+  repository root. That command is the one source of the verdict, the closed reason set and the
+  `final_path` counts; their schema owner is `.specify/shared/workflow/acceptance-hardening.md` § Closure
+  Verdict, and this step calls it by path instead of restating a condition. It MUST NOT be
+  replaced by a model judgement, another script, or an ad-hoc grep over the artifacts. On `block`,
+  land `Blocked` — recording the emitted reasons in `verification.md` — and MUST NOT write
+  `Implemented`; on `accept`, continue with the gate below. Exit `2` is an input defect in the
+  artifacts: repair it and re-run, and never read it as `accept`.
+
 
 > Gate probe: gate-implement-evidence-binding — after populating the evidence
 > records, run the binding check per the template's declared rules: every sample
@@ -403,7 +426,7 @@ gate's approval routing in step 8). After implementation, generate commit comman
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -413,3 +436,4 @@ gate's approval routing in step 8). After implementation, generate commit comman
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:implement-feature" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

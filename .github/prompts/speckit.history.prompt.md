@@ -1,4 +1,6 @@
 <!-- AUTO-GENERATED from templates/commands/history.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
+> **Concurrency obligation（执行义务，按指针抵达）**: this command is an execution body — consider concurrency first, default to it when the class and capability allow, and, when serial, name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## User Input
 
 ```text
@@ -15,13 +17,16 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 The executable core of this command is the **`manage-history`** skill (`.specify/skills/internal/manage-history/SKILL.md`): it distills the current AI tool's past conversations for this project into a durable, theme-aggregated knowledge base under `.specify/history/`. This template keeps entry, user input, and the wrap-up lifecycle only.
 
 - **Inputs**: the `$ARGUMENTS` parameters processed above, plus the JSON output of the frontmatter `scripts:` entry (`.specify/scripts/bash/collect-history.sh --json`, the collect-history locate step) identifying tool, session store, session count, and the manifest path; `--full` for a full reprocess; optional theme/date-range/topic narrowing.
-- **How to call**: read the skill and follow its Workflow (Steps 1–6) — tool & project identification with the support/empty-store gates, clean-session extraction (trivial sessions skipped, never silently), five-dimension distillation (decisions & rationale / reusable lessons / open TODOs / key interaction flows / user↔model conflicts), theme aggregation with incremental merge, manifest update, run report.
-- **Outputs**: the `.specify/history/` document set (`README.md` index, `00-cross-cutting-lessons.md`, one `NN-<theme-slug>.md` per theme) plus `.manifest.json`, and the run report (distilled vs skipped sessions with reasons, themes created/updated, output location).
-- **Safety rules** are owned by the skill: read-only on the session store, no verbatim dumps, no silent truncation, unsupported tools stop cleanly.
+- **How to call**: read the skill and follow its Workflow — the four-stage seam (`Step 0` / `Step A` / `Step B`) and the distillation pipeline (Steps 1–6, with the execute segment at `Step 6`'s position) — tool & project identification with the support/empty-store gates, clean-session extraction (trivial sessions skipped, never silently), five-dimension distillation (decisions & rationale / reusable lessons / open TODOs / key interaction flows / user↔model conflicts), theme aggregation with incremental merge, manifest update, run report.
+- **Four-stage execution form**: the run is **回顾 (review) → 设计（方案） (design) → 用户确认 (user confirm) → 执行 (execute)**, in that order and under those names. Review (`Step 0`) and design (`Step A`) write nothing: two snapshots (`git status --porcelain=v1` full text + content hashes over the declared root set) MUST be byte-identical, a temporary plan may live only under `.specify/.tmp/` and the execute segment removes it, and no tracked path is written before confirmation. Confirmation (`Step B`) is a closed three-value choice — `group` (default when absent) / `item` / `none-of`, never "one confirmation = everything"; an unconfirmed entry stays visible as `unconfirmed`, is not retried automatically next round, and is outside this round's closure. Execute takes `Step 6`'s position, writes only the confirmed set at group boundaries, and records one evidence file per group under `.specify/specs/<spec-dir>/test-evidence/` carrying the four segments `readings` / `paths` / `corpus` / `dispositions`.
+- **Seam pointer**: the seam's owner is `.specify/skills/internal/manage-history/SKILL.md` (Steps 0 / A / B plus the execute segment at `Step 6`'s position); this template enumerates the four stages and restates none of their rules. The disposition vocabulary stays owned by `.specify/shared/definitions/non-disposable-definitions.md` § Disposition Set, and the evidence file shape by the spec's `data-model.md` § E-7.
+- **Outputs**: the `.specify/history/` document set (`README.md` index, `00-cross-cutting-lessons.md`, one `NN-<theme-slug>.md` per theme) plus the incremental manifest, and the run report (distilled vs skipped sessions with reasons, themes created/updated, output location).
+- **The manifest's schema is not stated here**: its file name, its top-level keys and its per-session entry key are owned by `.specify/shared/declarations/facts/history-manifest-schema.yaml#/statement`, read by `.specify/scripts/python/history-utils.py`. This template names the manifest by its role (the incremental tracking record) and reaches its shape by that pointer.
+- **Safety rules** are owned by the skill: read-only on the session store, no verbatim dumps, no silent truncation, unsupported tools stop cleanly, no write before confirmation.
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.history" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
    尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
@@ -29,6 +34,7 @@ The executable core of this command is the **`manage-history`** skill (`.specify
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "/speckit.history" --unit-type command --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"
 
 ## Handoffs
 

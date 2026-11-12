@@ -17,6 +17,21 @@
 > 切片 Class 的 Object 单元为引擎脚本路径); external ids carry the `ext-`
 > prefix and `custom:` units. Validate with `--action probes --validate`.
 
+## 机器可读取值(三重结构)
+
+本文件拥有 probe 注册表的**行与判据**;它的**取值域**不在这里,而在 `.specify/shared/declarations/`
+的声明层,由引擎经 `.specify/scripts/python/declaration_reader.py` 读取:
+
+| 取值域 | owner 指针 | 读取者 |
+|--------|-----------|--------|
+| probe kind 域、Class 字段序、handler 的 kind/mode 域、lifecycle point 域、binding scope 域 | `.specify/shared/declarations/facts/probe-class-values.yaml#/statement` | `.specify/scripts/python/probe-utils.py` |
+| Object 字段序、派生 `probe-map` 的文件名、「非实体 probe 目录」章的解析标题与条目形态 | `.specify/shared/declarations/facts/probe-object-binding-map.yaml#/statement` | `.specify/scripts/python/probe-utils.py` |
+| `exec-quant` 记录的 schema(版本、受控词表、11 个 config 字段、逐动作参数清单) | `.specify/shared/declarations/facts/quant-record-schema.yaml#/statement` | `.specify/scripts/python/exec-quant.py` |
+
+本文件因此只保留:Class 行(Object 的归属与锚点)、Object 行、五条不变式,以及「派生视图
+MUST 由本文件重建」这条判据。表头与目录章的形态是解析面——它必须写在文件里才能被解析——
+但**成员集合**的 owner 是上表的声明,不是本文件。
+
 ## Slices
 
 - commands — 框架命令模板域
@@ -39,13 +54,14 @@
 | run-determination | internal | 运行判定四轴测量与两个可用性探测(token/elapsed/artifact_correctness/satisfaction;session store / evidence lane) | scripts | determine→session-record→route-into-feedback | wrap-up | `.specify/scripts/python/run-determination.py`:`AXES`,`probe_session_store`,`probe_evidence_lane` |
 | evidence-lane | internal | 证据引擎 lane 的可用性探测(node 运行时 / session store / 平台存储清单) | scripts | collect→findings.json | collect | `.specify/scripts/python/evidence-utils.py`:`LANE_NAMES`,`probe_node`,`probe_session_store`,`probe_platforms` |
 | exec-quant | internal | 受测单元执行的环境与质量遥测采集(agent 程序 / LLM 详细 / 质量指标;exec-quant durable store,Recording Only) | scripts | collect→durable-record | wrap-up | `.specify/scripts/python/exec-quant.py`:`ACTIONS`,`build_record`,`resolve_run_identity` |
+| closeout-step | internal | 收口步骤的可观察结局(签名面一次编译即得:Close-out 节的存在性与顺序;规则真源 owner 为 artifact-commit-step.md) | skills | compile→embed | wrap-up | `.specify/skills/git-utils/references/closeout-commands.md`:`## Deriving the sequence` |
 
 ## Objects
 
 > SC-001 对账基准(历史快照,仅作当时留痕,不代表当前数量):彼时的隐式埋点
 > 与嵌入点清单一一对应,`/speckit.feedback` 命令自身的 Object 随命令模板落地
 > 同变更登记(见 contracts/probe-registry.md C-3.4)。当前生效的埋点集合以本
-> 注册表为准,用 `feedback-utils.py --action probes --validate` 读取与对账,
+> 注册表为准,用 `probe-utils.py --action probes --validate` 读取与对账,
 > MUST NOT 在他处复写计数。
 >
 > 51–70 行为 044 Phase 7 的门控必要性 probe(insertion_type=confirm-gate):
@@ -65,6 +81,8 @@
 | speckit-checklist-wrapup | command-wrapup | /speckit.checklist | wrap-up |
 | speckit-clarify-wrapup | command-wrapup | /speckit.clarify | wrap-up |
 | speckit-derive-wrapup | command-wrapup | /speckit.derive | wrap-up |
+| speckit-measure-wrapup | command-wrapup | /speckit.measure | wrap-up |
+| speckit-status-wrapup | command-wrapup | /speckit.status | wrap-up |
 | speckit-docs-wrapup | command-wrapup | /speckit.docs | wrap-up |
 | speckit-goal-wrapup | command-wrapup | /speckit.goal | wrap-up |
 | speckit-history-wrapup | command-wrapup | /speckit.history | wrap-up |
@@ -77,6 +95,7 @@
 | speckit-research-wrapup | command-wrapup | /speckit.research | wrap-up |
 | speckit-review-wrapup | command-wrapup | /speckit.review | wrap-up |
 | speckit-sanitize-wrapup | command-wrapup | /speckit.sanitize | wrap-up |
+| speckit-seal-wrapup | command-wrapup | /speckit.seal | wrap-up |
 | speckit-session-wrapup | command-wrapup | /speckit.session | wrap-up |
 | speckit-skills-wrapup | command-wrapup | /speckit.skills | wrap-up |
 | speckit-tasks-wrapup | command-wrapup | /speckit.tasks | wrap-up |
@@ -92,11 +111,13 @@
 | skill-create-skills-wrapup | skill-wrapup | skill:create-skills | wrap-up |
 | skill-create-team-wrapup | skill-wrapup | skill:create-team | wrap-up |
 | skill-create-tools-wrapup | skill-wrapup | skill:create-tools | wrap-up |
+| skill-debt-audit-wrapup | skill-wrapup | skill:debt-audit | wrap-up |
 | skill-database-utils-wrapup | skill-wrapup | skill:database-utils | wrap-up |
 | skill-document-utils-wrapup | skill-wrapup | skill:document-utils | wrap-up |
 | skill-draw-diagram-wrapup | skill-wrapup | skill:draw-diagram | wrap-up |
 | skill-git-utils-wrapup | skill-wrapup | skill:git-utils | wrap-up |
-| skill-humanize-wrapup | skill-wrapup | skill:humanize | wrap-up |
+| skill-ssh-utils-wrapup | skill-wrapup | skill:ssh-utils | wrap-up |
+| skill-humanize-wrapup | skill-wrapup | skill:humanize-conclusion | wrap-up |
 | skill-sdd-loop-driver-cli-profile | skill-wrapup | skill:sdd-loop-driver | wrap-up |
 | gate-git-workflow-tiered-mode | skill-gate | skill:git-utils | gate-git-workflow-tiered-mode |
 | skill-improve-agent-wrapup | skill-wrapup | skill:improve-agent | wrap-up |
@@ -111,9 +132,11 @@
 | skill-self-improvement-wrapup | skill-wrapup | skill:self-improvement | wrap-up |
 | skill-sdd-project-setup-wrapup | skill-wrapup | skill:sdd-project-setup | wrap-up |
 | skill-sdd-house-keeping-wrapup | skill-wrapup | skill:sdd-house-keeping | wrap-up |
-| skill-study-project-wrapup | skill-wrapup | skill:study-project | wrap-up |
+| skill-study-code-wrapup | skill-wrapup | skill:study-code | wrap-up |
+| skill-study-online-wrapup | skill-wrapup | skill:study-online | wrap-up |
+| skill-study-kb-wrapup | skill-wrapup | skill:study-kb | wrap-up |
 | skill-summarize-project-wrapup | skill-wrapup | skill:summarize-project | wrap-up |
-| skill-think-skills-wrapup | skill-wrapup | skill:think-skills | wrap-up |
+| skill-coaching-skills-wrapup | skill-wrapup | skill:coaching-skills | wrap-up |
 | speckit-feedback-wrapup | command-wrapup | /speckit.feedback | wrap-up |
 | gate-feature-status-regression | command-gate | /speckit.feature | gate-feature-status-regression |
 | gate-implement-checklist-waiver | command-gate | /speckit.implement | gate-implement-checklist-waiver |
@@ -156,6 +179,7 @@
 | eq-probe-host-process | exec-quant | .specify/scripts/python/exec-quant.py | wrap-up |
 | eq-probe-host-config | exec-quant | .specify/scripts/python/exec-quant.py | wrap-up |
 | eq-probe-determination-link | exec-quant | .specify/scripts/python/exec-quant.py | wrap-up |
+| closeout-step-observe | closeout-step | skill:git-utils | wrap-up |
 | skill-analyze-artifacts-wrapup | skill-wrapup | skill:analyze-artifacts | wrap-up |
 | skill-clarify-artifact-wrapup | skill-wrapup | skill:clarify-artifact | wrap-up |
 | skill-create-checklist-wrapup | skill-wrapup | skill:create-checklist | wrap-up |
@@ -172,12 +196,14 @@
 | skill-manage-instructions-wrapup | skill-wrapup | skill:manage-instructions | wrap-up |
 | skill-manage-todo-wrapup | skill-wrapup | skill:manage-todo | wrap-up |
 | skill-research-feature-wrapup | skill-wrapup | skill:research-feature | wrap-up |
+| skill-review-feature-quality-wrapup | skill-wrapup | skill:review-feature-quality | wrap-up |
 | skill-review-sdd-process-wrapup | skill-wrapup | skill:review-sdd-process | wrap-up |
 | skill-run-agent-wrapup | skill-wrapup | skill:run-agent | wrap-up |
 | skill-run-interview-wrapup | skill-wrapup | skill:run-interview | wrap-up |
 | skill-run-skills-wrapup | skill-wrapup | skill:run-skills | wrap-up |
 | skill-run-team-wrapup | skill-wrapup | skill:run-team | wrap-up |
 | skill-sanitize-materials-wrapup | skill-wrapup | skill:sanitize-materials | wrap-up |
+| skill-seal-artifact-wrapup | skill-wrapup | skill:seal-artifact | wrap-up |
 
 ## Handler
 
@@ -205,9 +231,12 @@
 | h-threshold-notice | agent | Threshold prompt protocol (canonical semantics for step 6) | non-blocking | 30 | .specify/shared/workflow/feedback-step.md |
 | h-token-reflection | agent | Reflection procedure (the embedded step points here) | non-blocking | 40 | .specify/shared/workflow/feedback-step.md |
 | h-docs-sync-eval | agent | Evaluation procedure (the embedded step points here) | non-blocking | 50 | .specify/shared/workflow/docs-step.md |
+| h-closeout | agent | The `## Close-out` step | non-blocking | 60 | .specify/shared/workflow/artifact-commit-step.md |
 | h-situation-assess | engine | assess | non-blocking | 10 | .specify/scripts/python/trigger-utils.py |
+| h-git-workflow-observe | engine | observe | non-blocking | 20 | .specify/scripts/python/git-workflow-observe.py |
 | h-team-phase-summary | agent | Summary Refresh (all patterns) | non-blocking | 20 | .specify/skills/internal/create-team/SKILL.md |
 | h-gate-evidence | gate | 门控观察协议 (Gate Observation Protocol) | non-blocking | 30 | .specify/shared/guidelines/confirmation-gates.md |
+| h-decision-gate | gate | Decision gate (two-axis classification) | non-blocking | 40 | .specify/shared/guidelines/confirmation-gates.md |
 
 ## HandlerBinding
 
@@ -219,7 +248,9 @@
 | handler_id | selector | scope | 覆盖说明 |
 |------------|----------|-------|----------|
 | h-situation-assess | @point:situation | all | 050 情境评估:每回合环境评估与建议遥测(trigger-utils.py assess);非单元编译面,声明性订阅 |
+| h-git-workflow-observe | @point:situation | all | git-utils 作用域 A:情境评估回合刷新 `.specify/workflow/git.md` 的机器观测小节(观测非声明;声明只经 Bootstrap + 用户确认变更) |
 | h-team-phase-summary | @point:phase-boundary | skill-create-team-wrapup | 036 团队阶段边界总结:create-team 驱动的团队执行流在阶段边界刷新 goal 级总结 |
+| h-decision-gate | @point:confirm-gate | all | 决策门:每次向用户中断前按两轴定级(授权级别 × 影响范围)判定自动修复或询问(2026-11-10 用户裁定) |
 | h-gate-evidence | @point:confirm-gate | gate-create-docs-tiered-disposition | 044 门控必要性证据(逐 gate Object) |
 | h-gate-evidence | @point:confirm-gate | gate-create-docs-write-plan | 044 门控必要性证据(逐 gate Object) |
 | h-gate-evidence | @point:confirm-gate | gate-create-team-agent-reuse | 044 门控必要性证据(逐 gate Object) |
@@ -248,6 +279,7 @@
 | h-feedback-record | @point:wrap-up | all | 69 单元现均有反馈记录面 |
 | h-threshold-notice | @point:wrap-up | all | 消费 h-run-determination 判定结果(order 10 → 30 次序约束 FR-008/FR-014) |
 | h-token-reflection | @point:wrap-up | all | owner 链:Token 效率自评在 Reflection procedure step 2 |
+| h-closeout | @point:wrap-up | all | 091 收口步骤:每单元 wrap-up 在 Run Determination / exec-quant / Feedback 与 Documentation 步骤之后执行提交-合并-推送序列,行为归 artifact-commit-step.md § Close-out |
 | h-docs-sync-eval | @point:wrap-up | skill-humanize-wrapup | humanize 技能的 Documentation 面(062;技能侧首个 docs 绑定) |
 | h-docs-sync-eval | @point:wrap-up | speckit-analyze-wrapup | /speckit.analyze 的 Documentation 面(T019 矩阵;正枚举,免扣减语义) |
 | h-docs-sync-eval | @point:wrap-up | speckit-checklist-wrapup | /speckit.checklist 的 Documentation 面 |
@@ -264,6 +296,8 @@
 | h-docs-sync-eval | @point:wrap-up | speckit-requirements-wrapup | /speckit.requirements 的 Documentation 面 |
 | h-docs-sync-eval | @point:wrap-up | speckit-research-wrapup | /speckit.research 的 Documentation 面 |
 | h-docs-sync-eval | @point:wrap-up | speckit-review-wrapup | /speckit.review 的 Documentation 面 |
+| h-docs-sync-eval | @point:wrap-up | speckit-measure-wrapup | /speckit.measure 的 Documentation 面 |
+| h-docs-sync-eval | @point:wrap-up | speckit-status-wrapup | /speckit.status 的 Documentation 面 |
 | h-docs-sync-eval | @point:wrap-up | speckit-sanitize-wrapup | /speckit.sanitize 的 Documentation 面 |
 | h-docs-sync-eval | @point:wrap-up | speckit-session-wrapup | /speckit.session 的 Documentation 面 |
 | h-docs-sync-eval | @point:wrap-up | speckit-skills-wrapup | /speckit.skills 的 Documentation 面 |

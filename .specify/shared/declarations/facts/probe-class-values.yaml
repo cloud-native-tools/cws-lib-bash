@@ -1,0 +1,46 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the probe registry's class vocabulary: the two probe kinds, the six
+# class fields, and the four handler/binding closed sets. The engine
+# `.specify/scripts/python/probe-utils.py` reads it through `.specify/scripts/python/declaration_reader.py`
+# (`_PROBE_KINDS`, `_CLASS_FIELDS`, `HANDLER_KINDS`, `HANDLER_MODES`, `LIFECYCLE_POINTS`,
+# `BINDING_SCOPES`); the carrier reaches it by
+# `.specify/shared/declarations/facts/probe-class-values.yaml#/statement` for the value domains, while the
+# class/object tables themselves stay in the carrier — a registry cannot exist without its rows.
+#
+# Authority order: code > generated > authored. The engine tuples and the carrier's § Classes,
+# § Handler and § HandlerBinding headers named the same members on 2026-11-05; nothing had drifted.
+fact: probe-class-values
+kind: record-schema
+statement:
+  probe_kinds:
+    - internal
+    - external
+  class_fields:
+    - class_id
+    - kind
+    - collection
+    - target_slice
+    - processing
+    - insertion_type
+  handler_kinds:
+    - engine
+    - agent
+    - gate
+  handler_modes:
+    - non-blocking
+    - blocking
+  lifecycle_points:
+    - wrap-up
+    - situation
+    - phase-boundary
+    - confirm-gate
+  binding_scopes:
+    - complex-commands
+    - skills
+    - all
+consumers:
+  - .specify/scripts/python/probe-utils.py
+former_carriers:
+  - .specify/shared/definitions/probe-definitions.md
+note: "`class_fields` is ordered: the registry table's column order is the parse order, and the carrier's header carries a seventh `code_anchor` column that the engine treats as optional rather than as part of this tuple. `lifecycle_points` is closed but the carrier's § HandlerBinding may bind only a subset per command — a subset selection is not a wider domain."

@@ -337,7 +337,38 @@ def unparseable_names(paths):
 # CLI
 # --------------------------------------------------------------------------- #
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+from script_interface_cli import fill_help_labels  # noqa: E402
+from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+
+_HELP = """usage: clause_extract.py <contract-file> [...]
+options:
+  -h, --help     print this help and exit
+  --version      print <script-name> <framework-version> and exit"""
+
+
 def main(argv) -> int:
+    # The guard runs FIRST (C-9): it judges every token before the bare `--`, so `--help --bogus`
+    # is red rather than a help body that silently drops the undeclared token. It answers
+    # `--version` and rejects an undeclared option; `--help` is left to the arm below.
+    _sig_guard(text=__doc__)
+    if any(a in ("-h", "--help") for a in argv):
+        # The two label LINES are appended by the one helper that owns their text (C-7); this
+        # body states the usage and the options and inherits the rest.
+        print(fill_help_labels(_HELP), end="")
+        return 0
     if not argv:
         print("usage: clause_extract.py <contract-file> [...]", file=sys.stderr)
         return 2

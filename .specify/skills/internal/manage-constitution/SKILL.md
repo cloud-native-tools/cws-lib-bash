@@ -1,15 +1,18 @@
 ---
 name: manage-constitution
-description: Create or update the project constitution at `/.specify/memory/constitution.md` from interactive or provided principle inputs — bootstrap it from the constitution template when absent, infer the project's real context, fill every placeholder with concrete values, decide the `x.y.z.ddd` version bump (MAJOR / MINOR / PATCH / DAILY), enforce the mandatory-principle set, propagate every amendment across the dependent templates, and emit the Sync Impact Report. Use this when the user mentions ["constitution", "宪法", "update constitution", "amend constitution", "修订宪法", "governance principles", "治理原则", "principle amendment", "principles update", "version bump", "Sync Impact Report", "constitution version"].
+description: Create or update the project constitution at `/.specify/constitution.md` from interactive or provided principle inputs — bootstrap it from the constitution template when absent, infer the project's real context, fill every placeholder with concrete values, decide the `x.y.z.ddd` version bump (MAJOR / MINOR / PATCH / DAILY), enforce the mandatory-principle set, propagate every amendment across the dependent templates, and emit the Sync Impact Report. Use this when the user mentions ["constitution", "宪法", "update constitution", "amend constitution", "修订宪法", "governance principles", "治理原则", "principle amendment", "principles update", "version bump", "Sync Impact Report", "constitution version"].
 classification: internal
 skill_id: "<SKILL:.specify/skills/internal/manage-constitution/SKILL.md>"
 ---
 
 # manage-constitution
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
-Create or update the project constitution at `/.specify/memory/constitution.md`. That file is
+Create or update the project constitution at `/.specify/constitution.md`. That file is
 a TEMPLATE containing placeholder tokens in square brackets (e.g. `[PROJECT_NAME]`,
 `[PRINCIPLE_1_NAME]`). The job is threefold: (a) collect/derive concrete values, (b) fill the
 template precisely, and (c) propagate any amendments across dependent artifacts.
@@ -26,7 +29,7 @@ user-input handling, and handoffs only.
   `$ARGUMENTS` per its User Input Protocol (`.specify/shared/workflow/user-input-protocol.md`) and
   hands over the processed substance: governance principles, amendment intentions, or
   supplemental context.
-- **Operating file**: the project constitution at `/.specify/memory/constitution.md`. Paths
+- **Operating file**: the project constitution at `/.specify/constitution.md`. Paths
   below are repo-root-relative (a leading `/` means the repository root).
 - **Scope of writes**: the constitution file plus the dependent artifacts named in the
   consistency-propagation checklist (Step 4). Nothing else.
@@ -55,7 +58,7 @@ Before processing the template, scan the project to understand its actual contex
 
 ### Step 1 — Ensure and bootstrap the constitution
 
-- Ensure the constitution file exists at `/.specify/memory/constitution.md`.
+- Ensure the constitution file exists at `/.specify/constitution.md`.
 - If the file does **not** exist, generate it from
   `/.specify/templates/constitution-template.md` (copy the template content as the initial
   constitution, then immediately adapt it to the project's actual context by
@@ -212,6 +215,59 @@ Before processing the template, scan the project to understand its actual contex
     through every reference in the same change. This principle adds a decision order, not
     machinery: it MUST NOT justify a naming linter, a glossary generator, or any new
     tracking system.
+  - **Self-Explanatory Structure (不言自明)** — names, paths and structures MUST carry the
+    information their user needs, judged from the user's view rather than from how clear the
+    implementation looks internally. The ceiling is that the user sees the needed information
+    directly and the floor is no more than one simple command, with a satisfied floor enough to
+    support a change; a concrete user information need MUST be named before the principle
+    applies, and it MUST NOT be used to justify preventive redesign. Each optimization task
+    raises at most one information dimension, landed through a reconcile mechanism, and an
+    encoded attribute keeps its original source of truth (names and paths stay projections of
+    it). The full definition lives at
+    `.specify/shared/definitions/self-explanatory-definitions.md` and MUST be referenced, not
+    restated, inside the constitution. This principle adds a way of naming and structuring, not
+    machinery: it MUST NOT justify a freshness scanner, an information scorer, a maturity
+    report, or any other new tracking system.
+  - **Efficient Test Execution (Concurrent by Default)** — test coverage is a necessary and
+    never a sufficient condition for quality: a suite that exists but is not actually run
+    protects nothing, so the cost of running it is a quality attribute at the same tier as
+    coverage. The criterion that decides when efficiency becomes a releasable requirement, the
+    choice between process-level parallelism, asynchronous concurrency and neither, the
+    isolation preconditions that make parallel execution legitimate, the measurement anchors,
+    and the ways of being faster that are never admissible (shrinking the selection, skipping,
+    declaring flakiness, retrying until green) live at
+    `.specify/shared/guidelines/test-execution-efficiency.md` and MUST be referenced, not
+    restated, inside the constitution. The principle governs what tests cost to execute; the
+    pre-existing test-quality principles govern what test exists and when it is written, and
+    an obligation that appears on both sides is a defect to repair. It applies to any project
+    that builds a test framework or writes test cases, and the defaults and parameters of a
+    concrete runner stay the runner's own. This principle adds a criterion, not machinery: it
+    MUST NOT justify a duration registry, a slow-test ranking, a coverage-versus-time report,
+    or any other standing measurement surface.
+  - **Script Interface Contract (Declared, Zero-Side-Effect)** — every functional,
+    non-read-only script MUST answer three questions without doing anything else: a flag
+    present anywhere on the command line wins (`-h` / `--help` change nothing, `--version`
+    prints one machine-readable identity line) and is judged before any action, write, backup
+    or confirmation prompt; an undeclared option is rejected with a non-zero exit rather than
+    silently ignored; and a file that acts when run directly satisfies the contract whatever
+    else also sources or imports it. Pytest modules, pure libraries and read-only scripts are
+    outside the REQUIRED set. The full definition (candidate derivation, classification,
+    mandatory help content, the zero-side-effect boundary, unrecognized-option rejection,
+    exemptions and the declared-exception register) lives at
+    `.specify/shared/definitions/script-interface-definitions.md` and MUST be referenced, not
+    restated, inside the constitution. The rule's scope is written into the rule: it binds
+    framework scripts, downstream-project scripts and third-party scripts alike. This principle
+    adds a way of writing scripts, not machinery: it MUST NOT justify a second checker, an
+    extra command, or a new mandatory workflow step.
+  - **Re-Anchoring (不忘初心 · 温故而知新)** — every agent (including a dispatched subagent) keeps
+    its entry anchor — the task anchor AND the RULE anchor (unattended / no approval request /
+    U4 -> next stage / spine before action / workspace guard / fast-fail / gates / budget and
+    report discipline) — across
+    compactions and, after every core step, re-reads the RULES first via compact -> reload ->
+    evaluate at T0/T1/T2, yielding `on-track` / `correction-applied` / `decision-needed`. The full
+    definition lives at `.specify/shared/definitions/re-anchoring-definitions.md` and MUST be
+    referenced, not restated. This principle adds a reviewing habit, not machinery: it MUST NOT
+    justify a new scorer, ledger, scheduler or second checkpoint system.
 - Ensure the Governance section lists amendment procedure, versioning policy, and compliance
   review expectations.
 
@@ -255,7 +311,7 @@ constitution file after update. It carries:
 
 ### Step 7 — Write back
 
-Write the completed constitution to `/.specify/memory/constitution.md` (overwrite).
+Write the completed constitution to `/.specify/constitution.md` (overwrite).
 
 ### Step 8 — Final summary to the user
 
@@ -280,7 +336,7 @@ Write the completed constitution to `/.specify/memory/constitution.md` (overwrit
   `TODO(<FIELD_NAME>): explanation` and include it in the Sync Impact Report under deferred
   items.
 - Do not create a new template; always operate on the existing
-  `/.specify/memory/constitution.md` file.
+  `/.specify/constitution.md` file.
 
 ## Boundaries
 
@@ -293,7 +349,7 @@ Write the completed constitution to `/.specify/memory/constitution.md` (overwrit
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -303,3 +359,4 @@ Write the completed constitution to `/.specify/memory/constitution.md` (overwrit
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:manage-constitution" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

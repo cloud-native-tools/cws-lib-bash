@@ -1,0 +1,29 @@
+# Feature 092 (non-disposable), plan row 2 of the seven-face landing; contract
+# contracts/detection-engine-cli.contract.md C-601 / C-605.
+#
+# The one machine-read copy of the review surface: its MEMBERSHIP AND ITS ORDER, because the
+# report renders the roots in declaration order and `--roots` prints them that way. The engine
+# `.specify/scripts/python/non-disposable-check.py` reads it through `.specify/scripts/python/declaration_reader.py`;
+# the carrier reaches it by
+# `.specify/shared/declarations/facts/non-disposable-review-surface.yaml#/statement`.
+#
+# Measured 2026-11-09 on this tree (ten roots, all present): archive 66 / derive 2 / goal 55 /
+# history 7 / memory 1225 / project 10 / review 1 / specs 2926 / state 27 / teams 74.
+fact: non-disposable-review-surface
+kind: closed-set
+statement:
+  - .specify/archive
+  - .specify/derive
+  - .specify/goal
+  - .specify/history
+  - .specify/memory
+  - .specify/project
+  - .specify/review
+  - .specify/specs
+  - .specify/state
+  - .specify/teams
+consumers:
+  - .specify/scripts/python/non-disposable-check.py
+former_carriers:
+  - .specify/shared/definitions/non-disposable-definitions.md
+note: "Order is part of the value: the coverage declaration renders these roots in this order and the ten are a closed set, so a directory outside it is an undeclared sibling (a hint, never a candidate) and a member that is absent is reported with its reason instead of being counted as zero."

@@ -1,0 +1,37 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044, row `driver-gate-roster`).
+#
+# The one machine-read copy of the loop driver's pre-analyze gate roster: the six check names its
+# findings carry, and the per-stage file requirement that also decides the `--stage` choices. The
+# engine `.specify/skills/sdd-loop-driver/scripts/pre-analyze-check.py` reads it through
+# `.specify/scripts/python/declaration_reader.py` instead of spelling the names at its `add(findings, …)` call
+# sites and the stage mapping at its `STAGES` tuple; the carrier reaches it by
+# `.specify/shared/declarations/facts/driver-gate-roster.yaml#/statement`.
+#
+# Authority order: code > generated > authored. Two corrections were recorded on 2026-11-05 while
+# taking the value off the tree instead of off the roster — the carrier face, not the code face, is
+# what moved in both (see `note`).
+fact: driver-gate-roster
+kind: mapping
+statement:
+  checks:
+    - dangling-id
+    - external-clause
+    - blocked-by
+    - count-claim
+    - missing-path
+    - duplicate-id
+  stages:
+    requirements:
+      - requirements.md
+    plan:
+      - requirements.md
+      - plan.md
+    tasks:
+      - requirements.md
+      - plan.md
+      - tasks.md
+consumers:
+  - .specify/skills/sdd-loop-driver/scripts/pre-analyze-check.py
+former_carriers:
+  - .specify/skills/sdd-loop-driver/references/efficiency-model.md
+note: "`checks` is a set of names, not an ordered vocabulary: a call site selects which check applies and takes the rendering from here, so the sequence order carries no meaning and the six members are looked up by key. `stages` is a mapping because `--stage`'s choices and the per-stage input list are both derived from it. Two roster corrections: (1) C-044's carrier column said `same carrier` (SKILL.md), but SKILL.md's § References states it only cites the references' sections and never restates their tables; the restatement measured on 2026-11-05 lives in `references/efficiency-model.md` § 6.2 检查项, which is therefore the corrected carrier and now carries the pointer. (2) That table names five of the six checks — `external-clause` is absent while the engine emits it — so the code-side value stands and the carrier face is the one recorded as corrected; its table keeps the criteria and the five old row keys (its content is the gate's documentation, and resetting a criterion is not this batch's), so the fifth reading is `duplicate-fact`-clean rather than name-free. The four ownership/premise names (`runtime-stack-row`, `runtime-contract-incomplete`, `premise-undecided`, `inherited-blocker`) are a different closed set owned by `contracts/gate-wiring.contract.md` GW-07 and are deliberately not in this statement."

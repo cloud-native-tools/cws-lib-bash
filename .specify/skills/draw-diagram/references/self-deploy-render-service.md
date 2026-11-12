@@ -51,7 +51,7 @@
 | excalidraw | 9698 | render-server (Node) | image | `POST /svg`、`POST /png`，body = Excalidraw scene JSON（`{elements:[...],appState,files}`） |
 | drawio | 9699 | render-server (Node) | image | `POST /svg`、`POST /png`，body = drawio XML（`<mxfile>…`）；服务端用 `xvfb-run -a drawio --export` 无头导出 |
 | echarts | 9700 | render-server (Node) | served-HTML | `POST /`，body = ECharts option JSON → 返回自包含交互 HTML；**无图像端点**（`GET /png` → 404） |
-| d3 | 9701 | render-server (Node) | served-HTML | `POST /`，body = D3 可视化 JS 片段 → 返回自包含交互 HTML；**无图像端点**（`GET /png` → 404） |
+| d3 | 9701 | render-server (Node) | served-HTML | `POST /`，body = D3 可视化 JS 片段 → 返回自包含交互 HTML；**无图像端点**（`GET /png` → 404）。**另含静态资产端点** `GET /d3.v7.min.js` → 版本固定的 D3 v7 运行库本体（`application/javascript`，无公网依赖，供内网/离线环境的交付物以 `<script src>` 引用） |
 
 - 五个 Node 引擎端口（9697–9701）均提供 `GET /healthz` → `ok`（存活探针）。
 - 渲染器不可用返回 **503 `renderer unavailable: …`**，输入非法返回 **4xx**，**绝不**返回空白 200。
@@ -260,6 +260,7 @@ curl -s -o /dev/null -w '%{http_code} %{content_type}\n' -X POST --data-binary @
 curl -s -o /dev/null -w '%{http_code} %{content_type}\n' -X POST --data-binary @diag.drawio  "http://$H:9699/svg"  # -> 200 image/svg+xml
 curl -s -o /dev/null -w '%{http_code} %{content_type}\n' -X POST --data-binary @option.json  "http://$H:9700/"     # -> 200 text/html
 curl -s -o /dev/null -w '%{http_code} %{content_type}\n' -X POST --data-binary @viz.js      "http://$H:9701/"     # -> 200 text/html
+curl -s -o /dev/null -w '%{http_code} %{content_type}\n' "http://$H:9701/d3.v7.min.js"     # -> 200 application/javascript
 ```
 
 六项全 200 且 content-type 与产物形态一致即部署成功；任一失败先查服务日志（docker/podman: `docker logs render`；

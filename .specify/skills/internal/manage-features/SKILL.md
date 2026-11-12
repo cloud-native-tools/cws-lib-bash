@@ -1,11 +1,14 @@
 ---
 name: manage-features
-description: Maintain and refresh the project feature registry — the feature index (`.specify/memory/features.md`) plus the per-feature detail files (`.specify/memory/features/<ID>.md`) — by reconciling it against repo reality under the reconcile model (tolerance band, archive-not-delete, never regress status). Generates/refreshes current features (functional + non-functional), discovers future features via gap analysis, allocates sequential three-digit IDs, instantiates detail files from the template, keeps the index table and the README "Feature List" in sync, and validates. Use this when the user mentions ["feature registry", "features.md", "feature index", "feature list", "feature details", "维护特性", "特性注册表", "特性索引", "特性清单", "更新特性", "特性详情", "reconcile features", "future features", "gap analysis", "DFX", "功能特性"].
+description: Maintain and refresh the project feature registry — the feature index (`.specify/features.md`) plus the per-feature detail files (`.specify/features/<ID>.md`) — by reconciling it against repo reality under the reconcile model (tolerance band, archive-not-delete, never regress status). Generates/refreshes current features (functional + non-functional), discovers future features via gap analysis, allocates sequential three-digit IDs, instantiates detail files from the template, keeps the index table and the README "Feature List" in sync, and validates. Use this when the user mentions ["feature registry", "features.md", "feature index", "feature list", "feature details", "维护特性", "特性注册表", "特性索引", "特性清单", "更新特性", "特性详情", "reconcile features", "future features", "gap analysis", "DFX", "功能特性"].
 classification: internal
 skill_id: "<SKILL:.specify/skills/internal/manage-features/SKILL.md>"
 ---
 
 # manage-features
+
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
 
 ## Goal
 
@@ -23,9 +26,9 @@ Requirements. Content moved here verbatim in substance.
 ## Input Contract
 
 - **Registry surfaces** (the durable artifact space this skill owns):
-  1. **Feature detail files**: `.specify/memory/features/<ID>.md` — instantiated from
+  1. **Feature detail files**: `.specify/features/<ID>.md` — instantiated from
      `.specify/templates/feature-details-template.md`.
-  2. **Feature index**: `.specify/memory/features.md` — one table row per feature.
+  2. **Feature index**: `.specify/features.md` — one table row per feature.
 - **Feature classification**: **functional** (user-facing) vs **non-functional** (quality
   attributes), and **current** (existing) vs **future** (gap-identified, status `Draft`).
 - **Repo context must be readable** (README/docs/build config): desired state is computed
@@ -58,9 +61,16 @@ Three binding rules of the application:
   `Last Updated` on unchanged rows. Unchanged rows stay byte-identical.
 - **Archive-not-delete**: never remove a feature row or detail file because the
   capability disappeared from the code — keep the row and mark its status/description
-  accordingly (history is part of the registry's value).
+  accordingly (history is part of the registry's value). Writing an archive pointer onto
+  a row additionally passes the admission gate (see § Boundaries) — pointer only, never
+  a local decision.
 - **Never regress status**: registry convergence must not move a feature's status
-  backward (e.g. Implemented → Draft) without explicit user confirmation.
+  backward (e.g. Implemented → Draft) without explicit user confirmation. Narrow
+  exceptions exist, taken by pointer: `Implemented → Blocked` and
+  `Sealed → Ready for Review` are legal only as audit corrections that cite the evidence
+  making the earlier claim false — the exceptions' criteria and their legal shape are owned by
+  `.specify/templates/feature-details-template.md` § Canonical Status State Machine
+  ("Never regress — two narrow audit corrections"), and this rule copies none of them.
   > Gate probe: gate-feature-status-regression — after the user decision, record firing
   > evidence per `.specify/shared/guidelines/confirmation-gates.md` §门控观察协议
   > (non-blocking).
@@ -95,13 +105,13 @@ Three binding rules of the application:
    byte-identical) and the never-regress-status rule.
 
 5. **Allocate IDs**: Sequential three-digit FEATURE_ID from scanning
-   `.specify/memory/features/*.md`.
+   `.specify/features/*.md`.
 
 6. **Instantiate/update detail files**: From `.specify/templates/feature-details-template.md`,
    replace all placeholders, remove unused ones (placeholder glossary and replacement
    rules are owned by that template). Dates ISO format.
 
-7. **Update `.specify/memory/features.md`**: Table with
+7. **Update `.specify/features.md`**: Table with
    `ID | Name | Description | Status | Feature Details | Last Updated`. Auto-derive
    FEATURE_COUNT from table row count — recompute on every write, never hand-maintain
    (the auto-derive contract is owned by `.specify/templates/feature-index-template.md`).
@@ -118,8 +128,8 @@ Three binding rules of the application:
 
 - Feature names: 2–5 words
 - Index table: single header row, all columns, aligned pipes
-- Status vocabulary: `Draft | Planned | Implemented | Ready for Review | Completed`
-- Feature detail links: `.specify/memory/features/[FEATURE_ID].md`
+- Status vocabulary: `Draft` | `Planned` | `Implemented` | `Blocked` | `Ready for Review` | `Sealed` | `Completed`
+- Feature detail links: `.specify/features/[FEATURE_ID].md`
 - Do NOT modify templates; only instantiate copies
 
 ## Boundaries
@@ -135,10 +145,19 @@ Three binding rules of the application:
 - **Templates are read-only inputs** (`.specify/templates/feature-details-template.md`,
   `.specify/templates/feature-index-template.md`): instantiate copies, never edit the
   template files themselves.
+- **Archive-pointer admission is queried, never decided here**: writing an archive
+  pointer onto a feature row (the `Relocated` form — the row is retained while its
+  capability is absorbed elsewhere, e.g. "merged into <NNN>") is an archive action.
+  Before writing the row, query the single admission owner:
+  `python3 .specify/scripts/python/seal-utils.py --action archive-gate --spec-dir .specify/specs/<target> --json`.
+  Exit `0` → the pointer may be written. Exit `1` (refused) or Exit `2`
+  (input/environment error) → refuse by name: surface the engine's verdict and `reason`
+  and the `/speckit.seal` pointer, and leave the row unchanged. Registry reconcile stays
+  with this skill; the admission criterion is never re-implemented here.
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -148,3 +167,4 @@ Three binding rules of the application:
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:manage-features" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

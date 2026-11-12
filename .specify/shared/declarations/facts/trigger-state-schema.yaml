@@ -1,0 +1,47 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the proactive-trigger state file's schema: its schema version, the
+# default config, the closed action/response sets and the default threshold. The engine
+# `.specify/scripts/python/trigger-utils.py` reads it through `.specify/scripts/python/declaration_reader.py`; the
+# carrier reaches it by `.specify/shared/declarations/facts/trigger-state-schema.yaml#/statement`.
+#
+# Authority order: code > generated > authored.
+#
+# Carrier correction: the roster names `.specify/shared/definitions/probe-definitions.md` as this row's
+# carrier, but that file documents neither the state schema nor the config defaults (measured
+# 2026-11-05: none of `telemetryWindow`, `probeBudgetPct`, `minSample` appears there). The fact's
+# second face is the test-pinned literal (`tests/contract/test_trigger_engine.py`), which FR-006 (ii)
+# counts; the pointer is placed in the trigger guideline's engine-facing line instead of inventing a
+# carrier that never held the value.
+fact: trigger-state-schema
+kind: record-schema
+statement:
+  schema_version: 1
+  default_config:
+    enabled: true
+    threshold: 3
+    telemetryWindow: 200
+    probeBudgetPct: 20
+    minSample: 5
+  actions:
+    - init
+    - assess
+    - record
+    - record-manual
+    - status
+    - rules
+    - reset
+    - config
+    - tune
+    - tune-apply
+    - rotate
+  responses:
+    - accepted
+    - declined
+    - ignored
+  threshold_default: 3
+consumers:
+  - .specify/scripts/python/trigger-utils.py
+  - .specify/shared/guidelines/proactive-trigger.md
+former_carriers: []
+note: "`default_config` is the seed a new state file is written with, so its five keys and their values are one record; the `threshold` is also exposed on its own as `threshold_default` because callers read and clamp it independently of the rest of the config. `actions` is the closed action enumeration — an action outside it is an input error, never a new branch. The values are unchanged from the pre-migration engine constants."

@@ -1,20 +1,24 @@
 ---
 name: manage-goal
-description: Author and manage project-level goal definitions — the executable core of `/speckit.goal`. Runs the six modes (create / view / modify / targets / migrate / coordinate) through the goal engine: the four-element interview for a new goal (objective, success criteria, identity, Targets), the read/write engine grouping with exit-code verdicts, the single destructive write (`criteria --clear`) behind explicit approval, Target slice authorization with GD-2/GD-3 shape checks, per-team migration from an inline goal, and territory re-division proposals across teams sharing one goal. Every write goes through the engine — the goal archive is engine-write-only. Use this when the user mentions ["goal", "项目目标", "创建目标", "goal definition", "objective", "成功判据", "success criteria", "targets", "目标切片", "migrate goal", "目标迁移", "coordinate", "目标协调", "goal archive", "goal_slug", "goal achieved", "goal abandoned"].
+description: Author and manage goal definitions in the goal archive — the executable core of `/speckit.goal`. Runs the seven modes (create / view / modify / targets / migrate / migrate-archive / coordinate) through the goal engine: the four-element interview for a new goal (objective, success criteria, identity, Targets), the read/write engine grouping with exit-code verdicts, the single destructive write (`criteria --clear`) behind explicit approval, Target slice authorization with GD-2/GD-3 shape checks, per-team migration from an inline goal, the one-time move of spec-local trees into the unified archive, and territory re-division proposals across teams sharing one goal. Every write goes through the engine — the goal archive is engine-write-only. Use this when the user mentions ["goal", "项目目标", "创建目标", "goal definition", "objective", "成功判据", "success criteria", "targets", "目标切片", "migrate goal", "目标迁移", "migrate-archive", "档案迁移", "coordinate", "目标协调", "goal archive", "goal_slug", "goal achieved", "goal abandoned"].
 classification: internal
 skill_id: "<SKILL:.specify/skills/internal/manage-goal/SKILL.md>"
 ---
 
 # manage-goal
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Own and execute the operations behind `/speckit.goal` — the **sole authoring entry** for
-project-level goal definitions. A **Goal** is a project-level authored fact source; this
-skill owns only the *operations* (mode semantics, the four-element interview, execution
-ordering, engine invocation). The goal *concept* — composition, lifecycle, boundary
-against Requirement, criteria authority, singularity, and the team binding — is defined
-once in `.specify/shared/definitions/goal-definitions.md`. **Link to that document; never
+goal definitions in the goal archive. A **Goal** is an authored fact source (never a
+derived artifact); this skill owns only the *operations* (mode semantics, the
+four-element interview, execution ordering, engine invocation). The goal *concept* —
+composition, lifecycle, the two archive layers, boundary against Requirement, criteria
+authority, singularity, and the team binding — is defined once in
+`.specify/shared/definitions/goal-definitions.md`. **Link to that document; never
 restate it.** Deterministic rules (identity grammar, three-part structure, lifecycle
 table, change history, archive enumeration) live in `.specify/scripts/python/goal-utils.py`. Call
 the engine; do not re-derive its judgments in prose.
@@ -30,9 +34,9 @@ user-input handling, glossary pre-step, and lifecycle only.
 
 ## Input Contract
 
-- **Intent**: one of `create | view | modify | targets | migrate | coordinate`, optionally
-  with a goal-slug or team-slug. Mode is inferred from the request and **disclosed with
-  every run**.
+- **Intent**: one of `create | view | modify | targets | migrate | migrate-archive |
+  coordinate`, optionally with a goal-slug or team-slug. Mode is inferred from the
+  request and **disclosed with every run**.
 - **Ambiguous input resolves to `view`** — which is read-only.
 - **Reversibility**: execution proceeds directly for reversible actions
   (可逆动作自动执行，判据：`.specify/shared/guidelines/confirmation-gates.md`) — the single
@@ -40,12 +44,19 @@ user-input handling, glossary pre-step, and lifecycle only.
 
 | Mode | Purpose | Writes |
 |------|---------|--------|
-| `create` | archive a new goal definition | `.specify/goal/<goal-slug>/goal.md` |
+| `create` | archive a new goal definition | `.specify/anchoring/<goal-slug>/goal.md` |
 | `view` | list the archive, or show one goal | nothing |
 | `modify` | change objective, criteria, lifecycle state, or Targets | the same definition file |
 | `targets` | add / list / transition the goal's Targets (run-assignable scope slices) | the same definition file |
 | `migrate` | derive a definition from a team's inline goal and switch that team to a reference | new `goal.md` + that `team.md` |
+| `migrate-archive` | move spec-local goal/team trees into the unified archive (archive-not-delete; explicit, never implicit) | the two archive layers + `.specify/archive/goal-team/` receipts and archived trees |
 | `coordinate` | propose a territory re-division across teams sharing one goal | nothing until ratified, then each `team.md` |
+
+The two archive layers and the scope value set are owned by
+`.specify/shared/definitions/goal-definitions.md` § Archive Layers — this table cites the
+landing points, never the value domain. The team side a `migrate` / `coordinate` run
+touches lives at `.specify/teams/<slug>/team.md` (team concept:
+`.specify/skills/internal/create-team/references/conceptual-model.md`).
 
 `targets` is a modify-intent route: Target authorization, listing, and state transitions
 all land through this single authoring entry — no other surface writes the `## Targets`
@@ -57,7 +68,8 @@ Decomposition), never restate.
 ### 1. Resolve context
 
 Run `.specify/scripts/bash/check-prerequisites.sh --json --paths-only` for `REPO_ROOT`.
-The archive is `REPO_ROOT/.specify/goal/`.
+The goal archive is `REPO_ROOT/.specify/anchoring/` (both archive layers and the scope
+value set: `.specify/shared/definitions/goal-definitions.md` § Archive Layers).
 
 ### 2. Determine the mode
 
@@ -82,8 +94,9 @@ python3 .specify/scripts/python/goal-utils.py validate <goal-slug>
 python3 .specify/scripts/python/goal-utils.py check-statement "<sub-outcome statement>"
 python3 .specify/scripts/python/goal-utils.py targets <goal-slug> --list
 python3 .specify/scripts/python/goal-utils.py targets <goal-slug> --check "<sub-outcome statement>"
+python3 .specify/scripts/python/goal-utils.py probe-residual    # spec-local residual reading
 
-# 写组 — mutates the one definition file
+# 写组 — mutates the archive through the engine
 python3 .specify/scripts/python/goal-utils.py create <goal-slug> --objective "<desired end outcome>"
 python3 .specify/scripts/python/goal-utils.py objective <goal-slug> --set "<revised outcome>"
 python3 .specify/scripts/python/goal-utils.py criteria <goal-slug> --criterion "<new>"
@@ -91,10 +104,13 @@ python3 .specify/scripts/python/goal-utils.py status <goal-slug> --set achieved
 python3 .specify/scripts/python/goal-utils.py targets <goal-slug> --add "<sub-outcome statement>"
 python3 .specify/scripts/python/goal-utils.py targets <goal-slug> --set done --id T-001
 python3 .specify/scripts/python/goal-utils.py migrate <team-slug>
+python3 .specify/scripts/python/goal-utils.py migrate-archive --dry-run   # then --apply
 ```
 
-Exit codes: `0` ok · `2` input error (rejection) · `3` not found · `4` validation failed.
-A non-zero exit is a **verdict**: report it, never argue around it.
+Exit codes: `0` ok · `2` input error (rejection) · `3` not found / migration interrupted ·
+`4` validation failed / migration conflict · `5` blocked — the action table is the
+engine's (`python3 .specify/scripts/python/goal-utils.py --help`). A non-zero exit is a **verdict**:
+report it, never argue around it.
 
 **破坏性写入**（桶归属见 `.specify/shared/guidelines/confirmation-gates.md` §破坏性动作清单）：`criteria <goal-slug> --clear` 以空值覆盖既有判据集。引擎对缺参的 `criteria` 调用一律 exit 2——它 MUST NOT 被读成查看入口，也不会静默清空；传 `--clear` 之前 MUST 先取得用户明示批准。其余写入均为可逆动作：直接执行，按执行报告呈现，事后经 `/speckit.goal` modify 修改。
 
@@ -154,7 +170,18 @@ semantically equivalent, create it, then set the team's `goal_slug` to the new i
 **Never** delete the team's inline goal — retention is the user's choice, and migration is
 per-team and optional.
 
-### 7. `coordinate <goal-slug>`
+### 7. `migrate-archive`
+
+Move the spec-local goal/team trees into the unified archive — both kinds in one explicit
+call, archive-not-delete (each source tree is archived under `.specify/archive/goal-team/`,
+never deleted) and never invoked implicitly as a side effect of another run. Present the
+`--dry-run` plan before `--apply`; a per-definition conflict is a verdict, and an
+interrupted run is resumed by a second call rather than restarted. The flags, receipt
+shape and exit codes are owned by the engine's action table
+(`python3 .specify/scripts/python/goal-utils.py --help`). `/speckit.sanitize` offers only the
+read-only residual reading — never a migration.
+
+### 8. `coordinate <goal-slug>`
 
 The mechanism detects overlap and **proposes** a re-division with its rationale. It writes
 nothing. On the user's ratification, write the agreed territory back into each affected
@@ -183,14 +210,14 @@ nothing. On the user's ratification, write the agreed territory back into each a
 ## Command-lifecycle surfaces (kept in `/speckit.goal`)
 
 Entry argument handling (`.specify/shared/workflow/user-input-protocol.md`), the glossary
-pre-step (`.specify/memory/glossary.md`, protocol `.specify/shared/workflow/glossary.md`),
+pre-step (`.specify/glossary.md`, protocol `.specify/shared/workflow/glossary.md`),
 the `## Feedback` / `## Documentation` steps, and handoffs (team binding via
 `/speckit.team`) stay in the command template — they are command lifecycle, not goal
 operations.
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -200,3 +227,4 @@ operations.
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:manage-goal" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

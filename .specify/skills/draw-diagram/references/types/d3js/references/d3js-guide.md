@@ -599,7 +599,7 @@ render();
 ## Reproduction Appendix (复现附录)
 
 Split-mode deliverables (data in `data-*.js`) MUST include an appendix in the HTML: a visible collapsible footer (plus a header comment block) stating:
-- the file renders by opening it — no build step (CDN mode needs network; vendored mode works offline);
+- the file renders by opening it — no build step (the render-service asset mode needs access to that intranet service; vendored mode works offline);
 - which data file/array drives which part of the figure (nodes / links / rels / cells);
 - the source description version/date the data is based on;
 - the coordinate grid/partition rule if fixed coordinates are used (see [sds-realization.md](sds-realization.md) §4).

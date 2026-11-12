@@ -1,0 +1,19 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044).
+#
+# The one machine-read copy of the six-face gate's shape: the section keyword the face table lives
+# under, and the closed row count. The engine `.specify/scripts/python/flow-class-check.py` reads it through
+# `.specify/scripts/python/declaration_reader.py` and refuses to judge when it cannot; the carrier reaches it
+# by `.specify/shared/declarations/facts/expression-gate-faces.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `FACES_SECTION_KEYWORD` / `FACES_EXPECTED` and the
+# carrier's two statements of the count agreed on 2026-11-05, so nothing had drifted.
+fact: expression-gate-faces
+kind: mapping
+statement:
+  section_keyword: 六面
+  expected: 6
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+former_carriers:
+  - .specify/shared/workflow/expression-gates.md
+note: "The scalar is the closed row count, so a face table with five or seven data rows is a finding rather than a silent shape change; `section_keyword` is the heading the table must live under, because a second face table outside that section is the duplicate this axis forbids."

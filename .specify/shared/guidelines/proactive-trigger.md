@@ -12,6 +12,7 @@
 
 - 情境→流程的规则数据归 `.specify/templates/proactive-trigger-seed.json`(出厂种子)与运行期状态存储;情境词表的权威定义随特性设计期的 `data-model.md` 记录。该设计期文档是 dated record(设计期记录,不随包分发、不作为当前现实被引用),因此与本文档并存不构成漂移。
 - 引擎的信封形状、CLI 封闭枚举、退出码与运行期语义归 `contracts/trigger-engine.md`;本文档只列 action 名与用途一行,细节指向引擎 `--help`。
+- 触发状态文件的**取值域**(schema 版本、默认 config 的五个键、action／response 封闭集、默认阈值)归声明层 `.specify/shared/declarations/facts/trigger-state-schema.yaml#/statement`,引擎 `.specify/scripts/python/trigger-utils.py` 经 `.specify/scripts/python/declaration_reader.py` 读取。本文档不重述这些取值。
 - 动作的破坏性/可逆判据归 `.specify/shared/guidelines/confirmation-gates.md`;本文档只以路径引用,不复述其分类表或清单。
 - 面向用户的措辞与上下文规则归 `.specify/shared/guidelines/user-facing-comprehension.md`(本文件覆盖界面类 ⑥);本文档只以路径引用,不复述其白/黑名单与上下限条件集。本文档 § Suggestion Shape 的"一行非阻塞提示"形态是**该界面类既有的长度/形态约束**,由该纪律的上下文上限以引用方式沿用,两侧都不改写对方。
 

@@ -6,6 +6,8 @@
 
 **Note**: This template is filled in by the `/speckit.plan` command, which **replaces** every `[PLACEHOLDER]` token in place — it MUST NOT append a second copy of this template below the filled content. See the `/speckit.plan` command for the execution workflow.
 
+> **Concurrency obligation (执行义务，按指针抵达)**: this plan authorizes execution bodies. Each one follows the framework's single concurrency obligation — consider concurrency first, default to it when the class and capability allow, and name a reason code plus record the `requested` / `effective` / `effective_reason` reading when serial. The obligation's authored text is `shared/definitions/subagent-definitions.md` § The Concurrency Obligation; its class table is `shared/declarations/facts/concurrency-class.yaml`, its reason codes `shared/declarations/facts/serial-reason.yaml`, and its reading fields `shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## Summary
 
 [Extract from spec: primary requirement + technical approach from research]
@@ -34,7 +36,7 @@
 
 <!--
   ACTION REQUIRED for /speckit.plan:
-  Do NOT hard-code principle names here. Instead, read `.specify/memory/constitution.md`,
+  Do NOT hard-code principle names here. Instead, read `.specify/constitution.md`,
   enumerate every heading matching `### <roman-or-arabic-numeral>. <name>` (e.g.
   `### I. Template-First Architecture`, `### IV. Test-First Development`), and render
   ONE row in the table below per principle in the exact order they appear in the
@@ -47,7 +49,7 @@
   - Evidence (one-line citation pointing at the design artefact that demonstrates compliance)
 -->
 
-**Core Principles Compliance** (rendered from `.specify/memory/constitution.md`):
+**Core Principles Compliance** (rendered from `.specify/constitution.md`):
 
 | # | Principle | Compliance | Evidence |
 |---|-----------|------------|----------|
@@ -63,7 +65,7 @@
 
 *Owner of the record shape, the admissibility criteria, the rejection forms and the load-bearing
 threshold: `.specify/shared/guidelines/decision-tension.md` — one pointer, read from the repository
-root (the same form this template uses for `.specify/memory/constitution.md`); a plan artifact lives
+root (the same form this template uses for `.specify/constitution.md`); a plan artifact lives
 under `.specify/specs/<key>/`, so a plan-directory-relative link would resolve to a path that does
 not exist. This section lists the field names and points at that file — it MUST NOT restate the
 criteria table, the rejection list or the threshold table.*
@@ -169,6 +171,22 @@ reference the real directories captured above. Explicitly note any new top-level
 |----------------------|---------------------------------------------------|--------|
 | [e.g. `templates/commands/x.md`] | [e.g. `.claude/commands/speckit.x.md`; `.github/prompts/speckit.x.prompt.md`; `.qoder/commands/speckit.x.md`; `.opencode/command/speckit.x.md` — per-tool copies via regen-command-copies.py; NO `.specify/templates/commands/` mirror (retired)] | [e.g. `diff -q` on the pairs touched here, judged against the baseline measured before the edit — "no NEW drift"; regenerated copies contain the edit. Never a pre-written exit code] |
 
+## Execution Premises
+
+Owner of this table's shape, its `Status` and `Decision` value domains and its invalid-row rule: `shared/workflow/acceptance-hardening.md` § Execution Premises — this skeleton carries the column set and nothing else, so a value domain written here would be a second definition.
+
+| ID | Premise | Evidence | Status | Decision |
+|----|---------|----------|--------|----------|
+| [<premise id>] | [<one load-bearing assumption this plan rests on>] | [<path, command or measurement that bears on it>] | [<value from the owner's domain>] | [<value from the owner's domain, where the owner requires it>] |
+
+## Inherited Blockers
+
+Owner of this table's shape, its `Disposition` domain, the `Source row` / `Carrier` / `Carrier slice` grammar and the carrier's eligibility rule: `shared/workflow/acceptance-hardening.md` § Inherited Blockers — this skeleton carries the column set and nothing else. The dependency set these rows are extracted from MUST be declared in this section, either as the literal `**Dependency artifacts (declared, never implied)**` block or as the exact sentence `Dependency set: none`.
+
+| # | Source row | Disposition | Carrier | Carrier slice | Evidence / note |
+|---|-----------|-------------|---------|---------------|-----------------|
+| [<ordinal>] | [<the extracted dependency record's locator>] | [<value from the owner's domain>] | [<carrier, where the owner requires one>] | [<the slice that carries it>] | [<path plus one line, or the reason the disposition holds>] |
+
 ## Document Structure
 
 <!--
@@ -179,7 +197,7 @@ reference the real directories captured above. Explicitly note any new top-level
   verbatim — the chapter heading `## Document Structure` and its four subsections `### Chapter Tree`,
   `### Reader Baseline`, `### Evidence List`, `### Fact Owners`. Read them from this file, not from
   another project's spec artifacts: `[[STR-NNN]]` ids are a per-spec namespace, so a downstream
-  project that went looking for `[[STR-002]]`…`[[STR-006]]` in its own § Shared Strings would find
+  project that went looking for `STR-002`…`STR-006` in its own § Shared Strings would find
   unrelated literals or nothing at all.
   The semantics, and the code-first owner of the grammar, are
   `scripts/python/doc-consistency-check.py` (`STRUCTURE_HEADING`, `STRUCTURE_SUBSECTIONS`,

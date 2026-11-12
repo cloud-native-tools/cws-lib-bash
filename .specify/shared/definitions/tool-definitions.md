@@ -35,7 +35,7 @@ Unqualified "Tool" in the tools domain always means the first. The second is bes
 
 Note also: the **discovery inventories** are `.specify/tools/{system,shell,project}.json` — machine-generated, never hand-edited. They are written by `.specify/scripts/bash/generate-instructions.sh`, which redirects `refresh-tools.sh --system|--shell|--project --json` into those three files; `refresh-tools.sh` itself writes nothing and requires one of those source flags (a bare `--json` prints usage and exits 1). `.specify/memory/tools/` (directory) holds the **definition records** and is the only authoritative surface for what a tool is.
 
-`.specify/memory/tools.md` (singular file) is a **separate, hand-maintained index of MCP servers**. Despite its name and its `## System Binaries` / `## Shell Environment` / `## Project Scripts` headings, nothing regenerates it and those three sections carry only a one-line description each, never an enumeration — this has been true since the revision that added the file. Do not treat it as the tools inventory, and do not cite it as a generated artifact.
+`.specify/tools.md` § Helper Tools Index (the singular file, merged 2026-11-10 with the Tools System Guide) is a **separate, hand-maintained index of MCP servers**. Despite its name and its `## System Binaries` / `## Shell Environment` / `## Project Scripts` headings, nothing regenerates it and those three sections carry only a one-line description each, never an enumeration — this has been true since the revision that added the file. Do not treat it as the tools inventory, and do not cite it as a generated artifact.
 
 ## Tool Type Standardization
 

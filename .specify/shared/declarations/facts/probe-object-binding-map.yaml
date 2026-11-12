@@ -1,0 +1,26 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the probe object/binding map's shape: the object fields, the derived
+# map's file name, and the two tokens the non-entity catalog chapter is parsed by. The engine
+# `.specify/scripts/python/probe-utils.py` reads it through `.specify/scripts/python/declaration_reader.py`
+# (`_OBJECT_FIELDS`, `PROBE_MAP_NAME`, `_CATALOG_HEADING`, `_CATALOG_ENTRY_RE`); the carrier reaches
+# it by `.specify/shared/declarations/facts/probe-object-binding-map.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's object-field tuple and catalog tokens
+# matched the carrier's § Objects and § 非实体 probe 目录 chapter on 2026-11-05; nothing had drifted.
+fact: probe-object-binding-map
+kind: record-schema
+statement:
+  object_fields:
+    - object_id
+    - class_id
+    - unit
+    - lifecycle_point
+  probe_map_file: probe-map.md
+  catalog_heading: 非实体 probe 目录
+  catalog_entry_pattern: '^- `([^`]+)` — .+$'
+consumers:
+  - .specify/scripts/python/probe-utils.py
+former_carriers:
+  - .specify/shared/definitions/probe-definitions.md
+note: "The map itself is derived and MUST be rebuilt from the registry, never hand-copied; only its file name is a stored value. `catalog_entry_pattern` is the shape of one catalog entry line (`- `<path>` — <note>`), so the catalog chapter's entries are parsed rather than listed a second time. `object_fields` is ordered and `lifecycle_point` is optional per row, which is why it is last."

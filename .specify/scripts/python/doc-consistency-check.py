@@ -1567,12 +1567,38 @@ def render_text(payload):
     return "\n".join(lines)
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None):
+    _sig_guard(argv, declared=['--action', '--spec-dir', '--path', '--owner-path', '--faces', '--strict', '--allow-degraded', '--format', '--json-out', '--freeze'])  # answer --version / reject an undeclared option
     parser = argparse.ArgumentParser(
         description="Document-form consistency checker (069a): reader / evidence / "
                     "duplicate / count faces; 077 adds `--action structure` "
                     "(plan-side document structure + two-way comparison)."
     )
+    _sig_configure(parser)
+
     parser.add_argument("--action", default="verify", choices=("verify", STRUCTURE_ACTION))
     parser.add_argument("--spec-dir", default="")
     parser.add_argument(
@@ -1602,7 +1628,8 @@ def main(argv=None):
              "appear in the payload; never use this at a blocking call site)",
     )
     parser.add_argument("--format", choices=("text", "json"), default="text")
-    parser.add_argument("--json-out", default="")
+    parser.add_argument("--json-out", default="", help="write the payload to this path "
+                                                       "(triggers the write)")
     parser.add_argument(
         "--freeze",
         action="store_true",

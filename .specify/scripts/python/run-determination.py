@@ -4,7 +4,7 @@
 One completed run reaches wrap-up; this engine evaluates four measured
 quantities for it — token 消耗, 耗时, 制品正确性 and 满意度 — and emits exactly
 one ``run_determination`` record. The record *is* the 改点 (owner:
-``.specify/memory/glossary.md`` → `改点`): an observation sensor inside the
+``.specify/glossary.md`` → `改点`): an observation sensor inside the
 improve flow, never a feedback entry and never an intervention ledger.
 
 Program-First (``.specify/shared/guidelines/token-efficiency.md`` § 程序优先) is the whole
@@ -36,7 +36,7 @@ Deliberately reached by reference, never restated here:
 * The four feedback red lines and the never-solicit line — owned by
   ``.specify/shared/workflow/feedback-step.md`` § Positioning & Red Lines.
 * The name-level baseline form, red-first evidence, mutation drill and the
-  anti-vacuity sentinel — owned by ``.specify/memory/glossary.md``.
+  anti-vacuity sentinel — owned by ``.specify/glossary.md``.
 * Which agent CLIs have a resolvable session store, and which do not — owned by
   ``STORE_RESOLVERS`` / ``UNSUPPORTED_TOOL_HINTS`` in
   ``.specify/scripts/python/history-utils.py``.
@@ -1635,6 +1635,7 @@ def build_parser() -> argparse.ArgumentParser:
     # no surface to appear on, and the flag is position-independent by
     # construction. `test_run_determination_engine.py` pins that.
     common = argparse.ArgumentParser(add_help=False)
+
     common.add_argument("--workspace-root", default=None,
                         help="project workspace owning .specify/ (default: resolved "
                              "by the memory engine)")
@@ -1645,6 +1646,8 @@ def build_parser() -> argparse.ArgumentParser:
                     "per completed run, one record.",
         parents=[common],
     )
+    _sig_configure(parser)
+
     parser.add_argument("--action", required=True, choices=list(ACTIONS))
 
     identity = parser.add_argument_group("identity & scope")
@@ -1777,7 +1780,31 @@ def _emit(payload: Dict[str, Any], as_json: bool, action: str) -> None:
     print(render_text(action, payload))
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv: Optional[List[str]] = None) -> int:
+    _sig_guard(argv, declared=['--workspace-root', '--json', '--action', '--unit-id', '--unit-type', '--run-id', '--complexity', '--qualification', '--feature', '--feature-id', '--session-file', '--session-rows', '--tool', '--proxy-paths', '--token-note', '--elapsed-ms', '--elapsed-note', '--names-current', '--names-baseline', '--declared-check', '--green-check', '--red-first-refs', '--collected', '--user-turn-class', '--prev-user-turn-class', '--unresolved-red', '--red-source', '--target', '--limit', '--unsettled'])  # answer --version / reject an undeclared option
     parser = build_parser()
     args = parser.parse_args(argv)
     try:

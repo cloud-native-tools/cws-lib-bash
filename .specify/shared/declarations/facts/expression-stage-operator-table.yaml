@@ -1,0 +1,23 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044).
+#
+# The one machine-read copy of the stage-operator table's header: the five columns the gate owner
+# must carry, in order. The engine `.specify/scripts/python/flow-class-check.py` reads it through
+# `.specify/scripts/python/declaration_reader.py` and resolves every row by these columns instead of
+# re-spelling them; the carrier reaches it by
+# `.specify/shared/declarations/facts/expression-stage-operator-table.yaml#/statement`.
+#
+# Authority order: code > generated > authored. The engine's `required` tuple and the carrier's
+# header row named the same five columns in the same order on 2026-11-05, so nothing had drifted.
+fact: expression-stage-operator-table
+kind: ordered-operator-table
+statement:
+  - 阶段
+  - 算子 id
+  - 执行算子
+  - 对应面
+  - 阻断级别
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+former_carriers:
+  - .specify/shared/workflow/expression-gates.md
+note: "Order is part of the value: the engine resolves each row by column position after checking the header against this tuple, so a reordered header is a shape change rather than a cosmetic edit. The carrier keeps the table itself — a table cannot exist without its header — and points here for the column set instead of owning it."

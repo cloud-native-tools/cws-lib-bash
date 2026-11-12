@@ -12,6 +12,158 @@
 # 输入: 子命令 + 选项 (见 --help)
 # 输出: stdout 渲染结果; Review 记录写入 ${REVIEW_DIR}/<branch>-<ts>.md
 # ============================================================
+#
+# Emitted by `.specify/scripts/python/sync-mirrors.py`; the authority for this block is
+# `contracts/mirror-projection.contract.md` C-34 / C-36. It depends on nothing
+# that exists only in the source tree: it re-derives its own version line (C-36).
+_script_interface_guard() {
+    _sig_name="${0##*/}"
+    _sig_stop=0
+    for _sig_arg in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_arg" in
+            --) _sig_stop=1 ;;
+            -h|--help) return 0 ;;
+            --version)
+                _sig_dir="$(dirname -- "$0")"
+                case "$_sig_dir" in /*) ;; *) _sig_dir="./$_sig_dir" ;; esac
+                _sig_ver="unknown"
+                _sig_level=0
+                while [ -d "$_sig_dir" ] && [ "$_sig_level" -le 12 ]; do
+                    if [ -f "$_sig_dir/pyproject.toml" ] && [ -e "$_sig_dir/.git" ]; then
+                        _sig_ver="$(sed -n 's/^version[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$_sig_dir/pyproject.toml" 2>/dev/null | head -n 1)"
+                        [ -n "$_sig_ver" ] || _sig_ver="unknown"
+                        break
+                    fi
+                    if [ "$_sig_dir" = "/" ]; then break; fi
+                    _sig_dir="$(dirname -- "$_sig_dir")"
+                    _sig_level=$((_sig_level + 1))
+                done
+                printf '%s %s\n' "$_sig_name" "$_sig_ver"
+                exit 0 ;;
+        esac
+    done
+    return 0
+}
+_script_interface_guard "$@"
+
+usage() {
+    cat << 'EOF'
+
+  git-delta-review — git-delta 驱动的命令行 Code Review 工作流
+  (看 → 批 → 记 → 报 四步闭环; 方法论见 references/review-workflow.md)
+
+  USAGE:
+    git-delta-review.sh <command> [options]
+
+  COMMANDS:
+    diff      渲染人类友好的代码对比 (git-delta 核心能力)
+              --side-by-side | --files | --stat | --focus <path> | --since <ref> | --head <ref>
+              --worktree/-w: 审查未提交改动 (HEAD vs 工作区, 含已暂存+未暂存)
+    review    交互式逐文件 Review (测试文件优先; --yes 非交互; --no-tests-first 关闭排序)
+    note      非交互追加一条 Review 意见 (供 Agent/CI 调用, 无需 delta)
+              -s <severity> -f <file> [-l <line>] -c <comment> [--review-file <path>]
+              severity: blocking | important | suggestion | nitpick | question | praise
+    report    查看/汇总 Review 报告
+              --list (默认) | --latest | --summary | --cat <file> | --file <record>
+              --summary --file <code-review.md>: 合入门禁判决的唯一来源
+              退出码关闭于 0/1/2: 0 允许, 1 拒绝 (当前记录的 blocking 计数), 2 输入错误
+              省略 --file 是历史模式: 自标 implicit, 组合路径一律显式给路径
+    base      解析评审基准 (非交互路径第 1 步)
+              --spec <dir> | --since/--base <ref> | --trunk <ref> | --head <ref> | --json
+              输出 base= head= base_source=; 无档可解时 base_source=not-evaluated 并退出 2
+    triage    判定代码段适用性 (run | not-applicable | not-evaluated)
+              --spec <dir> | --since <ref> | --head <ref> | --trunk <ref> | --code-paths <glob[,glob]>
+              输出 triage= basis= changed_files=; 空 delta 在任何回执之前判定
+    start     创建代码段记录, 并把上一次记录轮转归档 (非交互路径第 2 步)
+              --spec <dir> | --since <ref> | --head <ref> | --trunk <ref> | --renderer <delta|text>
+              --triage <value>: 非 run 的适用性拒绝创建记录; 归档名 code-review-<YYYYMMDDTHHMMSSZ>.md
+    receipt   覆盖率回执与段裁决 (非交互路径第 4 步)
+              --review-file <code-review.md> (必需, 不做目录内最新文件隐式选取)
+              --spec <dir> | --since <ref> | --head <ref> | --trunk <ref> | --renderer <delta|text>
+              --skip-with-reason <glob> --reason <reason>  (可重复; 理由取自法定五值)
+              写出记录内定界的 name=value 块并打印同一块; 四项计数只由它产出
+              退出码关闭于 0/1/2: 0 完整, 1 覆盖缺口, 2 不可评估 (不写块)
+    capture   客户采集 (非交互路径第 5 步)
+              --review-file <code-review.md> --triage <run|not-applicable|not-evaluated> [--unit <custom:owner/name>]
+              每次运行至多一条指针条目; 未采集情形存储零条目并打印五值披露行; 恒退出 0
+
+  NON-INTERACTIVE PATH (five steps, in this order — five, never four):
+    1. base      resolve the range: base= head= base_source=
+    2. start     record creation and rotation (required from the second run on)
+    3. note      append opinions (repeatable, one call per opinion)
+    4. receipt   coverage receipt and the summary verdict
+    5. capture   client-channel capture of this run's finding pointers (skipped with a disclosed reason; never a code defect)
+  No step prompts; no step needs a terminal. Step 2 is a step of its own: skipping
+  it turns the unattended path into an agent hand-writing the record.
+
+  EXAMPLES:
+    git-delta-review.sh diff --stat --since main          # Phase 1: 提交粒度自检
+    git-delta-review.sh diff --worktree                   # 审查未提交改动 (dogfooding/提交前)
+    git-delta-review.sh diff --side-by-side               # 左右分栏对比 (GitHub PR 视图)
+    git-delta-review.sh review --since main               # Phase 2: 结构化审查
+    git-delta-review.sh note -s blocking -f src/a.rs -l 45 -c "空指针风险"
+    git-delta-review.sh report --summary                  # Phase 3/4: 收敛判定
+    git-delta-review.sh base --spec .specify/specs/<key>  # 代码段: 解析本次评审区间
+    git-delta-review.sh triage --spec .specify/specs/<key>  # 代码段: 适用性判定
+    git-delta-review.sh start --spec .specify/specs/<key>   # 代码段: 创建/轮转记录
+
+  ENVIRONMENT:
+    REVIEW_DIR    Review 文件存储目录 (默认: ${SKILL_WORKDIR}/.specify/review)
+    GIT_BASE      默认对比基准 (默认: main; base/triage/start 不使用该默认)
+    GIT_HEAD      默认对比目标 (默认: HEAD)
+    DELTA_BIN     delta 二进制路径 (默认: delta)
+    REVIEW_RUN_TIMESTAMP  固定运行时间戳 YYYYMMDDTHHMMSSZ (默认: 当前 UTC 时间)
+
+EOF
+}
+
+# script-interface:86:begin (feature 086 -- generated; the rule is owned by
+# `.specify/shared/definitions/script-interface-definitions.md`, its bash half by
+# `.specify/scripts/bash/script-interface.sh` and `.specify/scripts/python/sync-mirrors.py`. No rule of its own.)
+_sig_usage() {
+    _si_body="$(usage 2>&1)"
+    printf '%s
+' "$_si_body"
+    case "$_si_body" in *'side-effects:'*) ;; *) printf '%s
+' 'side-effects: writes only through the options it documents; a flag-only invocation writes nothing' ;; esac
+    case "$_si_body" in *'exit-codes:'*) ;; *) printf '%s
+' 'exit-codes: 0 success; 1 a documented check failed; 2 argument or environment error' ;; esac
+}
+
+_sig_answers() {
+    _sig_want=""
+    _sig_stop=0
+    for _sig_tok in "$@"; do
+        if [ "$_sig_stop" -eq 1 ]; then continue; fi
+        case "$_sig_tok" in
+            --) _sig_stop=1 ;;
+            -h|--help) [ -n "$_sig_want" ] || _sig_want=help ;;
+            --version) [ -n "$_sig_want" ] || _sig_want=version ;;
+            -*)
+                case " --cat --code-paths --comment --file --files --focus --format --head --json --latest --line --list --no-tests-first --reason --renderer --review --review-file --severity --side-by-side --since --skip-with-reason --spec --stat --summary --triage --trunk --unit --unit-id --worktree --yes -s -f -l -c -w " in
+                    *" $_sig_tok "*) ;;
+                    *)
+                        if [ -z "" ]; then
+                            printf 'error: unrecognized option: %s\n' "$_sig_tok" >&2
+                            _sig_usage >&2
+                            exit 2
+                        fi
+                        ;;
+                esac
+                ;;
+        esac
+    done
+    case "$_sig_want" in
+        help) _sig_usage; exit 0 ;;
+    esac
+    return 0
+}
+
+_sig_answers "$@"
+set -u
+# script-interface:86:end
+
 set -euo pipefail
 
 SKILL_HOME="${SKILL_HOME:-$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")/.." && pwd -P)}"
@@ -514,7 +666,7 @@ cmd_report() {
 #
 # 三个子命令落在本脚本这一既有实体上 (contracts/code-review-skill.md C-30),
 # 不引入新引擎、常驻进程或依赖。它们构成非交互评审路径的前三步
-# (第四步 receipt 与汇总裁决由覆盖率回执承担), 见 --help 的 FOUR-STEP 段。
+# (第四步 receipt 与汇总裁决由覆盖率回执承担), 见 --help 的 FIVE-STEP 段。
 # ══════════════════════════════════════════════════════════════
 
 SPEC_DIR=""             # --spec <feature-dir>
@@ -1026,12 +1178,25 @@ cmd_receipt() {
 
     mapfile -t changed < <(printf '%s\n' "${changed[@]}" | LC_ALL=C sort)
 
-    # 行数是量测值: 测不出来就不写块, 绝不写 0 也不估算 (C-41 / V16)
-    local lines_added=0 lines_deleted=0 stat_a stat_d stat_rest
-    while IFS=$'\t' read -r stat_a stat_d stat_rest; do
+    # 行数是量测值: 测不出来就不写块, 绝不写 0 也不估算 (C-41 / V16)。
+    # 法定跳过选择器先于量测: 被 --skip-with-reason 命中的路径不进入聚合,
+    # 否则一个合法 binary 跳过会让整个回执 exit 2 (FR-014 / C-36)。
+    local lines_added=0 lines_deleted=0 stat_a stat_d stat_path index selector skip_path
+    while IFS=$'\t' read -r stat_a stat_d stat_path; do
         [[ -z "${stat_a:-}" ]] && continue
+        skip_path=false
+        for index in "${!skip_globs[@]}"; do
+            selector="${skip_globs[$index]}"
+            [[ -z "$selector" ]] && continue
+            # shellcheck disable=SC2053  # 选择器是调用方给的 glob, 故意不加引号
+            if [[ "$stat_path" == $selector ]]; then
+                skip_path=true
+                break
+            fi
+        done
+        [[ "$skip_path" == "true" ]] && continue
         if [[ "$stat_a" == "-" || "$stat_d" == "-" ]]; then
-            echo "行数无法测量 (binary): ${stat_rest:-?}" >&2
+            echo "行数无法测量 (binary): ${stat_path:-?}" >&2
             echo "不可量测的数字字段意味着不写块 (C-41 / V16)" >&2
             exit 2
         fi
@@ -1439,12 +1604,16 @@ usage() {
               --skip-with-reason <glob> --reason <reason>  (可重复; 理由取自法定五值)
               写出记录内定界的 name=value 块并打印同一块; 四项计数只由它产出
               退出码关闭于 0/1/2: 0 完整, 1 覆盖缺口, 2 不可评估 (不写块)
+    capture   客户采集 (非交互路径第 5 步)
+              --review-file <code-review.md> --triage <run|not-applicable|not-evaluated> [--unit <custom:owner/name>]
+              每次运行至多一条指针条目; 未采集情形存储零条目并打印五值披露行; 恒退出 0
 
-  NON-INTERACTIVE PATH (four steps, in this order — four, never three):
+  NON-INTERACTIVE PATH (five steps, in this order — five, never four):
     1. base      resolve the range: base= head= base_source=
     2. start     record creation and rotation (required from the second run on)
     3. note      append opinions (repeatable, one call per opinion)
     4. receipt   coverage receipt and the summary verdict
+    5. capture   client-channel capture of this run's finding pointers (skipped with a disclosed reason; never a code defect)
   No step prompts; no step needs a terminal. Step 2 is a step of its own: skipping
   it turns the unattended path into an agent hand-writing the record.
 

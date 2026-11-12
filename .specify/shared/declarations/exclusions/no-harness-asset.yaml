@@ -1,0 +1,305 @@
+# Exclusion records — reason `no-harness-asset` (requirements.md FR-002 / FR-005; data-model.md E-2).
+#
+# One row per candidate unit that fails **D1** (FR-002's asset side): its acceptance deliverable
+# contains no item named by `.specify/shared/guidelines/better-harness.md` § 消费者清单 — no evidence record,
+# no feedback / learning record, no gate verdict on someone else's artifact, and no change to
+# `skills/`, `agents/`, `teams/`, `tools/`, `docs/`, the constitution or the instructions.
+#
+# `carrier` is the engine or asset the unit does reach (data-model.md E-2). `anchor` is the
+# resolvable in-tree evidence for the reason: the section that states what the unit delivers.
+#
+# Re-measured 2026-11-05 (implement, part 5) before writing this file, per
+# `contracts/migration-batches.contract.md` § Verification ("the excluded facts still have no
+# engine read point") read for the asset side instead:
+#   draw-diagram   — Step 4 accepts the run against the LDM and the delivery contract and reports
+#                    products (HTML + source + image); no evidence/feedback record is produced and
+#                    no `skills/`, `agents/`, `teams/`, `tools/`, `docs/` or governance file is edited.
+#   database-utils — read-only querying of MySQL/PostgreSQL protocol databases; the deliverable is
+#                    a query result, and the skill writes nothing outside its own config file.
+# Count measured at write time: 2 rows, one file (the two remaining closed reasons carry no row —
+# a reason file that would be empty MUST NOT be created to satisfy the shape).
+# Re-measured 2026-11-05 (implement, part 6) with the T032 append of the screen's remaining
+# candidates: **32 rows**. The earlier count stays as the reading it was, not as the current one.
+
+# D1 unsatisfied: the deliverable is a diagram package, not a harness asset.
+# Engine the unit does reach: its six engine layers are selected per run, so the one deterministic
+# framework engine the unit's text invokes unconditionally is the feedback record it writes for
+# itself (`SKILL.md` § Self-Improvement Contract, `python3 …/.specify/scripts/python/feedback-utils.py
+# --action record`). A row names one carrier; this is that one, measured with `grep -n`.
+- unit: .specify/skills/draw-diagram/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/draw-diagram/SKILL.md#Step 4: 验收与回报
+
+# D1 unsatisfied: the deliverable is a query result over a configured database.
+# Engine the unit does reach: its own dispatcher, `.specify/scripts/query.py` (`SKILL.md` § Usage).
+- unit: .specify/skills/database-utils/SKILL.md
+  carrier: .specify/skills/database-utils/scripts/query.py
+  anchor: .specify/skills/database-utils/SKILL.md#Overview
+
+# --- T032 rows (tasks.md T032), appended 2026-11-05 (implement, part 6): the screen's remaining
+# candidates, 30 rows. The 2 rows above are untouched — data-model.md E-2 says a new unit appends a
+# row and MUST NOT reorder existing ones — and one unit appears exactly once (E-2 R-4).
+# Why `no-harness-asset` on these 30: each one's acceptance deliverable — the product its own
+# `anchor` section names — is not one of the four harness-asset kinds FR-002 (D1) asks for, so the
+# asset side of the scope criterion fails. Nothing about the unit's subject is disputed and its
+# carrier is unchanged.
+# Their text does still reach a deterministic engine, which is why the screen accepts them at all
+# (FR-004's accepted conservative side) and why every row carries a `carrier`: `grep` at write time
+# found either a `.specify/scripts/python/<name>.py` reference or the unit's own
+# `${SKILL_HOME}/scripts/<file>` asset invoked by relative path. 8 of these units own no subject
+# engine and reach the record engine their own § Wrap-up calls (`.specify/scripts/python/feedback-utils.py`),
+# recorded per row rather than left to be re-derived.
+# Count after this append: 32 rows (2 + 30). Measured, not projected: the merged file was read by
+# `harness-triple-check.py --action coverage`, which reported `exclusion-anchor-unresolvable` 0 and
+# `unclassified` 0 on this tree.
+
+# `.specify/shared/workflow/*.md` — protocol documents (3 rows)
+# These carry protocols a driver follows. What they deliver is a memory-store or spec-directory file
+# (`features.md`, `glossary.md`, a dispatch plan) — none of the four kinds — and each still names
+# one engine in prose.
+#
+# .specify/shared/workflow/external-dispatch-recipes.md — the deliverable is a recipe catalogue a driver
+# reads; nothing lands on a governed tree and no record or verdict is produced
+# carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+- unit: .specify/shared/workflow/external-dispatch-recipes.md
+  carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+  anchor: .specify/shared/workflow/external-dispatch-recipes.md#Two Topologies
+#
+# .specify/shared/workflow/feature-integration.md — the deliverable is registry rows in
+# `.specify/features.md` and `features/<ID>-<slug>.md` — the memory registry, which the consumer
+# list does not name
+# carrier: .specify/scripts/python/closure-acceptance-check.py
+- unit: .specify/shared/workflow/feature-integration.md
+  carrier: .specify/scripts/python/closure-acceptance-check.py
+  anchor: .specify/shared/workflow/feature-integration.md#Core Protocol
+#
+# .specify/shared/workflow/glossary.md — the deliverable is glossary entries in
+# `.specify/glossary.md`; the protocol edits a memory-store file, not one of the four kinds
+# carrier: .specify/scripts/python/glossary-utils.py
+- unit: .specify/shared/workflow/glossary.md
+  carrier: .specify/scripts/python/glossary-utils.py
+  anchor: .specify/shared/workflow/glossary.md#5. Scope
+
+# `skills/external/*/SKILL.md` (2 rows)
+# A coaching run and an office-document toolkit. The coaching plan is handed to `improve-skills`,
+# which is the unit that changes `skills/`; the document toolkit's product is a document.
+#
+# .specify/skills/coaching-skills/SKILL.md — the deliverable is four coaching run files (expectation
+# / observation / deviations / improvement-plan); the plan is only handed to `improve-skills`, so no
+# `skills/` file is changed here
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/coaching-skills/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/coaching-skills/SKILL.md#Artifacts and Order
+#
+# .specify/skills/document-utils/SKILL.md — the deliverable is an office document (DOCX / PDF / PPTX
+# / XLSX); the format tools under its own `.specify/scripts/` are what it reaches
+# carrier: .specify/skills/document-utils/scripts/office/validate.py
+- unit: .specify/skills/document-utils/SKILL.md
+  carrier: .specify/skills/document-utils/scripts/office/validate.py
+  anchor: .specify/skills/document-utils/SKILL.md#Overview
+
+# `skills/internal/*/SKILL.md` (15 rows)
+# Authoring and analysis skills whose product is a spec artifact, a registry file, a ledger, a
+# report or a relayed third-party product. Where a unit owns a subject engine that engine is the
+# carrier; where it owns none, the carrier is the record engine its § Wrap-up calls.
+#
+# .specify/skills/internal/archive-session/SKILL.md — the deliverable is an exported CLI-session bundle in a
+# user-named directory outside the memory store
+# carrier: .specify/skills/internal/archive-session/scripts/export.py
+- unit: .specify/skills/internal/archive-session/SKILL.md
+  carrier: .specify/skills/internal/archive-session/scripts/export.py
+  anchor: .specify/skills/internal/archive-session/SKILL.md#调用
+#
+# .specify/skills/internal/clarify-artifact/SKILL.md — the deliverable is ratified answers encoded back into
+# the phase artifact (requirements.md / plan.md)
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/clarify-artifact/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/clarify-artifact/SKILL.md#Goal
+#
+# .specify/skills/internal/create-checklist/SKILL.md — the deliverable is a requirements-quality checklist
+# file under the feature's `checklists/`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/create-checklist/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/create-checklist/SKILL.md#Goal
+#
+# .specify/skills/internal/create-plan/SKILL.md — the deliverable is plan.md plus its design artifacts
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/create-plan/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/create-plan/SKILL.md#Goal
+#
+# .specify/skills/internal/create-requirements/SKILL.md — the deliverable is requirements.md
+# carrier: .specify/scripts/python/validate-requirements.py
+- unit: .specify/skills/internal/create-requirements/SKILL.md
+  carrier: .specify/scripts/python/validate-requirements.py
+  anchor: .specify/skills/internal/create-requirements/SKILL.md#Goal
+#
+# .specify/skills/internal/create-tasks/SKILL.md — the deliverable is tasks.md
+# carrier: .specify/scripts/python/validate-tasks.py
+- unit: .specify/skills/internal/create-tasks/SKILL.md
+  carrier: .specify/scripts/python/validate-tasks.py
+  anchor: .specify/skills/internal/create-tasks/SKILL.md#Goal
+#
+# .specify/skills/internal/derive-architecture/SKILL.md — the deliverable is a derivation archive at
+# `.specify/derive/<slug>/derive.md`
+# carrier: .specify/scripts/python/derive-utils.py
+- unit: .specify/skills/internal/derive-architecture/SKILL.md
+  carrier: .specify/scripts/python/derive-utils.py
+  anchor: .specify/skills/internal/derive-architecture/SKILL.md#Workflow
+#
+# .specify/skills/internal/manage-features/SKILL.md — the deliverable is the feature registry (`features.md`
+# plus per-feature detail files)
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/manage-features/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/manage-features/SKILL.md#Goal
+#
+# .specify/skills/internal/manage-goal/SKILL.md — the deliverable is goal definitions under `.specify/goal/`
+# carrier: .specify/scripts/python/goal-utils.py
+- unit: .specify/skills/internal/manage-goal/SKILL.md
+  carrier: .specify/scripts/python/goal-utils.py
+  anchor: .specify/skills/internal/manage-goal/SKILL.md#Goal
+#
+# .specify/skills/internal/manage-todo/SKILL.md — the deliverable is TODO blocks and parked ideas in
+# workspace files
+# carrier: .specify/scripts/python/search-todo.py
+- unit: .specify/skills/internal/manage-todo/SKILL.md
+  carrier: .specify/scripts/python/search-todo.py
+  anchor: .specify/skills/internal/manage-todo/SKILL.md#Goal
+#
+# .specify/skills/internal/research-feature/SKILL.md — the deliverable is research.md
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/research-feature/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/research-feature/SKILL.md#Goal
+#
+# .specify/skills/internal/run-agent/SKILL.md — the deliverable is the dispatched agent's own output plus its
+# run report
+# carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+- unit: .specify/skills/internal/run-agent/SKILL.md
+  carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+  anchor: .specify/skills/internal/run-agent/SKILL.md#Goal
+#
+# .specify/skills/internal/run-interview/SKILL.md — the deliverable is the target artifact edited in place
+# plus the decision ledger (spec dir or memory session store)
+# carrier: .specify/scripts/python/interview-utils.py
+- unit: .specify/skills/internal/run-interview/SKILL.md
+  carrier: .specify/scripts/python/interview-utils.py
+  anchor: .specify/skills/internal/run-interview/SKILL.md#Goal
+#
+# .specify/skills/internal/run-skills/SKILL.md — the deliverable is the target skill's own product, relayed
+# unchanged
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/run-skills/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/run-skills/SKILL.md#Goal
+#
+# .specify/skills/internal/run-team/SKILL.md — the deliverable is the team's work plus the mandatory run
+# report; a run changes no governed tree
+# carrier: .specify/scripts/python/goal-utils.py
+- unit: .specify/skills/internal/run-team/SKILL.md
+  carrier: .specify/scripts/python/goal-utils.py
+  anchor: .specify/skills/internal/run-team/SKILL.md#Goal
+
+# `.specify/templates/commands/*.md` (10 rows)
+# The command face of the same ten deliverables. Each template carries entry, parameters and the
+# command-lifecycle wrap-up and delegates the product to its skill; the product is named per row.
+#
+# .specify/templates/commands/checklist.md — delivers a checklist file through create-checklist
+# carrier: .specify/scripts/python/flow-class-check.py
+- unit: .specify/templates/commands/checklist.md
+  carrier: .specify/scripts/python/flow-class-check.py
+  anchor: .specify/templates/commands/checklist.md#Delegation
+#
+# .specify/templates/commands/clarify.md — delivers ratified answers written back into the phase artifact
+# carrier: .specify/scripts/python/flow-class-check.py
+- unit: .specify/templates/commands/clarify.md
+  carrier: .specify/scripts/python/flow-class-check.py
+  anchor: .specify/templates/commands/clarify.md#Delegation
+#
+# .specify/templates/commands/derive.md — delivers the `.specify/derive/` archive
+# carrier: .specify/scripts/python/derive-utils.py
+- unit: .specify/templates/commands/derive.md
+  carrier: .specify/scripts/python/derive-utils.py
+  anchor: .specify/templates/commands/derive.md#Outline
+#
+# .specify/templates/commands/goal.md — delivers goal definitions under `.specify/goal/`
+# carrier: .specify/scripts/python/goal-utils.py
+- unit: .specify/templates/commands/goal.md
+  carrier: .specify/scripts/python/goal-utils.py
+  anchor: .specify/templates/commands/goal.md#Outline
+#
+# .specify/templates/commands/interview.md — delivers the edited target artifact plus the interview ledger
+# carrier: .specify/scripts/python/interview-utils.py
+- unit: .specify/templates/commands/interview.md
+  carrier: .specify/scripts/python/interview-utils.py
+  anchor: .specify/templates/commands/interview.md#Skill Delegation
+#
+# .specify/templates/commands/plan.md — delivers plan.md plus its design artifacts
+# carrier: .specify/scripts/python/flow-class-check.py
+- unit: .specify/templates/commands/plan.md
+  carrier: .specify/scripts/python/flow-class-check.py
+  anchor: .specify/templates/commands/plan.md#Skill Delegation
+#
+# .specify/templates/commands/research.md — delivers research.md
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/templates/commands/research.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/templates/commands/research.md#Delegation
+#
+# .specify/templates/commands/session.md — delivers the exported session bundle
+# carrier: .specify/skills/internal/archive-session/scripts/export.py
+- unit: .specify/templates/commands/session.md
+  carrier: .specify/skills/internal/archive-session/scripts/export.py
+  anchor: .specify/templates/commands/session.md#Modes
+#
+# .specify/templates/commands/tasks.md — delivers tasks.md
+# carrier: .specify/scripts/python/validate-tasks.py
+- unit: .specify/templates/commands/tasks.md
+  carrier: .specify/scripts/python/validate-tasks.py
+  anchor: .specify/templates/commands/tasks.md#Delegation
+#
+# .specify/templates/commands/todo.md — delivers the TODO surface (workspace blocks and parked ideas)
+# carrier: .specify/scripts/python/search-todo.py
+- unit: .specify/templates/commands/todo.md
+  carrier: .specify/scripts/python/search-todo.py
+  anchor: .specify/templates/commands/todo.md#Delegation
+
+# --- 092 A2 rows, appended 2026-11-09 (092 non-disposable, u04): three carriers that entered the
+# candidate screen after 084 closed — `.specify/templates/commands/measure.md` and
+# `.specify/templates/commands/status.md` (087) and `.specify/skills/ssh-utils/SKILL.md` (ssh-utils refactor).
+# Existing rows above are untouched (E-2: a new unit appends, never reorders), and each unit appears
+# exactly once (E-2 R-4).
+# Why `no-harness-asset` on these three: D1 fails — the acceptance deliverable each row's anchor
+# names is a report, a digest or a remote execution result produced by its own engine, not one of
+# the four harness-asset kinds. A fact declaration is not the minimal repair either: no engine of
+# these units reads a value from the declaration layer today, so a declaration would name a consumer
+# engine with no locatable read point and stay permanently `pending` (STR-009) — repairing that would
+# mean editing the engines, outside a 084 spec-file change. The reason is `no-harness-asset`, not
+# `no-machine-fact`: none of the three ever held a roster fact, and the latter reason is reserved for
+# a unit whose migrated fact left the roster.
+# Count after this append: 35 rows (32 + 3). The readings above stay as the readings they were.
+
+# .specify/templates/commands/measure.md — product: a measurement report printed from the existing exec-quant
+# store; measure.py writes nothing
+# carrier: .specify/scripts/python/measure.py
+- unit: .specify/templates/commands/measure.md
+  carrier: .specify/scripts/python/measure.py
+  anchor: .specify/templates/commands/measure.md#Delegation
+
+# .specify/templates/commands/status.md — product: a bounded current-state digest, the reporting guard's
+# verdicts on this run's own obligation, or one status line; status-digest.py owns every read
+# carrier: .specify/scripts/python/status-digest.py
+- unit: .specify/templates/commands/status.md
+  carrier: .specify/scripts/python/status-digest.py
+  anchor: .specify/templates/commands/status.md#Delegation
+
+# .specify/skills/ssh-utils/SKILL.md — product: remote command execution (stdout and remote exit
+# code) over ssh; the skill is transport only and writes no record
+# carrier: .specify/skills/ssh-utils/scripts/ssh-exec.py
+- unit: .specify/skills/ssh-utils/SKILL.md
+  carrier: .specify/skills/ssh-utils/scripts/ssh-exec.py
+  anchor: .specify/skills/ssh-utils/SKILL.md#Boundary

@@ -8,6 +8,8 @@ classification: external
 
 # improve-docs
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
 ## Goal
 
 Improve **one existing document** in the managed documentation space so the next reader succeeds where the last one failed: fix content that is wrong, stale, incomplete, unreadable, unlinkable, or unrenderable. This is the **content-quality** member of the docs trio: `create-docs` owns the structure, `create-pages` owns the optional presentation layer.
@@ -54,6 +56,8 @@ python3 ${SKILL_HOME}/../create-pages/scripts/scaffold-hugo.py --action build --
 
 Other admissible evidence: a `/speckit.review` finding, a `memory-recall` hit, a distilled `.specify/history/` lesson, a user correction in this session, or a **verified** staleness signal — a path, command, flag, count, or version the document asserts that no longer holds. Verify each such claim against the repository (does the path exist? does `--help` still list the flag?) and record what you checked.
 
+**The document's traceability record** — when one exists, read it before deciding anything: `docs/.speckit/runs/*-diagram-trace.json` carries the entry for this document under `diagrams[]`, and that entry is the machine evidence of **which diagram the document already owns, which engine layer produced it, and which face(s) — the editable source and the rendered render — the pair is made of**. It is evidence of a fact, not a to-do list: a document with an entry is not thereby "up to date", and a document without one is not thereby wrong. What the record settles is ownership — which source file a content change has to travel to, and which engine that file's re-render must keep. Locate the entry by the document's own path; never guess the newest record. The judgement that turns this evidence into a verdict is `docs-utils.py --action obligation --only <this document>`, whose verdict vocabulary and reason table are written once, beside the engine that emits them, in [`create-docs/references/diagram-obligation.md`](../create-docs/references/diagram-obligation.md), and are quoted nowhere here.
+
 **Unobserved is a valid finding.** If nothing concrete faults the document, say so and stop; do not manufacture improvements.
 
 ### 3. Classify the improvement
@@ -71,14 +75,20 @@ Each class carries a different verification obligation:
 | **Oversize relief** | a root entry exceeds the one-screen rule, or a page is unnavigable | Sink detail into the typed `docs/` tree — the *destination file* is `create-docs` work; hand off |
 | **Notes promotion** | a `draft` note has matured into a formal fact | Merge the content into its `target`; the note's archive move and status flip on disk are `create-docs` work |
 | **Decision supersession** | a recorded decision is obsolete | **Annotate** `Deprecated` / `Superseded by`; never rewrite or delete decision history |
+| **Diagram-sync** | the improvement touches a fact the document's diagram depicts — a component name, a relation, a step order | Update the diagram in the same run, or raise a named staleness finding; exactly one of the two, never both and never neither |
 
 ### 4. Apply the minimal section-level edit
 
 Change only what the evidence supports; preserve every untouched section verbatim, including its wording, ordering, and language. Keep the document's own voice — an improvement is not a rewrite. If a fact must be removed, replace it with the corrected fact or an explicit annotation; never leave a silent hole.
 
+**On a Diagram-sync hit** the diagram travels with the edit, under the flow obligations the producing flow already carries: the entry the evidence step read names the source to change and the engine layer to keep, so an existing diagram is updated through its recorded engine and is never re-routed; a document that owns no diagram yet goes through the `draw-diagram` capability by path (`skills/external/draw-diagram`) rather than through anything improvised here. Both faces and the document's reference move in this one run, or the run reports the named finding instead (step 6).
+
+**On a miss**, state it in place and move on: add one line to the touched section saying that no diagram work was needed this run, and repeat that statement once in the report. Do not re-render to demonstrate activity — a re-render that changed nothing is churn wearing evidence's clothes, and the double statement exists so that "nothing happened here" is a recorded reading rather than an inference from silence.
+
 ### 5. Verify
 
 - Re-run `docs-utils.py --action validate --root .` → the target's findings are gone and **no new violation** appears anywhere.
+- Re-run the diagram reading for **this one document**: `docs-utils.py --action obligation --root . --only <this document> [--record <this run's record>]`. The verdict it returns must be `satisfied` or a valid `recorded-exemption`; `stale`, `missing` and `not-evaluated` each **block** the improvement-complete conclusion — a document whose prose was just corrected while its picture or its record says otherwise has not been improved, it has been changed in one place out of two. When the verdict is not one of the two admissible ones, the residual is reported with the reason the checker gave, never softened into "the diagram may be out of date".
 - If the site layer is scaffolded, re-run the Hugo build → still green.
 - Re-read the edited sections against the evidence list: every finding is either fixed or explicitly deferred with a reason.
 
@@ -93,6 +103,10 @@ python3 ${SKILL_HOME}/../create-docs/scripts/docs-utils.py --action audit --root
 
 Report: the document changed, the evidence behind each edit, class per edit, before → after for every factual change, verification results, and any **hand-off to `create-docs`** (moves, new files, archiving) or residual the user must decide.
 
+The report also **carries the diagram reading** it verified above: the verdict and reason the checker returned for this document, and — when the run touched a diagram — the four things a later reader needs in order to find it again: the source path, the rendered face path(s), the document's own reference line, and the trace-record path. A run that says "improved" while this reading is missing is claiming a result it did not measure.
+
+**When the diagram cannot be re-rendered** — the engine layer is unavailable, the render backend is unreachable, or the delivery check refuses — raise a **named staleness finding**: say which diagram, which face and which reason, so the next reader can act on it. Leave the editable source untouched. Rolling the source back, deleting the half-finished pair or rewriting the document to match the *old* picture would erase the only evidence that the two disagree, and the divergence is the finding. The refusal itself is carried through in the capability's own words; this skill neither paraphrases it nor renders anything locally as a fallback.
+
 ## Constraints
 
 - **One document per run** — or one explicitly bounded, single-dimension batch. Improving several documents by judgement is several runs. The one exception is **mandated collateral repair**: when an edit changes a heading or anchor, repairing the inbound links in other files belongs to the *same* run — leaving them broken to honour the one-document rule is a misreading, not compliance.
@@ -101,8 +115,10 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 - **Never delete content as an improvement.** Superseded prose is corrected or annotated; removal at file scope goes through `create-docs` (archive-not-delete).
 - **Never assert what you did not verify.** An unverifiable claim is either dropped with a note or marked as needing confirmation — do not launder a guess into documentation.
 - **Never edit a generated file or a mirror.** Files carrying an `AUTO-GENERATED` header, `.specify/**` mirrors, and per-tool command copies are outputs: fix the canonical source, then run `python3 .specify/scripts/python/sync-mirrors.py --write`.
-- **Never touch non-document managed state as documentation.** `docs/.speckit/target-structure.md` is a **cross-run non-document contract**: read only when context requires it and **never edit** it. `docs/.speckit/plans/` and `docs/.speckit/audit/` are run artifacts; `docs/git-workflow.md` is machine-maintained branch state; `.specify/memory/**` is machine-managed data; `docs/public/` is generated presentation output.
+- **Never touch non-document managed state as documentation.** `docs/.speckit/target-structure.md` is a **cross-run non-document contract**: read only when context requires it and **never edit** it. `docs/.speckit/plans/` and `docs/.speckit/audit/` are run artifacts; a legacy pre-migration `docs/git-workflow.md` is machine-maintained branch state (current state lives at `.specify/workflow/git.md`, outside the docs space); `.specify/memory/**` is machine-managed data; `docs/public/` is generated presentation output.
 - **Never restyle without a finding.** Cosmetic churn on an unfaulted document is a violation of the anti-churn discipline, not an improvement.
+- **The diagram arrives by reference, never by copy.** The drawing capability is reached at `skills/external/draw-diagram` and its routing criteria, semantic model and delivery contract stay there — this skill names the path and quotes none of its rows. That also settles where the obligation's body lives: it is `create-docs`'s, written once in its desired-state baseline, and the Diagram-sync row above says only what THIS flow does about it. What follows from both: the improve flow opens no second rendering path, and updating a diagram never carries a move, a rename or an archive with it — those remain `create-docs`'s, per the boundary above.
+- **The three face names a content change can produce are named here too** — `orphan-rendered`, `orphan-source`, `source-newer-than-render` — because a rename or a re-render is exactly what produces them, and a report that says "the diagram is wrong" cannot be acted on. What each one means and the order they are decided in live in the sibling skill's shipped reference, `.specify/skills/create-docs/references/diagram-obligation.md` § 4, § 6 and § 7, which is the single registry for them; this skill names the faces and does not restate that sequence.
 - **Reserved filenames stay reserved** (`README.md` / `ARCHITECTURE.md` / `CONTRIBUTING.md` / `CHANGELOG.md` at the root only; directory indexes are `index.md`).
 - **Do not improve this skill or `create-docs` here** → `improve-skills`.
 
@@ -124,6 +140,7 @@ Report: the document changed, the evidence behind each edit, class per edit, bef
 | `${SKILL_HOME}/../create-docs/scripts/docs-utils.py` | Deterministic findings: `validate`, `scan`, `fix-links`, `audit` |
 | `${SKILL_HOME}/../create-pages/scripts/scaffold-hugo.py` | Site build check (`--action build`) for render defects — only when the optional site layer is installed |
 | `.specify/scripts/python/feedback-utils.py` | Recorded feedback digest (`--action list --contains`) |
+| `.specify/shared/workflow/artifact-commit-step.md` § Close-out | 消化产生的提交如何收尾（步骤与报告字段的唯一 owner；按指针抵达） |
 | `.specify/shared/patterns/reconcile-pattern.md` | Tolerance-band and anti-churn semantics shared with `create-docs` |
 
 ## Self-Improvement Alignment
@@ -132,7 +149,7 @@ The document being edited is not an Execution Subject by default, so this flow i
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -142,3 +159,4 @@ The document being edited is not an Execution Subject by default, so this flow i
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:improve-docs" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

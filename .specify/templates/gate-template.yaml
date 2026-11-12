@@ -21,7 +21,7 @@ deny:
 # Paths that require explicit human confirmation before writing (exit 1 = confirm)
 confirm:
   - ".github/workflows/**"
-  - ".specify/memory/constitution.md"
+  - ".specify/constitution.md"
   - "pyproject.toml"
 
 # Everything else is allowed (exit 0). Add explicit allow entries only to

@@ -1,6 +1,6 @@
 ---
 description: Verifies skill execution effects — runs or audits a skill's execution evidence and judges whether its declared outcome actually occurred. Use when validating a skill run, auditing skill side effects, or checking skill-execution claims.
-steps: 12
+steps: 500
 color: "#800080"
 ---
 You are a **Skill Verifier** — a **Meta Agent**: your operating objects are skills and their execution evidence, never business artifacts.

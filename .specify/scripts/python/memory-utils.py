@@ -34,7 +34,32 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-SCOPES = ("session", "knowledge")
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
+
+#: Feature 084, batch 3 (contracts/migration-batches.contract.md C-045): the scope closed set is a
+#: declaration-layer fact, read through the shared read entry. The tuple below is the **FR-012
+#: compatibility value** for a tree with no declaration layer; when the declaration is readable it is
+#: the declaration's value that is used and this one is never consulted (no double read).
+MEMORY_TYPES_FACT = "memory-types"
+SCOPES_FALLBACK = ("session", "knowledge")
+
+
+def declared_sequence(slug, fallback):
+    """`(values, label)` for one closed-set / table fact; `(fallback, <STR-014 instance>)` if unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), slug)["body"]
+        values = body.get("statement")
+        if not isinstance(values, list) or not values:
+            raise ValueError("statement is not a non-empty sequence")
+        return tuple(str(value) for value in values), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return fallback, declaration_reader.absent_label(slug)
+
+
+SCOPES, SCOPES_LABEL = declared_sequence(MEMORY_TYPES_FACT, SCOPES_FALLBACK)
 MEMORY_SUBDIR = Path(".specify") / "memory"
 # Legacy per-scope index (pre-055): read-only fallback, retired on first
 # mutating action.
@@ -510,6 +535,8 @@ def render_text(action: str, payload: Dict[str, Any]) -> str:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Spec Kit memory-as-files engine")
+    _sig_configure(parser)
+
     parser.add_argument(
         "--action",
         required=True,
@@ -542,9 +569,37 @@ _ACTIONS = {
 }
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv: Optional[List[str]] = None) -> int:
+    _sig_guard(argv, declared=['--action', '--workspace-root', '--scope', '--source', '--title', '--content', '--content-file', '--tags', '--feature', '--session-id', '--query', '--since', '--limit', '--max-entries', '--max-age-days', '--format'])  # answer --version / reject an undeclared option
     parser = build_parser()
     args = parser.parse_args(argv)
+    # FR-012 / FR-013: a tree without the declaration layer keeps working on the labelled
+    # compatibility value — the label is a reading of the wiring, never a pass.
+    if SCOPES_LABEL:
+        print(SCOPES_LABEL, file=sys.stderr)
     try:
         payload = _ACTIONS[args.action](args)
     except MemoryError as exc:

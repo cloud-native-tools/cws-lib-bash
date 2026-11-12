@@ -1,0 +1,313 @@
+# Exclusion records — reason `no-machine-fact` (requirements.md FR-002 / FR-005; data-model.md E-2).
+#
+# One row per **unit** whose last in-scope fact left the roster
+# (contracts/migration-batches.contract.md § Facts outside the roster). The rows are the unit-level
+# records; the fact-level record for the same removal lives in that contract section and in
+# the feature detail's § Latest Review — an absent migration, never a silent deletion.
+#
+# `carrier` is the deterministic engine the unit's text actually calls (located by `grep` at write
+# time), never the markdown that carried the fact. `anchor` is the resolvable in-tree location where
+# the fact still lives as prose — the reason's evidence: the value is written down here and in no
+# engine. The absence measurement for each row is recorded in the comment above it.
+#
+# Re-measured 2026-11-05 (implement, part 3) before writing this file, per the contract's
+# § Verification row "the excluded facts still have no engine read point":
+#   grep -rln "Bootstrap\|Operationalize\|Optimize" --include=*.py --include=*.sh .specify/scripts/ skills/   -> 0 hits
+#   grep -rn "improvement-track\|changed-asset" --include=*.py --include=*.sh .                      -> 0 hits
+#   grep -rn "CRITICAL\|severity" .specify/scripts/python/*.py                                                -> severity of OTHER axes only
+#                                                                                                       (error/advisory, record tags), no
+#                                                                                                       CRITICAL/HIGH/MEDIUM/LOW scale
+#   grep -rn "clause-uncovered\|fr-uncovered" .specify/scripts/python/*.py                                    -> account-clause-coverage.py:
+#                                                                                                       a NARROWER two-label set, not
+#                                                                                                       this row's finding classes
+# Count measured at write time: 8 rows. Re-measured 2026-11-05 (implement, part 5) with the two
+# US4 rows appended for the units that never held a machine-consumed fact at all: **10 rows**. Two
+# facts of the same roster contribute no row —
+# `review-segment-sequence` and `history-categories` — because their unit groups keep an in-scope
+# fact (`arc-verdict-mapping`, `history-manifest-schema`); a row for them would be the both-declared-
+# and-excluded state data-model.md E-2 R-4 forbids.
+# Re-measured 2026-11-05 (implement, part 6) with the T032 append of the screen's remaining
+# candidates: **38 rows**. The 8 and 10 above stay as the readings they were, not as the current one.
+
+# `analyze-severity-values` + `analysis finding-channel set` — 2 units, 2 facts.
+# Engine the unit calls: account-clause-coverage.py (the nearest label set in code; a narrower set).
+- unit: .specify/templates/commands/analyze.md
+  carrier: .specify/scripts/python/account-clause-coverage.py
+  anchor: .specify/templates/commands/analyze.md#Wrap-up
+
+- unit: .specify/skills/internal/analyze-artifacts/SKILL.md
+  carrier: .specify/scripts/python/account-clause-coverage.py
+  anchor: .specify/skills/internal/analyze-artifacts/references/detection-and-severity.md#Severity assignment
+
+# `self-improvement-stage-sequence` + `track-to-executor mapping` — 1 unit, 2 facts.
+# Engine the unit calls: feedback-utils.py (the improvement record's engine); no engine reads a stage
+# sequence or maps a track to an executor.
+- unit: .specify/skills/internal/self-improvement/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/shared/workflow/self-improvement-workflow.md#Standard Flow
+
+# `improvement-track-values` + `changed-asset-category mapping` — 5 units, 2 facts.
+# Engine each unit calls: the record engine nearest its subject. Roster correction: the contract's
+# anchor column names "§ Target Classification" for all five, which measured true only for
+# improve-agent; the other four name the same fact in the classification step of their own § Workflow
+# or refinement map. Their own measured section is the anchor, recorded rather than re-pointed.
+- unit: .specify/skills/internal/improve-agent/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/improve-agent/SKILL.md#Target Classification
+
+- unit: .specify/skills/internal/improve-team/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/improve-team/SKILL.md#Refinement Map (examples)
+
+- unit: .specify/skills/internal/improve-tools/SKILL.md
+  carrier: .specify/scripts/python/tools-utils.py
+  anchor: .specify/skills/internal/improve-tools/SKILL.md#Classify the improvement
+
+- unit: .specify/skills/improve-docs/SKILL.md
+  carrier: .specify/scripts/python/sync-mirrors.py
+  anchor: .specify/skills/improve-docs/SKILL.md#3. Classify the improvement
+
+- unit: .specify/skills/improve-skills/SKILL.md
+  carrier: .specify/skills/improve-skills/scripts/skill-shape.py
+  anchor: .specify/skills/improve-skills/SKILL.md#Organize improvement items
+
+# --- US4 rows (tasks.md T020 / T023), appended 2026-11-05, existing rows untouched ---
+
+# D2 unsatisfied, and the boundary sample requirements.md § Edge Cases 末条 names: this unit ships a
+# `.yaml` of its own — `.specify/templates/project-input.template.yaml` — but it is the **input form** the
+# skill reads from the user, not a machine-consumed value domain. It cannot be mistaken for a
+# declaration fact because the reader only ever opens files under `.specify/shared/declarations/`; the
+# assertion is about the reader's input face, not about the template's shape, so no "is this really
+# an input template" judgement is introduced here.
+# This single row is also T023's retirement of screen S's accepted conservative side: the unit
+# enters the candidate set by a text test and leaves it by one record — never by a second mechanism.
+# Engine the unit does reach: its own loader/validator/query engine (`SKILL.md` § 本技能脚本清单).
+- unit: .specify/skills/internal/summarize-project/SKILL.md
+  carrier: .specify/skills/internal/summarize-project/scripts/project-db.py
+  anchor: .specify/skills/internal/summarize-project/SKILL.md#项目信息输入模型
+
+# D2 unsatisfied: the deliverable is rewritten prose — no engine's verdict changes with a value this
+# unit carries. The scope table's generic carrier cell (`同目录 .specify/scripts/`) has no object here: the
+# skill ships no `.specify/scripts/` directory, so the measured carrier is the deterministic program its
+# workflow does call — the fidelity comparer under `tests/fixtures/humanize/`
+# (`SKILL.md` § Evaluation hooks, `--input` / `--output`, exit 0 = 通过).
+- unit: .specify/skills/humanize-conclusion/SKILL.md
+  carrier: tests/fixtures/humanize/diff_protected.py
+  anchor: .specify/skills/humanize-conclusion/SKILL.md#Overview
+
+# --- T032 rows (tasks.md T032), appended 2026-11-05 (implement, part 6): the screen's remaining
+# candidates whose D1 holds and whose D2 does not, 28 rows. The 10 rows above are untouched (E-2: a
+# new unit appends, never reorders), and a unit already covered by a declaration never appears here
+# (E-2 R-4, E-5).
+# D1 holds for these 28 because the deliverable named in each row's comment IS one of the four kinds
+# the consumer list points at. The kind is marked per row: (a) evidence record, (b) feedback or
+# learning record, (c) gate verdict on someone else's artifact, (d) a change to a governed tree
+# (FR-002 D1).
+# D2 fails, and the measurement is the run rather than this comment: on the tree these rows were
+# written against, `harness-triple-check.py --action coverage` reports `declarations: 23` and names
+# none of these units in any declaration's `consumers` or `former_carriers`. The values these units
+# carry are workflow obligations and judgement prose — what a stage must do, in what order, and why
+# — and the engine in the `carrier` column reads no value out of that text to reach a verdict.
+# FR-006 leaves that in markdown: the carriers stay as they are and no literal is deleted.
+# `carrier` is the engine the unit's text actually reaches, located by `grep` at write time: a
+# `.specify/scripts/python/<name>.py` reference where the unit names one, and the unit's own
+# `${SKILL_HOME}/scripts/<file>` asset where its engine is invoked by relative path.
+# Count after this append: 38 rows (10 + 28).
+
+# `skills/external/*/SKILL.md` (7 rows)
+# Seven skills that change a governed tree — `docs/`, `skills/`, a target project's framework
+# projection — or reconcile one. Four of them name their own engine as the carrier.
+#
+# .specify/skills/create-docs/SKILL.md — (d) the deliverable is the `docs/` tree; `docs-utils.py
+# --action validate/audit` is the engine it calls
+# carrier: .specify/skills/create-docs/scripts/docs-utils.py
+- unit: .specify/skills/create-docs/SKILL.md
+  carrier: .specify/skills/create-docs/scripts/docs-utils.py
+  anchor: .specify/skills/create-docs/SKILL.md#Overview
+#
+# .specify/skills/create-pages/SKILL.md — (d) the deliverable is the docs site (`<docs>/public`)
+# plus one CI file
+# carrier: .specify/skills/create-pages/scripts/scaffold-hugo.py
+- unit: .specify/skills/create-pages/SKILL.md
+  carrier: .specify/skills/create-pages/scripts/scaffold-hugo.py
+  anchor: .specify/skills/create-pages/SKILL.md#Overview
+#
+# .specify/skills/create-skills/SKILL.md — (d) the deliverable is a new or updated `SKILL.md` under
+# `skills/`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/create-skills/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/create-skills/SKILL.md#Workflow
+#
+# .specify/skills/git-utils/SKILL.md — (d) the deliverable includes the managed block of `docs/git-
+# workflow.md`
+# carrier: .specify/skills/git-utils/scripts/git_fleet.py
+- unit: .specify/skills/git-utils/SKILL.md
+  carrier: .specify/skills/git-utils/scripts/git_fleet.py
+  anchor: .specify/skills/git-utils/SKILL.md#Git Workflow 块维护
+#
+# .specify/skills/merge-skills/SKILL.md — (d) the deliverable is the merged target skill under
+# `skills/`
+# carrier: .specify/skills/merge-skills/scripts/coverage_probe.py
+- unit: .specify/skills/merge-skills/SKILL.md
+  carrier: .specify/skills/merge-skills/scripts/coverage_probe.py
+  anchor: .specify/skills/merge-skills/SKILL.md#Workflow
+#
+# .specify/skills/sdd-house-keeping/SKILL.md — (d) H2–H3 reconcile the target project's governance,
+# docs, feature and instruction layers
+# carrier: .specify/skills/sdd-house-keeping/scripts/mechanism-inventory.py
+- unit: .specify/skills/sdd-house-keeping/SKILL.md
+  carrier: .specify/skills/sdd-house-keeping/scripts/mechanism-inventory.py
+  anchor: .specify/skills/sdd-house-keeping/SKILL.md#What This Skill Does
+#
+# .specify/skills/sdd-project-setup/SKILL.md — (d) S2 installs or refreshes the target project's
+# framework projection and writes its constitution and instructions
+# carrier: .specify/skills/sdd-project-setup/scripts/mechanism-inventory.py
+- unit: .specify/skills/sdd-project-setup/SKILL.md
+  carrier: .specify/skills/sdd-project-setup/scripts/mechanism-inventory.py
+  anchor: .specify/skills/sdd-project-setup/SKILL.md#What This Skill Does
+
+# `skills/internal/*/SKILL.md` (12 rows)
+# Two verdict-issuing skills (c), one evidence-lane producer (a), one feedback-store producer (b),
+# and eight that change `agents/`, `teams/`, `tools/`, the constitution, the instructions or the
+# docs tree (d).
+#
+# .specify/skills/internal/code-review/SKILL.md — (c) the deliverable is a four-value verdict on someone
+# else's code delta
+# carrier: .specify/skills/internal/code-review/scripts/git-delta-review.sh
+- unit: .specify/skills/internal/code-review/SKILL.md
+  carrier: .specify/skills/internal/code-review/scripts/git-delta-review.sh
+  anchor: .specify/skills/internal/code-review/SKILL.md#Workflow
+#
+# .specify/skills/internal/create-agent/SKILL.md — (d) the deliverable is an agent definition under `agents/`
+# carrier: .specify/scripts/python/execution-config.py
+- unit: .specify/skills/internal/create-agent/SKILL.md
+  carrier: .specify/scripts/python/execution-config.py
+  anchor: .specify/skills/internal/create-agent/SKILL.md#Goal
+#
+# .specify/skills/internal/create-team/SKILL.md — (d) the deliverable is a team definition under `teams/`
+# plus its run reports
+# carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+- unit: .specify/skills/internal/create-team/SKILL.md
+  carrier: .specify/skills/internal/create-team/scripts/dispatch.sh
+  anchor: .specify/skills/internal/create-team/SKILL.md#Team Definition & Persistence (create mode)
+#
+# .specify/skills/internal/create-tools/SKILL.md — (d) the deliverable is a tool record under `tools/`
+# carrier: .specify/scripts/python/tools-utils.py
+- unit: .specify/skills/internal/create-tools/SKILL.md
+  carrier: .specify/scripts/python/tools-utils.py
+  anchor: .specify/skills/internal/create-tools/SKILL.md#Goal
+#
+# .specify/skills/internal/implement-feature/SKILL.md — (a) the deliverable includes the evidence-lane
+# records of the implemented slice
+# carrier: .specify/scripts/python/gate-check.py
+- unit: .specify/skills/internal/implement-feature/SKILL.md
+  carrier: .specify/scripts/python/gate-check.py
+  anchor: .specify/skills/internal/implement-feature/SKILL.md#Goal
+#
+# .specify/skills/internal/manage-agents/SKILL.md — (d) the deliverable is the host agent configuration and
+# the deployed agent knowledge pages
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/manage-agents/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/manage-agents/SKILL.md#分层信息披露（严格按序，禁止跳层/全量装载）
+#
+# .specify/skills/internal/manage-constitution/SKILL.md — (d) the deliverable is
+# `.specify/constitution.md`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/manage-constitution/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/manage-constitution/SKILL.md#Goal
+#
+# .specify/skills/internal/manage-feedback/SKILL.md — (b) the deliverable is feedback entries in
+# `.specify/memory/feedback/`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/internal/manage-feedback/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/internal/manage-feedback/SKILL.md#Goal
+#
+# .specify/skills/internal/manage-instructions/SKILL.md — (d) the deliverable is `.specify/instructions.md`
+# and its per-tool compatibility symlinks
+# carrier: .specify/scripts/python/glossary-utils.py
+- unit: .specify/skills/internal/manage-instructions/SKILL.md
+  carrier: .specify/scripts/python/glossary-utils.py
+  anchor: .specify/skills/internal/manage-instructions/SKILL.md#Goal
+#
+# .specify/skills/internal/review-feature-quality/SKILL.md — (c) the deliverable is the artifact and
+# implementation verdict segments of `/speckit.review`
+# carrier: .specify/skills/internal/code-review/scripts/git-delta-review.sh
+- unit: .specify/skills/internal/review-feature-quality/SKILL.md
+  carrier: .specify/skills/internal/code-review/scripts/git-delta-review.sh
+  anchor: .specify/skills/internal/review-feature-quality/SKILL.md#Segment A — Artifact Review
+#
+# .specify/skills/internal/sanitize-materials/SKILL.md — (d) confirmed cleanups touch the framework-owned
+# docs tree, mirrors and compatibility links
+# carrier: .specify/scripts/python/sanitize-utils.py
+- unit: .specify/skills/internal/sanitize-materials/SKILL.md
+  carrier: .specify/scripts/python/sanitize-utils.py
+  anchor: .specify/skills/internal/sanitize-materials/SKILL.md#Goal
+#
+# .specify/skills/study-code/SKILL.md — (d) the deliverable is `docs/overview.md`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/skills/study-code/SKILL.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/skills/study-code/SKILL.md#Report Output Location
+
+# `.specify/templates/commands/*.md` (9 rows)
+# The command face of nine of those deliverables, each delegating the product to its skill.
+#
+# .specify/templates/commands/docs.md — (d) delivers the `docs/` tree through create-docs
+# carrier: .specify/scripts/python/doc-consistency-check.py
+- unit: .specify/templates/commands/docs.md
+  carrier: .specify/scripts/python/doc-consistency-check.py
+  anchor: .specify/templates/commands/docs.md#Delegation
+#
+# .specify/templates/commands/feedback.md — (b) delivers feedback-store entries through manage-feedback
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/templates/commands/feedback.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/templates/commands/feedback.md#Outline
+#
+# .specify/templates/commands/implement.md — (a) delivers the implementation plus its evidence-lane records
+# carrier: .specify/scripts/python/closure-acceptance-check.py
+- unit: .specify/templates/commands/implement.md
+  carrier: .specify/scripts/python/closure-acceptance-check.py
+  anchor: .specify/templates/commands/implement.md#Skill Delegation
+#
+# .specify/templates/commands/improve.md — (b)(d) delivers improvement interventions backed by feedback and
+# memory records
+# carrier: .specify/scripts/python/evidence-utils.py
+- unit: .specify/templates/commands/improve.md
+  carrier: .specify/scripts/python/evidence-utils.py
+  anchor: .specify/templates/commands/improve.md#Outline
+#
+# .specify/templates/commands/instructions.md — (d) delivers `.specify/instructions.md` and the compatibility
+# symlinks
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/templates/commands/instructions.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/templates/commands/instructions.md#Skill Delegation
+#
+# .specify/templates/commands/sanitize.md — (d) delivers confirmed framework-material cleanups
+# carrier: .specify/scripts/python/sanitize-utils.py
+- unit: .specify/templates/commands/sanitize.md
+  carrier: .specify/scripts/python/sanitize-utils.py
+  anchor: .specify/templates/commands/sanitize.md#Delegation
+#
+# .specify/templates/commands/skills.md — (d) delivers a new or updated skill under `skills/`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/templates/commands/skills.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/templates/commands/skills.md#Delegation
+#
+# .specify/templates/commands/team.md — (d) delivers team definitions under `teams/`
+# carrier: .specify/skills/internal/create-team/scripts/match-team-preset.py
+- unit: .specify/templates/commands/team.md
+  carrier: .specify/skills/internal/create-team/scripts/match-team-preset.py
+  anchor: .specify/templates/commands/team.md#Outline
+#
+# .specify/templates/commands/tools.md — (d) delivers tool records under `tools/`
+# carrier: .specify/scripts/python/feedback-utils.py
+- unit: .specify/templates/commands/tools.md
+  carrier: .specify/scripts/python/feedback-utils.py
+  anchor: .specify/templates/commands/tools.md#Outline

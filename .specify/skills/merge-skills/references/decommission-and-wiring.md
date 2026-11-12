@@ -70,7 +70,7 @@ the host's confirmation-gate convention:
   source, not the target).
 - Description-caching registries **refreshed** (app may need restart to reload).
 - **No declaration still names the retired slug**, and the host's skill-enablement /
-  obsolete-asset contract checks pass (spec-kit: `pytest tests/contract/ -q -k
+  obsolete-asset contract checks pass (spec-kit: `bash .specify/scripts/bash/run-tests.sh tests/contract/ -q -k
   "skill_enablement or obsolete_assets"`).
 - **No residual reference** to the source skill name anywhere in the target's docs or the
   host's topology docs (grep the source name; expect only intentional "merged into …" notes).

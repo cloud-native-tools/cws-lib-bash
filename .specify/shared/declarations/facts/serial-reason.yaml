@@ -1,0 +1,62 @@
+# 093 — [[STR-003]] the closed serial-reason code vocabulary.
+#
+# The one machine-read owner of the code set, the two groups, each code's bound FR-005 condition, its
+# evidence form and the declaration order (FR-006, FR-007, FR-009). Read through
+# `.specify/scripts/python/declaration_reader.py`; the engine validates a record's `codes` list against this
+# entry and MUST NOT carry a code literal of its own.
+#
+# Grouping rule (C-006): a `condition-bound` code names the FR-005 condition whose failure it explains
+# and carries that clause id; a `factual` code describes "nothing to run" or "no mechanism yet" and
+# carries NO condition (FR-006 exempts factual members from the condition↔code bijection).
+fact: serial-reason
+kind: ordered-operator-table
+statement:
+  groups:
+    - condition-bound
+    - factual
+  condition_index:
+    - FR-005(b)
+    - FR-005(c)
+    - FR-005(d)
+    - FR-005(e)
+  codes:
+    - code: dependency-edge
+      group: condition-bound
+      condition: FR-005(b)
+      meaning: an unsatisfied dependency edge keeps a unit blocked
+      evidence_form: dependency-edge
+      evidence_requirement: resolvable predecessor unit id plus its completion verdict pointer
+    - code: write-conflict
+      group: condition-bound
+      condition: FR-005(c)
+      meaning: write domains intersect and no isolation form is declared
+      evidence_form: write-conflict
+      evidence_requirement: the intersecting file-level path set
+    - code: host-no-parallel
+      group: condition-bound
+      condition: FR-005(d)
+      meaning: the host cannot run units in parallel and no external-process form is used
+      evidence_form: host-probe
+      evidence_requirement: the runtime capability probe reading and its landing point
+    - code: budget-reserve
+      group: condition-bound
+      condition: FR-005(e)
+      meaning: the slot budget after the verifier reserve is below two
+      evidence_form: budget-readings
+      evidence_requirement: the slot and budget readings before and after the reserve deduction
+    - code: single-unit
+      group: factual
+      meaning: the representable unit set has size 0 or 1, so there is nothing to run concurrently
+      evidence_form: unit-set
+      evidence_requirement: the enumerated representable unit set, size 0 or 1
+    - code: mechanism-not-yet-landed
+      group: factual
+      meaning: the concurrency mechanism itself is not yet available in this run
+      evidence_form: unit-set
+      evidence_requirement: the enumerated unit set plus the named missing mechanism
+      evidence_extra_field: missing_mechanism
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_serial_reason.py
+former_carriers: []
+note: "Order is part of the value (FR-006): an ordered codes list sorts by this declaration order, and the engine reads the order from the list, never from a constant. `condition_index` is the condition side of the bijection and is exactly the FR-005 clauses the grouped members bind; FR-005(a) (fewer than two ready units) has no condition-bound code by decision: its shortfall IS the factual `single-unit` code, which FR-006 forbids counting as a bijection gap. `single-unit` and `mechanism-not-yet-landed` are factual, never condition-bound. Simplicity, controllability and history are not codes (FR-009): the set is closed and grows only by revising this entry."

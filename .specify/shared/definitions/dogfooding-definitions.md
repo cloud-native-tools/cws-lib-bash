@@ -6,7 +6,7 @@
 > `.specify/shared/definitions/dogfooding-definitions.md`, mirrored to
 > `.specify/shared/definitions/`. Normative language follows RFC 2119.
 > **引用约定**: 后续任何文档、流程或对话提及 "Dogfooding" 时,均按本文件定义
-> 赋予其完整含义,无需在各处重述。References: `.specify/memory/constitution.md`
+> 赋予其完整含义,无需在各处重述。References: `.specify/constitution.md`
 > § XI; glossary entries (Dogfooding / 问题修复 / 机制修复 / 框架项目 / 客户项目).
 
 ## 0. Dogfooding(本体定义)
@@ -137,7 +137,7 @@ Spec Kit 仓库的 Dogfooding 本质是**一人分饰两角**:既是框架的作
 
 ## 3. 术语登记(词汇表)
 
-以下术语已登记于 `.specify/memory/glossary.md`(origin=user, status=confirmed):
+以下术语已登记于 `.specify/glossary.md`(origin=user, status=confirmed):
 **Dogfooding**(§0 本体)、问题修复 (Problem Fix)、机制修复 (Mechanism Fix)、
 框架项目 (Framework Project)、客户项目 (Client Project)。本文件为它们的
 **概念权威**;词汇表条目为检索锚点。

@@ -1,0 +1,97 @@
+# Declaration layer contract — the single owner of this feature's machine-read value domains.
+#
+# Harness triple structure. Every value below appears ONCE in the repository:
+# markdown owners reference this file, engines read it through .specify/scripts/python/declaration_reader.py.
+# A second copy of any of these values is a defect, not a convenience (contract C-002).
+#
+# Written in the allowed YAML subset (contracts/declaration-schema.contract.md C-008):
+# block mappings, block sequences, scalars, comments, two-space indentation. No flow collections
+# (except the empty forms), no anchors, no aliases, no tags, no multiple documents, no block scalars.
+
+schema: harness-declarations/v1
+yaml_subset: block-subset/v1
+
+# FR-003 — the closed five kinds a fact declaration may take.
+fact_kinds:
+  - threshold
+  - closed-set
+  - ordered-operator-table
+  - mapping
+  - record-schema
+
+# FR-007 / data-model E-6 — the derived completeness state is two-valued, never a third value.
+completeness_states:
+  - complete
+  - pending
+
+# FR-002 — the closed three reasons an exclusion record may carry (the file name is the reason).
+exclusion_reasons:
+  - no-machine-fact
+  - no-harness-asset
+  - by-owner-decree
+
+# FR-016 / contract C-036 — the three exit codes with their meaning, as key: code pairs.
+exit_codes:
+  ok: 0
+  finding: 1
+  input-error: 2
+
+# contract C-004 — mandatory keys of a fact declaration; `note` is the only optional key.
+required_fact_keys:
+  - fact
+  - kind
+  - statement
+  - consumers
+  - former_carriers
+
+# contract C-006 — mandatory keys of an exclusion row; the reason is carried by the file name.
+required_exclusion_keys:
+  - unit
+  - carrier
+  - anchor
+
+# data-model E-10 — the call sites, and only these two. The gate host's delegation is opt-in
+# (contract C-040, plan D8): its flag defaults off so an existing closed finding-name set in
+# tests/contract/test_acceptance_premises.py does not move.
+gate_call_sites:
+  - path: .specify/skills/sdd-loop-driver/scripts/pre-analyze-check.py
+    mode: opt-in-flag
+    flag: --triple-structure
+    stages: requirements plan tasks
+  - path: tests/contract/test_harness_triple_structure.py
+    mode: contract-test
+
+# 093 — fact registration (FR-031, C-010): one key per registered slug, pointing at its fact entry.
+# Append-only: the domain keys above are untouched, and this block grows only by revising its owner.
+concurrency-class: .specify/shared/declarations/facts/concurrency-class.yaml
+serial-reason: .specify/shared/declarations/facts/serial-reason.yaml
+effective-concurrency: .specify/shared/declarations/facts/effective-concurrency.yaml
+concurrency-slot-and-reserve: .specify/shared/declarations/facts/concurrency-slot-and-reserve.yaml
+decomposition-coverage: .specify/shared/declarations/facts/decomposition-coverage.yaml
+executor-enumeration-roots: .specify/shared/declarations/facts/executor-enumeration-roots.yaml
+concurrency-contract: .specify/shared/declarations/facts/concurrency-contract.yaml
+coordinator-dispatch-verdict: .specify/shared/declarations/facts/coordinator-dispatch-verdict.yaml
+
+# Feature 094, contract `contracts/command-family-and-declarations.md` C-83 / C-84 / C-85
+# — the two facts registered before any consumer reads them. One entry per fact:
+# `subset_id` names the grammar the fact file is written in, `value_domain` the closed
+# domain the consumer validates against, and `statement_keys` the keys the statement must
+# carry. An unregistered fact reads as `owner-unavailable` at the consumer, never as a
+# default. Adopted under ruling N-5: the section uses the file's existing
+# sequence-of-mappings form, and `tests/contract/test_declaration_facts.py` asserts the
+# reader sees both facts — a registration no reader consumes would be inert.
+registered_facts:
+  - fact: goal-team-command-family
+    subset_id: declaration-subset/v1
+    value_domain: closed-set
+    statement_keys:
+      - statement
+  - fact: goal-team-handoff-threshold
+    subset_id: declaration-subset/v1
+    value_domain: threshold+timing-map
+    statement_keys:
+      - metric
+      - threshold
+      - boundary
+      - on_direct
+      - on_handoff

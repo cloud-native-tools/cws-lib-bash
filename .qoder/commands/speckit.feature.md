@@ -2,6 +2,8 @@
 description: 维护项目特性注册表（索引与特性详情文件）
 ---
 <!-- AUTO-GENERATED from templates/commands/feature.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
+> **Concurrency obligation（执行义务，按指针抵达）**: this command is an execution body — consider concurrency first, default to it when the class and capability allow, and, when serial, name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## User Input
 
 ```text
@@ -23,7 +25,7 @@ Process `$ARGUMENTS` per the [User Input Protocol](.specify/shared/workflow/user
 
 ### 技能产出
 
-- `.specify/memory/features/<ID>.md` 详情文件(从 `.specify/templates/feature-details-template.md` 实例化)与 `.specify/memory/features.md` 索引表(`FEATURE_COUNT` 自动派生)。
+- `.specify/features/<ID>.md` 详情文件(从 `.specify/templates/feature-details-template.md` 实例化)与 `.specify/features.md` 索引表(`FEATURE_COUNT` 自动派生)。
 - README "Feature List" 段同步(Functional / Non-functional)。
 - 残差报告:收敛行 / 容差行 / 新增行 / 需用户决策项;无变更时如实说明。
 

@@ -1,11 +1,83 @@
 {
   "version": 1,
   "tool": "qoder",
-  "rendered_at": "20261030T021900Z",
+  "rendered_at": "20261112T091515Z",
   "entries": {
+    ".claude/agents/reporter.md": {
+      "source": "templates/reporter.agent.md",
+      "sha256": "1658df4901ee66c59dc61a30db35c299926f90a2fe3cb3dc2493baca84a8b1da"
+    },
+    ".claude/agents/sdd-analysis-worker.md": {
+      "source": "templates/sdd-analysis-worker.agent.md",
+      "sha256": "9ecd4eba6da1c80280f216c141e337f07d1ea4208f626b961de7ec8aafd1fe6b"
+    },
+    ".claude/agents/sdd-checklist-worker.md": {
+      "source": "templates/sdd-checklist-worker.agent.md",
+      "sha256": "1e40cf330352cdf2f6fbb8e17745285d92c2f8cd5e659960cc696e60f55c25c2"
+    },
+    ".claude/agents/sdd-clarify-analyzer.md": {
+      "source": "templates/sdd-clarify-analyzer.agent.md",
+      "sha256": "22281ce104a0ce67c9521f52abbe858ea57bab89c0f02fd2ce54634d758f08dc"
+    },
+    ".claude/agents/sdd-debt-fixer.md": {
+      "source": "templates/sdd-debt-fixer.agent.md",
+      "sha256": "2b1b58e306cfd01d527a6f01491c4df53922f8180e11f897752bc3824e5bc4b5"
+    },
+    ".claude/agents/sdd-debt-governor.md": {
+      "source": "templates/sdd-debt-governor.agent.md",
+      "sha256": "ebd93954ec22ad125dbb1c05f6531baba71d06d5738ec79cab99e16c7432c9d6"
+    },
     ".claude/agents/sdd-executor.md": {
       "source": "templates/sdd-executor.agent.md",
       "sha256": "b6e3b8c02aa82cc6296219f0ca264d66d144a5285d0c1cfd88fe9ea0a74378df"
+    },
+    ".claude/agents/sdd-implement-coordinator.md": {
+      "source": "templates/sdd-implement-coordinator.agent.md",
+      "sha256": "94e2ca489ad62af5c8edf0077eb6bc6a34e48466779c03efc33ebfedda0cf29b"
+    },
+    ".claude/agents/sdd-implement-executor.md": {
+      "source": "templates/sdd-implement-executor.agent.md",
+      "sha256": "8cc2e3158407d9a0fc021f69c4d72b5297e58ae374b48571e01cbe2946c606cd"
+    },
+    ".claude/agents/sdd-observer.md": {
+      "source": "templates/sdd-observer.agent.md",
+      "sha256": "b008927cf0bca0bde033e9517aa7c16f7b63469de601d274f71c3f080fdce066"
+    },
+    ".claude/agents/sdd-plan-coordinator.md": {
+      "source": "templates/sdd-plan-coordinator.agent.md",
+      "sha256": "1b150b0b2fe06985ec807e3dbcc104cb8e3b5a318140ca7a22f6095875c68805"
+    },
+    ".claude/agents/sdd-plan-executor.md": {
+      "source": "templates/sdd-plan-executor.agent.md",
+      "sha256": "a91150b7971e8affb1ca585d372864c82864dcec67cd4ca1bb15f7ab63d55e32"
+    },
+    ".claude/agents/sdd-requirement-analyzer.md": {
+      "source": "templates/sdd-requirement-analyzer.agent.md",
+      "sha256": "67fc194f98cb34efb84ef904e983f71ee6eed362975d1319dd2cb046927ffdcf"
+    },
+    ".claude/agents/sdd-review-coordinator.md": {
+      "source": "templates/sdd-review-coordinator.agent.md",
+      "sha256": "10d393450807aab846129ee9aee6f7220feff20570cb120eca158db5c08ad978"
+    },
+    ".claude/agents/sdd-review-executor.md": {
+      "source": "templates/sdd-review-executor.agent.md",
+      "sha256": "a23decf0f3f1751968093cf18da0632403e9cd3cba23e5d8277c5c7ac4ab3d17"
+    },
+    ".claude/agents/sdd-stage-integrator.md": {
+      "source": "templates/sdd-stage-integrator.agent.md",
+      "sha256": "24b754317c277cd3b2af4ce5acaea559fcf201eec33d3c84d15163b15f471d3d"
+    },
+    ".claude/agents/sdd-stage-verifier.md": {
+      "source": "templates/sdd-stage-verifier.agent.md",
+      "sha256": "69567f5f308a905640078d2eddb781ad86dc915ad67e98894e73b5a9ae04df16"
+    },
+    ".claude/agents/sdd-task-coordinator.md": {
+      "source": "templates/sdd-task-coordinator.agent.md",
+      "sha256": "8924c626dbefb6d27e135ae700c8019d5cbe648c4b6071fc2f02beaf0634c2ca"
+    },
+    ".claude/agents/sdd-task-executor.md": {
+      "source": "templates/sdd-task-executor.agent.md",
+      "sha256": "76b12a226e5f4ffde65362c590737826b61487edf6f69b2724cf3ac9920dfe3c"
     },
     ".claude/agents/skill-verifier.md": {
       "source": "templates/skill-verifier.agent.md",
@@ -15,9 +87,81 @@
       "source": "templates/structure-adjuster.agent.md",
       "sha256": "2cea357cd65248db2a06730122ed702977e044f6408b13141e550daa5e0d0164"
     },
+    ".github/agents/reporter.agent.md": {
+      "source": "templates/reporter.agent.md",
+      "sha256": "ebefc287a51ccf514061e0d2a8ce58d092a4ef7b20bca6622ffc3980cb24b7b6"
+    },
+    ".github/agents/sdd-analysis-worker.agent.md": {
+      "source": "templates/sdd-analysis-worker.agent.md",
+      "sha256": "ef7d155ffffa5e45d70c499ed97862b9ca3c3630fc881445be47223592f06960"
+    },
+    ".github/agents/sdd-checklist-worker.agent.md": {
+      "source": "templates/sdd-checklist-worker.agent.md",
+      "sha256": "d651dec27a5f626f0d08feac67a25ce04661970185a17eea18ada530da123a79"
+    },
+    ".github/agents/sdd-clarify-analyzer.agent.md": {
+      "source": "templates/sdd-clarify-analyzer.agent.md",
+      "sha256": "07afa7e34feb919bfabcf10c31b71577187de4a67c1051123795465495a824d9"
+    },
+    ".github/agents/sdd-debt-fixer.agent.md": {
+      "source": "templates/sdd-debt-fixer.agent.md",
+      "sha256": "d02fbd4e844469d5214455deb8ea4ed52f5ec814bdfa97326b0891c0ae2e4ab7"
+    },
+    ".github/agents/sdd-debt-governor.agent.md": {
+      "source": "templates/sdd-debt-governor.agent.md",
+      "sha256": "7368a923cd9a8fde3b998cc62992b525367cfd8bc3c44d34b0861a8c18d84345"
+    },
     ".github/agents/sdd-executor.agent.md": {
       "source": "templates/sdd-executor.agent.md",
       "sha256": "86da7dfe08ee8c0544d643ce1f03ad8934161a8beffd878f7aafe0ba460dcde3"
+    },
+    ".github/agents/sdd-implement-coordinator.agent.md": {
+      "source": "templates/sdd-implement-coordinator.agent.md",
+      "sha256": "dc9452c79303eaf693e1be7c1be763d05a17038a8f71617d8eec59029c23069d"
+    },
+    ".github/agents/sdd-implement-executor.agent.md": {
+      "source": "templates/sdd-implement-executor.agent.md",
+      "sha256": "7218e47b28e61f36cca37463de15f8817abb5b970ef0a1f25d2983188baba017"
+    },
+    ".github/agents/sdd-observer.agent.md": {
+      "source": "templates/sdd-observer.agent.md",
+      "sha256": "d758f2db31a500d0c20c185b807120b1ab879c8b359450012e7917623df9d1ca"
+    },
+    ".github/agents/sdd-plan-coordinator.agent.md": {
+      "source": "templates/sdd-plan-coordinator.agent.md",
+      "sha256": "0aa5498af8081788d3f81579af84be4626bd1ca35a8f62a1201f23dd9b31d002"
+    },
+    ".github/agents/sdd-plan-executor.agent.md": {
+      "source": "templates/sdd-plan-executor.agent.md",
+      "sha256": "e50b5d477f2dd6365ee7103d4b0d65818c91ed32a687bdaa7ef49b66a2eb1a03"
+    },
+    ".github/agents/sdd-requirement-analyzer.agent.md": {
+      "source": "templates/sdd-requirement-analyzer.agent.md",
+      "sha256": "1325f75f162ac6af65fcc5c22f82c8aaa66bbd8a4cb52c69fcff13564935b2c8"
+    },
+    ".github/agents/sdd-review-coordinator.agent.md": {
+      "source": "templates/sdd-review-coordinator.agent.md",
+      "sha256": "eecdf52ab5a84c1f3ff53246832e36bc4ec1c15d16f654e6c265b134104863ce"
+    },
+    ".github/agents/sdd-review-executor.agent.md": {
+      "source": "templates/sdd-review-executor.agent.md",
+      "sha256": "fad61c0d820316a286275a3fe5126e4b047a276357f38f8475014bc8ef568b3b"
+    },
+    ".github/agents/sdd-stage-integrator.agent.md": {
+      "source": "templates/sdd-stage-integrator.agent.md",
+      "sha256": "ea8f3605dbd3660b2bac4c9d7c8264d4a0547bef4b31292d7c3bb99445251f84"
+    },
+    ".github/agents/sdd-stage-verifier.agent.md": {
+      "source": "templates/sdd-stage-verifier.agent.md",
+      "sha256": "78b68bba07ddc87bbc82329d84c6625f13f17b278c342183feaa6d8acc7617ce"
+    },
+    ".github/agents/sdd-task-coordinator.agent.md": {
+      "source": "templates/sdd-task-coordinator.agent.md",
+      "sha256": "9b4e42b19aecf61ccbabe85eda67b50e7c0688aa3febfb8ae5f9890d7990d163"
+    },
+    ".github/agents/sdd-task-executor.agent.md": {
+      "source": "templates/sdd-task-executor.agent.md",
+      "sha256": "4f3314aebfd214fc57b306e94e2d5b62b6146502d62b565ff4815855b23c09e1"
     },
     ".github/agents/skill-verifier.agent.md": {
       "source": "templates/skill-verifier.agent.md",
@@ -27,29 +171,173 @@
       "source": "templates/structure-adjuster.agent.md",
       "sha256": "faf5f5cb5e075ede24920646ce340c9c368d9acb63697801d5099cc14ac9b594"
     },
+    ".opencode/agents/reporter.md": {
+      "source": "templates/reporter.agent.md",
+      "sha256": "62dc2ed5a8e9a163ad9aceb3b636ffcfbff002fbab7a65816136093a7db992ca"
+    },
+    ".opencode/agents/sdd-analysis-worker.md": {
+      "source": "templates/sdd-analysis-worker.agent.md",
+      "sha256": "49999ed3097e93d030195ffa70f89d8d64f2c84d1a0268bfd0970cc6da1e01c6"
+    },
+    ".opencode/agents/sdd-checklist-worker.md": {
+      "source": "templates/sdd-checklist-worker.agent.md",
+      "sha256": "2c866f9b840f3147424fce9c479780025371a664a9502ddb828f5bf4d4620064"
+    },
+    ".opencode/agents/sdd-clarify-analyzer.md": {
+      "source": "templates/sdd-clarify-analyzer.agent.md",
+      "sha256": "646245cd4ddb65cc25236ee44a155a190bc76a6f3d7f2a93b1e9e7477d5d4bad"
+    },
+    ".opencode/agents/sdd-debt-fixer.md": {
+      "source": "templates/sdd-debt-fixer.agent.md",
+      "sha256": "d98420de709067516e58c3f6d30f38468307110f02f42eb24e46a198dd6f82da"
+    },
+    ".opencode/agents/sdd-debt-governor.md": {
+      "source": "templates/sdd-debt-governor.agent.md",
+      "sha256": "3fb3f60b761e88e4300b7db201f757077c09e627e83b5b5afef87a19ac80cdce"
+    },
     ".opencode/agents/sdd-executor.md": {
       "source": "templates/sdd-executor.agent.md",
       "sha256": "054e05cf2b7ec4866cd60ffb20fd9031812d2936749c34c8d4a7f1c662c71cc4"
     },
+    ".opencode/agents/sdd-implement-coordinator.md": {
+      "source": "templates/sdd-implement-coordinator.agent.md",
+      "sha256": "32fd761933f8eec1745f42be9c643424f5d66beaff007ea6d396b4b9dffbf138"
+    },
+    ".opencode/agents/sdd-implement-executor.md": {
+      "source": "templates/sdd-implement-executor.agent.md",
+      "sha256": "8d3669d58eb1e48405da2843aafea6e74027066dc46369333fde573a759253a8"
+    },
+    ".opencode/agents/sdd-observer.md": {
+      "source": "templates/sdd-observer.agent.md",
+      "sha256": "2a7e36f5dd932d672e6800c57d3fabe00f5b52e4b7d7fc20da3bad87a896088d"
+    },
+    ".opencode/agents/sdd-plan-coordinator.md": {
+      "source": "templates/sdd-plan-coordinator.agent.md",
+      "sha256": "13392bc5c7a45f356a67441b5976384fff64c15bd4926095d386d2a4680af569"
+    },
+    ".opencode/agents/sdd-plan-executor.md": {
+      "source": "templates/sdd-plan-executor.agent.md",
+      "sha256": "91053c37493c932d5cb8a3db2c52e7378a29887466573e8fbe24ac7283d62b52"
+    },
+    ".opencode/agents/sdd-requirement-analyzer.md": {
+      "source": "templates/sdd-requirement-analyzer.agent.md",
+      "sha256": "ebf0db3582b3e13567013f4ed2a2ec04dea605787365bd82b2f773f8e72fa2cf"
+    },
+    ".opencode/agents/sdd-review-coordinator.md": {
+      "source": "templates/sdd-review-coordinator.agent.md",
+      "sha256": "39e72f34e24ecea4a6f0b34fb1fc387e62a6e2e34f812f148e7ee06000866be6"
+    },
+    ".opencode/agents/sdd-review-executor.md": {
+      "source": "templates/sdd-review-executor.agent.md",
+      "sha256": "c371e7454b531798e0023ae0955228133fdb9a8fc0d18264024c3a9f5a0d46b2"
+    },
+    ".opencode/agents/sdd-stage-integrator.md": {
+      "source": "templates/sdd-stage-integrator.agent.md",
+      "sha256": "68fa97cc3f82e88119b6ea8c53c7cc79622acdd1b1cba05b86b645eef3df0cbb"
+    },
+    ".opencode/agents/sdd-stage-verifier.md": {
+      "source": "templates/sdd-stage-verifier.agent.md",
+      "sha256": "e9a3b95c5f7bedb5c135642ae0f6e235596f4cebe1c02e8b0c325286aa5921f0"
+    },
+    ".opencode/agents/sdd-task-coordinator.md": {
+      "source": "templates/sdd-task-coordinator.agent.md",
+      "sha256": "1fed0bf6fac0dce226fc364d2b74f744b3f62fae2a441154eb188f448b98da7f"
+    },
+    ".opencode/agents/sdd-task-executor.md": {
+      "source": "templates/sdd-task-executor.agent.md",
+      "sha256": "1a6045b229f0f13b6bf8fd97c8ac4c4655281ab2fe90c78fc374cf1d2680b139"
+    },
     ".opencode/agents/skill-verifier.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "597ec62637e32d8ae4a50b47a04e15c9c785975396256b4c775bc1ef2b646c83"
+      "sha256": "0528fded9d92051e49f9a182d0191101ceb4eb2f133f30bf42ec57b24a232134"
     },
     ".opencode/agents/structure-adjuster.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "d9179c3525a84520c795fc6041d887297e88ebcfc3e78327f54371cc08bc334c"
+      "sha256": "4be4fa88fd31b7819f439b33cebbe482d092152b9cdb889745facd092927080e"
+    },
+    ".qoder/agents/reporter.agent.md": {
+      "source": "templates/reporter.agent.md",
+      "sha256": "75d64644d26a4cae0a2a5836c3a176361d292cac85c4009c8e169503a530cc72"
+    },
+    ".qoder/agents/sdd-analysis-worker.agent.md": {
+      "source": "templates/sdd-analysis-worker.agent.md",
+      "sha256": "11937307c9873506a8c0802a828a97c9e40cc63068b25f174ac0f268087e9fef"
+    },
+    ".qoder/agents/sdd-checklist-worker.agent.md": {
+      "source": "templates/sdd-checklist-worker.agent.md",
+      "sha256": "5460112c813662fdc6274b49af4c858d636c41f4ba8f8fedaf80b81da0eb5e3d"
+    },
+    ".qoder/agents/sdd-clarify-analyzer.agent.md": {
+      "source": "templates/sdd-clarify-analyzer.agent.md",
+      "sha256": "0c39a7e3258fb7721e488f953dc5ee35264284ea78d7a08054c8e7dbed2cd3f8"
+    },
+    ".qoder/agents/sdd-debt-fixer.agent.md": {
+      "source": "templates/sdd-debt-fixer.agent.md",
+      "sha256": "2fdb820b0fa81c7e6b47b3bf6c0c0a33c75313ae6c198fb90437ce4766fb2b16"
+    },
+    ".qoder/agents/sdd-debt-governor.agent.md": {
+      "source": "templates/sdd-debt-governor.agent.md",
+      "sha256": "1ec55ad74b6ecdeddce912ecec567e02ac4e71061e7a95e3e3dfe325f531b5ae"
     },
     ".qoder/agents/sdd-executor.agent.md": {
       "source": "templates/sdd-executor.agent.md",
       "sha256": "052b14a09cffa99609042adf479f9a251e52e91acfdcfec0a14b9853e2e36282"
     },
+    ".qoder/agents/sdd-implement-coordinator.agent.md": {
+      "source": "templates/sdd-implement-coordinator.agent.md",
+      "sha256": "86fed6b5b800a16ce3f3d1816bb56dd5c153363c33df5c4948163ff8c6ff94c9"
+    },
+    ".qoder/agents/sdd-implement-executor.agent.md": {
+      "source": "templates/sdd-implement-executor.agent.md",
+      "sha256": "0a39bfbb565fe0e2e52386bd424fa7a196b0ecbe386675d5dd840c42ead70fb0"
+    },
+    ".qoder/agents/sdd-observer.agent.md": {
+      "source": "templates/sdd-observer.agent.md",
+      "sha256": "c95cd54ef10bd8fcc68a6fc4a90fc8e4aeb6d31acc8b559791925b774bcd419b"
+    },
+    ".qoder/agents/sdd-plan-coordinator.agent.md": {
+      "source": "templates/sdd-plan-coordinator.agent.md",
+      "sha256": "f4f7f869e89b63b570624bed87288d108cf4eebf1df4d1c545beaa2fb9af549d"
+    },
+    ".qoder/agents/sdd-plan-executor.agent.md": {
+      "source": "templates/sdd-plan-executor.agent.md",
+      "sha256": "c9d1e68708e3b061099c0897c1e6d26f41276e10f35cd2c6aaa743c17d254b55"
+    },
+    ".qoder/agents/sdd-requirement-analyzer.agent.md": {
+      "source": "templates/sdd-requirement-analyzer.agent.md",
+      "sha256": "bee2f1b87efc2e27c08b964be184163dd5469e9fbec04e471823644db884d746"
+    },
+    ".qoder/agents/sdd-review-coordinator.agent.md": {
+      "source": "templates/sdd-review-coordinator.agent.md",
+      "sha256": "119fe964b575b09440267e1478bf9a93f60e62cbe210bb24a45bb4f01e64fdfa"
+    },
+    ".qoder/agents/sdd-review-executor.agent.md": {
+      "source": "templates/sdd-review-executor.agent.md",
+      "sha256": "0895ed84e80e72b250bc77955022c21475ca086905a0c8c955668ef8bd4513c4"
+    },
+    ".qoder/agents/sdd-stage-integrator.agent.md": {
+      "source": "templates/sdd-stage-integrator.agent.md",
+      "sha256": "dd17e10a9b253ef389864b0a41e52492a7ac631b9f39cc0e0277d0ff2718c061"
+    },
+    ".qoder/agents/sdd-stage-verifier.agent.md": {
+      "source": "templates/sdd-stage-verifier.agent.md",
+      "sha256": "712ef1d8f112fa47fffce5d5f52cd35a2906f808cbe9f082edae4780daf088b2"
+    },
+    ".qoder/agents/sdd-task-coordinator.agent.md": {
+      "source": "templates/sdd-task-coordinator.agent.md",
+      "sha256": "5963b2d73fd2d821450a927229c97bce779d3ccca5548bad1b26e9908bef69fb"
+    },
+    ".qoder/agents/sdd-task-executor.agent.md": {
+      "source": "templates/sdd-task-executor.agent.md",
+      "sha256": "04327fd52cce853544d733aefe7049503dcde0f0ffb447851f71372aad4c23d9"
+    },
     ".qoder/agents/skill-verifier.agent.md": {
       "source": "templates/skill-verifier.agent.md",
-      "sha256": "56d0cb2dffef1272ee6943f0f91df5a2bf27586fb1b9655f6242bb3b8ff0f0fb"
+      "sha256": "5f85b5119788067f04dcf57b83fca7c1adbe16e6d31dc81c8e0dc6da645f3ca7"
     },
     ".qoder/agents/structure-adjuster.agent.md": {
       "source": "templates/structure-adjuster.agent.md",
-      "sha256": "034ba320d8fe145e95b1853424dbe11160a9c74eb80becdf5615213512396040"
+      "sha256": "d921e70d6f64d32fa80ff5617053c5ada2f484c16177d914ca3ad8cdabb5e129"
     }
   }
 }

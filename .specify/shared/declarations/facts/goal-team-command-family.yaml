@@ -1,0 +1,21 @@
+# Feature 094, contract `contracts/command-family-and-declarations.md` C-76 / C-77 / C-78;
+# tasks row T025.
+#
+# The one machine-read copy of the command family's EXPLICIT ADDITION LIST. The primary
+# family predicate is the declared class axis, not this file: the engine asks
+# `.specify/scripts/python/flow-class-check.py --action lookup --unit-id /speckit.<command>` and
+# reads the verdict from the record's `source` field (`ledger` = in family,
+# `default` = not in family). The statement below only ADDS command names on top of that
+# predicate; the empty list is legal and means "class predicate only" (C-76, C-77).
+#
+# Consumers read this through `.specify/scripts/python/declaration_reader.py`; the two consumption
+# points are the engine `.specify/scripts/python/goal-utils.py` (`command-family` action) and
+# `.specify/skills/internal/create-team/SKILL.md` (C-74). No other whitelist may exist.
+fact: goal-team-command-family
+kind: closed-set
+statement: []
+consumers:
+  - .specify/scripts/python/goal-utils.py
+  - .specify/skills/internal/create-team/SKILL.md
+former_carriers: []
+note: "New declaration with no former carrier: the family was never a maintained list, and the class predicate stays primary — this file can only add names whose carrier exists (C-77)."

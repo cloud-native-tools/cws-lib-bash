@@ -26,17 +26,17 @@ ssh <alias> "su - <run-user> -c 'cd <project-dir> && python3 - --project <projec
 
 | 次序 | 命令 | 触发条件 | 效果 |
 |---|---|---|---|
-| 1 | `/speckit.sanitize` | 材料陈旧残留；`cleanup` 模式下还有已消费记录 | materials lane 卫生治理；retention lane 消费→回执→回收 |
+| 1 | `/speckit.sanitize` | 材料陈旧残留、重复编号；`cleanup` 模式下还有已消费记录 | materials 可逆修复自动执行；重复编号在 git 干净且无歧义时自动重排；retention lane 消费→回执→回收 |
 | 2 | `/speckit.feature` | `feat` 缺或注册表与实况漂移 | 注册表 reconcile（增量，不重建） |
 | 3 | `/speckit.instructions` | compat 断、过期、partial/degraded、`BUDGET ... over` | 指令与兼容链接重建；预算收敛 |
 | 4 | `/speckit.docs` | docs 树与代码/特性/指令漂移 | 委托 create-docs 收敛 |
 
 - 执行 **H1 缺口 OR owner 自检报告的漂移**；每项登记 `executed / existing / skipped + reason`；未处理项进 H5 清单。H1 只回答“资产在不在”，不替代 sanitize/feature/instructions/docs 的漂移检查。
-- **Carrier**：本地 H2/H3 由编排者/原生子代理在当前项目执行；远端每个 `/speckit.*` 在 `<project-dir>` 下经 run-agent 驱动——`ssh <alias>` → `su - <run-user>` → `cd <project-dir>`；CLI 缺省 qodercli（execution-config defaults，可覆盖）。
+- **Carrier**：本地 H2/H3 的派发 MUST 缺省使用 **fork 承载**（同族 `qodercli` 子进程经 `.specify/skills/sdd-loop-driver/scripts/stage-runner.sh`）；异构 agent MUST 使用 **subprocess 承载**（该 agent 自身 CLI 的独立子进程）；宿主内建 in-process subagent 路径 **BANNED**，不作为承载。远端每个 `/speckit.*` 在 `<project-dir>` 下经 run-agent 驱动——`ssh <alias>` → `su - <run-user>` → `cd <project-dir>`；CLI 缺省 qodercli（execution-config defaults，可覆盖）。
 - constitution 缺失 → 停止并 handoff `sdd-project-setup`。
 - **sanitize 调用契约**：
-  - `check` 模式：同时跑 `/speckit.sanitize check`（materials）与 `/speckit.sanitize --lane retention check`；两份摘要一起报告，不删除。
-  - `cleanup` 模式：跑 `/speckit.sanitize --lane all`；一个调用内呈现 materials 与 retention 两个计划，破坏性确认仍由 sanitize 既有门处理，**不新增第二道门**。
+  - `check` 模式：跑 `/speckit.sanitize check --auto-reversible`（materials 可逆修复自动执行）、`/speckit.sanitize --lane renumber --auto-reversible`（引擎在 duplicate-only、无歧义引用、git 干净时自动确认并重排）、与 `/speckit.sanitize --lane retention check`；三份摘要一起报告，不删除。
+  - `cleanup` 模式：跑 `/speckit.sanitize --lane all --auto-reversible`；一个调用内呈现 materials、renumber 与 retention 计划，破坏性确认仍由 sanitize 既有门处理，**不新增第二道门**。
   - MUST NOT 直接调用 `sanitize-utils.py apply` 或 `record-retention.py apply`。
   - **能力探测**：缺 `record-retention.py`（旧框架）→ 只跑 materials lane，报告 `retention=not_evaluated — 需升级 spec-kit`，不删除；缺 `sanitize-utils.py` → 回交 setup 做刷新。
   - **命令面**：不假设 `/speckit.*` 副本存在；缺失时按 `.specify/skills/internal/<name>/SKILL.md` 直接加载 owner 技能。
@@ -86,7 +86,7 @@ ssh <alias> "su - <run-user> -c 'cd <project-dir> && python3 - --project <projec
 
 ## H5 REPORT
 
-运行报告落宿主工作目录 `sdd-housekeeping-<project-slug>-<UTC-ts>.yaml`：
+运行报告归档到目标项目 `.specify/memory/housekeeping/<UTC-ts>-<mode>.yaml`（一次运行一个文件，不聚合、不重写旧报告；远端拓扑在目标侧写入）：
 
 ```yaml
 target: {mode: local|remote, project_dir, alias, run_user}
@@ -94,6 +94,9 @@ mode: check|cleanup
 inventory: {physical_before, logical_before, physical_after, logical_after}
 actions:
   - {command: "/speckit.sanitize --lane retention", status: executed|existing|skipped, reason: ...}
+sanitize_materials_auto: {repaired, dismissed, pending}
+sanitize_renumber: {auto_confirmed, applied, pending}
+docs_links: {repaired, pending}
 sanitize_retention: {scanned, eligible, blocked, removed, remaining, ledger}
 unprocessed: [...]
 candidates: {features: [...], feedback: [...], todos: [...]}
@@ -103,7 +106,7 @@ suggestion: "候选工作；如需 SDD 全流程推进可调用 sdd-loop-driver�
 - 候选来源：未完成 feature、大规模反馈改进、SPECKIT TODO。本 skill 是候选清单的唯一所有者；setup 不再产出 `sdd-candidates-*.yaml`。
 - 候选清单是建议，不携带「必须调用 sdd-loop-driver」的语义。
 - `check` 模式下 `removed` / `remaining` / `ledger` 允许为 null；`record-retention.py` 缺席时 `sanitize_retention.status = not_evaluated`，不得填 0 冒充。
-- 不在目标项目创建 ad-hoc 目录；不借用 `.specify/state/`。
+- 不在目标项目创建 ad-hoc 目录；不借用 `.specify/state/`；运行报告落 `.specify/memory/housekeeping/`（存储登记 owner：`.specify/shared/definitions/framework-map.md`）。
 
 **就绪判据差异（有意）**：house-keeping H0 以 `.specify/` + constitution 为前置；`source.json` 缺失在 H1 记为 provenance warning，不阻断本 skill。loop-driver 的 preflight ⑤ 额外要求 `source.json`，因为它需要框架版本用于派发；两者差异在此声明，不在两处各自发挥。
 

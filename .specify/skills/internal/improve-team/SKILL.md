@@ -7,6 +7,9 @@ classification: internal
 
 # improve-team
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Adjust and optimize an **existing** agent team. `improve-team` is the team-domain analogue of `improve-agent`, completing the create → improve lifecycle for teams. It loads a persisted team, makes **targeted, evidence-based, structure-preserving** edits (never a broad rewrite), re-persists the team, and reports what changed and why. The multi-agent Conceptual Model it operates against is defined once in `../create-team/references/conceptual-model.md`; the team **goal** concept in `../create-team/references/goal.md`.
@@ -32,6 +35,37 @@ Goal anchor (Constitution Principle XIII): this skill is a Better-Harness instru
 5. **Re-persist** — write the updated `team.md` and **bump the `updated` date**; leave `created` and all unaffected frontmatter/members untouched. Run intermediates stay in the git-ignored workspace `.specify/teams/.work/<slug>/`; if editing a legacy team, repoint any stale `progress_file` there.
 6. **Seat backfill (席位回填, opt-in)** — for the modify-target team **only** (never auto-scan other teams): resolve each `agent:` member reference; a seat with no definition under `.specify/agents/{templates,instances}/` is backfilled per the seat-instantiation clauses in `../create-team/references/create-mode.md` step 4 (create-agent delegation, kind instance; ALL frame placeholders resolved; `team-scope: <team-slug>` set; same-slug collision disclosed, never silently overwritten). Backfilled instances are structurally identical to create-time instances (shared clauses, no variant). After backfilling, run `specify render-agents --ai <当前宿主工具>` so the seats reach the host registration surface; render failure MUST be disclosed, not skipped. 存量团队经一次 modify 即可让席位上注册面。
 7. **Report** — list each change and the evidence that motivated it, distinguish: directly-referenced existing seats, seats backfilled this round, and the render stats summary (rendered/backups/unmapped), and recommend a `run` to validate.
+
+## Handoff Territory Expansion
+
+Feature 094 — when an `active` handoff contract (`<spec-dir>/handoff.md`, frontmatter `contract: handoff/v1`)
+names this team through `team_slug`, its `## Territory` section is the crew's only write grant.
+Expanding it is an **explicit, disclosed applied modification — one record per team**, never an
+optimizer guess:
+
+1. **Load and validate** — read `<spec-dir>/handoff.md`; `goal_slug` and `team_slug` MUST resolve
+   to `.specify/anchoring/<goal_slug>/goal.md` and `.specify/teams/<team_slug>/team.md`. A
+   dangling key is refused; this skill never repairs the contract itself and never guesses a
+   missing binding.
+2. **Expand `## Territory` into `territory.write`** — every granted entry lands in this team's
+   `territory.write`. Granted entries stay inside the contract's spec directory and MUST NOT
+   include `.specify/anchoring/**` or `.specify/teams/**`.
+3. **Force the design face into `territory.forbidden`** — `requirements.md`, `tasks.md`,
+   `verification.md` and `handoff.md` land in `territory.forbidden` of every seat that carries
+   the expansion. The refusal is mechanical, not cooperative:
+   `python3 .specify/skills/internal/create-team/scripts/territory-check.py --team .specify/teams/<slug>/team.md --path <path>`
+   exits non-zero and names the path and the seat.
+4. **Record one record per team** — the change report carries, for each expanded team, its slug,
+   the contract path, the added `territory.write` entries and the added `territory.forbidden`
+   entries; the `updated` date is bumped and unaffected fields stay byte-identical.
+5. **Writeback stays per task** — the crew's delivery is one record per completed task at
+   `<spec-dir>/writeback/<T-NNN>.yaml` carrying `task`, `outcome`, `run_id`, `evidence` and `at`.
+   `tasks.md` and `verification.md` remain spec-side writes; the crew never marks a task
+   complete in the task table.
+
+The design face stays on the spec side: amending `handoff.md` is a spec-side edit plus an engine
+re-expansion, never a crew edit; an `active → fulfilled` transition is recorded by the spec side
+after the writeback is verified (C-64/C-67 of `contracts/handoff-contract.md`).
 
 ## Refinement Map (examples)
 
@@ -72,7 +106,7 @@ Start every run with SI-0 from `.specify/shared/workflow/self-improvement-workfl
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -82,3 +116,4 @@ Start every run with SI-0 from `.specify/shared/workflow/self-improvement-workfl
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:improve-team" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

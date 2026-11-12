@@ -60,5 +60,5 @@ python3 .specify/scripts/python/evidence-utils.py --action collect --target <uni
 
 - 本步骤插入消费单元的证据输入位置(通常替代原"从历史回忆执行效果"类步骤),不改变该单元的收尾 Feedback 步骤。
 - 引用方式:在 SKILL.md 相应步骤写"按 `.specify/shared/workflow/evidence-step.md` 执行 Step A/B(+E)",零复制定义。
-- Node 环境缺失时 session/project/assets 三泳道降级,runs/feedback 泳道(纯 Python)仍可用——消费流程按可用泳道进行,边界如实申明。
+- Node 环境缺失时 Node 型泳道降级、纯 Python 型泳道仍可用——消费流程按可用泳道进行,边界如实申明。泳道的**成员与次序**由 `.specify/shared/declarations/facts/evidence-lanes.yaml#/statement` 单一拥有（本行不枚举；Node 型/原生型的划分归 `.specify/scripts/python/evidence-utils.py`）。
 - `.specify/memory/evidence/` 不进入 feedback 打包(package)范围。

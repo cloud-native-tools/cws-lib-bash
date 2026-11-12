@@ -36,7 +36,7 @@
 
 ## Target(目标切片):提议形流程,授权只经 /speckit.goal
 
-Target 是 goal 之下的 run 级可指派范围切片——概念(身份文法、三态生命周期、与判据轴的边界)定义一次于 `.specify/shared/definitions/goal-definitions.md` 的 Target Decomposition([[STR-004]]),此处只规范团队侧的操作纪律,不复述概念:
+Target 是 goal 之下的 run 级可指派范围切片——概念(身份文法、三态生命周期、与判据轴的边界)定义一次于 `.specify/shared/definitions/goal-definitions.md` 的 Target Decomposition(§ Target Decomposition 目标切片),此处只规范团队侧的操作纪律,不复述概念:
 
 - **提议 → 批准(ratify)两段式**:团队或某次 run 认为需要新切片、或某切片已完成/应放弃时,只**提议**——在 run 报告与台账证据中写明理由;实际的新增(`targets <slug> --add`)与状态迁移(`targets <slug> --set done|dropped|open --id <T-nnn>`)MUST 经 `/speckit.goal` 由人批准执行。**派生流程 MUST NOT 写 `goal.md`**——包括 `## Targets` 节,它只由引擎渲染。
 - **分解提议(goal-based 创建,042)**:分解路径产出**分解提议集**——每条候选为成果形语句(GD-2)、从属同一目标、自身独立成立者另立 goal;呈现前每条经 `targets <slug> --check` 干跑通过(校验器与 `--add` 同源),批准为一次**合并批准**(propose→ratify 决策语义不变),随后逐条 `--add`;exit-2 拒绝原样上报、修订重检或显式放弃,不绕过引擎。对 `goal.md` 零写入的红线覆盖提议全程(过程细节见 [`create-mode.md`](create-mode.md) → *Goal-based create branch*)。

@@ -1,0 +1,23 @@
+# Batch 1, row 9 (contracts/migration-batches.contract.md C-042) — the 081-sensitive row.
+#
+# The one machine-read copy of the `Path` closed set: the two values a success criterion's
+# `**Path**:` marker may carry. Two engines read it through `.specify/scripts/python/declaration_reader.py`
+# — the requirements checker `.specify/scripts/python/validate-requirements.py` (the format rule) and the
+# closure checker `.specify/scripts/python/closure-acceptance-check.py` (an out-of-domain marker is its
+# input error). The carriers reach it by
+# `.specify/shared/declarations/facts/success-criterion-path-values.yaml#/statement`.
+#
+# Authority order: code > generated > authored. Both engines' inline tuples and the judgement
+# prose named the same two values, in the same order, on 2026-11-05, so nothing had drifted.
+fact: success-criterion-path-values
+kind: closed-set
+statement:
+  - final
+  - supporting
+consumers:
+  - .specify/scripts/python/validate-requirements.py
+  - .specify/scripts/python/closure-acceptance-check.py
+former_carriers:
+  - .specify/shared/workflow/acceptance-hardening.md
+  - .specify/templates/commands/requirements.md
+note: "Order is part of the value: member 0 is the only member that can refuse a verdict and the only one an execution-class feature must carry, so this is an ordered closed set and the engines unpack it instead of re-spelling the names. Of the roster's three named carriers, only .specify/shared/workflow/acceptance-hardening.md used to restate the pair; .specify/templates/commands/requirements.md produces the marker and now points here. .specify/skills/internal/create-requirements/SKILL.md is a producing carrier that never restated either member (measured 2026-11-05: `grep -c 'final\\|supporting\\|Path'` on its pre-change bytes = 0) and its bytes are frozen by 069a's dated record (.specify/specs/069a-*/notes/pre-change-file-hashes.txt, read by tests/contract/test_expression_compatibility.py C-5), so it is not a former carrier and is deliberately not pointed; the 069a freeze owner would have to revisit the record before that file can change."

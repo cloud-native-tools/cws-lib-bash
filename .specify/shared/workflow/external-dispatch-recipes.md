@@ -13,7 +13,9 @@ Operational recipes for driving an **external subagent** (Mode 3 in [`subagent-d
 
 Both topologies support parallel lines: one connection/process per line, each line tracked with its own task entry (e.g. TaskCreate/TaskUpdate) so the orchestrator never conflates their states.
 
-> **SDD-driving skills boundary**: for `sdd-project-setup`, `sdd-house-keeping` and `sdd-loop-driver`, the **local** topology defaults to the orchestrator / host native subagent and MUST NOT launch `qodercli` locally. The local external-CLI variant in Recipe 5 is for consumers that explicitly choose external dispatch; it is not the SDD local default. The **remote** topology is `ssh <alias>` → `su - <run-user>` → `cd <project-dir>` → subagent CLI; the CLI default is the execution-config defaults layer (`.specify/templates/execution-config-defaults.yaml`, `cli: qodercli`). The **only local exception** is the bounded read-only validation/detection fan-out (`/speckit.analyze` §5.5, `objective-analysis-gate.md`): it is worker dispatch, not stage dispatch, and selects External per `subagent-definitions.md` § Mode Selection (Recipe 7).
+**SSH transport owner**: concrete option sets, quoting, stdin script push and exit-code propagation are owned by the `ssh-utils` skill (`.specify/scripts/ssh-exec.py`). Every non-interactive ssh invocation MUST carry `-o RemoteCommand=none` — a host whose ssh_config presets `RemoteCommand` otherwise rejects the command line with `Cannot execute command-line and remote command`. The recipes below show the topology shape; prefer the wrapper when executing.
+
+> **SDD-driving skills boundary**: for `sdd-project-setup`, `sdd-house-keeping` and `sdd-loop-driver`, local stage dispatch MUST default to the **fork carrier** — same-family `qodercli` child processes through `.specify/skills/sdd-loop-driver/scripts/stage-runner.sh` — and heterogeneous agents MUST use the **subprocess carrier** (an independent child process of the agent's own CLI). The **host-internal in-process subagent path is BANNED** as a carrier (neither a default nor a degradation option). The **remote** topology is `ssh <alias>` → `su - <run-user>` → `cd <project-dir>` → subagent CLI; the CLI default is the execution-config defaults layer (`.specify/templates/execution-config-defaults.yaml`, `cli: qodercli`). The bounded read-only validation/detection fan-out (`/speckit.analyze` §5.5, `objective-analysis-gate.md`) is worker dispatch, not stage dispatch, and rides the same two process carriers (Recipe 7); the read-only allowlist and `--no-session-persistence` flags stay unchanged.
 
 ## Recipe 1 — Breakpoint Probe (断点探测)
 
@@ -31,7 +33,7 @@ Read the three signals together (branch name, recent commits, spec directory con
 Each stage gets a complete instruction file written to the remote host via heredoc, one file per line and stage:
 
 ```bash
-ssh <alias> "cat > /home/<run-user>/prompt-<line>-<stage>.md" <<'EOF'
+ssh -o RemoteCommand=none <alias> "cat > /home/<run-user>/prompt-<line>-<stage>.md" <<'EOF'
 <prompt body>
 EOF
 ```
@@ -62,7 +64,7 @@ Derive the next stage's runner from the previous one with a one-line `sed` filen
 Run the stage in the background with its output streamed to a local log, then poll:
 
 ```bash
-ssh <alias> "su - <run-user> -c 'bash /home/<run-user>/run-<line>-<stage>.sh'" \
+ssh -o RemoteCommand=none <alias> "su - <run-user> -c 'bash /home/<run-user>/run-<line>-<stage>.sh'" \
   > ~/tmp/<project>/<line>-<stage>.log 2>&1 &     # background; one ssh stream per line
 
 tail -N ~/tmp/<project>/<line>-<stage>.log        # poll until the sentinel line appears
@@ -85,9 +87,11 @@ On one host, split by role into parallel lines: one run user solidifies infrastr
 ## Recipe 7 — Read-only Validation Fan-out (只读验证波)
 
 Carrier for `/speckit.analyze` §5.5 and the same-author detection delegation wave: **one external
-process per finding, all in parallel, no host sessions.** Use this recipe when the executing agent
-is itself a non-nesting subagent (no native subagent tool) and must still obtain fresh-context
-read-only validators.
+process per finding, all in parallel, no host sessions.** This is the **subprocess carrier** for a
+heterogeneous agent (an independent child process of the agent's own CLI) and the read-only form of
+the **fork carrier** when the CLI is same-family (`qodercli` through `stage-runner.sh`); the
+**host-internal in-process subagent path is BANNED** as a carrier for this wave. Use it whenever the
+executing agent must obtain fresh-context read-only validators without host sessions.
 
 ```bash
 # one dispatch per finding; the flags carry the read-only allowlist and keep the run out of history
@@ -115,3 +119,4 @@ DISPATCH_LOG_DIR="<run-dir>/validators" \
 
 - **What this document is not**: the contract that makes a dispatch observable lives in [`subagent-definitions.md`](../definitions/subagent-definitions.md); the decision of *whether* a progression should run as an unattended loop lives in [`unattended-loop-pattern.md`](../patterns/unattended-loop-pattern.md). If a recipe here and the contract disagree, the contract wins — fix the recipe.
 - **Not a team substitute**: these recipes drive raw agent CLIs; structured multi-member runs with verifier seats and stall protocols belong to teams (`/speckit.team`), whose dispatch goes through the reference wrapper `.specify/skills/internal/create-team/scripts/dispatch.sh`.
+- **Reporting duty rides the same payload**: an in-scope dispatched flow also carries the reporting obligation — reached by path at [`reporting-obligations.md`](../guidelines/reporting-obligations.md); the recipes below stay command shapes and define none of it.

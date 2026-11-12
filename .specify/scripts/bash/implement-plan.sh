@@ -3,49 +3,72 @@
 set -e
 
 # Load common helpers for Unicode support and shared functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/common.sh" ]; then
+
+# script-interface: the sourceable guard block (086) lives in script-interface.sh
+# It sits above this script's own parsing and above `source common.sh`: a shared
+# library's top-level checks would otherwise turn `--help` into a non-zero exit, and
+# the flags must win over any write. Authority: .specify/shared/definitions/
+# script-interface-definitions.md section 4.
+SCRIPT_INTERFACE_LIB="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/script-interface.sh"
+if [ -f "$SCRIPT_INTERFACE_LIB" ]; then
     # shellcheck source=/dev/null
-    source "$SCRIPT_DIR/common.sh"
-    # Ensure UTF-8 locale for better Unicode handling
-    ensure_utf8_locale || true
+    . "$SCRIPT_INTERFACE_LIB"
+    script_interface_guard entry
+    script_interface_guard define name="$0" \
+        usage="[--json] [--input <text>] [<user_input>]" \
+        effects="writes .specify/specs/<feature>/tasks.md; the flags write nothing" \
+        codes="0 created or answered; 1 a prerequisite is missing; 2 an unrecognized option" \
+        writes=--input \
+        -- --json --input
+    script_interface_guard guard "$@"
 fi
 
-# Plan implementation for Spec Kit - pure bash, no external dependencies
-# This script implements the /speckit.plan command workflow
+main() {
 
-# Parse command line arguments
-JSON_MODE=false
-USER_INPUT=""
-HELP_MODE=false
 
-while [[ $# -gt 0 ]]; do
-    case $1 in
-        --json)
-            JSON_MODE=true
-            shift
-            ;;
-        --help|-h)
-            HELP_MODE=true
-            shift
-            ;;
-        --input)
-            USER_INPUT="$2"
-            shift 2
-            ;;
-        *)
-            # If we have unprocessed arguments and no --input flag was used,
-            # treat all remaining args as user input
-            if [ -z "$USER_INPUT" ]; then
-                USER_INPUT="$*"
-            fi
-            break
-            ;;
-    esac
-done
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/common.sh" ]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/common.sh"
+        # Ensure UTF-8 locale for better Unicode handling
+        ensure_utf8_locale || true
+    fi
 
-if $HELP_MODE; then
-    cat <<EOF
+    # Plan implementation for Spec Kit - pure bash, no external dependencies
+    # This script implements the /speckit.plan command workflow
+
+    # Parse command line arguments
+    JSON_MODE=false
+    USER_INPUT=""
+    HELP_MODE=false
+
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            --json)
+                JSON_MODE=true
+                shift
+                ;;
+            --help|-h)
+                HELP_MODE=true
+                shift
+                ;;
+            --input)
+                USER_INPUT="$2"
+                shift 2
+                ;;
+            *)
+                # If we have unprocessed arguments and no --input flag was used,
+                # treat all remaining args as user input
+                if [ -z "$USER_INPUT" ]; then
+                    USER_INPUT="$*"
+                fi
+                break
+                ;;
+        esac
+    done
+
+    if $HELP_MODE; then
+        cat <<EOF
 Usage: $0 [--json] [--input "user input"] [user input...]
 
 Options:
@@ -60,58 +83,59 @@ Examples:
   $0 --json "Handle special chars like \$, \", ', \\ and Unicode like World 👋"
   $0 --input "Complex prompt with | & ; * ? [ ] { } ( ) < > ! #" 
 EOF
-    exit 0
-fi
+        exit 0
+    fi
 
-# Get script directory and load common functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+    # Get script directory and load common functions
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    source "$SCRIPT_DIR/common.sh"
 
-# Ensure UTF-8 locale for better Unicode handling
-ensure_utf8_locale || true
+    # Ensure UTF-8 locale for better Unicode handling
+    ensure_utf8_locale || true
 
-# Validate user input if provided
-if [ -n "$USER_INPUT" ]; then
-    validate_input "$USER_INPUT" 10000 || {
-        echo "Error: Invalid user input" >&2
-        exit 1
-    }
-    is_valid_utf8 "$USER_INPUT" || {
-        echo "Warning: User input may contain invalid UTF-8 sequences" >&2
-    }
-fi
+    # Validate user input if provided
+    if [ -n "$USER_INPUT" ]; then
+        validate_input "$USER_INPUT" 10000 || {
+            echo "Error: Invalid user input" >&2
+            exit 1
+        }
+        is_valid_utf8 "$USER_INPUT" || {
+            echo "Warning: User input may contain invalid UTF-8 sequences" >&2
+        }
+    fi
 
-# Get all paths and variables from common functions
-eval $(get_feature_paths)
+    # Get all paths and variables from common functions
+    eval $(get_feature_paths)
 
-# Check if we're on a proper feature branch (only for git repos)
-check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
+    # Check if we're on a proper feature branch (only for git repos)
+    check_feature_branch "$CURRENT_BRANCH" "$HAS_GIT" || exit 1
 
-# Ensure the feature directory exists
-mkdir -p "$REQUIREMENTS_DIR"
+    # Ensure the feature directory exists. The scaffold below writes, and its gates read the
+    # parsed arguments, so the tree is created only on the writing path.
+    mkdir -p "$REQUIREMENTS_DIR"
 
-# Copy plan template if it exists
-TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
-if [[ -f "$TEMPLATE" ]]; then
-    cp "$TEMPLATE" "$IMPL_PLAN"
-    echo "Copied plan template to $IMPL_PLAN"
-else
-    echo "Warning: Plan template not found at $TEMPLATE"
-    # Create a basic plan file if template doesn't exist
-    touch "$IMPL_PLAN"
-fi
+    # Copy plan template if it exists
+    TEMPLATE="$REPO_ROOT/.specify/templates/plan-template.md"
+    if [[ -f "$TEMPLATE" ]]; then
+        cp "$TEMPLATE" "$IMPL_PLAN"
+        echo "Copied plan template to $IMPL_PLAN"
+    else
+        echo "Warning: Plan template not found at $TEMPLATE"
+        # Create a basic plan file if template doesn't exist
+        touch "$IMPL_PLAN"
+    fi
 
-# Phase 0: Handle user input and research requirements
-# Extract unknowns from Technical Context that need clarification
-handle_research_phase() {
-    local feature_spec="$1"
-    local research_file="$2"
-    
-    echo "Starting Phase 0: Research"
-    
-    # Create research.md if it doesn't exist
-    if [[ ! -f "$research_file" ]]; then
-        cat > "$research_file" <<EOF
+    # Phase 0: Handle user input and research requirements
+    # Extract unknowns from Technical Context that need clarification
+    handle_research_phase() {
+        local feature_spec="$1"
+        local research_file="$2"
+
+        echo "Starting Phase 0: Research"
+
+        # Create research.md if it doesn't exist
+        if [[ ! -f "$research_file" ]]; then
+            cat > "$research_file" <<EOF
 # Research Findings
 
 **Branch**: $CURRENT_BRANCH | **Date**: $(date '+%Y-%m-%d')
@@ -121,17 +145,17 @@ handle_research_phase() {
 This document contains findings from research conducted to resolve uncertainties in the technical context.
 
 EOF
-    fi
-    
-    # For our specific use case (complex Unicode and special characters),
-    # we need to research safe handling approaches
-    
-    # Add research findings for special character handling
-    if grep -q "NEEDS CLARIFICATION" "$feature_spec" 2>/dev/null; then
-        echo "Researching safe input handling for special characters and Unicode..."
-        
-        # Append research findings
-        cat >> "$research_file" <<EOF
+        fi
+
+        # For our specific use case (complex Unicode and special characters),
+        # we need to research safe handling approaches
+
+        # Add research findings for special character handling
+        if grep -q "NEEDS CLARIFICATION" "$feature_spec" 2>/dev/null; then
+            echo "Researching safe input handling for special characters and Unicode..."
+
+            # Append research findings
+            cat >> "$research_file" <<EOF
 
 ## Decision: Safe Input Handling for Special Characters and Unicode
 
@@ -151,23 +175,23 @@ EOF
 - No locale setting: May cause Unicode issues on some systems
 
 EOF
-    fi
-    
-    echo "Phase 0: Research completed"
-}
+        fi
 
-# Phase 1: Generate design artifacts
-handle_design_phase() {
-    local feature_spec="$1"
-    local data_model_file="$2"
-    local contracts_dir="$3"
-    local quickstart_file="$4"
-    
-    echo "Starting Phase 1: Design & Contracts"
-    
-    # Create data-model.md
-    if [[ ! -f "$data_model_file" ]]; then
-        cat > "$data_model_file" <<EOF
+        echo "Phase 0: Research completed"
+    }
+
+    # Phase 1: Generate design artifacts
+    handle_design_phase() {
+        local feature_spec="$1"
+        local data_model_file="$2"
+        local contracts_dir="$3"
+        local quickstart_file="$4"
+
+        echo "Starting Phase 1: Design & Contracts"
+
+        # Create data-model.md
+        if [[ ! -f "$data_model_file" ]]; then
+            cat > "$data_model_file" <<EOF
 # Data Model
 
 **Branch**: $CURRENT_BRANCH | **Date**: $(date '+%Y-%m-%d')
@@ -185,14 +209,14 @@ handle_design_phase() {
   - No injection attempts detected (handled at processing layer)
 
 EOF
-    fi
-    
-    # Create contracts directory
-    mkdir -p "$contracts_dir"
-    
-    # Create quickstart.md
-    if [[ ! -f "$quickstart_file" ]]; then
-        cat > "$quickstart_file" <<EOF
+        fi
+
+        # Create contracts directory
+        mkdir -p "$contracts_dir"
+
+        # Create quickstart.md
+        if [[ ! -f "$quickstart_file" ]]; then
+            cat > "$quickstart_file" <<EOF
 # Quick Start Guide
 
 **Branch**: $CURRENT_BRANCH | **Date**: $(date '+%Y-%m-%d')
@@ -220,36 +244,35 @@ Expected: Command handles both special chars and Unicode correctly
 - JSON output properly escaped with json_escape() function
 
 EOF
-    fi
-    
-    echo "Phase 1: Design & Contracts completed"
-}
+        fi
 
-# Main execution flow
-main() {
+        echo "Phase 1: Design & Contracts completed"
+    }
+
+
     echo "Executing /speckit.plan workflow for branch: $CURRENT_BRANCH"
-    
+
     # Load feature spec if it exists
     if [[ -f "$FEATURE_SPEC" ]]; then
         echo "Loaded feature spec: $FEATURE_SPEC"
     else
         echo "Warning: Feature spec not found at $FEATURE_SPEC"
     fi
-    
+
     # Load constitution if it exists
-    CONSTITUTION_FILE="$REPO_ROOT/.specify/memory/constitution.md"
+    CONSTITUTION_FILE="$REPO_ROOT/.specify/constitution.md"
     if [[ -f "$CONSTITUTION_FILE" ]]; then
         echo "Loaded constitution: $CONSTITUTION_FILE"
     else
         echo "Warning: Constitution file not found at $CONSTITUTION_FILE"
     fi
-    
+
     # Execute Phase 0: Research
     handle_research_phase "$FEATURE_SPEC" "$RESEARCH"
-    
+
     # Execute Phase 1: Design & Contracts  
     handle_design_phase "$FEATURE_SPEC" "$DATA_MODEL" "$CONTRACTS_DIR" "$QUICKSTART"
-    
+
     # Output results
     if $JSON_MODE; then
         printf '{"FEATURE_SPEC":"%s","IMPL_PLAN":"%s","SPECS_DIR":"%s","BRANCH":"%s","HAS_GIT":"%s","USER_INPUT":"%s"}\n' \
@@ -278,5 +301,9 @@ main() {
     fi
 }
 
-# Run main function
-main
+# (the body above runs when this file is executed directly)
+main "$@"
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi

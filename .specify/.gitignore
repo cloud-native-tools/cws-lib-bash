@@ -28,3 +28,7 @@ memory/trigger/telemetry.jsonl
 
 # Agent-created scratch (temp-directory discipline); cleaned up when the work item completes
 .tmp/
+
+# SDD line state (state spines + runner four-piece evidence): runtime, re-entry reads the working tree,
+# never versioned; the spec artifacts it points at stay tracked
+state/

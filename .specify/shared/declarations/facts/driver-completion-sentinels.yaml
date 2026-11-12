@@ -1,0 +1,26 @@
+# Batch 2 (contracts/migration-batches.contract.md C-044, row `driver-completion-sentinels`).
+#
+# The one machine-read copy of the loop driver's completion sentinel shape: the literal template, the
+# transform applied to the stage name, and the three field names that carry the result in the
+# snapshot envelope. The engine `.specify/skills/sdd-loop-driver/scripts/loop-state.py` renders every
+# sentinel from here through `.specify/scripts/python/declaration_reader.py` instead of re-spelling the
+# template; the carrier reaches it by
+# `.specify/shared/declarations/facts/driver-completion-sentinels.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `sentinel_literal()` rendered `<STAGE>-DONE` by
+# uppercasing the stage name, and `STATUS_FIELDS` / `LOG_FIELDS` carried the result in `sentinel` and
+# `sentinel_present` on 2026-11-05 — the same template, transform and fields this statement names, so
+# nothing had drifted and the code-side value stands uncorrected.
+fact: driver-completion-sentinels
+kind: mapping
+statement:
+  pattern: "{stage}-DONE"
+  transform: uppercase
+  status_field: sentinel
+  log_field: sentinel
+  log_present_field: sentinel_present
+consumers:
+  - .specify/skills/sdd-loop-driver/scripts/loop-state.py
+former_carriers:
+  - .specify/skills/sdd-loop-driver/SKILL.md
+note: "`pattern` is the template with `{stage}` standing for the stage name after `transform` is applied — `PLAN` + `uppercase` + this pattern render the same literal the engine produced inline before the migration, which is the reading `tests/unit/test_loop_state_engine.py` takes on `<STAGE>-DONE` logs. The three field keys are where the value surfaces rather than a fourth value: `status_field` / `log_field` are the same key on the two envelopes and `log_present_field` is the log's boolean. FR-012's compatibility path is why the engine keeps a labelled inline render for the case where this declaration cannot be read at all (a project that has not received the layer); the declaration being readable means that path is never taken."

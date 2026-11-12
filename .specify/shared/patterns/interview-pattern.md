@@ -263,7 +263,7 @@ Where the pattern already lives in this project, and where it fits:
 | `/speckit.goal` (`create`) | **Partial instance** — the objective and criteria are elicited **openly** per this pattern (the user's outcome, not a menu); the identity slug is a mechanical field, not an interview question |
 | `/speckit.plan` | **Opt-in escalation** — when design decisions are underdetermined, interview instead of fabricating a design |
 | `create-team` | **Opt-in escalation** — eliciting a missing goal, and deriving roster/pattern when the goal underdetermines them |
-| `summarize-project`, `create-skills`, `study-project` | **Pre-existing narrower loops** — gate-by-gate confirmation, one-question-per-round authoring, ≤3-per-round scoping. Conformant as-is; when next revised, check each question against the open-question rule before citing this pattern |
+| `summarize-project`, `create-skills`, `study-code` | **Pre-existing narrower loops** — gate-by-gate confirmation, one-question-per-round authoring, ≤3-per-round scoping. Conformant as-is; when next revised, check each question against the open-question rule before citing this pattern |
 | `/speckit.analyze`, `/speckit.review`, `/speckit.implement`, `/speckit.history`, `/speckit.feature` | **Bad fit — do not adopt.** Read-only diagnosis, mechanical execution, or automated distillation: there is no tacit information to elicit |
 
 ## Anti-patterns (反模式)

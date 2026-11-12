@@ -7,11 +7,11 @@ description: "Task list template for feature implementation"
 
 **Requirement ID**: [REQUIREMENT_ID] (from branch name, e.g., 003)
 **Requirement Key**: [REQUIREMENTS_KEY] (e.g., 003-speckit-agents-command)
-**Related Feature**: [FEATURE_ID] [FEATURE_NAME] (from .specify/memory/features.md)
+**Related Feature**: [FEATURE_ID] [FEATURE_NAME] (from .specify/features.md)
 **Input**: Design documents from `.specify/specs/[REQUIREMENTS_KEY]/`
 **Prerequisites**: plan.md (required), requirements.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests Mode**: [ON | OFF] — derived from `.specify/memory/constitution.md` by `/speckit.tasks`. State the principle (or absence) that drove the decision.
+**Tests Mode**: [ON | OFF] — derived from `.specify/constitution.md` by `/speckit.tasks`. State the principle (or absence) that drove the decision.
 
 **Tests**: When Tests Mode is ON, the examples below include test tasks and they are MANDATORY. When OFF, remove the test rows entirely (do NOT leave empty placeholders).
 
@@ -80,7 +80,7 @@ description: "Task list template for feature implementation"
 - GATE-1: Full test suite has zero NEW failures vs recorded baseline — check: `<this project's test runner>` + `comm -13 baseline current`
 - GATE-2: Every mirror obligation from plan.md verified byte-identical — check: `diff -rq <source> <mirror>`
 - GATE-3: No `[ ]` or `[>]` task rows remain — check: `grep -cE '^- \[[ >]\]' tasks.md` returns 0
-- GATE-4: verification.md lists every SC-NNN with a status — check: grep SC ids against requirements.md
+- GATE-4: Every `final`-path success criterion is `pass` **and** the feature's smoke record is present — check: in `verification.md`, every criterion whose `**Path**` marker reads `final` has `SC-NNN_status=pass`, and `smoke_command=`, `smoke_exit_code=0` and `smoke_evidence_path=` (a path that exists and is non-empty) are all present. A `final`-path criterion in `blocked` / `deferred` / `fail` fails this gate unless an explicit user waiver names that criterion. Condition set owner: `shared/workflow/acceptance-hardening.md` § Gates — this row carries the check, not a second schema
 
 ## Environment Prerequisites
 
@@ -100,12 +100,14 @@ description: "Task list template for feature implementation"
 
 - <dependency>: <available | partial | unavailable> — probe: `<command>` @ <date>; affected phases/tasks: <phase/task refs or none>
 
+**A13 boundary** (owner: `shared/workflow/acceptance-hardening.md` § Gates — this note is a pointer, not a second rule): this section records **task-generation probe verdicts** only, each with its probe command and an ISO date. A planning-time load-bearing premise belongs to `plan.md` § Execution Premises; a record inherited from a dependency feature belongs to `plan.md` § Inherited Blockers. The same fact written into two of the three carriers is a defect: the second occurrence MUST be converted into a pointer (`see § …`), never kept as a copy.
+
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2, US3)
 - **[blockedBy: T001,T002]** (optional): explicit dependency tag — this task MUST NOT start until every listed task is `[X]`. Machine-checkable alternative to prose like "depends on T012"; prefer it whenever a dependency exists. Tasks without the tag follow phase order only.
-- **[green: <contract>#<clause>]** (optional, repeatable): green-point attribution tag — this row is the one that turns that contract clause green. A row may declare zero or more; a row declaring none keeps exactly the plain form above, so the tag is purely additive. The contract path resolves relative to this tasks.md's own directory first and the repository root second. Keep the tag on the task row: the one-line-per-task rule is owned by `.specify/templates/commands/tasks.md` § "One line per task (mechanical-validation contract)" and is machine-enforced, so a tag folded onto a continuation line is a format error. `scripts/python/validate-tasks.py` parses the tag and reports: a contract path or clause id that does not resolve → `green-dangling` (**ERROR**); claims on one contract whose clause order runs backwards against the row order → `green-cross-phase` (WARN, an earlier row cannot leave that contract green at its own phase); one clause claimed by two rows → `green-clause-collision` (WARN); one test path claimed green at two different points by two rows → `green-path-divergence` (WARN). Partition a contract's clauses across the rows that own them so each clause is claimed exactly once, and never silence a WARN by deleting the tag — that removes the evidence of the conflict without removing the conflict.
+- **[green: <contract>#<clause>]** (optional, repeatable): green-point attribution tag — this row is the one that turns that contract clause green. A row may declare zero or more; a row declaring none keeps exactly the plain form above, so the tag is purely additive. The contract path resolves relative to this tasks.md's own directory first and the repository root second. Keep the tag on the task row: the one-line-per-task rule is owned by `.specify/skills/internal/create-tasks/SKILL.md` § "One line per task (mechanical-validation contract)" and is machine-enforced, so a tag folded onto a continuation line is a format error. `scripts/python/validate-tasks.py` parses the tag and reports: a contract path or clause id that does not resolve → `green-dangling` (**ERROR**); claims on one contract whose clause order runs backwards against the row order → `green-cross-phase` (WARN, an earlier row cannot leave that contract green at its own phase); one clause claimed by two rows → `green-clause-collision` (WARN); one test path claimed green at two different points by two rows → `green-path-divergence` (WARN). Partition a contract's clauses across the rows that own them so each clause is claimed exactly once, and never silence a WARN by deleting the tag — that removes the evidence of the conflict without removing the conflict.
 - Include exact file paths in descriptions
 - **Verification tasks**: Add explicit manual QA/verification tasks when they are separate from automated tests
 

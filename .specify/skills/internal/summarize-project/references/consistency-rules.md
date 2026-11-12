@@ -229,7 +229,7 @@ for f in .specify/specs/*/tasks.md; do
   printf '%-34s -> %s\n' "$k" "${r:-未声明}"
 done
 # 反向链接（优先级 2）
-awk -F'|' '/^\| [0-9]{3} \|/{gsub(/^ +| +$/,"",$2); gsub(/^ +| +$/,"",$7); if($7!="-") print $2" -> "$7}' .specify/memory/features.md
+awk -F'|' '/^\| [0-9]{3} \|/{gsub(/^ +| +$/,"",$2); gsub(/^ +| +$/,"",$7); if($7!="-") print $2" -> "$7}' .specify/features.md
 ```
 
 阶段节点名称取特性名（业务语言）；阶段状态由 §2 真值表从其 spec 子项聚合得出——**不直接抄特性索引的状态列**。两者不一致时按 §5 记为记录冲突。
@@ -495,7 +495,7 @@ python3 ${SKILL_HOME}/scripts/check-coherence.py <报告路径> --strict   # WAR
 
 | 前缀 | 命名空间 | 取值来源 | 形态示例（值随项目而变） |
 |------|----------|----------|------|
-| `F-` | 特性索引 ID | 特性索引的 ID 列（**示例布局**：`.specify/memory/features.md`） | `F-019 <特性名>` |
+| `F-` | 特性索引 ID | 特性索引的 ID 列（**示例布局**：`.specify/features.md`） | `F-019 <特性名>` |
 | `S-` | 规格键（spec key） | spec 目录名（含其前缀数字；**示例布局**：`specs/<key>/`） | `S-019-<slug>` |
 | `P-` / `T-` | 报告自编工作项 ID | 本报告结构 B 自编 | `P-02` / `T-13` |
 
@@ -545,7 +545,7 @@ python3 ${SKILL_HOME}/scripts/check-coherence.py <报告路径> --strict   # WAR
 | W-2 | `${SKILL_WORKDIR}/.specify/memory/feedback/` | **只经** `feedback-utils.py` 引擎（不手写文件） | 技能自省通道，宿主框架资产 |
 | W-3 | 图源与渲染产物、计算/校验中间产物（图源 `*.puml` 与渲染出的 `*.svg` / `*.png` 同名落 `assets/`；**项目数据库 `project.db`、引擎输出 `engine-out.json`**、可选导出 `progress-data.json`、`expect.json`、门禁结果落 `data/`） | draw-diagram 渲染流程 / `project-db.py` / `progress-engine.py` / 校验脚本 | 一律落**交付目录内**（`assets/` 或 `data/`，默认每次运行从事实源重建、随目录整体刷新，作为交付物一部分保留）；**绝不写入目标项目管理工件区**（目标项目 ≠ 宿主时交付目录外零写入） |
 
-**白名单之外一律只读**，明确包括：`.specify/specs/**`（requirements / plan / tasks / verification / checklists）、`.specify/memory/features.md` 与 `features/**`、`.specify/memory/constitution.md`、`.specify/instructions.md`、`.specify/skills/**`、`.specify/agents/**`、`.specify/templates/**`、`.specify/history/**`、`.specify/memory/session|knowledge/**`、README/docs、源代码、git 仓库（不 commit、不 tag、不改 ref）。
+**白名单之外一律只读**，明确包括：`.specify/specs/**`（requirements / plan / tasks / verification / checklists）、`.specify/features.md` 与 `features/**`、`.specify/constitution.md`、`.specify/instructions.md`、`.specify/skills/**`、`.specify/agents/**`、`.specify/templates/**`、`.specify/history/**`、`.specify/memory/session|knowledge/**`、README/docs、源代码、git 仓库（不 commit、不 tag、不改 ref）。
 
 ### 10.4 优先级与目标≠宿主的处理
 

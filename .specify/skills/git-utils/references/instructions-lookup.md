@@ -1,17 +1,18 @@
 # Git Workflow 状态文件定位与写入
 
-本技能把项目声明的分支工作流信息写入独立状态文件 **`${SKILL_WORKDIR}/docs/git-workflow.md`** 的 Git Workflow 托管块，不写入 instructions 文件，也不生成其他工作流文档（`.specify/instructions.md` 的 `## Git Workflow` 章节只保留指向本文件的指针，由 `/speckit.instructions` 维护）。工作流模型是项目级选择（菜单见 SKILL.md 作用域 A）；块内首行 `Workflow model` 声明所选模型，其后的行随模型形态而异——下文示例为三层模型的填充形态。
+本技能把项目声明的分支工作流信息写入独立状态文件 **`${SKILL_WORKDIR}/.specify/workflow/git.md`** 的 Git Workflow 托管块，不写入 instructions 文件，也不生成其他工作流文档（`.specify/instructions.md` 的 `## Git Workflow` 章节只保留指向本文件的指针，由 `/speckit.instructions` 维护）。工作流模型是 **Spec Kit 框架下**的声明（菜单见 SKILL.md 作用域 A）——人类开发者与无人值守机制共同遵循，不是开发者个人 git 习惯；块内首行 `Workflow model` 声明所选模型，其后的行随模型形态而异——下文示例为三层模型的填充形态。
 
 ## 目标文件
 
-- 固定路径：`${SKILL_WORKDIR}/docs/git-workflow.md`；文件不存在时用 `${SKILL_HOME}/assets/git-workflow-block.md` 渲染整文件创建。
+- 固定路径：`${SKILL_WORKDIR}/.specify/workflow/git.md`；文件不存在时用 `${SKILL_HOME}/assets/git-workflow-block.md` 渲染整文件创建。
+- `specify init` 会在目标缺失时先用骨架模板播种该文件（`None yet.` 占位块，见 [observe-hook.md](./observe-hook.md)）；Bootstrap 照常按「只替换标记之间内容」填充，区别仅在于文件头来自骨架模板。
 - 不要对 instructions 别名（`CLAUDE.md` / `AGENTS.md` / `QODER.md` 等）做任何写入。
 
 ## 写入规则
 
 ```bash
 # 判断块是否已存在
-grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/docs/git-workflow.md" && echo "block present" || echo "block missing"
+grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/.specify/workflow/git.md" && echo "block present" || echo "block missing"
 ```
 
 - **文件已存在**：只替换 `<!-- GIT_WORKFLOW_START -->` 与 `<!-- GIT_WORKFLOW_END -->` **之间**的内容；标记本身与块外内容保持字节不变。
@@ -27,7 +28,7 @@ grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/docs/git-workflow.md"
 grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/.specify/instructions.md" && echo "legacy block in instructions"
 ```
 
-命中时：先把该块内容原样迁入 `docs/git-workflow.md`（文件缺失时先创建），再把 instructions 文件中的整个旧 `## Git Workflow` 章节替换为指针句（"分支角色唯一事实源在 `docs/git-workflow.md`，由 git-workflow 技能机器维护"），并在报告中说明已迁移。遗留 `.specify/git-workflow.md` / `.specify/memory/git-workflow.md` 仍按 Phase 0 规则处理。
+命中时：先把该块内容原样迁入 `.specify/workflow/git.md`（文件缺失时先创建），再把 instructions 文件中的整个旧 `## Git Workflow` 章节替换为指针句（"分支角色唯一事实源在 `.specify/workflow/git.md`，由 git-workflow 技能机器维护"），并在报告中说明已迁移。遗留 `docs/git-workflow.md`（上一代位置）/ `.specify/git-workflow.md` / `.specify/memory/git-workflow.md` 仍按 Phase 0 规则处理。
 
 ## 块内容
 
@@ -35,7 +36,7 @@ grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/.specify/instructions
 
 ```markdown
 <!-- GIT_WORKFLOW_START -->
-<!-- Workflow model is a per-project choice (menu: single-branch / dual-branch / temp-branch / MAIN-PRE-DEV three-tier); the declaration below records THIS project's choice, followed by its operating rules. -->
+<!-- Workflow model is a framework-level declaration under Spec Kit (menu: single-branch / dual-branch / temp-branch / MAIN-PRE-DEV three-tier); the declaration below records THIS project's choice, followed by its operating rules. -->
 - **Workflow model**: MAIN/PRE/DEV 三层
 | Role | Branch | Tracking | Purpose |
 |------|--------|----------|---------|
@@ -53,7 +54,7 @@ grep -q '<!-- GIT_WORKFLOW_START -->' "${SKILL_WORKDIR:-.}/.specify/instructions
 
 ```bash
 # 提取三层模型的分支名（Branch 列反引号内的值；仅声明模型为三层时使用）
-awk '/<!-- GIT_WORKFLOW_START -->/,/<!-- GIT_WORKFLOW_END -->/' "${SKILL_WORKDIR:-.}/docs/git-workflow.md" \
+awk '/<!-- GIT_WORKFLOW_START -->/,/<!-- GIT_WORKFLOW_END -->/' "${SKILL_WORKDIR:-.}/.specify/workflow/git.md" \
   | awk -F'|' '$2 ~ /MAIN|PRE|DEV/ {gsub(/[ `]/, "", $2); gsub(/[ `]/, "", $3); print $2"="$3}'
 ```
 

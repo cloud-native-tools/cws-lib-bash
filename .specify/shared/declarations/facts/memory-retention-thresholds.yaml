@@ -1,0 +1,31 @@
+# Batch 3 (contracts/migration-batches.contract.md C-045).
+#
+# The one machine-read copy of the record-retention thresholds: the default grace window and the
+# closed store roster a retention run may scan. The engine `.specify/scripts/python/record-retention.py`
+# reads it through `.specify/scripts/python/declaration_reader.py` (`DEFAULT_GRACE_DAYS`, `STORES`), so the
+# `--grace-days` default and the store validation come from here; the carriers reach it by
+# `.specify/shared/declarations/facts/memory-retention-thresholds.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `DEFAULT_GRACE_DAYS = 30` and the four-store roster
+# agreed with every carrier on 2026-11-05, so nothing had drifted.
+#
+# Carrier correction: `contracts/migration-batches.contract.md` names "same two skills" (the memory
+# skills) as the carrier side. Measured 2026-11-05, neither skill spells the 30-day grace or the
+# store roster — they document `prune --max-entries` / `--max-age-days` as caller-supplied values.
+# The carriers that do state the value are the three listed below, and they are the ones pointed.
+fact: memory-retention-thresholds
+kind: mapping
+statement:
+  grace_days: 30
+  stores:
+    - exec-quant
+    - feedback
+    - run-determination
+    - session-note
+consumers:
+  - .specify/scripts/python/record-retention.py
+former_carriers:
+  - docs/reference/skills/memory.md
+  - docs/reference/skills/feedback.md
+  - docs/reference/commands/sanitize.md
+note: "`grace_days` is the default only: a caller may override it with `--grace-days`, which is a parameter, not a second copy of the value. `stores` is a closed roster — an unknown store is refused rather than ignored — and the order is the scan order. `memory-utils.py`'s `prune` carries no default of its own (it requires `--max-entries` / `--max-age-days`), which is why the threshold's engine side is the retention engine and not the memory store."

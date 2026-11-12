@@ -1,0 +1,33 @@
+# 093 — the slot and reserve thresholds (FR-014, FR-015, FR-020; T-001).
+#
+# The one machine-read owner of `slot_cap_default` and `verifier_reserve`, the per-unit budget bound and
+# the round ceiling. The ceiling is NOT here: it is an enforced runtime bound owned by
+# `.specify/skills/sdd-loop-driver/scripts/wp-gate.py` (`--slot-cap-ceiling`, check WG-16), and this
+# entry names that owner instead of carrying a second number (C-008, R-3).
+#
+# The only composition rule this feature adds is the `min` formula and the reserve deduction; every
+# prose site that used to restate a cap becomes a projection of this entry (T-001).
+fact: concurrency-slot-and-reserve
+kind: threshold
+statement:
+  slot_cap_default: 6
+  verifier_reserve: 1
+  reserve_deduction: pre-dispatch, from the slot budget
+  unit_budget:
+    unit: max_turns
+    min: 1
+    max: 500
+  round_ceiling: 2
+  round_ceiling_meaning: dispatches per concurrent unit; attempt 3 is retry-exhausted, and a split child is never retried
+  bound_formula: min(slot_cap, ceiling, remaining_budget)
+  effective_available: min(slot_cap, ceiling, remaining_budget) - verifier_reserve
+  degradation_rule: effective_available < 2 => serial with the budget-reserve code
+  ceiling_owner:
+    path: .specify/skills/sdd-loop-driver/scripts/wp-gate.py
+    argument: --slot-cap-ceiling
+    check_id: WG-16
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_units.py
+former_carriers: []
+note: "T-001's collapse: the value that used to live in the stage-team preset (slot_cap_default 6), the decomposition model's map default (6) and the state spine's decomposition_slot_cap key all become projections of this entry; the ceiling stays with the gate script's declared default because it is enforced at dispatch, not configured. The verifier reserve is at least one slot per FR-015 and is deducted before dispatch, so a run with fewer than two slots left degrades to serial with the budget-reserve code rather than sharing a slot between executor and verifier. FR-020's 'unique definition point' is this block: max_turns is the budget unit and the round ceiling is two dispatches, which is the existing retry admission rule (attempt 1 without a delta, attempt 2 with a material delta, attempt 3 exhausted) read from one place."

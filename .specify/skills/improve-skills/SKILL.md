@@ -7,6 +7,8 @@ classification: external
 
 # improve-skills
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
 ## Goal
 
 Continuously improve one existing local Skill from a user-provided Skill description and evidence from real executions. The expected result is a focused Skill update that fixes observed problems, captures reusable lessons, and makes the next execution more reliable.
@@ -17,11 +19,11 @@ Goal anchor (Constitution Principle XIII): this skill is a Better-Harness instru
 
 The input is a description of the Skill to improve. It must be interpreted as follows:
 
-- **Target identifier**: identify exactly one local Skill by `skill_id`, frontmatter `name`, canonical path, or Skill directory name. If multiple Skills match or no local Skill can be found, ask one targeted clarification before editing.
+- **Target identifier**: identify exactly one local Skill by `skill_id`, frontmatter `name`, canonical path, or Skill directory name. This skill declares **only the parameter and its meaning**; the accepted forms, the normalization order, the disambiguation rules and the failure table are owned by `.specify/shared/definitions/skill-reference-definitions.md` — reach them there and disclose both the raw and the normalized identifier in the run's output. A slash form names the command surface, not a routing instruction. If multiple Skills match or no local Skill can be found, ask one targeted clarification before editing.
 - **Optimization direction**: extract the requested direction when present (execution failures, efficiency, input/output clarity, tool usage, validation strength). If absent, infer it only from concrete execution history and user feedback.
 - **User emphasis — highest priority**: the user's optimization descriptions are the highest-priority input. They receive a dedicated application pass (Workflow step 6) and outrank this skill's built-in optimization defaults; the only bound is the normative red lines (step 6's conflict rule).
 - **Batch mode** (user names a *set* of Skills or a whole directory): run **one** batch pass — collect evidence once, freeze the per-skill candidate list, prefer mechanical sanctioned conformance edits over speculative rewrites, verify mirrors once at the end. Do not loop the full workflow N times blindly.
-- **Batch triage ownership**: a Skill absent from *this* repo is not automatically out of scope — resolve where it actually lives and process it there when the user owns that location.
+- **Triage ownership (single or batch)**: a Skill absent from *this* repo is not automatically out of scope — resolve where it actually lives and process it there when the user owns that location. A user-supplied path outside the position ladder is acceptable for this **edit-class** operation (the execution trust boundary belongs to `run-skills`); record the resolved **absolute** path. When this skill runs as a dispatched Trainee in a chain, **it resolves its own subject** from the work text and MUST NOT hand that resolution back to the caller.
 - **Intent routing guard**: if the intent is to *monitor/score an ongoing execution* rather than modify a Skill, this is the wrong entry point (editing conflicts with monitoring's zero-write red line) — route to a `continuous` team and say why.
 
 Batch procedure, ownership resolution, and routing rationale: [`./references/loop-playbook.md`](./references/loop-playbook.md) `## Input Contract`.
@@ -40,10 +42,12 @@ Batch procedure, ownership resolution, and routing rationale: [`./references/loo
    - Read the full implementation: `SKILL.md` + `references/` + `.specify/scripts/` + `assets/`; run `python3 ${SKILL_HOME}/scripts/skill-shape.py <SKILL.md>` for the objective shape verdict.
    - Assess strengths and weaknesses **from the implementation's own perspective**, beyond norm conformance: which mechanisms are load-bearing, which sections are dead weight, where the workflow leaks decisions, which prose is deterministic logic in disguise, what optimization space remains.
    - Record a research note (strengths / weaknesses / optimization space) before any edit; every later keep/change/drop decision traces back to it. Conformance-only optimization without this research is theater. Method detail: [`./references/loop-playbook.md`](./references/loop-playbook.md) `## Step 2`.
+   - **Where does the policy take its value?** Read the run-environment files the target references (the inputs it consumes, the outputs it writes, the config or target directories it names) together with its body, and answer for each: does the body hard-code an environment path, a user directory name or a default landing point, or does a rule the body needs live only in those outside files? A hard-coded value is not a default to keep — it is a misplaced policy (§ `.specify/shared/definitions/mechanism-policy-definitions.md` § Misplacement Symptoms); reuse their judgement, do not restate it.
 
 3. **调研证据 — measure execution effectiveness (evidence-step A/B)**
    - **When the Spec Kit evidence stack is present** (`.specify/shared/workflow/evidence-step.md` + `evidence-utils.py`; single source of truth — do not restate its rules here): execute Step A/B per it — reuse fresh findings via `--action latest --target skill:<name>`, or collect via `--action collect --target skill:<name> --lanes all` (session + feedback lanes carry the strongest signals). **Standalone deployments** have no evidence engine: skip the lane machinery and build the candidate list from the execution-window evidence instead.
    - Triage findings by `evidenceState`, then **freeze the candidate list** — later steps must not add or drop candidates. Red lines: `Unobserved` items are recorded only and MUST NOT be treated as defects; counting signals MUST NOT directly generate optimization points.
+   - **`policy source missing or ambiguous`** is one of the candidate categories: raised from the survey above together with the evidence-derived candidates, **before the freeze**, and never added after it. It MUST NOT inherit the hard-coded value already in the skill as the policy (§ `.specify/shared/definitions/mechanism-policy-definitions.md` § Consumption Contract, prohibition 1); the improvement direction is to let the policy come from the user or the environment at run time — a parameter the caller supplies, asked for when absent.
    - Supplementary evidence from the execution window, runtime failures and silent under-extraction as first-class evidence, and the degenerate-evidence fallback: [`./references/loop-playbook.md`](./references/loop-playbook.md) `## Step 3`. If evidence is insufficient, ask one targeted question about what failed, what was inefficient, or what should happen differently next time.
 
 4. **Organize improvement items**
@@ -65,6 +69,7 @@ Batch procedure, ownership resolution, and routing rationale: [`./references/loo
    - Priority is decision order, not verification exemption: user-pass edits pass the same step-8 gates. Conflict taxonomy and worked cases: [`./references/loop-playbook.md`](./references/loop-playbook.md) `## Step 6`.
 
 7. **Update the Skill for the next execution**
+   - **Both layers before the first edit**: read the policy items this edit depends on (which input it assumes, where the change lands), judge each one, and stop on any that is unstaked — the owner's read-judge-stop check, § Consumption Contract of `.specify/shared/definitions/mechanism-policy-definitions.md`. This runs **before** the first edit below: a stop leaves the target untouched, with no half-edited file. **Policy missing** (the user never said which input or landing point the change assumes) and **environment error** (named but unreadable) are different wordings with different follow-ups — never report one as the other.
    - Edit `SKILL.md` to make the improved behavior executable and checkable. Update frontmatter `description` only when execution feedback shows trigger/discovery mismatch; update `./references/`, `./scripts/`, or `./assets/` only when the evidence shows they will reduce future mistakes. Scripts extracted in step 5 are listed in the Resources table.
    - Distill only reusable lessons — no process logs, changelogs, or retrospectives. **Never narrate the document's own history** (`旧文档断言…已证伪` / `重要勘误` frames) — exceptions and rewrite examples: [`./references/skill-slimming-principles.md`](./references/skill-slimming-principles.md) `## No History Narration`.
    - **Rename/removal downstream-wiring checklist**: a rename/consolidation/removal is not done until every downstream pointer moves with it (obsolete-skills list, contract tests, skills-count list, feature history, dogfooded artifacts) and both mirrors are byte-equal. Five-step checklist and move-then-edit ordering: [`./references/loop-playbook.md`](./references/loop-playbook.md) `## Step 7`.
@@ -144,7 +149,7 @@ When the shared self-improvement workflow is present (`.specify/shared/workflow/
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -154,3 +159,4 @@ When the shared self-improvement workflow is present (`.specify/shared/workflow/
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:improve-skills" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

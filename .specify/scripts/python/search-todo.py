@@ -21,6 +21,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="SPECKIT TODO block scanner")
+    _sig_configure(p)
+
     p.add_argument("--json", action="store_true", help="Emit JSON to stdout")
     p.add_argument("--root", type=str, help="Override workspace root")
     p.add_argument("--exclude", action="append", default=[], help="Append exclude pattern (repeatable)")
@@ -371,7 +373,31 @@ def output_json(
     print(json.dumps(result, ensure_ascii=False))
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main() -> None:
+    _sig_guard(declared=['--json', '--root', '--exclude', '--no-default-excludes', '--context-depth', '--context-only-headings'])  # answer --version / reject an undeclared option
     args = parse_args()
     import atexit
     atexit.register(flush_warnings)

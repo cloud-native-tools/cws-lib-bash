@@ -40,6 +40,16 @@ git show origin/<DEV>:.gitexcludes 2>/dev/null && echo "DEV: exists" || echo "DE
 - `.gitexcludes` 中列出的路径是否在其他分支中仍被跟踪（若被排除且仍被跟踪，建议执行清理）
 - 各分支 `.gitexcludes` 规则是否符合预期（如 MAIN 应排除开发配置文件）
 
+## 观测事实刷新（machine observations）
+
+```bash
+python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/git-workflow-observe.py" --action observe
+```
+
+- 只刷新 `.specify/workflow/git.md` 的 `Observed facts (machine, dated)` 小节（机制见
+  [observe-hook.md](./observe-hook.md)）；托管块声明不因体检而变化。
+- 只想看是否有待更新（不写）：加 `--check`——退出 `0` 表示已是最新，`10` 表示有待更新。
+
 ## 维护报告模板
 
 容忍带内的项（同步 `0 0`、文档与实际一致）标记「✅ 已一致」；仅实质偏离进入「建议操作」：
@@ -63,7 +73,7 @@ git show origin/<DEV>:.gitexcludes 2>/dev/null && echo "DEV: exists" || echo "DE
 - 被排除路径跟踪状态: ✅ 已清理 / ⚠️ 仍被跟踪（列表）
 
 ### Git Workflow 块一致性
-- `docs/git-workflow.md` 托管块（分支名与实际一致）: ✅ / ❌ 问题描述
+- `.specify/workflow/git.md` 托管块（分支名与实际一致）: ✅ / ❌ 问题描述
 - START/END 标记成对存在: ✅ / ❌
 - 无遗留第二数据源（.specify/git-workflow.md、.specify/memory/git-workflow.md、旧版 instructions.md 内联 `## Git Workflow` 块）: ✅ / ⚠️ 冗余待处理（路径）
 

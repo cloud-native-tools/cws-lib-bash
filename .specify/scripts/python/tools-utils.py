@@ -600,12 +600,17 @@ def list_project_scripts(root_dir: Path) -> List[Dict[str, str]]:
 
     results: List[Dict[str, str]] = []
     for file_path in sorted(scripts_dir.rglob("*")):
-        if not file_path.is_file():
+        # A symlink may point outside the workspace (a test/carrier copy of one engine);
+        # the project scan reports the workspace's own files, never the target's.
+        if file_path.is_symlink() or not file_path.is_file():
             continue
         if file_path.suffix not in {".sh", ".py"}:
             continue
 
-        rel_path = file_path.resolve().relative_to(root_dir.resolve()).as_posix()
+        try:
+            rel_path = file_path.resolve().relative_to(root_dir.resolve()).as_posix()
+        except ValueError:
+            continue
         script_type = "python" if file_path.suffix == ".py" else "bash"
         if script_type == "python":
             description = extract_python_docstring(file_path)
@@ -721,6 +726,8 @@ def get_system_info() -> Dict[str, Any]:
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Unified tools utilities")
+    _sig_configure(parser)
+
     parser.add_argument(
         "--action",
         required=True,
@@ -742,7 +749,31 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main() -> int:
+    _sig_guard(declared=['--action', '--type', '--functions-only', '--root-dir', '--name', '--tool-type', '--source-identifier', '--description', '--record-file', '--workspace-root', '--tools-dir'])  # answer --version / reject an undeclared option
     parser = _build_parser()
     args = parser.parse_args()
 

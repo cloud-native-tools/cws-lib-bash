@@ -22,6 +22,8 @@
 - 远程推送(push / force-push / 远程分支操作)与写入外部权威源(issue 跟踪、平台注册表等本空间之外的系统)
 - 覆盖用户既有内容(含覆盖用户既有权威条目,如 glossary 用户条目冲突写入、同名目录覆盖清空、以空值覆盖既有 goal 判据集——后者 MUST 由引擎拒绝缺参形态,清空只经显式旗标进入)
 
+**可逆动作例外（archive-first）**: 一个动作若在改变目标之前把原件复制进运行范围归档根、并在回执中逐项记录恢复路径，则它是可逆动作，MUST 自动执行，不进入本清单的前置确认。适用面以各 owner 的归档回执为准：`specify migrate` 的 `.specify/archive/migrate/<run-id>/` + 回执 `recover`；重复编号重排在 git 干净前提下的 `.specify/memory/renumber/` 账本；sanitize 可逆修复与 docs 死链修复。没有归档/回执路径的删除、清空与远程推送仍按本清单保留前置确认（例如 retention / spec 退役删除）。
+
 ## 治理保留清单
 
 以下门控凭本清单保留,不参与可逆性推断(intrinsic 与 governance-kept):
@@ -35,6 +37,7 @@
 | git-workflow 远程操作门控 | skills/external/git-utils | 远程推送属破坏性桶 |
 | tools invoke 预览门控 | tools.md / tool-definitions.md | 任意脚本执行,存疑从严(governance-kept) |
 | feedback consume 删除前确认 | feedback.md | 前置原子删除,破坏性桶 |
+| retention / spec 退役删除 | retention lane / sanitize spec retirement | 无归档回执，删除不可恢复，仍按单批前置确认 |
 | docs 移动/归档/删除分级 | docs.md | 破坏性桶(reconcile R4/R5) |
 | session 导出同名覆盖确认 | session.md | 同名覆盖清空,破坏性桶 |
 | feature 状态回退确认 | feature.md | 治理状态保护(governance-kept) |
@@ -99,3 +102,48 @@ python3 "${SKILL_WORKDIR:-.}/.specify/scripts/python/feedback-utils.py" --action
 2. 记录失败 MUST NOT 使宿主流程失败——报告警告后继续;
 3. gate 对象的锚点是门控点位的单行指针 `> Gate probe: <object_id> — after the user decision, record firing evidence per confirmation-gates.md §门控观察协议 (non-blocking).`,不参与 wrap-up embed 对账;
 4. 指针措辞 MUST NOT 命中 `scan-confirmation-gates.py` 的阻塞模式(不得新增扫描器门控计数)。
+
+## Decision gate (two-axis classification)
+
+Every interruption of a run for the user is a **decision gate** and MUST pass this classification first — a
+finding the matrix routes to auto-fix is never presented as a question. Both axes are classified by the
+executing agent **before** it stops.
+
+**Axis 1 — the agent's authorization level (held for this run, declared at entry):**
+
+| Level | Meaning |
+|---|---|
+| 无人值守 (unattended) | no user is available: the agent decides everything, records every decision, and an irreversible action stops with a blocked report — never a silent approval request |
+| 自主执行 (autonomous) — the interactive default | the user is present, and the agent proceeds without asking on reversible work |
+| 小心谨慎 (cautious) | the user declared that reversible functional changes also need a look first |
+
+**Analyze-gate exception (unattended SDD runs, 2026-11-10 user ruling)**: in an unattended SDD run, an
+analyze gate's CRITICAL/HIGH findings are repaired and re-analyzed autonomously — per the round's recorded
+dispositions — instead of stopping for user confirmation. That repair→re-analyze loop is bounded by the stall
+rules (stage deadline, retry ceiling, budget), which remain the only interruption. Interactive runs keep the
+stop-and-ask behaviour; the driver's loop rule cites this clause rather than restating it.
+
+**Axis 2 — the finding's impact scope (read from the change the fix would make):**
+
+| Scope | Meaning |
+|---|---|
+| 架构级 (architecture) | a contract, interface, constitution-level convention, stage chain, or an owner document's rules |
+| 功能级 (functional) | behaviour, spec semantics, data integrity, or a machine-managed store's content (e.g. a mass rename/repair) |
+| 小缺陷 (minor) | formatting, path/reference hygiene, idempotency, duplicate lines, a generator's local guard |
+
+**The matrix — auto-fix (+ disclose) versus ask:**
+
+| Level × Scope | 架构级 | 功能级 | 小缺陷 |
+|---|---|---|---|
+| 无人值守 | fix with a decision record; irreversible → blocked report | fix + record | fix + disclose |
+| 自主执行 | **ask** | fix + disclose | fix + disclose |
+| 小心谨慎 | ask | ask | fix + disclose |
+
+The destructive/irreversible list in this document outranks the matrix: an irreversible action always stops.
+
+**Calibration cases (2026-11-10, autonomous level):** the 47/89 feature-detail slug/content mismatch
+(functional → fix + disclose) and the duplicated `.gitignore` append from `generate-instructions.sh`
+(minor → fix + disclose); neither is a user question.
+
+**Record:** an auto-fixed gate records both classified axes, what changed and the revert path; an asked gate
+presents the same classification so the user sees why the gate fired.

@@ -88,15 +88,83 @@ from pathlib import Path
 # Contract constants (literals are pinned copies of requirements.md § Shared Strings)
 # --------------------------------------------------------------------------- #
 CLASS_KEY = "flow_class"            # [[STR-003]]
-EXECUTION = "execution"             # [[STR-001]]
-EXPRESSION = "expression"           # [[STR-002]]
-DEFAULT_CLASS = EXECUTION
 DEFAULT_MARKER = "未声明·按默认"    # [[STR-004]]
 
-CLASS_VALUES = (EXECUTION, EXPRESSION)
-BASIS_VALUES = ("behavior-oracle", "reader-oracle", "mixed-oracle")
-MIXED_ORACLE = "mixed-oracle"
-NEUTRAL_CATEGORIES = ("memory", "feedback", "evidence", "session")
+# Feature 084, batch 1 rows 4-8: the five closed sets this engine compares against are
+# declaration-layer facts (`.specify/shared/declarations/facts/flow-class-*.yaml`). The engine carries no copy of
+# them — it reads each through the shared read entry, so adding one legal member to a declaration makes
+# the gate accept it with no script edit (FR-007 (c), US2 acceptance 2) and a second tuple anywhere is
+# the finding these reads exist to make impossible.
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import declaration_reader  # noqa: E402  (import follows the sys.path entry above)
+
+
+def declared_sequence(slug):
+    """`(values, label)` for one closed-set / table fact; `((), <STR-014 instance>)` when unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), slug)["body"]
+        values = body.get("statement")
+        if not isinstance(values, list) or not values:
+            raise ValueError("statement is not a non-empty sequence")
+        return tuple(str(value) for value in values), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return (), declaration_reader.absent_label(slug)
+
+
+CLASS_VALUES, CLASS_VALUES_LABEL = declared_sequence("flow-class-classes")
+BASIS_VALUES, BASIS_VALUES_LABEL = declared_sequence("flow-class-basis")
+NEUTRAL_CATEGORIES, NEUTRAL_CATEGORIES_LABEL = declared_sequence("flow-class-neutral-categories")
+REQUIRED_LEDGER_COLUMNS, LEDGER_COLUMNS_LABEL = declared_sequence("flow-class-ledger-columns")
+
+
+def declared_mapping(slug):
+    """`(mapping, label)` for one mapping-shaped fact; `({}, <STR-014 instance>)` when unreadable."""
+    try:
+        body = declaration_reader.load_fact(
+            declaration_reader.find_repo(Path(__file__).resolve()), slug)["body"]
+        statement = body.get("statement")
+        if not isinstance(statement, dict) or not statement:
+            raise ValueError("statement is not a non-empty mapping")
+        return dict(statement), None
+    except (declaration_reader.DeclarationError, TypeError, ValueError):
+        return {}, declaration_reader.absent_label(slug)
+
+
+#: Feature 084, batch 2: the six-face gate's shape (section keyword + closed row count) and the
+#: stage-operator table's header. Both are declarations; the engine carries no copy of either, and a
+#: value read as empty leaves the corresponding check refusing to judge (see :func:`main`).
+FACES_DECLARED, FACES_DECLARED_LABEL = declared_mapping("expression-gate-faces")
+OPERATOR_COLUMNS, OPERATOR_COLUMNS_LABEL = declared_sequence("expression-stage-operator-table")
+FACES_SECTION_KEYWORD = FACES_DECLARED.get("section_keyword")
+try:
+    FACES_EXPECTED = int(str(FACES_DECLARED.get("expected", "")).strip())
+except (TypeError, ValueError):
+    FACES_EXPECTED = None
+#: A file that parsed but does not carry a usable pair is as unjudgeable as an absent one: the gate
+#: would otherwise compare a row count against `None`, which reads as a shape finding rather than as
+#: the `[[STR-014]]` degradation it is.
+if not FACES_SECTION_KEYWORD or FACES_EXPECTED is None:
+    FACES_DECLARED_LABEL = FACES_DECLARED_LABEL or declaration_reader.absent_label(
+        "expression-gate-faces")
+
+#: The operator table's columns, by position. A header that does not match this tuple is a gate-owner
+#: error, and every row is then resolved by position — so the five column names exist once, in
+#: `.specify/shared/declarations/facts/expression-stage-operator-table.yaml`, not again in this file.
+if len(OPERATOR_COLUMNS) == 5:
+    STEP_COLUMN, GATE_ID_COLUMN, OPERATOR_COLUMN, FACE_COLUMN, LEVEL_COLUMN = OPERATOR_COLUMNS
+else:
+    STEP_COLUMN = GATE_ID_COLUMN = OPERATOR_COLUMN = FACE_COLUMN = LEVEL_COLUMN = None
+    OPERATOR_COLUMNS_LABEL = OPERATOR_COLUMNS_LABEL or declaration_reader.absent_label(
+        "expression-stage-operator-table")
+
+#: The declared class axis is ordered and `mixed-oracle` is its third member; both facts are ordered
+#: closed sets, so the positions below are the declaration's, never a re-spelled name. An empty read
+#: (unreadable layer) leaves these ``None`` and the CLI refuses to judge (see :func:`main`).
+EXECUTION, EXPRESSION = CLASS_VALUES if len(CLASS_VALUES) == 2 else (None, None)
+MIXED_ORACLE = BASIS_VALUES[2] if len(BASIS_VALUES) > 2 else None
+DEFAULT_CLASS = EXECUTION
 
 # Anti-vacuous floors: measured constants (2026-10-24), never derived at runtime.
 FLOOR_COMMANDS = 27
@@ -117,7 +185,11 @@ SKILL_LAYERS = ("external", "internal")
 
 LEDGER_SECTION_KEYWORD = "逐流程台账"
 NEUTRAL_SECTION_KEYWORD = "类中立清单"
-REQUIRED_LEDGER_COLUMNS = ("unit_id", CLASS_KEY, "basis", "neutral")
+# ``REQUIRED_LEDGER_COLUMNS`` is NOT defined here: feature 084 batch 1 row 7 moved the ledger's
+# required column set to ``.specify/shared/declarations/facts/flow-class-ledger-columns.yaml`` and the read at
+# the top of this module binds the same ordered tuple the header check compared before (T012). A
+# local re-assignment would shadow that read and put the second copy back — this module refuses to
+# judge when the read is empty (see :func:`main`), so no local fallback belongs here either.
 REQUIRED_NEUTRAL_COLUMNS = ("unit_id", "category", "rationale")
 
 UNIT_ID_RE = re.compile(r"^(?:/speckit\.[a-z0-9][a-z0-9-]*|skill:[a-z0-9][a-z0-9-]*)$")
@@ -878,15 +950,9 @@ DECLARATION_ABSENT = "declaration-absent"
 # closed-set and only meaningful for ``expression`` lines; an ``execution`` line
 # may carry only the explicit ``-``. Extending the set is an owner revision.
 FLOW_TYPE_KEY = "flow_type"
-FLOW_TYPE_NONE = "-"
-FLOW_TYPE_VALUES = (
-    "technique-document",
-    "user-manual",
-    "reference",
-    "runbook",
-    "design-note",
-    FLOW_TYPE_NONE,
-)
+#: Feature 084, batch 1 row 6: the document-type closed set is declared; `-` is its last member.
+FLOW_TYPE_VALUES, FLOW_TYPE_LABEL = declared_sequence("flow-class-document-types")
+FLOW_TYPE_NONE = FLOW_TYPE_VALUES[-1] if FLOW_TYPE_VALUES else None
 FLOW_TYPE_LINE_RE = re.compile(r"^\*\*Flow Type\*\*: ([^\s]+)$")
 FLOW_TYPE_PROBE_RE = re.compile(r"^\s*\*\*\s*flow\s+type\s*\*\*", re.IGNORECASE)
 
@@ -1375,7 +1441,10 @@ STATUS_VALUES = (ENFORCED, DECLARED_UNENFORCED)
 # unknown, non-blocking or stage/face-mismatched reference is a finding. Free-text
 # semantics stay with the review face (C-10) — the checker never claims to judge
 # whether the 24 cells *mean* what they cite.
-GATE_ID_COLUMN = "算子 id"
+# ``GATE_ID_COLUMN`` is NOT defined here: feature 084 batch 2 moved the operator table's column set
+# to ``.specify/shared/declarations/facts/expression-stage-operator-table.yaml`` and the positional read at the
+# top of this module binds member 1 to that name (T014). A local re-assignment would put the second
+# copy back.
 GATE_REF_PREFIX = "gate:"
 GATE_REF_COLUMN = "强制门禁引用"
 
@@ -1490,7 +1559,12 @@ def parse_gate_owner(repo: Path) -> GateOwner:
     if operator_table is None:
         raise GateOwnerError("gate owner § 阶段算子表 has no parseable table")
     op_header, op_rows = operator_table
-    required = ("阶段", GATE_ID_COLUMN, "执行算子", "对应面", "阻断级别")
+    # The five column names are NOT spelled here: feature 084 batch 2 moved them to
+    # `.specify/shared/declarations/facts/expression-stage-operator-table.yaml`, and the positional read at the
+    # top of this module binds them in declaration order. The check keeps its shape — each required
+    # column must be present in the header, and every row is then resolved by column name — so the
+    # refusal message and the exit code are unchanged.
+    required = (STEP_COLUMN, GATE_ID_COLUMN, OPERATOR_COLUMN, FACE_COLUMN, LEVEL_COLUMN)
     missing = [column for column in required if column not in op_header]
     if missing:
         raise GateOwnerError(
@@ -1517,10 +1591,10 @@ def parse_gate_owner(repo: Path) -> GateOwner:
         operators.append(
             {
                 "id": gate_id,
-                "stage": record["阶段"].strip("` "),
-                "face": record["对应面"].strip("` "),
-                "blocking": record["阻断级别"].strip("` ").lower() == "blocking",
-                "operator": record["执行算子"],
+                "stage": record[STEP_COLUMN].strip("` "),
+                "face": record[FACE_COLUMN].strip("` "),
+                "blocking": record[LEVEL_COLUMN].strip("` ").lower() == "blocking",
+                "operator": record[OPERATOR_COLUMN],
             }
         )
     return GateOwner(faces, operators)
@@ -2351,8 +2425,11 @@ def action_delegation(repo: Path, output_format: str) -> int:
 # --------------------------------------------------------------------------- #
 # 069b: six-face bindings (contract contracts/ledger-reconciler.md C-11 / C-12)
 # --------------------------------------------------------------------------- #
-FACES_SECTION_KEYWORD = "六面"
-FACES_EXPECTED = 6
+# ``FACES_SECTION_KEYWORD`` / ``FACES_EXPECTED`` are NOT assigned here: feature 084 batch 2 moved the
+# six-face gate's shape to ``.specify/shared/declarations/facts/expression-gate-faces.yaml`` and the read at the
+# top of this module binds them (T014). A local re-assignment would shadow that read and put the second
+# copy back — this module refuses to judge when the read is empty (see :func:`main`), so no local
+# fallback belongs here either.
 FACE_ID_COLUMN = "face id"
 FACE_POINTER_COLUMN = "owner_pointer"
 
@@ -2641,6 +2718,8 @@ def build_parser() -> argparse.ArgumentParser:
             "(owner: .specify/shared/definitions/flow-class-definitions.md)."
         ),
     )
+    _sig_configure(parser)
+
     parser.add_argument(
         "--action",
         required=True,
@@ -2656,11 +2735,49 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+# --version, wired through the one version source (C-8)
+#
+# `guard_argv()` answers `--version` (and rejects an undeclared option) BEFORE any parser
+# reads the line, so it works for a flat argparse parser, for one whose subcommands are
+# required, and for the two modules that read sys.argv by hand. It writes nothing and
+# resolves `<script-name> <framework-version>` from the nearest pyproject.toml at run
+# time — this file carries no version literal. `--help` is left to the module's own body.
+import sys as _sig_sys  # noqa: E402
+import pathlib as _sig_pathlib
+
+_SIG_DIR = str(_sig_pathlib.Path(__file__).resolve().parent)
+if _SIG_DIR not in _sig_sys.path:
+    _sig_sys.path.insert(0, _SIG_DIR)
+try:  # the helper owns the rule; an engine copied WITHOUT it still runs its actions
+    from script_interface_cli import configure_parser as _sig_configure  # noqa: E402
+    from script_interface_cli import guard_argv as _sig_guard  # noqa: E402
+except ImportError:  # a sandbox/handler copy carries the engine but not the helper
+    def _sig_configure(parser, **_kwargs):
+        return parser
+
+    def _sig_guard(_argv=None, declared=None, **_kwargs):
+        return None
+
 def main(argv=None) -> int:
+    _sig_guard(argv, declared=['--action', '--repo', '--unit-id', '--format'])  # answer --version / reject an undeclared option
     args = build_parser().parse_args(argv)
     repo = Path(args.repo).expanduser().resolve() if args.repo else find_repo_root()
     if not repo.is_dir():
         print("repository root is not a directory: %s" % repo, file=sys.stderr)
+        return 2
+
+    # Feature 084 / FR-012: the closed sets this engine compares against are declarations. A project
+    # whose layer is missing cannot be judged — and MUST NOT be judged against values this script no
+    # longer carries — so the degradation is an explicit exit-2 label naming each unreadable fact,
+    # never a traceback and never a green verdict (C-049).
+    labels = [label for label in (CLASS_VALUES_LABEL, BASIS_VALUES_LABEL, NEUTRAL_CATEGORIES_LABEL,
+                                 LEDGER_COLUMNS_LABEL, FLOW_TYPE_LABEL,
+                                 FACES_DECLARED_LABEL, OPERATOR_COLUMNS_LABEL) if label]
+    if labels:
+        for label in labels:
+            print(label, file=sys.stderr)
+        print("flow-class-check: refusing to judge against an absent closed set "
+              "(declaration layer unreadable)", file=sys.stderr)
         return 2
 
     if args.action == "lookup":

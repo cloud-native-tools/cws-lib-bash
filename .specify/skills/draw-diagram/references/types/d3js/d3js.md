@@ -40,7 +40,7 @@ Create interactive data visualizations using D3.js (Data-Driven Documents), outp
 ### 义务与产物形态
 
 1. **链路闭合**：每个声明 form 必须事件绑定 → 状态更新 → 渲染更新三环齐全；缺环 = 该 form 未实现（验收判据见 semantic-model § 交互语义与验收，"控件在而无效不算实现"）。
-2. **库加载按交付契约 § D7.1 三选一并声明**：single-file 模式默认 CDN（`https://d3js.org/d3.v7.min.js`）须在复现性附录声明「首开需联网」；离线交付走 split/vendored 模式（既有 Core Principle 2 的两种输出模式即该表两种策略的本引擎实现）。
+2. **库加载按交付契约 § D7.1 三选一并声明；默认 MUST NOT 走公网 CDN**：默认取团队自建渲染服务的固定版本资产 `http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js`（即 D7.1「CDN」策略在受控内网下的实现），复现性附录须声明「首开需能访问该服务」；服务不可达或要求断网打开时改用本地 vendor 策略——把该资产取回后放在 HTML 同目录 `vendor/d3.v7.min.js` 并以相对路径引用（交付从单文件变为「HTML + vendor/」）。两者可主备串联（服务优先、vendor 兜底）。公网 CDN 只在既无渲染服务、又取不到 vendor 副本的环境里作最后手段，同样须在附录声明。
 3. **过渡不是交互**：`d3.transition` 等动效只作反馈增强，不作为任何 form 的达标形态（无输入驱动的自动播放不满足判据）。
 4. **既有交互长处与声明 forms 并存**：常显边标签开关、`?clean=1` 静态快照、导出 SVG/PNG 等既有能力照常提供；声明之内的 forms 一个都不能少，声明之外的不作为验收点。
 5. **交付说明**：列出实际具备的交互与触发方式（使用说明不属于交付契约 D4 禁止的图例式解说；其余文字规则 D3–D5 照常适用）。
@@ -53,8 +53,8 @@ Every visualization must start from data. Choose the chart type that best reveal
 ### 2. Self-Contained Output
 Default output is a **single HTML file** with all D3.js code and styles inline, so it works by simply opening in a browser. Two output modes are supported:
 
-- **Single-file mode (default)**: all code, styles, and data inline; D3.js v7 loaded from CDN (`https://d3js.org/d3.v7.min.js`). Best for quick sharing and portability.
-- **Split mode (for maintainability / offline reproducibility)**: keep data in a separate local `data.js` or `data.json` next to the HTML, and optionally vendor D3.js locally (download `d3.v7.min.js` beside the HTML and reference it by relative path). Choose split mode when the dataset is large, the chart will be edited repeatedly, or the output must render without CDN access. State the chosen mode in the deliverable explanation.
+- **Single-file mode (default)**: all code, styles, and data inline; D3.js v7 loaded from the self-hosted render service asset (`http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js`). Best for quick sharing and portability inside the intranet; never loaded from a public CDN.
+- **Split mode (for maintainability / offline reproducibility)**: keep data in a separate local `data.js` or `data.json` next to the HTML, and vendor D3.js locally (copy the bundle fetched from the render service to `vendor/d3.v7.min.js` beside the HTML and reference it by relative path — do not download from a public CDN). Choose split mode when the dataset is large, the chart will be edited repeatedly, or the output must render without access to the render service. State the chosen mode in the deliverable explanation.
 
 ### 3. D3.js Best Practices
 Use D3.js v7 (latest stable). Follow the data-join pattern (`enter/update/exit`), use proper scales and axes, implement responsive SVG with `viewBox`. See [d3js-guide.md](references/d3js-guide.md) for syntax and patterns.
@@ -159,7 +159,8 @@ Package everything into a self-contained HTML file with this structure:
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>[Visualization Title]</title>
-  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js"></script>
+  <script>window.d3 || document.write('<script src="vendor/d3.v7.min.js"><\/script>');</script>
   <style>
     /* Inline styles for the visualization */
   </style>
@@ -174,11 +175,11 @@ Package everything into a self-contained HTML file with this structure:
 ```
 
 Key requirements:
-- D3.js loaded from CDN: `https://d3js.org/d3.v7.min.js` (single-file mode) or vendored locally (split mode)
+- D3.js loaded from the render-service asset: `http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js` (single-file mode) with a vendored `vendor/d3.v7.min.js` fallback (split mode); a public CDN URL is not a valid loader
 - All CSS inline in `<style>` block
 - All JavaScript inline in `<script>` block
 - Data embedded inline in single-file mode; in split mode, data lives in a separate local `data.js`/`data.json` referenced by relative path
-- A **reproduction appendix** (visible collapsible footer section plus a header comment block): state that the file opens and renders directly with no build step (CDN mode needs network; split/vendored mode works offline), which data files/arrays drive which part of the figure (nodes / links / rels / cells), and the source description version/date the data is based on. Mandatory in split mode — the data is external and maintainers need the entry points.
+- A **reproduction appendix** (visible collapsible footer section plus a header comment block): state that the file opens and renders directly with no build step (the render-service asset mode needs access to that intranet service; vendored mode works offline), which data files/arrays drive which part of the figure (nodes / links / rels / cells), and the source description version/date the data is based on. Mandatory in split mode — the data is external and maintainers need the entry points.
 - **Export capability**: include「导出 SVG / 导出 PNG」buttons (SVG serialization + Canvas conversion) whenever the figure targets embedding into reports or docs. Reusable snippet: [d3js-guide.md](references/d3js-guide.md).
 - Responsive design: use `viewBox` or resize listener
 
@@ -202,13 +203,13 @@ For multi-chart dashboards:
    - What the visualization shows
    - How to interact with it (if interactive)
    - How to modify the data (where in the code to update values)
-   - How to reproduce/embed: the file opens directly in a browser and renders with no build step (CDN mode needs network; split/vendored mode works offline); when review embedding matters, optionally attach a headless-browser-exported PNG snapshot of the figure — that snapshot's window height (content height **plus** a margin) and the clipping judgement are owned by the delivery contract's D6「渲染证据几何」row ([../draw-diagram/references/delivery-contract.md](../../delivery-contract.md)); the margin value is not restated here, and a non-blank PNG alone is **not** render evidence
+   - How to reproduce/embed: the file opens directly in a browser and renders with no build step (the render-service asset mode needs access to that intranet service; vendored mode works offline); when review embedding matters, optionally attach a headless-browser-exported PNG snapshot of the figure — that snapshot's window height (content height **plus** a margin) and the clipping judgement are owned by the delivery contract's D6「渲染证据几何」row ([../draw-diagram/references/delivery-contract.md](../../delivery-contract.md)); the margin value is not restated here, and a non-blank PNG alone is **not** render evidence
 
 ## Output Requirements
 
 - **Delivery contract (read first; rules owned by the front door)**: [../draw-diagram/references/delivery-contract.md](../../delivery-contract.md) — D1/D2 delivery form, D3–D5 user-facing text rules (**in-chart labels and the HTML prose obey the same rules**), D6 pre-delivery self-check. **The rule text and its examples live only in the contract; they are not restated here.** The items below are this engine's **mechanics**; the contract wins on conflict.
-- Output as a **single `.html` file** by default (self-contained; D3.js v7 via CDN). Split mode is allowed when maintainability or offline reproducibility requires it: local `data.js`/`data.json` and/or a vendored local D3.js, all referenced by relative paths
-- D3.js version: v7 (via `https://d3js.org/d3.v7.min.js` or vendored locally)
+- Output as a **single `.html` file** by default (self-contained; D3.js v7 via the render-service asset). Split mode is allowed when maintainability or offline reproducibility requires it: local `data.js`/`data.json` and/or a vendored local D3.js (`vendor/d3.v7.min.js`), all referenced by relative paths
+- D3.js version: v7.9.0 (via `http://xuanji-render.aliyun-inc.com:9701/d3.v7.min.js`, or the same bundle vendored as `vendor/d3.v7.min.js`)
 - SVG-based rendering (not Canvas, unless specifically requested for performance)
 - Responsive: works on both desktop and mobile viewports
 - Clean, readable code with comments explaining key sections
@@ -237,7 +238,7 @@ For multi-chart dashboards:
 
 | Asset | Purpose |
 |-------|---------|  
-| [template.html](assets/template.html) | Base HTML template with D3.js CDN, responsive setup, and standard margin convention |
+| [template.html](assets/template.html) | Base HTML template with the self-hosted D3 asset loader (render service + `vendor/` fallback), responsive setup, and standard margin convention |
 
 ## Quality Checklist
 
@@ -255,7 +256,7 @@ Before delivering the final HTML file, verify:
 - [ ] 不可避免的运行时偏离已在 box 内近似并量化声明（维度 + 幅度 + 原因）
 - [ ] HTML file opens correctly in a browser without errors
 - [ ] Browser console shows no JavaScript errors
-- [ ] D3.js v7 is present (CDN link or vendored local file) and correct
+- [ ] D3.js v7 is present (render-service asset URL or vendored local file; never a public CDN) and correct
 - [ ] No external dependencies beyond D3.js; split-mode data files are local and relative
 - [ ] SVG has proper `viewBox` or responsive sizing
 - [ ] Axes have readable labels and proper formatting

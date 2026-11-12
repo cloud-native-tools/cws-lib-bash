@@ -22,20 +22,32 @@
 | 事实一致性 | fact-consistency | `.specify/shared/guidelines/one-source-of-truth.md`（整文件即判据，无单章节锚） |
 | 评审 | review | `.specify/skills/internal/review-sdd-process/SKILL.md` § Workflow + `.specify/templates/review-template.md` |
 
+**机器可读的两处取值归声明层（批 2）**：本文件的**六面行数与表内列集**是机器读得到的值，单一 owner 是
+`.specify/shared/declarations/facts/expression-gate-faces.yaml#/statement`（`section_keyword` + `expected`）与
+`.specify/shared/declarations/facts/expression-stage-operator-table.yaml#/statement`（五个列名，有序）；引擎
+`.specify/scripts/python/flow-class-check.py` 经共享读取入口读这两处，本文件保留的是**判据**——表必须落在哪个章节、哪些列必须
+在场、为何顺序是值的一部分——不另持一份列集副本。上面第 6 行的行数与本节表头因此是**指针化后的遗留陈述**：
+`tests/contract/test_expression_gates_doc.py` 以逐字断言钉住 `面数 = 6`，故该数字在本文件保留到该钉被其所有者复核为止，
+归属仍以声明为准。
+
 ## 阶段算子表
 
 八个阶段各至少一行：阶段、算子 id、执行算子（可执行入口或点名的既有流程）、对应面、阻断级别。任一阶段无算子即失败；算子行不得是空表头行。
 `算子 id` 是稳定标识（`G-…`，全表唯一），供分类 owner 映射表的 `强制门禁引用` 列以 `gate:<算子 id>` 引用；id 变更即引用失效，两者 MUST 同步修订。
 
+**三处义务按可读面分派（一条义务只在一个阶段判）**：`in-scope` 的第 ① 项（`FR` 单元格可解析）在 requirements 阶段判且判为输入错误；第 ② 项（`tasks.md` 有行级引用该 FR 的必做任务行）在 tasks 阶段的 `G-tasks-fact` 判；第 ③ 项（`verification.md` 有点名该 `RS-NNN` 的联合验收行）**不在本表任何阶段行判**——`verification.md` 从不是阶段输入，它由 closure 判定（`.specify/scripts/python/closure-acceptance-check.py`）判。任一阶段 MUST NOT 把读不到的产物所承载的义务记为通过。
+
+**算子命令必须可调用**：本表每一行的「执行算子」列 MUST 是**可解析、可调用**的命令形态（可执行入口 + 该入口真实接受的参数形态）。守卫测试 `tests/contract/test_expression_gates_doc.py` MUST 断言两件事：(a) 每行首个命令的脚本路径存在，且其参数形态能被该脚本的 `--help` 接住（不接受 `--spec-dir` 的脚本 MUST NOT 被写成接受它）；(b) 当某行点名 `validate-requirements.py` 的检查项数时，该数字 MUST 等于脚本 `LABELS` 元组的长度（今天是 6）——计数只写在一个地方、由哨兵校验，正是本条要防的漂移。
+
 | 阶段 | 算子 id | 执行算子 | 对应面 | 阻断级别 |
 | --- | --- | --- | --- | --- |
-| requirements | `G-req-clarity` | `validate-requirements.py --spec-dir <spec dir>`（五项结构检查）+ `pre-analyze-check.py --stage requirements` | requirements-clarity | blocking |
+| requirements | `G-req-clarity` | `python3 .specify/scripts/python/validate-requirements.py <spec dir>/requirements.md`（六项结构检查：`id-contiguous` / `doc-order` / `ref-resolvable` / `marker-count` / `dup-id` / `path-marker`；位置参数是 `requirements.md` 路径，该脚本**不**接受 `--spec-dir`）+ `pre-analyze-check.py --stage requirements`（运行时行类第 1、2 条发现、`in-scope` 义务 ① 的输入错误判决、散文声明规则） | requirements-clarity | blocking |
 | requirements | `G-req-evidence` | 证据三件套语法预检（`doc-consistency-check.py --faces evidence`） | evidence-asof | blocking |
 | clarify | `G-clarify-clarity` | `pre-analyze-check.py --stage requirements`（仅在需求变更后重跑一次） | requirements-clarity | blocking |
 | clarify | `G-clarify-reader` | 读者声明与阅读场景补齐（`doc-consistency-check.py --faces reader`） | reader-purpose | blocking |
-| plan | `G-plan-fact` | `pre-analyze-check.py --stage plan`（事实唯一性与悬空引用一次比对） | fact-consistency | blocking |
+| plan | `G-plan-fact` | `pre-analyze-check.py --stage plan`（事实唯一性与悬空引用一次比对；运行时行类第 1、2 条在本阶段以 `plan.md` 可读面复读一次，`falsified` premise 缺 `Decision` 与继承 blocker 未处置两类**只**在本阶段判） | fact-consistency | blocking |
 | plan | `G-plan-structure` | 结构面复核（`docs-utils.py --action validate`，判据为零新增违规） | structure-links-build | blocking |
-| tasks | `G-tasks-fact` | `pre-analyze-check.py --stage tasks`（计数判定，委派） | fact-consistency | blocking |
+| tasks | `G-tasks-fact` | `pre-analyze-check.py --stage tasks`（计数判定，委派；并承载 `in-scope` 的第 ② 项义务——`tasks.md` 中**行级**引用该 FR 的必做任务行 `^- \[.\] T\d{3}.*\bFR-0NN\b`，`tasks.md` 首次成为阶段输入即在此） | fact-consistency | blocking |
 | tasks | `G-tasks-evidence` | 证据等级与 as-of 复核（`doc-consistency-check.py --faces evidence`） | evidence-asof | blocking |
 | checklist | `G-checklist-reader` | 读者声明复核（`doc-consistency-check.py --faces reader`） | reader-purpose | blocking |
 | checklist | `G-checklist-duplicate` | 跨文件手写副本（`doc-consistency-check.py --faces duplicate`） | fact-consistency | blocking |
@@ -52,7 +64,7 @@
 - 需求清晰度、事实一致性、评审三面 MUST 各至少一个 `blocking` 算子。
 - 读者声明缺失 MUST 阻断：`reader-declaration-missing` 是 blocking，不是 warning。
 - 不得把既有 P0/P1 判定降为 advisory；不得把表达类读作更宽松的通道。本门禁集只决定「用哪套算子证明同一不变量」，不新增、不放宽判定阈值。
-- `skill:humanize` 调用点只执行 062 域最小算子集（见 § 调用点表），它不继承六面的阻断底线；那是另一条调用点行，六面表的行集合不适用于该行，也不因该行降低六面的阻断级别。
+- `skill:humanize-conclusion` 调用点只执行 062 域最小算子集（见 § 调用点表），它不继承六面的阻断底线；那是另一条调用点行，六面表的行集合不适用于该行，也不因该行降低六面的阻断级别。
 
 ## 读者声明
 
@@ -134,7 +146,7 @@
 | `/speckit.docs`（W1） | `## Outline` 内、目标声明协调与分派之前 | `flow-class-check.py --action lookup --unit-id "/speckit.docs"` | 六面全集：`requirements-clarity`（需求清晰度）· `reader-purpose`（读者/目的/边界）· `evidence-asof`（证据分级与 as-of）· `structure-links-build`（结构/链接/构建）· `fact-consistency`（事实一致性）· `review`（评审）；其中读者、证据与事实三面由 `doc-consistency-check.py --action verify` 执行，计数面委派 `pre-analyze-check.py` | 每面 ≥ 1 blocking |
 | `skill:create-docs`（W3） | Reconcile Loop 的 R6 verify 与 Authoring Flow 的 R6 验证（两处） | 沿用调用方已解析结果；无调用方（standalone）时不新读 | 读者/目的 + 证据/as-of + 事实一致性 → `doc-consistency-check.py --action verify`（对受触文档）；结构/链接/构建 → `docs-utils.py --action validate` | blocking：发现即报告并阻止「收敛完成」结论 |
 | `/speckit.humanize`（W2） | `## Outline` 内、委派技能之前 | 不读取（只给 owner 指针） | 无（模板不执行算子） | 不适用（本行只声明指针与归口） |
-| `skill:humanize`（W4） | Stage 6 保真自检之前（读取一次）→ Stage 6 + Stage 7 | `flow-class-check.py --action lookup --unit-id "/speckit.humanize"`（该流程唯一的类别读取） | 062 域最小集，不按六面登记：`062-stage6-fidelity` · `062-stage6-entailment` · `062-stage5-audience-report` · `062-reviewer-report` | `062-stage6-fidelity` 与 `062-stage6-entailment` blocking；其余为 062 既有报告义务 |
+| `skill:humanize-conclusion`（W4） | Stage 6 保真自检之前（读取一次）→ Stage 6 + Stage 7 | `flow-class-check.py --action lookup --unit-id "/speckit.humanize"`（该流程唯一的类别读取） | 062 域最小集，不按六面登记：`062-stage6-fidelity` · `062-stage6-entailment` · `062-stage5-audience-report` · `062-reviewer-report` | `062-stage6-fidelity` 与 `062-stage6-entailment` blocking；其余为 062 既有报告义务 |
 
 ### 特性线阶段命令（`spec:` 键）
 
@@ -157,7 +169,7 @@
 ## 调用时机与降级
 
 - 读取先于判定：lookup MUST 先于该入口的任何门禁判定执行，且同一次运行只执行一次（同一产物变更不重复读取）。`/speckit.docs` 的读取在命令模板分派前；`/speckit.humanize` 的读取在其委派技能的 Stage 6 之前——命令模板本身不读取。
-- 降级一律可见：`source: default` → 原样显示固定标记（[[STR-004]]，未声明·按默认）；owner 不可解析或引擎缺席（文件不存在 / 退出码 2）→ 显示 `owner-unavailable`，并保持既有门禁不变；MUST NOT 中断流程、MUST NOT 静默切换门禁集、MUST NOT 把降级当作通过。
+- 降级一律可见：`source: default` → 原样显示固定标记（`未声明·按默认`）；owner 不可解析或引擎缺席（文件不存在 / 退出码 2）→ 显示 `owner-unavailable`，并保持既有门禁不变；MUST NOT 中断流程、MUST NOT 静默切换门禁集、MUST NOT 把降级当作通过。
 - 技能被独立调用（无命令调用方）时，仍按其调用点行执行读取；owner 或引擎缺席时按默认类处理并带同一标记或 `owner-unavailable`。
 - 命令与技能在同一个产物变更上重叠时，以一次执行为准并复用其输出，MUST NOT 造成算子重复执行。
 - 接线 MUST NOT 改变判定阈值、阶段集合或 P0/P1 定义——它只决定「用哪套算子证明同一不变量」。

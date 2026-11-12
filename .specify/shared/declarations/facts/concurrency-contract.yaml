@@ -1,0 +1,71 @@
+# 093 — [[STR-006]] the concurrency contract's landing discipline (FR-031, FR-032, FR-033).
+#
+# The one machine-read owner of WHERE this feature's obligation text and its facts land, and of the rule
+# that keeps them from drifting: framework sources are edited, projections are regenerated, never hand
+# edited; templates gain obligation text but never a repository-specific path fact. Read through
+# `.specify/scripts/python/declaration_reader.py`.
+#
+# It is also the registration surface of the five judgment faces (FR-031): each face's slug is paired
+# here with the fact entry that owns its values, so "which entry owns which face" has one answer.
+fact: concurrency-contract
+kind: mapping
+statement:
+  semantic_name: concurrency-contract
+  framework_sources:
+    - .specify/shared/
+    - skills/
+    - agents/
+    - .specify/scripts/
+  template_source:
+    path: .specify/templates/
+    rule: obligation text allowed, repository-specific path facts forbidden
+  projections:
+    - .specify/shared/
+    - .specify/skills/
+    - .specify/agents/templates/
+    - .specify/scripts/
+    - per-tool command copies are generated, never hand-edited
+  mirror_rule: edit the source, regenerate the projection
+  byte_identity: .specify/shared/declarations/facts/<slug>.yaml equals .specify/shared/declarations/facts/<slug>.yaml
+  judgment_faces:
+    - slug: concurrency-class
+      fact: .specify/shared/declarations/facts/concurrency-class.yaml
+    - slug: serial-reason
+      fact: .specify/shared/declarations/facts/serial-reason.yaml
+    - slug: effective-concurrency
+      fact: .specify/shared/declarations/facts/effective-concurrency.yaml
+    - slug: executor-enumeration-roots
+      fact: .specify/shared/declarations/facts/executor-enumeration-roots.yaml
+    - slug: decomposition-coverage
+      fact: .specify/shared/declarations/facts/decomposition-coverage.yaml
+  shared_strings:
+    - id: STR-001
+      owner: .specify/shared/declarations/facts/concurrency-class.yaml
+    - id: STR-002
+      owner: .specify/shared/declarations/facts/concurrency-class.yaml
+    - id: STR-003
+      owner: .specify/shared/declarations/facts/serial-reason.yaml
+    - id: STR-004
+      owner: .specify/shared/definitions/subagent-definitions.md
+    - id: STR-005
+      owner: .specify/shared/declarations/facts/effective-concurrency.yaml
+    - id: STR-006
+      owner: .specify/shared/declarations/facts/concurrency-contract.yaml
+    - id: STR-007
+      owner: .specify/shared/declarations/facts/decomposition-coverage.yaml
+    - id: STR-008
+      owner: .specify/shared/declarations/facts/executor-enumeration-roots.yaml
+    - id: STR-009
+      owner: .specify/shared/declarations/facts/serial-reason.yaml
+    - id: STR-010
+      owner: .specify/shared/declarations/facts/serial-reason.yaml
+    - id: STR-011
+      owner: .specify/shared/declarations/facts/coordinator-dispatch-verdict.yaml
+  shared_strings_rule: closed set; a new string revises an owner and this entry, never an ad-hoc literal
+  disposal_surface: .specify/specs/093-concurrency-by-default/contracts/existing-semantics-disposal.contract.md
+  fourth_owner_of_a_fact: defect
+consumers:
+  - .specify/scripts/python/concurrency-check.py
+  - tests/contract/test_concurrency_declarations.py
+former_carriers: []
+note: "The landing discipline is a pointer system, not prose: a carrier reaches a value by `<fact path>#/statement` and never restates it (Constitution XIV), so the mirror check judges byte identity and the harness-triple checker judges the pointers. `.specify/templates/` ships to every client project; an obligation sentence there may cite a fact path relative to the framework (.specify/templates/plan-template.md and .specify/templates/commands/*.md do), but a repository-specific fact such as this repo's spine key or a local directory may not enter a shipped template (FR-031's template-neutrality half). `shared_strings` is C-055's registration of the string table as a closed set: it records each id's single owner by path and deliberately omits the literals, whose verbatim values remain owned by the named owner (and, for the semantic name, by concurrency-class.yaml's statement). The disposal surface is FR-033's list: every pre-existing concurrency statement (064 write lines, 070 Work Package gate, 086 test execution efficiency, 092 goal/team parallelism, and the sdd-loop-driver local topology rules) is dispositioned there in the same change that changes its default, and the `mechanism-not-yet-landed` code is itself a member of that registration surface."

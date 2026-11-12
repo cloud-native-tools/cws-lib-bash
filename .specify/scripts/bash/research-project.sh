@@ -3,143 +3,167 @@
 set -e
 
 # Load common helpers for Unicode support and shared functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/common.sh" ]; then
+
+# script-interface: the sourceable guard block (086) lives in script-interface.sh
+# It sits above this script's own parsing and above `source common.sh`: a shared
+# library's top-level checks would otherwise turn `--help` into a non-zero exit, and
+# the flags must win over any write. Authority: .specify/shared/definitions/
+# script-interface-definitions.md section 4.
+SCRIPT_INTERFACE_LIB="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/script-interface.sh"
+if [ -f "$SCRIPT_INTERFACE_LIB" ]; then
     # shellcheck source=/dev/null
+    . "$SCRIPT_INTERFACE_LIB"
+    script_interface_guard entry
+    script_interface_guard define name="$0" \
+        usage="[--json] [<feature_description>]" \
+        effects="writes .specify/specs/<feature>/research.md; the flags write nothing" \
+        codes="0 created or answered; 1 a prerequisite is missing; 2 an unrecognized option" \
+        writes=--json \
+        -- --json
+    script_interface_guard guard "$@"
+fi
+
+main() {
+
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/common.sh" ]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/common.sh"
+        # Ensure UTF-8 locale for better Unicode handling
+        ensure_utf8_locale || true
+    fi
+
+    # Parse command line arguments
+    JSON_MODE=false
+    ARGS=()
+
+    for arg in "$@"; do
+        case "$arg" in
+            --json) 
+                JSON_MODE=true 
+                ;;
+            --help|-h) 
+                echo "Usage: $0 [--json]"
+                echo "  --json    Output results in JSON format"
+                echo "  --help    Show this help message"
+                exit 0 
+                ;;
+            *) 
+                ARGS+=("$arg") 
+                ;;
+        esac
+    done
+
+    # Get script directory and load common functions
+    SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     source "$SCRIPT_DIR/common.sh"
+
     # Ensure UTF-8 locale for better Unicode handling
     ensure_utf8_locale || true
-fi
 
-# Parse command line arguments
-JSON_MODE=false
-ARGS=()
+    # Get all paths and variables from common functions
+    eval $(get_feature_paths)
 
-for arg in "$@"; do
-    case "$arg" in
-        --json) 
-            JSON_MODE=true 
-            ;;
-        --help|-h) 
-            echo "Usage: $0 [--json]"
-            echo "  --json    Output results in JSON format"
-            echo "  --help    Show this help message"
-            exit 0 
-            ;;
-        *) 
-            ARGS+=("$arg") 
-            ;;
-    esac
-done
+    # Ensure the feature directory exists. It sits on the writing path, below the argument
+    # scan, so a flag riding with a write still writes nothing (C-11).
+    mkdir -p "$REQUIREMENTS_DIR"
 
-# Get script directory and load common functions
-SCRIPT_DIR="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "$SCRIPT_DIR/common.sh"
+    # --- NEW: Research Gathering ---
 
-# Ensure UTF-8 locale for better Unicode handling
-ensure_utf8_locale || true
+    get_md_title() {
+        local file="$1"
+        # Read first 5 lines (head -n 5) and look for first header
+        local header=$(head -n 5 "$file" | grep -m 1 "^#\{1,\} ")
+        if [ -n "$header" ]; then
+            # Remove leading hashes and whitespace
+            echo "$header" | sed 's/^#\{1,\}[[:space:]]*//'
+        else
+            echo "(No title)"
+        fi
+    }
 
-# Get all paths and variables from common functions
-eval $(get_feature_paths)
+    # Collect docs
+    # Find markdown files, applying specific inclusion/exclusion rules
+    DOC_PATHS=()
 
-# Ensure the feature directory exists
-mkdir -p "$REQUIREMENTS_DIR"
+    # Helper to check exclusion and add to array
+    add_doc_path() {
+        local path="$1"
+        # Exclusion list
+        if [[ "$path" == "CLAUDE.md" ]] || \
+           [[ "$path" == "QODER.md" ]] || \
+           [[ "$path" == "AGENTS.md" ]] || \
+           [[ "$path" == ".github/copilot-instructions.md" ]] || \
+             [[ "$path" == ".specify/instructions.md" ]]; then
+           return
+        fi
 
-# --- NEW: Research Gathering ---
+        if [ -f "$path" ]; then
+            # Avoid duplicates
+            for e in "${DOC_PATHS[@]}"; do [[ "$e" == "$path" ]] && return 0; done
+            DOC_PATHS+=("$path")
+        fi
+    }
 
-get_md_title() {
-    local file="$1"
-    # Read first 5 lines (head -n 5) and look for first header
-    local header=$(head -n 5 "$file" | grep -m 1 "^#\{1,\} ")
-    if [ -n "$header" ]; then
-        # Remove leading hashes and whitespace
-        echo "$header" | sed 's/^#\{1,\}[[:space:]]*//'
-    else
-        echo "(No title)"
-    fi
-}
-
-# Collect docs
-# Find markdown files, applying specific inclusion/exclusion rules
-DOC_PATHS=()
-
-# Helper to check exclusion and add to array
-add_doc_path() {
-    local path="$1"
-    # Exclusion list
-    if [[ "$path" == "CLAUDE.md" ]] || \
-       [[ "$path" == "QODER.md" ]] || \
-       [[ "$path" == "AGENTS.md" ]] || \
-       [[ "$path" == ".github/copilot-instructions.md" ]] || \
-         [[ "$path" == ".specify/instructions.md" ]]; then
-       return
-    fi
-    
-    if [ -f "$path" ]; then
-        # Avoid duplicates
-        for e in "${DOC_PATHS[@]}"; do [[ "$e" == "$path" ]] && return 0; done
-        DOC_PATHS+=("$path")
-    fi
-}
-
-# 1. Project Root Docs (Restricted set)
-for f in README.md CONTRIBUTING.md BUILDING.md; do
-    add_doc_path "$f"
-done
-
-# 2. docs/ folder (max depth 2, cap to 10 .md files)
-if [ -d "docs" ]; then
-    while IFS= read -r f; do
+    # 1. Project Root Docs (Restricted set)
+    for f in README.md CONTRIBUTING.md BUILDING.md; do
         add_doc_path "$f"
-    done < <(find docs -maxdepth 2 -name "*.md" | sort -h | head -n 10)
-fi
+    done
 
-# 3. Memory (Constitution and Feature Index)
-if [ -d ".specify/memory" ]; then
-    add_doc_path ".specify/memory/constitution.md"
-    add_doc_path ".specify/memory/features.md"
-fi
+    # 2. docs/ folder (max depth 2, cap to 10 .md files)
+    if [ -d "docs" ]; then
+        while IFS= read -r f; do
+            add_doc_path "$f"
+        done < <(find docs -maxdepth 2 -name "*.md" | sort -h | head -n 10)
+    fi
 
-# 4. Current Feature Spec (if likely planning)
-if [ -f "$FEATURE_SPEC" ]; then
-    add_doc_path "$FEATURE_SPEC"
-fi
+    # 3. Governance anchors (Constitution and Feature Index)
+    if [ -f ".specify/constitution.md" ] || [ -f ".specify/features.md" ]; then
+        add_doc_path ".specify/constitution.md"
+        add_doc_path ".specify/features.md"
+    fi
 
-# Build Human Readable DOC_LIST (path: title)
-DOC_LIST=""
-for path in "${DOC_PATHS[@]}"; do
-    title=$(get_md_title "$path")
-    DOC_LIST+="$path: $title"$'\n'
-done
+    # 4. Current Feature Spec (if likely planning)
+    if [ -f "$FEATURE_SPEC" ]; then
+        add_doc_path "$FEATURE_SPEC"
+    fi
 
-# Output results
-if $JSON_MODE; then
-    # Use python to format JSON correctly
-    export FEATURE_SPEC IMPL_PLAN REQUIREMENTS_DIR CURRENT_BRANCH HAS_GIT
-    export DOC_PATHS_STR=$(printf "%s\n" "${DOC_PATHS[@]}")
-    python3 -c "
+    # Build Human Readable DOC_LIST (path: title)
+    DOC_LIST=""
+    for path in "${DOC_PATHS[@]}"; do
+        title=$(get_md_title "$path")
+        DOC_LIST+="$path: $title"$'\n'
+    done
+
+    # Output results
+    if $JSON_MODE; then
+        # Use python to format JSON correctly
+        export FEATURE_SPEC IMPL_PLAN REQUIREMENTS_DIR CURRENT_BRANCH HAS_GIT
+        export DOC_PATHS_STR=$(printf "%s\n" "${DOC_PATHS[@]}")
+        python3 -c "
 import json, os, re
 
 def get_md_title(filepath):
     try:
         if not os.path.exists(filepath):
             return '(No title)'
-        
+
         with open(filepath, 'r', encoding='utf-8', errors='ignore') as f:
             lines = f.readlines()
-            
+
         # 1. Try to find a header in the first 5 lines
         for i in range(min(5, len(lines))):
             line = lines[i]
             # Match line starting with one or more # followed by space
             if re.match(r'^#+\s+', line):
                     return re.sub(r'^#+\s*', '', line).strip()
-        
+
         # 2. Fallback: Take first 3 non-empty lines
         non_empty_lines = [line.strip() for line in lines if line.strip()]
         if non_empty_lines:
             return ' '.join(non_empty_lines[:3])
-            
+
         return '(No title)'
     except Exception:
         return '(No title)'
@@ -166,13 +190,19 @@ data = {
     'AVAILABLE_DOCS': available_docs
 }
 print(json.dumps(data, ensure_ascii=False))
-"
-else
-    echo "FEATURE_SPEC: $FEATURE_SPEC"
-    echo "IMPL_PLAN: $IMPL_PLAN" 
-    echo "SPECS_DIR: $REQUIREMENTS_DIR"
-    echo "BRANCH: $CURRENT_BRANCH"
-    echo "HAS_GIT: $HAS_GIT"
-    echo "AVAILABLE_DOCS:"
-    echo "$DOC_LIST"
+    "
+    else
+        echo "FEATURE_SPEC: $FEATURE_SPEC"
+        echo "IMPL_PLAN: $IMPL_PLAN" 
+        echo "SPECS_DIR: $REQUIREMENTS_DIR"
+        echo "BRANCH: $CURRENT_BRANCH"
+        echo "HAS_GIT: $HAS_GIT"
+        echo "AVAILABLE_DOCS:"
+        echo "$DOC_LIST"
+    fi
+
+}
+
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
 fi

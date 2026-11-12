@@ -1,0 +1,23 @@
+# Batch 1, row 3 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the evidence lane closed set. The engine
+# `.specify/scripts/python/evidence-utils.py` reads it through `.specify/scripts/python/declaration_reader.py`, so the
+# out-of-lane refusal is drawn from here rather than from a second tuple; the carriers reach it by
+# `.specify/shared/declarations/facts/evidence-lanes.yaml#/statement`.
+#
+# Authority order: code > generated > authored. `LANE_NAMES` and both carriers listed in
+# `former_carriers` named the same five lanes on 2026-11-05, so nothing had drifted.
+fact: evidence-lanes
+kind: closed-set
+statement:
+  - session
+  - project
+  - assets
+  - runs
+  - feedback
+consumers:
+  - .specify/scripts/python/evidence-utils.py
+former_carriers:
+  - .specify/shared/workflow/evidence-step.md
+  - .specify/skills/internal/collect-evidence/SKILL.md
+note: "Both faces agreed before migration (evidence-utils.py's LANE_NAMES and the carriers' prose named the same five lanes in the same order), so the authority order picked the code-side value with nothing to correct."

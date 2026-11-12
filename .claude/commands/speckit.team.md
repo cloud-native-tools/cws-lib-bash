@@ -1,4 +1,6 @@
 <!-- AUTO-GENERATED from templates/commands/team.md — do not edit; edit the source template, then run scripts/python/regen-command-copies.py -->
+> **Concurrency obligation（执行义务，按指针抵达）**: this command is an execution body — consider concurrency first, default to it when the class and capability allow, and, when serial, name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This template restates none of their rules.
+
 ## User Input
 
 ```text
@@ -22,6 +24,8 @@ What a **team** is — the **goal** (north star, not a task list; concrete, veri
 | **create** | "创建团队", "组织一个团队", "组建团队", "new team", "build a team" | `create-team` |
 | **modify** | "修改团队", "调整团队", "优化 team", "improve/adjust team" | `improve-team` |
 | **run** | "运行团队", "执行团队", "run/execute team", "跑一遍"(可选 `--target T-<nnn>` 指定目标切片) | `run-team` |
+
+**Scope**: pass `--scope` and `--spec-dir <path>` through to the team operations. The closed scope value set, what each member names, and the archive layers are owned by `.specify/shared/definitions/goal-definitions.md` § Archive Layers — this template cites that owner and enumerates none of it. A team is an ordinary definition in the team archive layer `.specify/teams/<slug>/team.md`; there is no second team store and no lifetime-property kind (concept owner: `.specify/skills/internal/create-team/references/conceptual-model.md` § The Team Definition and the Binding Model). The path rule is owned by `goal-utils.py resolve-scope`; this template cites it and defines none of it.
 
 **Routing flow**:
 
@@ -57,7 +61,11 @@ When intent cannot be resolved from non-empty arguments, the command MUST report
 
 ### Goal-Based Create — deterministic entry (create path)
 
-When a token in `$ARGUMENTS` exactly matches an archived `<goal-slug>` under `.specify/goal/`, the create path enters the **goal-based branch** directly. The entry is deterministic and engine-driven — recognition runs `python3 .specify/scripts/python/goal-utils.py list --json` and exact-matches the token (or a path to its `goal.md`); it MUST NOT be asserted from memory or semantics, and the branch decision is disclosed in the run output rather than gated on confirmation. Two rejections stop without writing: a **dangling reference** (user-named but absent from `list`) errors with the verbatim prefix `goal 未定义:` and points to `/speckit.goal create`; a **terminal goal** (`achieved`/`abandoned`) is reported and refused. Everything after entry — loading via `parse_goal` (objective, criteria incl. the `None provided.` missing state, status, targets, history), the four-element analysis, the decomposition proposal with batch approval, territory discipline, and team derivation/落盘 — is the skill's branch procedure: `.specify/skills/internal/create-team/references/create-mode.md` → *Goal-based create branch*.
+When a token in `$ARGUMENTS` exactly matches an archived `<slug>` in the goal archive `.specify/anchoring/`, the create path enters the **goal-based branch** directly. The entry is deterministic and engine-driven — recognition runs `python3 .specify/scripts/python/goal-utils.py list --json` (the archive-layer read is scoped by the engine's declared value set — pointer: `.specify/shared/definitions/goal-definitions.md` § Archive Layers) and exact-matches the token (or a path to its `goal.md`); it MUST NOT be asserted from memory or semantics, and the branch decision is disclosed in the run output rather than gated on confirmation. Two rejections stop without writing: a **dangling reference** (user-named but absent from `list`) errors with the verbatim prefix `goal 未定义:` and points to `/speckit.goal create`; a **terminal goal** (`achieved`/`abandoned`) is reported and refused. Everything after entry — loading via `parse_goal` (objective, criteria incl. the `None provided.` missing state, status, targets, history), the four-element analysis, the decomposition proposal with batch approval, territory discipline, and team derivation/落盘 — is the skill's branch procedure: `.specify/skills/internal/create-team/references/create-mode.md` → *Goal-based create branch*.
+
+### `goal` key — the bound goal's identity
+
+Inside a `team.md`, `goal` is the **`goal_slug` of the goal this team serves** — the identity of a definition in the goal archive (`.specify/anchoring/<slug>/goal.md`). It is an identity reference, never a copy of the goal's content (concept and binding rule: `.specify/shared/definitions/goal-definitions.md`; team side: `.specify/skills/internal/create-team/references/conceptual-model.md` § The Team Definition and the Binding Model).
 
 ### Run Mode
 
@@ -74,7 +82,7 @@ Canonical store: the team **directory** `.specify/teams/<slug>/` — definition 
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 1. Run Determination — `python3 .specify/scripts/python/run-determination.py --action determine --unit-id "/speckit.team" --unit-type command --run-id <RUN_ID> --complexity <COMPLEXITY>`；source args when available: `--session-file <SESSION_FILE> --session-rows <SESSION_ROWS> --tool <TOOL> --proxy-paths <PROXY_PATHS> --token-note <TOKEN_NOTE> --elapsed-ms <ELAPSED_MS> --elapsed-note <ELAPSED_NOTE> --names-current <NAMES_CURRENT> --names-baseline <NAMES_BASELINE> --declared-check <DECLARED_CHECK> --green-check <GREEN_CHECK> --red-first-refs <RED_FIRST_REFS> --collected <COLLECTED> --prev-user-turn-class <PREV_USER_TURN_CLASS> --unresolved-red <UNRESOLVED_RED> --red-source <RED_SOURCE>`
    尖括号为本轮运行时值——代入后照抄执行(占位 = 参数名去 --、转下划线、全大写;渲染集 = 引擎 manifest required + source,身份对已带实值)
@@ -83,6 +91,7 @@ Canonical store: the team **directory** `.specify/teams/<slug>/` — definition 
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
 6. Docs Sync Eval — `.specify/shared/workflow/docs-step.md` § "Evaluation procedure (the embedded step points here)"
+7. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"
 
 ## Handoffs
 

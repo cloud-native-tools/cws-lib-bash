@@ -3,141 +3,164 @@
 set -e
 
 # Load common helpers for Unicode support and shared functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$SCRIPT_DIR/common.sh" ]; then
+
+# script-interface: the sourceable guard block (086) lives in script-interface.sh
+# It sits above this script's own parsing and above `source common.sh`: a shared
+# library's top-level checks would otherwise turn `--help` into a non-zero exit, and
+# the flags must win over any write. Authority: .specify/shared/definitions/
+# script-interface-definitions.md section 4.
+SCRIPT_INTERFACE_LIB="$(CDPATH="" cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/script-interface.sh"
+if [ -f "$SCRIPT_INTERFACE_LIB" ]; then
     # shellcheck source=/dev/null
-    source "$SCRIPT_DIR/common.sh"
-    # Ensure UTF-8 locale for better Unicode handling
-    ensure_utf8_locale || true
+    . "$SCRIPT_INTERFACE_LIB"
+    script_interface_guard entry
+    script_interface_guard define name="$0" \
+        usage="[--json] [--debug] [--name <name>] [--type <type>] [--action <name>]" \
+        effects="writes a tool record under .specify/memory/tools/; the flags write nothing" \
+        codes="0 created or answered; 1 a prerequisite is missing; 2 an unrecognized option" \
+        writes=--action \
+        -- --json --debug --name -n --type -t --action -a
+    script_interface_guard guard "$@"
 fi
 
-# Fallback: if common.sh wasn't sourced or locale still isn't UTF-8, set a UTF-8 locale
-if ! locale 2>/dev/null | grep -qi 'utf-8'; then
-    if locale -a 2>/dev/null | grep -qi '^C\.utf8\|^C\.UTF-8$'; then
-        export LC_ALL=C.UTF-8
-        export LANG=C.UTF-8
-    elif locale -a 2>/dev/null | grep -qi '^en_US\.utf8\|^en_US\.UTF-8$'; then
-        export LC_ALL=en_US.UTF-8
-        export LANG=en_US.UTF-8
+main() {
+
+
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    if [ -f "$SCRIPT_DIR/common.sh" ]; then
+        # shellcheck source=/dev/null
+        source "$SCRIPT_DIR/common.sh"
+        # Ensure UTF-8 locale for better Unicode handling
+        ensure_utf8_locale || true
     fi
-fi
 
-JSON_MODE=false
-DEBUG_MODE=false
-TOOL_NAME=""
-TOOL_TYPE=""
-ACTION=""
-ARGS=()
+    # Fallback: if common.sh wasn't sourced or locale still isn't UTF-8, set a UTF-8 locale
+    if ! locale 2>/dev/null | grep -qi 'utf-8'; then
+        if locale -a 2>/dev/null | grep -qi '^C\.utf8\|^C\.UTF-8$'; then
+            export LC_ALL=C.UTF-8
+            export LANG=C.UTF-8
+        elif locale -a 2>/dev/null | grep -qi '^en_US\.utf8\|^en_US\.UTF-8$'; then
+            export LC_ALL=en_US.UTF-8
+            export LANG=en_US.UTF-8
+        fi
+    fi
 
-i=1
-while [ $i -le $# ]; do
-    arg="${!i}"
-    case "$arg" in
-        --json)
-            JSON_MODE=true
-            ;;
-        --debug)
-            DEBUG_MODE=true
-            ;;
-        --name|-n)
-            if [ $((i + 1)) -gt $# ]; then
-                echo "Error: --name requires a value" >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo "Error: --name requires a value" >&2
-                exit 1
-            fi
-            TOOL_NAME="$next_arg"
-            ;;
-        --type|-t)
-            if [ $((i + 1)) -gt $# ]; then
-                echo "Error: --type requires a value" >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo "Error: --type requires a value" >&2
-                exit 1
-            fi
-            TOOL_TYPE="$next_arg"
-            ;;
-        --action|-a)
-            if [ $((i + 1)) -gt $# ]; then
-                echo "Error: --action requires a value" >&2
-                exit 1
-            fi
-            i=$((i + 1))
-            next_arg="${!i}"
-            if [[ "$next_arg" == --* ]]; then
-                echo "Error: --action requires a value" >&2
-                exit 1
-            fi
-            ACTION="$next_arg"
-            ;;
-        --help|-h)
-            echo "Usage: $0 [--json] [--debug] [--name <name>] [--type <type>] [--action <action>] [<tool_name>]"
-            echo ""
-            echo "Options:"
-            echo "  --json                  Output in JSON format"
-            echo "  --debug                 Output diagnostics to stderr"
-            echo "  --name, -n <name>       Tool name"
-            echo "  --type, -t <type>       Tool type (project-script|system-binary|shell-function)"
-            echo "  --action, -a <action>   Action to perform (find|create|list)"
-            echo "  --help, -h              Show this help message"
-            echo ""
-            echo "Actions:"
-            echo "  find                    Find a tool by name and return its record"
-            echo "  create                  Create a new tool record if not exists"
-            echo "  list                    List all available tools"
-            echo ""
-            echo "Examples:"
-            echo "  $0 --name mytool --action find"
-            echo "  $0 --name mytool --type project-script --action create"
-            echo "  $0 --action list"
-            echo ""
-            exit 0
-            ;;
-        *)
-            ARGS+=("$arg")
-            ;;
-    esac
-    i=$((i + 1))
-done
+    JSON_MODE=false
+    DEBUG_MODE=false
+    TOOL_NAME=""
+    TOOL_TYPE=""
+    ACTION=""
+    ARGS=()
 
-POSITIONAL_INPUT="${ARGS[*]}"
+    i=1
+    while [ $i -le $# ]; do
+        arg="${!i}"
+        case "$arg" in
+            --json)
+                JSON_MODE=true
+                ;;
+            --debug)
+                DEBUG_MODE=true
+                ;;
+            --name|-n)
+                if [ $((i + 1)) -gt $# ]; then
+                    echo "Error: --name requires a value" >&2
+                    exit 1
+                fi
+                i=$((i + 1))
+                next_arg="${!i}"
+                if [[ "$next_arg" == --* ]]; then
+                    echo "Error: --name requires a value" >&2
+                    exit 1
+                fi
+                TOOL_NAME="$next_arg"
+                ;;
+            --type|-t)
+                if [ $((i + 1)) -gt $# ]; then
+                    echo "Error: --type requires a value" >&2
+                    exit 1
+                fi
+                i=$((i + 1))
+                next_arg="${!i}"
+                if [[ "$next_arg" == --* ]]; then
+                    echo "Error: --type requires a value" >&2
+                    exit 1
+                fi
+                TOOL_TYPE="$next_arg"
+                ;;
+            --action|-a)
+                if [ $((i + 1)) -gt $# ]; then
+                    echo "Error: --action requires a value" >&2
+                    exit 1
+                fi
+                i=$((i + 1))
+                next_arg="${!i}"
+                if [[ "$next_arg" == --* ]]; then
+                    echo "Error: --action requires a value" >&2
+                    exit 1
+                fi
+                ACTION="$next_arg"
+                ;;
+            --help|-h)
+                echo "Usage: $0 [--json] [--debug] [--name <name>] [--type <type>] [--action <action>] [<tool_name>]"
+                echo ""
+                echo "Options:"
+                echo "  --json                  Output in JSON format"
+                echo "  --debug                 Output diagnostics to stderr"
+                echo "  --name, -n <name>       Tool name"
+                echo "  --type, -t <type>       Tool type (project-script|system-binary|shell-function)"
+                echo "  --action, -a <action>   Action to perform (find|create|list)"
+                echo "  --help, -h              Show this help message"
+                echo ""
+                echo "Actions:"
+                echo "  find                    Find a tool by name and return its record"
+                echo "  create                  Create a new tool record if not exists"
+                echo "  list                    List all available tools"
+                echo ""
+                echo "Examples:"
+                echo "  $0 --name mytool --action find"
+                echo "  $0 --name mytool --type project-script --action create"
+                echo "  $0 --action list"
+                echo ""
+                exit 0
+                ;;
+            *)
+                ARGS+=("$arg")
+                ;;
+        esac
+        i=$((i + 1))
+    done
 
-# If tool name not set via flag, try positional argument
-if [ -z "$TOOL_NAME" ] && [ -n "$POSITIONAL_INPUT" ]; then
-    TOOL_NAME="$POSITIONAL_INPUT"
-fi
+    POSITIONAL_INPUT="${ARGS[*]}"
 
-# Set default action
-if [ -z "$ACTION" ]; then
-    if [ -n "$TOOL_NAME" ]; then
-        ACTION="find"
+    # If tool name not set via flag, try positional argument
+    if [ -z "$TOOL_NAME" ] && [ -n "$POSITIONAL_INPUT" ]; then
+        TOOL_NAME="$POSITIONAL_INPUT"
+    fi
+
+    # Set default action
+    if [ -z "$ACTION" ]; then
+        if [ -n "$TOOL_NAME" ]; then
+            ACTION="find"
+        else
+            ACTION="list"
+        fi
+    fi
+
+    # Set root dir
+    if git rev-parse --show-toplevel >/dev/null 2>&1; then
+        ROOT_DIR=$(git rev-parse --show-toplevel)
     else
-        ACTION="list"
+        # Fallback: assume script is in .specify/scripts/bash (depth 2)
+        ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
     fi
-fi
 
-# Set root dir
-if git rev-parse --show-toplevel >/dev/null 2>&1; then
-    ROOT_DIR=$(git rev-parse --show-toplevel)
-else
-    # Fallback: assume script is in .specify/scripts/bash (depth 2)
-    ROOT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
-fi
+    # Set tools memory directory
+    TOOLS_MEMORY_DIR="$ROOT_DIR/.specify/memory/tools"
 
-# Set tools memory directory
-TOOLS_MEMORY_DIR="$ROOT_DIR/.specify/memory/tools"
-
-to_workspace_relative() {
-    local path="$1"
-    python3 - "$ROOT_DIR" "$path" << 'PYEOF'
+    to_workspace_relative() {
+        local path="$1"
+        python3 - "$ROOT_DIR" "$path" << 'PYEOF'
 from pathlib import Path
 import sys
 
@@ -145,54 +168,54 @@ root = Path(sys.argv[1]).resolve()
 target = Path(sys.argv[2]).resolve()
 print(target.relative_to(root).as_posix())
 PYEOF
-}
+    }
 
-format_tool_id() {
-    local canonical_path="$1"
-    echo "<TOOL:${canonical_path}>"
-}
+    format_tool_id() {
+        local canonical_path="$1"
+        echo "<TOOL:${canonical_path}>"
+    }
 
-ensure_tool_id_in_record() {
-    local record_file="$1"
-    local tool_id="$2"
+    ensure_tool_id_in_record() {
+        local record_file="$1"
+        local tool_id="$2"
 
-    if grep -q '^\*\*Tool ID\*\*:' "$record_file"; then
-        return 0
-    fi
-
-    awk -v id="$tool_id" '
-        {
-            print $0
-            if ($0 ~ /^\*\*Source Identifier\*\*:/) {
-                print "**Tool ID**: " id
-            }
-        }
-    ' "$record_file" > "$record_file.tmp" && mv "$record_file.tmp" "$record_file"
-}
-
-# Validate tool type if provided
-validate_tool_type() {
-    local type="$1"
-    case "$type" in
-        project-script|system-binary|shell-function)
+        if grep -q '^\*\*Tool ID\*\*:' "$record_file"; then
             return 0
-            ;;
-        *)
-            report_error "Invalid tool type '$type'. Must be one of: project-script, system-binary, shell-function" "$JSON_MODE"
-            return 1
-            ;;
-    esac
-}
+        fi
 
-debug_log() {
-    if [ "$DEBUG_MODE" = true ]; then
-        echo "[create-new-tools][debug] $*" >&2
-    fi
-}
+        awk -v id="$tool_id" '
+            {
+                print $0
+                if ($0 ~ /^\*\*Source Identifier\*\*:/) {
+                    print "**Tool ID**: " id
+                }
+            }
+        ' "$record_file" > "$record_file.tmp" && mv "$record_file.tmp" "$record_file"
+    }
 
-json_diagnostic() {
-    local json_file="$1"
-    python3 - "$json_file" <<'PYEOF'
+    # Validate tool type if provided
+    validate_tool_type() {
+        local type="$1"
+        case "$type" in
+            project-script|system-binary|shell-function)
+                return 0
+                ;;
+            *)
+                report_error "Invalid tool type '$type'. Must be one of: project-script, system-binary, shell-function" "$JSON_MODE"
+                return 1
+                ;;
+        esac
+    }
+
+    debug_log() {
+        if [ "$DEBUG_MODE" = true ]; then
+            echo "[create-new-tools][debug] $*" >&2
+        fi
+    }
+
+    json_diagnostic() {
+        local json_file="$1"
+        python3 - "$json_file" <<'PYEOF'
 import json
 import sys
 from pathlib import Path
@@ -218,69 +241,69 @@ except json.JSONDecodeError as exc:
     )
     sys.exit(1)
 PYEOF
-}
+    }
 
-print_prefixed_file() {
-    local prefix="$1"
-    local file_path="$2"
+    print_prefixed_file() {
+        local prefix="$1"
+        local file_path="$2"
 
-    if [ -s "$file_path" ]; then
-        sed "s/^/${prefix}/" "$file_path" >&2
-    fi
-}
-
-# Refresh all tools and get JSON output
-refresh_all_tools_json() {
-    local refresh_script="$SCRIPT_DIR/refresh-tools.sh"
-    if [ ! -f "$refresh_script" ]; then
-        report_error "refresh-tools.sh not found at $refresh_script" "$JSON_MODE"
-        exit 1
-    fi
-
-    local stdout_file stderr_file status validation
-    stdout_file=$(mktemp)
-    stderr_file=$(mktemp)
-    status=0
-
-    if [ "$DEBUG_MODE" = true ]; then
-        REFRESH_TOOLS_DEBUG=1 "$refresh_script" --system --shell --project --json --debug >"$stdout_file" 2>"$stderr_file" || status=$?
-    else
-        "$refresh_script" --system --shell --project --json >"$stdout_file" 2>"$stderr_file" || status=$?
-    fi
-
-    if [ "$DEBUG_MODE" = true ]; then
-        print_prefixed_file "[create-new-tools][refresh-tools] " "$stderr_file"
-    fi
-
-    if [ "$status" -ne 0 ]; then
-        debug_log "refresh-tools.sh failed with exit code $status"
-        rm -f "$stdout_file" "$stderr_file"
-        return $status
-    fi
-
-    if ! validation=$(json_diagnostic "$stdout_file"); then
-        debug_log "invalid JSON from refresh-tools.sh: $validation"
-        if [ "$DEBUG_MODE" = true ]; then
-            print_prefixed_file "[create-new-tools][raw-refresh-json] " "$stdout_file"
+        if [ -s "$file_path" ]; then
+            sed "s/^/${prefix}/" "$file_path" >&2
         fi
+    }
+
+    # Refresh all tools and get JSON output
+    refresh_all_tools_json() {
+        local refresh_script="$SCRIPT_DIR/refresh-tools.sh"
+        if [ ! -f "$refresh_script" ]; then
+            report_error "refresh-tools.sh not found at $refresh_script" "$JSON_MODE"
+            exit 1
+        fi
+
+        local stdout_file stderr_file status validation
+        stdout_file=$(mktemp)
+        stderr_file=$(mktemp)
+        status=0
+
+        if [ "$DEBUG_MODE" = true ]; then
+            REFRESH_TOOLS_DEBUG=1 "$refresh_script" --system --shell --project --json --debug >"$stdout_file" 2>"$stderr_file" || status=$?
+        else
+            "$refresh_script" --system --shell --project --json >"$stdout_file" 2>"$stderr_file" || status=$?
+        fi
+
+        if [ "$DEBUG_MODE" = true ]; then
+            print_prefixed_file "[create-new-tools][refresh-tools] " "$stderr_file"
+        fi
+
+        if [ "$status" -ne 0 ]; then
+            debug_log "refresh-tools.sh failed with exit code $status"
+            rm -f "$stdout_file" "$stderr_file"
+            return $status
+        fi
+
+        if ! validation=$(json_diagnostic "$stdout_file"); then
+            debug_log "invalid JSON from refresh-tools.sh: $validation"
+            if [ "$DEBUG_MODE" = true ]; then
+                print_prefixed_file "[create-new-tools][raw-refresh-json] " "$stdout_file"
+            fi
+            rm -f "$stdout_file" "$stderr_file"
+            return 1
+        fi
+
+        cat "$stdout_file"
         rm -f "$stdout_file" "$stderr_file"
-        return 1
-    fi
+    }
 
-    cat "$stdout_file"
-    rm -f "$stdout_file" "$stderr_file"
-}
+    # Parse JSON and find tool by name
+    find_tool_in_json() {
+        local tool_name="$1"
+        local json_data="$2"
 
-# Parse JSON and find tool by name
-find_tool_in_json() {
-    local tool_name="$1"
-    local json_data="$2"
+        local json_file
+        json_file=$(mktemp)
+        printf '%s' "$json_data" > "$json_file"
 
-    local json_file
-    json_file=$(mktemp)
-    printf '%s' "$json_data" > "$json_file"
-
-    python3 - "$tool_name" "$json_file" "$DEBUG_MODE" << 'PYTHON_SCRIPT'
+        python3 - "$tool_name" "$json_file" "$DEBUG_MODE" << 'PYTHON_SCRIPT'
 import sys
 import json
 from pathlib import Path
@@ -377,138 +400,138 @@ else:
 
 print(json.dumps(result, indent=2))
 PYTHON_SCRIPT
-    local ret=$?
-    rm -f "$json_file"
-    return $ret
-}
-
-# Get template file for tool type
-get_template_file() {
-    local tool_type="$1"
-    local template_name=""
-    
-    case "$tool_type" in
-        project-script)
-            template_name="tool-project-script-template.md"
-            ;;
-        system-binary)
-            template_name="tool-system-binary-template.md"
-            ;;
-        shell-function)
-            template_name="tool-shell-function-template.md"
-            ;;
-        webhook)
-            template_name="tool-webhook-template.md"
-            ;;
-    esac
-
-    if [ -z "$template_name" ]; then
-        echo ""
-        return
-    fi
-
-    # Templates are owned by the create-tools skill; the .specify/templates/ paths are a
-    # fallback for installs predating the move.
-    local candidate
-    for candidate in \
-        "$ROOT_DIR/.specify/skills/internal/create-tools/templates/$template_name" \
-        "$ROOT_DIR/skills/internal/create-tools/templates/$template_name" \
-        "$ROOT_DIR/.specify/templates/$template_name" \
-        "$ROOT_DIR/templates/$template_name"; do
-        if [ -f "$candidate" ]; then
-            echo "$candidate"
-            return
-        fi
-    done
-
-    echo ""
-}
-
-# Create tool record from template
-create_tool_record() {
-    local tool_name="$1"
-    local tool_type="$2"
-    local source_identifier="$3"
-    local description="$4"
-    
-    mkdir -p "$TOOLS_MEMORY_DIR"
-    
-    local template_file
-    template_file=$(get_template_file "$tool_type")
-    
-    if [ -z "$template_file" ]; then
-        report_error "Template not found for tool type '$tool_type'" "$JSON_MODE"
-        exit 1
-    fi
-
-    local self_improvement_template=""
-    local candidate
-    for candidate in \
-        "$ROOT_DIR/.specify/skills/internal/create-tools/templates/tool-self-improvement.md" \
-        "$ROOT_DIR/skills/internal/create-tools/templates/tool-self-improvement.md"; do
-        if [ -f "$candidate" ]; then
-            self_improvement_template="$candidate"
-            break
-        fi
-    done
-    if [ -z "$self_improvement_template" ]; then
-        report_error "Self-Improvement contract template not found" "$JSON_MODE"
-        exit 1
-    fi
-    
-    local record_file="$TOOLS_MEMORY_DIR/${tool_name}.md"
-    local canonical_path
-    canonical_path=$(to_workspace_relative "$record_file")
-    local tool_id
-    tool_id=$(format_tool_id "$canonical_path")
-    local date_today
-    date_today=$(date +%Y-%m-%d)
-    
-    # Replace placeholders in template. Values may contain slashes (paths) or
-    # ampersands, so use a control-char delimiter and escape the replacements.
-    sed_escape() {
-        printf '%s' "$1" | sed -e 's/[\\&]/\\\\&/g' -e $'s/\x01/\\\\\x01/g'
+        local ret=$?
+        rm -f "$json_file"
+        return $ret
     }
 
-    local esc_tool_name esc_tool_type esc_source esc_tool_id esc_canonical esc_date esc_description
-    esc_tool_name=$(sed_escape "$tool_name")
-    esc_tool_type=$(sed_escape "$tool_type")
-    esc_source=$(sed_escape "$source_identifier")
-    esc_tool_id=$(sed_escape "$tool_id")
-    esc_canonical=$(sed_escape "$canonical_path")
-    esc_date=$(sed_escape "$date_today")
-    esc_description=$(sed_escape "$description")
+    # Get template file for tool type
+    get_template_file() {
+        local tool_type="$1"
+        local template_name=""
 
-    sed -e $'s\x01\\[TOOL NAME\\]\x01'"$esc_tool_name"$'\x01g' \
-        -e $'s\x01\\[TOOL TYPE\\]\x01'"$esc_tool_type"$'\x01g' \
-        -e $'s\x01\\[SOURCE IDENTIFIER\\]\x01'"$esc_source"$'\x01g' \
-        -e $'s\x01\\[TOOL ID\\]\x01'"$esc_tool_id"$'\x01g' \
-        -e $'s\x01\\[RESOURCE ID\\]\x01'"$esc_tool_id"$'\x01g' \
-        -e $'s\x01\\[CANONICAL PATH\\]\x01'"$esc_canonical"$'\x01g' \
-        -e $'s\x01\\[YYYY-MM-DD\\]\x01'"$esc_date"$'\x01g' \
-        -e $'s\x01\\[Short, user-friendly description of what .* and when to use it\\]\x01'"$esc_description"$'\x01g' \
-        -e $'s\x01^\\*\\*Source Identifier\\*\\*:.*\x01**Source Identifier**: '"$esc_source"$'  \x01' \
-        -e $'s\x01^\\*\\*Status\\*\\*:.*\x01**Status**: Draft  \x01' \
-        -e $'s\x01^\\*\\*Discovery Origin\\*\\*:.*\x01**Discovery Origin**: discovery-assisted  \x01' \
-        "$template_file" > "$record_file"
-    printf '\n' >> "$record_file"
-    cat "$self_improvement_template" >> "$record_file"
-    
-    echo "$record_file|$canonical_path|$tool_id"
-}
+        case "$tool_type" in
+            project-script)
+                template_name="tool-project-script-template.md"
+                ;;
+            system-binary)
+                template_name="tool-system-binary-template.md"
+                ;;
+            shell-function)
+                template_name="tool-shell-function-template.md"
+                ;;
+            webhook)
+                template_name="tool-webhook-template.md"
+                ;;
+        esac
 
-# List all available tools
-list_all_tools() {
-    local json_data
-    if ! json_data=$(refresh_all_tools_json); then
-        report_error "Failed to refresh tool inventory" "$JSON_MODE"
-        return 1
-    fi
-    
-    # Create Python script to format output
-    local py_script
-    py_script=$(mktemp)
-    cat > "$py_script" << 'PYEOF'
+        if [ -z "$template_name" ]; then
+            echo ""
+            return
+        fi
+
+        # Templates are owned by the create-tools skill; the .specify/templates/ paths are a
+        # fallback for installs predating the move.
+        local candidate
+        for candidate in \
+            "$ROOT_DIR/.specify/skills/internal/create-tools/templates/$template_name" \
+            "$ROOT_DIR/skills/internal/create-tools/templates/$template_name" \
+            "$ROOT_DIR/.specify/templates/$template_name" \
+            "$ROOT_DIR/templates/$template_name"; do
+            if [ -f "$candidate" ]; then
+                echo "$candidate"
+                return
+            fi
+        done
+
+        echo ""
+    }
+
+    # Create tool record from template
+    create_tool_record() {
+        local tool_name="$1"
+        local tool_type="$2"
+        local source_identifier="$3"
+        local description="$4"
+
+        mkdir -p "$TOOLS_MEMORY_DIR"
+
+        local template_file
+        template_file=$(get_template_file "$tool_type")
+
+        if [ -z "$template_file" ]; then
+            report_error "Template not found for tool type '$tool_type'" "$JSON_MODE"
+            exit 1
+        fi
+
+        local self_improvement_template=""
+        local candidate
+        for candidate in \
+            "$ROOT_DIR/.specify/skills/internal/create-tools/templates/tool-self-improvement.md" \
+            "$ROOT_DIR/skills/internal/create-tools/templates/tool-self-improvement.md"; do
+            if [ -f "$candidate" ]; then
+                self_improvement_template="$candidate"
+                break
+            fi
+        done
+        if [ -z "$self_improvement_template" ]; then
+            report_error "Self-Improvement contract template not found" "$JSON_MODE"
+            exit 1
+        fi
+
+        local record_file="$TOOLS_MEMORY_DIR/${tool_name}.md"
+        local canonical_path
+        canonical_path=$(to_workspace_relative "$record_file")
+        local tool_id
+        tool_id=$(format_tool_id "$canonical_path")
+        local date_today
+        date_today=$(date +%Y-%m-%d)
+
+        # Replace placeholders in template. Values may contain slashes (paths) or
+        # ampersands, so use a control-char delimiter and escape the replacements.
+        sed_escape() {
+            printf '%s' "$1" | sed -e 's/[\\&]/\\\\&/g' -e $'s/\x01/\\\\\x01/g'
+        }
+
+        local esc_tool_name esc_tool_type esc_source esc_tool_id esc_canonical esc_date esc_description
+        esc_tool_name=$(sed_escape "$tool_name")
+        esc_tool_type=$(sed_escape "$tool_type")
+        esc_source=$(sed_escape "$source_identifier")
+        esc_tool_id=$(sed_escape "$tool_id")
+        esc_canonical=$(sed_escape "$canonical_path")
+        esc_date=$(sed_escape "$date_today")
+        esc_description=$(sed_escape "$description")
+
+        sed -e $'s\x01\\[TOOL NAME\\]\x01'"$esc_tool_name"$'\x01g' \
+            -e $'s\x01\\[TOOL TYPE\\]\x01'"$esc_tool_type"$'\x01g' \
+            -e $'s\x01\\[SOURCE IDENTIFIER\\]\x01'"$esc_source"$'\x01g' \
+            -e $'s\x01\\[TOOL ID\\]\x01'"$esc_tool_id"$'\x01g' \
+            -e $'s\x01\\[RESOURCE ID\\]\x01'"$esc_tool_id"$'\x01g' \
+            -e $'s\x01\\[CANONICAL PATH\\]\x01'"$esc_canonical"$'\x01g' \
+            -e $'s\x01\\[YYYY-MM-DD\\]\x01'"$esc_date"$'\x01g' \
+            -e $'s\x01\\[Short, user-friendly description of what .* and when to use it\\]\x01'"$esc_description"$'\x01g' \
+            -e $'s\x01^\\*\\*Source Identifier\\*\\*:.*\x01**Source Identifier**: '"$esc_source"$'  \x01' \
+            -e $'s\x01^\\*\\*Status\\*\\*:.*\x01**Status**: Draft  \x01' \
+            -e $'s\x01^\\*\\*Discovery Origin\\*\\*:.*\x01**Discovery Origin**: discovery-assisted  \x01' \
+            "$template_file" > "$record_file"
+        printf '\n' >> "$record_file"
+        cat "$self_improvement_template" >> "$record_file"
+
+        echo "$record_file|$canonical_path|$tool_id"
+    }
+
+    # List all available tools
+    list_all_tools() {
+        local json_data
+        if ! json_data=$(refresh_all_tools_json); then
+            report_error "Failed to refresh tool inventory" "$JSON_MODE"
+            return 1
+        fi
+
+        # Create Python script to format output
+        local py_script
+        py_script=$(mktemp)
+        cat > "$py_script" << 'PYEOF'
 import sys
 import json
 
@@ -561,104 +584,110 @@ else:
         print(f"    {desc}")
         print()
 PYEOF
-    
-    # Execute Python script with JSON data
-    echo "$json_data" | python3 "$py_script"
-    local ret=$?
-    
-    # Cleanup
-    rm -f "$py_script"
-    
-    return $ret
+
+        # Execute Python script with JSON data
+        echo "$json_data" | python3 "$py_script"
+        local ret=$?
+
+        # Cleanup
+        rm -f "$py_script"
+
+        return $ret
+    }
+
+    # Main logic
+    case "$ACTION" in
+        list)
+            list_all_tools
+            ;;
+        find|create)
+            if [ -z "$TOOL_NAME" ]; then
+                report_error "Tool name is required for action '$ACTION'" "$JSON_MODE"
+                exit 1
+            fi
+
+            # Refresh and get all tools
+            if ! json_data=$(refresh_all_tools_json); then
+                report_error "Failed to refresh tool inventory" "$JSON_MODE"
+                exit 1
+            fi
+
+            # Find tool in JSON data
+            if ! find_result=$(find_tool_in_json "$TOOL_NAME" "$json_data"); then
+                report_error "Invalid JSON from refresh-tools.sh" "$JSON_MODE"
+                exit 1
+            fi
+
+            if [ "$ACTION" = "find" ]; then
+                echo "$find_result"
+                exit 0
+            fi
+
+            # Check if we need to create a new record
+            if [ "$ACTION" = "create" ]; then
+                status=$(echo "$find_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
+
+                # A discovery hit means the tool exists in the inventory — NOT that a
+                # definition record exists. Only the record file decides that.
+                resolved_tool_name=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('name',''))" 2>/dev/null || true)
+                discovered_source=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); t=data.get('tool') or {}; print(t.get('sourceName') or t.get('path') or '')" 2>/dev/null || true)
+                discovered_description=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('description',''))" 2>/dev/null || true)
+                if [ -z "$resolved_tool_name" ]; then
+                    resolved_tool_name="$TOOL_NAME"
+                fi
+
+                record_file="$TOOLS_MEMORY_DIR/${resolved_tool_name}.md"
+                canonical_path=".specify/memory/tools/${resolved_tool_name}.md"
+                tool_id=$(format_tool_id "$canonical_path")
+
+                if [ -f "$record_file" ]; then
+                    ensure_tool_id_in_record "$record_file" "$tool_id"
+
+                    if [ "$JSON_MODE" = true ]; then
+                        echo "{\"status\": \"exists\", \"message\": \"Tool record already exists\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
+                    else
+                        echo "Tool record already exists: $record_file"
+                        echo "tool_id: $tool_id"
+                    fi
+                elif [ "$status" = "multiple_matches" ] && [ -z "$TOOL_TYPE" ]; then
+                    report_error "Multiple discovery matches for '$TOOL_NAME'. Use --type <type> to disambiguate" "$JSON_MODE"
+                    exit 1
+                else
+                    if [ -z "$TOOL_TYPE" ]; then
+                        report_error "Tool type is required when creating a new tool. Use --type <type>" "$JSON_MODE"
+                        exit 1
+                    fi
+
+                    validate_tool_type "$TOOL_TYPE" || exit 1
+
+                    # Prefer the discovered source path/description; the record is a
+                    # Draft for the user to complete either way.
+                    source_identifier="${discovered_source:-$resolved_tool_name}"
+                    description="${discovered_description:-Tool for $resolved_tool_name}"
+
+                    creation_output=$(create_tool_record "$resolved_tool_name" "$TOOL_TYPE" "$source_identifier" "$description")
+                    record_file="${creation_output%%|*}"
+                    rest="${creation_output#*|}"
+                    canonical_path="${rest%%|*}"
+                    tool_id="${rest#*|}"
+
+                    if [ "$JSON_MODE" = true ]; then
+                        echo "{\"status\": \"created\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
+                    else
+                        echo "Created tool record: $record_file"
+                        echo "tool_id: $tool_id"
+                    fi
+                fi
+            fi
+            ;;
+        *)
+            report_error "Unknown action '$ACTION'. Use: find, create, or list" "$JSON_MODE"
+            exit 1
+            ;;
+    esac
+
 }
 
-# Main logic
-case "$ACTION" in
-    list)
-        list_all_tools
-        ;;
-    find|create)
-        if [ -z "$TOOL_NAME" ]; then
-            report_error "Tool name is required for action '$ACTION'" "$JSON_MODE"
-            exit 1
-        fi
-        
-        # Refresh and get all tools
-        if ! json_data=$(refresh_all_tools_json); then
-            report_error "Failed to refresh tool inventory" "$JSON_MODE"
-            exit 1
-        fi
-        
-        # Find tool in JSON data
-        if ! find_result=$(find_tool_in_json "$TOOL_NAME" "$json_data"); then
-            report_error "Invalid JSON from refresh-tools.sh" "$JSON_MODE"
-            exit 1
-        fi
-        
-        if [ "$ACTION" = "find" ]; then
-            echo "$find_result"
-            exit 0
-        fi
-
-        # Check if we need to create a new record
-        if [ "$ACTION" = "create" ]; then
-            status=$(echo "$find_result" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status',''))")
-
-            # A discovery hit means the tool exists in the inventory — NOT that a
-            # definition record exists. Only the record file decides that.
-            resolved_tool_name=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('name',''))" 2>/dev/null || true)
-            discovered_source=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); t=data.get('tool') or {}; print(t.get('sourceName') or t.get('path') or '')" 2>/dev/null || true)
-            discovered_description=$(echo "$find_result" | python3 -c "import sys,json; data=json.load(sys.stdin); print((data.get('tool') or {}).get('description',''))" 2>/dev/null || true)
-            if [ -z "$resolved_tool_name" ]; then
-                resolved_tool_name="$TOOL_NAME"
-            fi
-
-            record_file="$TOOLS_MEMORY_DIR/${resolved_tool_name}.md"
-            canonical_path=".specify/memory/tools/${resolved_tool_name}.md"
-            tool_id=$(format_tool_id "$canonical_path")
-
-            if [ -f "$record_file" ]; then
-                ensure_tool_id_in_record "$record_file" "$tool_id"
-
-                if [ "$JSON_MODE" = true ]; then
-                    echo "{\"status\": \"exists\", \"message\": \"Tool record already exists\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
-                else
-                    echo "Tool record already exists: $record_file"
-                    echo "tool_id: $tool_id"
-                fi
-            elif [ "$status" = "multiple_matches" ] && [ -z "$TOOL_TYPE" ]; then
-                report_error "Multiple discovery matches for '$TOOL_NAME'. Use --type <type> to disambiguate" "$JSON_MODE"
-                exit 1
-            else
-                if [ -z "$TOOL_TYPE" ]; then
-                    report_error "Tool type is required when creating a new tool. Use --type <type>" "$JSON_MODE"
-                    exit 1
-                fi
-
-                validate_tool_type "$TOOL_TYPE" || exit 1
-
-                # Prefer the discovered source path/description; the record is a
-                # Draft for the user to complete either way.
-                source_identifier="${discovered_source:-$resolved_tool_name}"
-                description="${discovered_description:-Tool for $resolved_tool_name}"
-
-                creation_output=$(create_tool_record "$resolved_tool_name" "$TOOL_TYPE" "$source_identifier" "$description")
-                record_file="${creation_output%%|*}"
-                rest="${creation_output#*|}"
-                canonical_path="${rest%%|*}"
-                tool_id="${rest#*|}"
-
-                if [ "$JSON_MODE" = true ]; then
-                    echo "{\"status\": \"created\", \"record_file\": \"$record_file\", \"canonical_path\": \"$canonical_path\", \"tool_id\": \"$tool_id\"}"
-                else
-                    echo "Created tool record: $record_file"
-                    echo "tool_id: $tool_id"
-                fi
-            fi
-        fi
-        ;;
-    *)
-        report_error "Unknown action '$ACTION'. Use: find, create, or list" "$JSON_MODE"
-        exit 1
-        ;;
-esac
+if [ "${BASH_SOURCE[0]}" = "$0" ]; then
+    main "$@"
+fi

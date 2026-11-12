@@ -1,7 +1,7 @@
 # Glossary Protocol (Correction · Enrichment · Conflict)
 
 This file is the single source of truth for how
-`/speckit.*` commands use the project glossary at `.specify/memory/glossary.md`. Commands
+`/speckit.*` commands use the project glossary at `.specify/glossary.md`. Commands
 embed a lightweight `## Glossary` step that points here (modeled on the `## Feedback` step).
 
 The glossary is a **documentation/prompt-framework** artifact (Constitution Principle IX):
@@ -39,7 +39,7 @@ easily-confused words).
   stop binding because the current task finds it inconvenient, and an anti-pattern named for a
   term is a ruling, not a suggestion. Read **by topic domain** — pull the entries for the
   domain the input is about rather than the whole table (summary-first) — and reach an entry's
-  full record through `.specify/memory/glossary.md`; a command step names this obligation and
+  full record through `.specify/glossary.md`; a command step names this obligation and
   MUST NOT restate its conditions.
 
 ## 2. Progressive enrichment (at checkpoints)
@@ -77,7 +77,7 @@ resolution (see below; criteria: `.specify/shared/guidelines/confirmation-gates.
 
 ## 4. Manual edits & user precedence (以用户输入为准)
 
-- Users may edit `.specify/memory/glossary.md` directly at any time; it is human-readable.
+- Users may edit `.specify/glossary.md` directly at any time; it is human-readable.
 - `origin=user` entries are **authoritative**: automatic proposals MUST NOT overwrite them
   without explicit user confirmation. The engine refuses an `auto` write over a `user` entry
   unless `--confirmed-resolution` is given.

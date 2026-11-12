@@ -7,6 +7,9 @@ skill_id: "<SKILL:.specify/skills/internal/analyze-artifacts/SKILL.md>"
 
 # analyze-artifacts
 
+> **Concurrency obligation（执行义务，按指针抵达）**: this skill is an execution body — before the first real action, run the one-shot assessment (class → carrier → partition), default to concurrent execution for two or more independent units, and when serial name a reason code and record the `requested` / `effective` / `effective_reason` reading. Authored text: `.specify/shared/definitions/subagent-definitions.md` § The Concurrency Obligation; class table: `.specify/shared/declarations/facts/concurrency-class.yaml`; reason codes: `.specify/shared/declarations/facts/serial-reason.yaml`; reading fields: `.specify/shared/declarations/facts/effective-concurrency.yaml`. This body restates none of their rules.
+
+
 ## Goal
 
 Reach a verdict on whether a feature's artifact set is internally consistent and ready to
@@ -22,13 +25,43 @@ Canonical extraction source: `.specify/templates/commands/analyze.md` § Executi
 Operating Principles, and the do-not-flag list. The command template keeps entry +
 delegation only.
 
+## Rounds
+
+- **Round 1** adjudicates the full severity set (`CRITICAL`/`HIGH`/`MEDIUM`/`LOW`).
+- **Round 2** (a rerun after fixes) re-adjudicates the round-1 findings **and** the full severity set,
+  or declares itself **C/H-only** in the report. A C/H-only round 2 MUST enumerate every open
+  `MEDIUM`/`LOW` round-1 finding as a **residue row** in the findings JSONL — `status` plus a
+  disposition (`fixed` / `deferred` / `rejected`, with the reason) — and a round-2 pass without that
+  residue list is incomplete: it MUST NOT be read as closing the gate. Prose residue in a notes file
+  is not a gate input.
+
+### Incremental re-check protocol（增量复检协议）
+
+A round after the first defaults to an **incremental re-check**; the full re-run is the fallback, not the default:
+
+- **Re-check scope**: round N+1 re-checks exactly (i) the loci repaired in round N and (ii) their one-hop neighbors (a repaired FR/contract clause pulls the artifact sections that cite it).
+- **Reuse is declared, never silent**: every untouched domain is reused and named in the round record with its content hash (path set + hash). An unnamed reuse is an incomplete record.
+- **Validator independence is never downgraded**: every CRITICAL/HIGH of the incremental round still needs a fresh-context, read-only validator; reuse applies to detection domains, never to validation.
+- **Deterministic gates always full-run** as the backstop; a gate that goes red for a reason a repaired locus cannot explain escalates to a full re-run.
+- **Full re-run is mandatory** when any of: more than half of the declared domains were touched; the repairs changed contract surfaces across all three artifact classes; the finding taxonomy or a clause-id map changed; or an incremental round still leaves an open CRITICAL/HIGH.
+- **Round record fields**: touched-loci set · reused domains (path + hash) · per carried finding disposition (`fixed` / `deferred` / `rejected` with reason). The residue rules above apply unchanged.
+
+### Domain and output budget（域与输出预算）
+
+The dispatch layer splits the analysis into file-disjoint domains; this skill owns the sizing and output rules it must follow:
+
+- **Size by expected finding volume**: a domain carries at most ~15 files and ~10 expected findings. A domain expected to exceed either bound MUST be pre-split by file path before dispatch — a domain that fails on output limit and is then re-split is a dispatch defect, and its partial findings are never accepted.
+- **Bounded worker output**: a worker returns findings as structured records only (id / category / claim / severity / locations / evidence) in the findings JSONL; narrative duplicated from the artifacts does not belong in worker output.
+- **Incomplete unit rule**: a worker that returns an output-limit error, a truncated findings set, or a read-domain mismatch is an incomplete unit — re-dispatch its files (split further), never synthesize around a silence.
+
+
 ## Input Contract
 
 - **Prerequisite**: `/speckit.tasks` has produced a complete `tasks.md`. Abort with a
   clear message if a required artifact is missing (tell the user which command to run).
 - **Argument**: free text is **supplemental analysis focus areas**, not standalone
   instructions.
-- **Constitution authority**: `.specify/memory/constitution.md` is non-negotiable in this
+- **Constitution authority**: `.specify/constitution.md` is non-negotiable in this
   scope. A constitution conflict is automatically **CRITICAL** and is resolved by adjusting
   spec/plan/tasks — never by diluting, reinterpreting, or silently ignoring the principle.
   If a principle itself must change, that happens in a separate explicit constitution
@@ -44,9 +77,9 @@ Run the command's declared prerequisite script once from repo root; parse JSON f
 `REQUIREMENTS_DIR` and `AVAILABLE_DOCS`; derive absolute `SPEC` / `PLAN` / `TASKS` paths.
 Abort if a required file is missing. Then derive feature-lookup context (best effort, no
 write): `REQUIREMENTS_KEY` = basename of the requirements dir; `FEATURE_INDEX` =
-`.specify/memory/features.md` (if present); `FEATURE_DETAILS_DIR` =
-`.specify/memory/features/` (if present) — the index rows live in `features.md`, the
-matching detail file at `features/<ID>.md`, and the install-shipped sample at
+`.specify/features.md` (if present); `FEATURE_DETAILS_DIR` =
+`.specify/features/` (if present) — the index rows live in `features.md`, the
+matching detail file at `features/<NNN>-<slug>.md`, and the install-shipped sample at
 `features/*.md`.
 
 Identify the most likely bound feature in this order: (1) explicit references inside
@@ -66,7 +99,7 @@ Load only the minimal necessary context — never the whole artifacts:
 | `tasks.md` | Task IDs, descriptions, phase grouping, `[P]` markers, referenced file paths |
 | `checklists/*.md` | Item text, checked state (`- [ ]` / `- [X]`), and tags — `[Gap]` in particular |
 | feature registry | Index rows (ID, Name, Description, Status, Details link, Last Updated); the matching detail file; its spec-linkage fields |
-| constitution | `.specify/memory/constitution.md` for principle validation |
+| constitution | `.specify/constitution.md` for principle validation |
 
 ### 3. Coverage accounting (fixed read-only step)
 
@@ -105,6 +138,13 @@ Eight passes (A duplication · B ambiguity · C underspecification · D constitu
 records) plus one checklist pass (H), the same-author delegation rule, the stale-copy decision
 test, and the do-not-flag noise floor:
 [`./references/detection-and-severity.md`](./references/detection-and-severity.md).
+
+**F — cross-clause contradictions.** Two clauses that impose mutually exclusive criteria on
+the same object MUST be reported as one `inconsistency` finding naming both clauses and the
+shared object — for example, one clause requires an artifact's whole-file hash to remain
+unchanged while another requires a section of that same file to be rewritten, or two clauses
+classify the same predicate into different closed sets. Neither clause may be accepted as the
+settled reading while its opposite stands.
 
 **H — checklist accountability.** Every unchecked `[Gap]` item under
 `REQUIREMENTS_DIR/checklists/*.md` MUST be raised as a finding or carry an explicit
@@ -177,7 +217,7 @@ observations, metrics, and the rerun delta when a prior report exists:
 
 ## Wrap-up
 
-<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 7877db82c58c — do not edit; edit the registry, then recompile -->
+<!-- AUTO-GENERATED by probe-utils.py --action compile-embeds — truth source: .specify/shared/definitions/probe-definitions.md (## Handler / ## HandlerBinding) — fingerprint: 4682b9e38032 — do not edit; edit the registry, then recompile -->
 
 **Runtime-mode gate.** If `${SKILL_WORKDIR}/.specify/` does not exist, this skill is running in standalone mode (a non–Spec Kit deployment, e.g. a global agent skills directory) — skip this entire Wrap-up step: no engine call, no feedback entry.
 
@@ -187,3 +227,4 @@ observations, metrics, and the rerun delta when a prior report exists:
 3. Feedback Record — `python3 .specify/scripts/python/feedback-utils.py --action record --unit-id "skill:analyze-artifacts" --unit-type skill --run-id <RUN_ID> --review <REVIEW> --points <POINTS>`
 4. Threshold Notice — `.specify/shared/workflow/feedback-step.md` § "Threshold prompt protocol (canonical semantics for step 6)"
 5. Token Reflection — `.specify/shared/workflow/feedback-step.md` § "Reflection procedure (the embedded step points here)"
+6. Closeout — `.specify/shared/workflow/artifact-commit-step.md` § "The `## Close-out` step"

@@ -1,0 +1,19 @@
+# Batch 1, row 6 (contracts/migration-batches.contract.md C-042).
+#
+# The one machine-read copy of the document-type closed set (the `flow_type` axis). The explicit
+# `-` is a member, not an empty value: it is the only value an `execution` line may carry, so it is
+# quoted here and read back as the last member.
+fact: flow-class-document-types
+kind: closed-set
+statement:
+  - technique-document
+  - user-manual
+  - reference
+  - runbook
+  - design-note
+  - "-"
+consumers:
+  - .specify/scripts/python/flow-class-check.py
+former_carriers:
+  - .specify/shared/definitions/flow-class-definitions.md
+note: "Both faces agreed before migration (FLOW_TYPE_VALUES and the carrier's § 文档类型 table), so the authority order picked the code-side value with nothing to correct. The `-` member is quoted because a bare `-` is a YAML null item, not a scalar."

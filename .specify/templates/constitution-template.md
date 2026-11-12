@@ -301,6 +301,118 @@ Rationale: a name is how every later reader, search, and agent finds an entity a
 it to related concepts. An improvised name silently breaks those links, so the cheapest
 correct decision is always the one an existing authority already made.
 
+### XVIII. Self-Explanatory Structure (不言自明)
+Names, paths and structures MUST carry the information their user needs, judged from the
+user's view rather than from how clear the implementation looks internally:
+- It MUST be the user's view that decides, not implementation-internal clarity: information
+  a program can infer without context does NOT count as reachable.
+- The ceiling is that the user sees the needed information directly; the floor MUST be no
+  more than one simple command, and a satisfied floor is sufficient to support a change.
+- The principle MUST NOT be used to justify preventive redesign — a concrete user
+  information need MUST be named before it applies to anything.
+- Each optimization task MUST raise at most one information dimension, and a reconcile
+  mechanism MUST be how that dimension lands.
+- An encoded attribute MUST keep its original source of truth, and names and paths MUST stay
+  projections of it, reconciled to it rather than edited into a second owner.
+- The full definition is owned by `.specify/shared/definitions/self-explanatory-definitions.md`
+  and MUST be referenced, not restated, here; the framework's own source copy of this owner
+  stays at `shared/definitions/self-explanatory-definitions.md` and MUST NOT be the path a
+  downstream project is told to open.
+
+Rationale: a structure that carries no user information forces the user to open files or
+ask a maintainer before they can filter, sort or judge the system. Naming the information a
+structure must carry keeps it legible at the entry point instead of only from inside.
+
+### XIX. Efficient Test Execution (Concurrent by Default)
+Test coverage is a necessary condition for quality and never a sufficient one: a suite that
+exists but is not actually run protects nothing, so the cost of running it is a quality
+attribute in its own right, at the same tier as coverage, and MUST be treated as one:
+- Test execution efficiency MUST be judged by the criterion owned at
+  `.specify/shared/guidelines/test-execution-efficiency.md`, which is also the only
+  definition point of the choice between process-level parallelism, asynchronous
+  concurrency and neither, of the isolation preconditions that make parallel execution
+  legitimate, and of the ways of being faster that are never admissible; consumers MUST
+  reference it, do not restate it.
+- Where that criterion is met, efficiency MUST be a releasable requirement: a change MAY be
+  refused for exceeding it, and a faster run MUST NOT be bought by shrinking the selection,
+  skipping, declaring flakiness, or retrying until green.
+- Before any execution mode is changed, the isolation preconditions MUST hold on measurement
+  — compared by failure name against serial execution — not by reading the tests; a
+  precondition that does not hold MUST be repaired before parallelism is enabled.
+- This principle applies to every project that builds a test framework or writes test cases,
+  and not only to this repository; the defaults and parameters of a concrete runner remain
+  the runner's own.
+- Where this principle and the existing test-quality principles both speak, the split is
+  fixed: this one governs what tests cost to execute, the others govern what test exists and
+  when it is written — an overlapping obligation is a defect to repair, not a duplicate to
+  keep.
+- This principle adds a criterion, not machinery: it MUST NOT justify a duration registry, a
+  slow-test ranking, a coverage-versus-time report, or any other standing measurement surface.
+
+Rationale: coverage answers whether a path is tested at all, never whether those tests still
+run, and the two fail independently — an idle suite keeps its coverage number and loses all
+protection while every report stays green. Naming execution cost as a quality attribute keeps
+the cheaper-to-run suite from becoming a suite nobody runs.
+
+### XX. Script Interface Contract (Declared, Zero-Side-Effect)
+Every functional, non-read-only script in this project — and in every project generated from this
+template — MUST answer three questions before it does anything else:
+- A flag present anywhere on the command line MUST win: `-h` and `--help` MAY change nothing,
+  `--version` MUST print one machine-readable identity line, and every question they answer
+  MUST be answered before any action, write, backup or confirmation prompt.
+- An undeclared option MUST be rejected with a non-zero exit and a recognizable error, never
+  silently ignored and never allowed to reach the main action, including after a bare `--`.
+- Any file that acts when run directly MUST satisfy the same contract whether another file
+  also sources or imports it; a script is a script for that reason alone.
+- A pytest module, a pure library, and a read-only script MUST be treated as
+  outside the REQUIRED set
+  (`--help`/`--version` are recommended for a read-only script and optional elsewhere); the
+  owner document owns the mechanical bases (`pytest-module`, `optional-read-only`, `out-of-scope`,
+  `historical-record`).
+- The rule MUST be pointer, not copy: this principle names its owner document and MUST NOT
+  restate that document's label set or classification steps, and neither MUST any other
+  surface that carries the rule.
+- The rule MUST NOT justify a second checker, an extra command, or a new mandatory workflow
+  step: it is enforced on the surfaces that already exist.
+
+Rationale: a script that writes something as a side effect of being asked what it does
+destroys the one safe move a reader has. The standalone points above are the non-delegable
+core, the full definition (candidate derivation, classification, flag content, the
+zero-side-effect boundary, unrecognized-option rejection, exemptions) lives at
+`.specify/shared/definitions/script-interface-definitions.md` and MUST be referenced, not
+restated, here; the framework's own source copy of that owner stays at
+`shared/definitions/script-interface-definitions.md` and MUST NOT be the path a downstream
+project is told to open. The rule binds framework scripts, scripts of downstream projects and
+third-party scripts alike, and it does not expire because a script was distributed rather than
+authored here.
+
+### XXI. Re-Anchoring (不忘初心 · 温故而知新)
+Every agent in this project — the driver and every dispatched subagent — MUST keep its original
+task and rules in view, and MUST re-confirm them after every core step:
+- **不忘初心 (Never Forget the Initial Rules and Task)**: the entry anchor MUST persist BOTH the task
+  anchor (goal verbatim, non-goals, acceptance authority, stage plan, decision gates) AND the RULE anchor
+  (the operating rules in force: unattended / no approval request / U4 -> next stage / spine before action /
+  workspace guard / fast-fail / the gate discipline / budget and report discipline). A compaction, handoff or reentry MUST resume
+  from that anchor, never from memory or impression.
+- **温故而知新 (Review the Old, Know the New)**: after every core step (stage U4, package
+  boundary, checkpoint, subagent return), the agent MUST run compact -> reload -> evaluate and
+  answer the five rule-first direction questions, recording one of `on-track` / `correction-applied` /
+  `decision-needed`. The review's primary object is the RULES: the current and next action already
+  carry the goal, while a dropped rule (e.g. "unattended") leaves no trace in them. Only
+  `decision-needed` is surfaced; the audit is a statement, never an approval request.
+- The reload is tiered: T0 (the anchor digest at every core step), T1 (the rule digest at stage
+  boundaries, after a detected compaction and after a subagent turn-limit stall), T2 (the full
+  manual only when a dispatch form is unclear or a stall is handled). A full reload after every
+  tool call MUST NOT be substituted — it is ceremony that buries the anchor.
+- The full definition (the two concepts, the tiers, the agent obligation and its boundaries)
+  lives at `.specify/shared/definitions/re-anchoring-definitions.md` and MUST be referenced, not restated, here.
+- This principle adds a reviewing habit, not machinery: it MUST NOT justify a new scorer, a
+  ledger, a scheduler or a second checkpoint system.
+
+Rationale: a long run's most expensive failure is silent drift — the loop keeps executing while
+the original direction has been lost. Rules loaded once at the start do not survive compaction;
+a persisted anchor plus a periodic review does, and it costs one cheap reload per core step.
+
 ## [SECTION_2_NAME]
 <!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
 
