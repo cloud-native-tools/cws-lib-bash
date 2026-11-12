@@ -230,6 +230,7 @@ EOF
     printf '   %-16s = %s\n' "Containers" "${runtime}"
     [ -n "${cmdline}" ] && printf '   %-16s = %s\n' "Kernel cmdline" "${cmdline}"
 
+    printf '   %-16s = %s\n' "Generated" "$(date '+%Y-%m-%d %H:%M:%S %Z' 2>/dev/null)"
     printf '%b\n' "${R}==============================================================================${C}"
   )
 }
