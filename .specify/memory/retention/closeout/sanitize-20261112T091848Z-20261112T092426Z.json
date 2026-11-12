@@ -1,0 +1,55 @@
+{
+  "receiptVersion": 1,
+  "kind": "speckit.closeout-receipt",
+  "runId": "sanitize-20261112T091848Z",
+  "writtenAt": "2026-11-12T09:24:26Z",
+  "unit": {
+    "unitId": "/speckit.sanitize",
+    "unitType": "command"
+  },
+  "recordsCommit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+  "records": [
+    {
+      "path": ".specify/memory/feedback/20261112T091921Z-speckit-sanitize.md",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/feedback-utils.py --action list (schema owned by the feedback engine)"
+    },
+    {
+      "path": ".specify/memory/feedback/20261112T091921Z-skill-sanitize-materials.md",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/feedback-utils.py --action list (schema owned by the feedback engine)"
+    },
+    {
+      "path": ".specify/memory/feedback/20261112T091930Z-speckit-sanitize.md",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/feedback-utils.py --action list (schema owned by the feedback engine)"
+    },
+    {
+      "path": ".specify/memory/session/20261112T091903Z-run-determination-speckit-sanitize-sanitize-20261112t091848z.md",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/run-determination.py --action history (persisted through the memory engine session scope)"
+    },
+    {
+      "path": ".specify/memory/session/20261112T091903Z-run-determination-skill-sanitize-materials-sanitize-20261112.md",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/run-determination.py --action history (persisted through the memory engine session scope)"
+    },
+    {
+      "path": ".specify/memory/exec-quant/records/20261112T091916797926Z-0b90f581.json",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/exec-quant.py --action list-records (schema owned by the exec-quant engine)"
+    },
+    {
+      "path": ".specify/memory/exec-quant/records/20261112T091917098420Z-277b8b8c.json",
+      "action": "committed",
+      "commit": "abfe8ece81c8691b2a82b89dd4ddbbe7fed7b3c6",
+      "readRule": ".specify/scripts/python/exec-quant.py --action list-records (schema owned by the exec-quant engine)"
+    }
+  ]
+}
