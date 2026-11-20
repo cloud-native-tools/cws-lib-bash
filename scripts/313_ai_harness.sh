@@ -16,36 +16,36 @@ function specify_user() {
   echo "${user}:${group}"
 }
 
-# Ensure ai-engine is installed and available.
+# Ensure ai-harness is installed and available.
 # Transition: the legacy `specify` console alias (still installed by
-# ai-engine-cli) satisfies detection until every client project has migrated.
-function ai_engine_ensure() {
-  if ! have ai-engine && ! have specify; then
-    log warn "ai-engine command not found, attempting to install..."
-    if ! ai_engine_install; then
-      log error "Failed to install ai-engine"
+# ai-harness-cli) satisfies detection until every client project has migrated.
+function ai_harness_ensure() {
+  if ! have ai-harness && ! have specify; then
+    log warn "ai-harness command not found, attempting to install..."
+    if ! ai_harness_install; then
+      log error "Failed to install ai-harness"
       return "${RETURN_FAILURE:-1}"
     fi
   fi
   return "${RETURN_SUCCESS:-0}"
 }
 
-# Deprecated alias (spec-kit → ai-engine transition): use ai_engine_ensure.
+# Deprecated alias (spec-kit → ai-harness transition): use ai_harness_ensure.
 # Kept so downstream callers of the old name keep working; removed once every
 # client project has migrated.
 function specify_ensure() {
-  log warn "specify_ensure is deprecated; use ai_engine_ensure (forwarding)"
-  ai_engine_ensure "$@"
+  log warn "specify_ensure is deprecated; use ai_harness_ensure (forwarding)"
+  ai_harness_ensure "$@"
 }
 
-# Install or upgrade ai-engine by delegating to ai-engine's own install.sh
+# Install or upgrade ai-harness by delegating to ai-harness's own install.sh
 #
-# DUAL DUTY: ai-engine has no self-update subcommand, so this function is both
+# DUAL DUTY: ai-harness has no self-update subcommand, so this function is both
 # the cold-start INSTALL path and the UPGRADE path — install.sh performs a
 # clean reinstall, and its python ladder prefers the existing installation's
 # python (upgrade-in-place) when no --python / cwd .venv pins the destination.
 #
-# Ownership contract: the install.sh at the ai-engine repo root is the SINGLE
+# Ownership contract: the install.sh at the ai-harness repo root is the SINGLE
 # owner of cold-start install logic — python resolution ladder, source
 # ordering, pip index pairing, uv opt-in, and post-install verification all
 # live there. This wrapper only LOCATES or FETCHES that script and delegates;
@@ -53,26 +53,26 @@ function specify_ensure() {
 # fetch-only copy used to obtain a checkout (and thus install.sh) — the
 # authoritative install order lives in install.sh.
 #
-# Usage: ai_engine_install [install.sh args...]
-#   e.g. ai_engine_install --python /path/to/python
-#        ai_engine_install --intranet-only
+# Usage: ai_harness_install [install.sh args...]
+#   e.g. ai_harness_install --python /path/to/python
+#        ai_harness_install --intranet-only
 #   forwarded verbatim to install.sh (see `bash install.sh --help` there)
 #
 # Locate order:
 #   1. ${SPECIFY_INSTALL_SH} — explicit path to an install.sh (any local
-#      ai-engine checkout); use this to avoid the network entirely.
+#      ai-harness checkout); use this to avoid the network entirely.
 #      The env var name is kept for backward compatibility.
 #   2. shallow clone of the first reachable source below into a temp dir
 #
 # Exit codes: install.sh exit codes propagate (0 ok | 2 missing prerequisite
 # | 3 no viable source x index | 5 verification failed); failure to even
 # obtain the script returns RETURN_FAILURE.
-function ai_engine_install() {
-  log info "Installing ai-engine (delegating to ai-engine install.sh)..."
+function ai_harness_install() {
+  log info "Installing ai-harness (delegating to ai-harness install.sh)..."
 
   local script=""
 
-  # 1. Explicit override: any local ai-engine checkout's install.sh
+  # 1. Explicit override: any local ai-harness checkout's install.sh
   if [[ -n "${SPECIFY_INSTALL_SH:-}" ]]; then
     if [[ -f "${SPECIFY_INSTALL_SH}" ]]; then
       script="${SPECIFY_INSTALL_SH}"
@@ -94,12 +94,12 @@ function ai_engine_install() {
 
     # Entry format: "<repo url>|<branch>|<hostname>"
     local sources=(
-      "https://gitlab.alibaba-inc.com/cloud-native-ai/ai-engine.git|master|gitlab.alibaba-inc.com"
-      "https://gitee.com/cloud-native-ai/ai-engine.git|master|gitee.com"
-      "https://github.com/cloud-native-ai/ai-engine.git|master|github.com"
+      "https://gitlab.alibaba-inc.com/cloud-native-ai/ai-harness.git|master|gitlab.alibaba-inc.com"
+      "https://gitee.com/cloud-native-ai/ai-harness.git|master|gitee.com"
+      "https://github.com/cloud-native-ai/ai-harness.git|master|github.com"
     )
 
-    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/ai-engine-install.XXXXXX")" || {
+    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/ai-harness-install.XXXXXX")" || {
       log error "Failed to create temp directory"
       return "${RETURN_FAILURE:-1}"
     }
@@ -116,9 +116,9 @@ function ai_engine_install() {
         log warn "Network connectivity to ${hostname} failed, skipping this source"
         continue
       fi
-      if git clone --depth 1 --branch "${branch}" "${url}" "${tmp_dir}/ai-engine" >/dev/null 2>&1; then
+      if git clone --depth 1 --branch "${branch}" "${url}" "${tmp_dir}/ai-harness" >/dev/null 2>&1; then
         cloned=true
-        log notice "Fetched ai-engine checkout from ${hostname}"
+        log notice "Fetched ai-harness checkout from ${hostname}"
         break
       fi
       log warn "Clone from ${hostname} failed, trying next source..."
@@ -130,10 +130,10 @@ function ai_engine_install() {
       return "${RETURN_FAILURE:-1}"
     fi
 
-    script="${tmp_dir}/ai-engine/install.sh"
+    script="${tmp_dir}/ai-harness/install.sh"
     if [[ ! -f "${script}" ]]; then
       rm -rf "${tmp_dir}"
-      log error "Fetched checkout has no install.sh at repo root (too old ai-engine?)"
+      log error "Fetched checkout has no install.sh at repo root (too old ai-harness?)"
       return "${RETURN_FAILURE:-1}"
     fi
   fi
@@ -150,32 +150,32 @@ function ai_engine_install() {
   fi
 
   if [[ ${rc} -eq 0 ]]; then
-    log notice "ai-engine installed successfully (via ${script})"
+    log notice "ai-harness installed successfully (via ${script})"
     return "${RETURN_SUCCESS:-0}"
   fi
-  log error "ai-engine installer failed with exit code ${rc}"
+  log error "ai-harness installer failed with exit code ${rc}"
   return "${rc}"
 }
 
-# Deprecated alias (spec-kit → ai-engine transition): use ai_engine_install.
+# Deprecated alias (spec-kit → ai-harness transition): use ai_harness_install.
 # Kept so downstream callers of the old name keep working; removed once every
 # client project has migrated.
 function specify_install() {
-  log warn "specify_install is deprecated; use ai_engine_install (forwarding)"
-  ai_engine_install "$@"
+  log warn "specify_install is deprecated; use ai_harness_install (forwarding)"
+  ai_harness_install "$@"
 }
 
-# Uninstall ai-engine (package renamed specify-cli → ai-engine-cli; both
+# Uninstall ai-harness (package renamed specify-cli → ai-harness-cli; both
 # names are handled during the transition).
 function specify_uninstall() {
-  log info "Uninstalling ai-engine..."
+  log info "Uninstalling ai-harness..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."
     return "${RETURN_FAILURE:-1}"
   fi
 
   local pkg removed=false
-  for pkg in ai-engine-cli specify-cli; do
+  for pkg in ai-harness-cli ai-engine-cli specify-cli; do
     if pip3 show "${pkg}" >/dev/null 2>&1; then
       if pip3 uninstall -y "${pkg}"; then
         removed=true
@@ -186,23 +186,23 @@ function specify_uninstall() {
   done
 
   if [ "${removed}" = true ]; then
-    log notice "ai-engine uninstalled successfully"
+    log notice "ai-harness uninstalled successfully"
   else
-    log warn "Failed to uninstall ai-engine (it might not be installed)"
+    log warn "Failed to uninstall ai-harness (it might not be installed)"
   fi
   return "${RETURN_SUCCESS:-0}"
 }
 
 # Check Specify dependencies and ensure installation
 function specify_check() {
-  # Ensure ai-engine is installed
-  if ! ai_engine_ensure; then
+  # Ensure ai-harness is installed
+  if ! ai_harness_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
-  # Call specify check to verify all required tools are available
+  # Call ai-harness check to verify all required tools are available
   log info "Checking Specify dependencies..."
-  if specify check; then
+  if ai-harness check; then
     log notice "Specify dependencies check passed"
     return "${RETURN_SUCCESS:-0}"
   else
@@ -236,8 +236,8 @@ function specify_init() {
     ;;
   esac
 
-  # Ensure ai-engine is available
-  if ! ai_engine_ensure; then
+  # Ensure ai-harness is available
+  if ! ai_harness_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
@@ -257,11 +257,11 @@ function specify_init() {
       esac
 
       if [ "${tool_ignore_agent_tools}" = "true" ]; then
-        if ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+        if ! ai-harness init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
           log error "Failed to initialize Specify project for AI tool: ${tool}"
           return "${RETURN_FAILURE:-1}"
         fi
-      elif ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls; then
+      elif ! ai-harness init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls; then
         log error "Failed to initialize Specify project for AI tool: ${tool}"
         return "${RETURN_FAILURE:-1}"
       fi
@@ -272,11 +272,11 @@ function specify_init() {
   fi
 
   if [ "${ignore_agent_tools}" = "true" ]; then
-    if specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+    if ai-harness init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
       log notice "Specify project initialized successfully"
       return "${RETURN_SUCCESS:-0}"
     fi
-  elif specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
+  elif ai-harness init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
     log notice "Specify project initialized successfully"
     return "${RETURN_SUCCESS:-0}"
   fi
@@ -320,18 +320,18 @@ function specify_deinit() {
 
   case "${ai_tool}" in
   all)
-    rm -rfv .github/prompts/speckit.*.prompt.md
-    rm -rfv .qoder/commands/speckit.*.md
-    rm -rfv .opencode/command/speckit.*.md
+    rm -rfv .github/prompts/ah.*.prompt.md
+    rm -rfv .qoder/commands/ah.*.md
+    rm -rfv .opencode/command/ah.*.md
     ;;
   copilot)
-    rm -rfv .github/prompts/speckit.*.prompt.md
+    rm -rfv .github/prompts/ah.*.prompt.md
     ;;
   qoder)
-    rm -rfv .qoder/commands/speckit.*.md
+    rm -rfv .qoder/commands/ah.*.md
     ;;
   opencode)
-    rm -rfv .opencode/command/speckit.*.md
+    rm -rfv .opencode/command/ah.*.md
     ;;
   *)
     log error "Usage: specify_deinit [copilot|qoder|opencode|all]"
@@ -339,6 +339,6 @@ function specify_deinit() {
     ;;
   esac
 
-  rm -rfv .specify/memory/features .specify/memory/features.md
-  rm -rfv .specify/scripts .specify/templates
+  rm -rfv .ah/memory/features .ah/memory/features.md
+  rm -rfv .ah/scripts .ah/templates
 }
