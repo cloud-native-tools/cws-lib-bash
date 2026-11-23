@@ -1,8 +1,14 @@
 #!/bin/bash
 
+# ai-harness family. Spec Kit's `specify_*` family lives in 313_specify.sh and
+# is independent of this file: the two projects no longer share CLI helpers or
+# command names. `specify` is Spec Kit's own console entrypoint; this file
+# detects ai-harness only by the `ai-harness` console script.
+
 # User:group that owns agent-CLI (qodercli et al.) login state for the current
-# runtime. The host operator account and the container run account are different
-# identities, so the target follows the runtime form rather than the host user:
+# runtime. Shared helper (not part of either CLI family): the host operator
+# account and the container run account are different identities, so the target
+# follows the runtime form rather than the host user:
 #   - container (image run account): CWS_DEVELOP_USER, default develop
 #   - docker host (physical/VM):     agent
 # is_container comes from profile.d/02_probe.sh, which is loaded before scripts/.
@@ -16,11 +22,11 @@ function specify_user() {
   echo "${user}:${group}"
 }
 
-# Ensure ai-harness is installed and available.
-# Transition: the legacy `specify` console alias (still installed by
-# ai-harness-cli) satisfies detection until every client project has migrated.
+# Ensure ai-harness is installed and available. Detection is by the
+# `ai-harness` console script only: `specify` belongs to the independent
+# Spec Kit project and is never an ai-harness signal.
 function ai_harness_ensure() {
-  if ! have ai-harness && ! have specify; then
+  if ! have ai-harness; then
     log warn "ai-harness command not found, attempting to install..."
     if ! ai_harness_install; then
       log error "Failed to install ai-harness"
@@ -30,11 +36,8 @@ function ai_harness_ensure() {
   return "${RETURN_SUCCESS:-0}"
 }
 
-# Deprecated alias (spec-kit → ai-harness transition): use ai_harness_ensure.
-# Kept so downstream callers of the old name keep working; removed once every
-# client project has migrated.
-function specify_ensure() {
-  log warn "specify_ensure is deprecated; use ai_harness_ensure (forwarding)"
+# Short family alias: ensure ai-harness is available.
+function ah_ensure() {
   ai_harness_ensure "$@"
 }
 
@@ -157,17 +160,16 @@ function ai_harness_install() {
   return "${rc}"
 }
 
-# Deprecated alias (spec-kit → ai-harness transition): use ai_harness_install.
-# Kept so downstream callers of the old name keep working; removed once every
-# client project has migrated.
-function specify_install() {
-  log warn "specify_install is deprecated; use ai_harness_install (forwarding)"
+# Short family alias: install or upgrade ai-harness.
+function ah_install() {
   ai_harness_install "$@"
 }
 
-# Uninstall ai-harness (package renamed specify-cli → ai-harness-cli; both
-# names are handled during the transition).
-function specify_uninstall() {
+# Uninstall ai-harness (package renamed specify-cli → ai-harness-cli; the
+# current packages are ai-harness-cli and ai-engine-cli). NEVER includes
+# specify-cli: that package name now belongs to the independent Spec Kit
+# project (see 313_specify.sh).
+function ah_uninstall() {
   log info "Uninstalling ai-harness..."
   if ! have pip3; then
     log error "pip3 command not found. Please install pip3 first."
@@ -175,7 +177,7 @@ function specify_uninstall() {
   fi
 
   local pkg removed=false
-  for pkg in ai-harness-cli ai-engine-cli specify-cli; do
+  for pkg in ai-harness-cli ai-engine-cli; do
     if pip3 show "${pkg}" >/dev/null 2>&1; then
       if pip3 uninstall -y "${pkg}"; then
         removed=true
@@ -193,35 +195,35 @@ function specify_uninstall() {
   return "${RETURN_SUCCESS:-0}"
 }
 
-# Check Specify dependencies and ensure installation
-function specify_check() {
+# Check ai-harness dependencies and ensure installation
+function ah_check() {
   # Ensure ai-harness is installed
   if ! ai_harness_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
   # Call ai-harness check to verify all required tools are available
-  log info "Checking Specify dependencies..."
+  log info "Checking ai-harness dependencies..."
   if ai-harness check; then
-    log notice "Specify dependencies check passed"
+    log notice "ai-harness dependencies check passed"
     return "${RETURN_SUCCESS:-0}"
   else
-    log error "Specify dependencies check failed"
+    log error "ai-harness dependencies check failed"
     return "${RETURN_FAILURE:-1}"
   fi
 }
 
-# Initialize a new Specify project
-# Usage: specify_init <ai_tool> [project_name]
+# Initialize a new ai-harness project
+# Usage: ah_init <ai_tool> [project_name]
 # Available AI tools: all, claude, copilot, qoder, opencode
-function specify_init() {
+function ah_init() {
   local ai_tool=${1}
   local project_name=${2:-.}
   local ignore_agent_tools=${3:-false}
 
   # Validate AI tool parameter
   if [ -z "${ai_tool}" ]; then
-    log error "Usage: specify_init <ai_tool> [project_name]"
+    log error "Usage: ah_init <ai_tool> [project_name]"
     log error "Available AI tools: all, claude, copilot, qoder, opencode"
     return "${RETURN_FAILURE:-1}"
   fi
@@ -241,7 +243,7 @@ function specify_init() {
     return "${RETURN_FAILURE:-1}"
   fi
 
-  log info "Initializing Specify project with AI tool: ${ai_tool}, project name: ${project_name}"
+  log info "Initializing ai-harness project with AI tool: ${ai_tool}, project name: ${project_name}"
 
   if [ "${ai_tool}" = "all" ]; then
     local tools=(claude copilot opencode qoder)
@@ -258,64 +260,64 @@ function specify_init() {
 
       if [ "${tool_ignore_agent_tools}" = "true" ]; then
         if ! ai-harness init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
-          log error "Failed to initialize Specify project for AI tool: ${tool}"
+          log error "Failed to initialize ai-harness project for AI tool: ${tool}"
           return "${RETURN_FAILURE:-1}"
         fi
       elif ! ai-harness init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls; then
-        log error "Failed to initialize Specify project for AI tool: ${tool}"
+        log error "Failed to initialize ai-harness project for AI tool: ${tool}"
         return "${RETURN_FAILURE:-1}"
       fi
     done
 
-    log notice "Specify project initialized successfully for all AI tools"
+    log notice "ai-harness project initialized successfully for all AI tools"
     return "${RETURN_SUCCESS:-0}"
   fi
 
   if [ "${ignore_agent_tools}" = "true" ]; then
     if ai-harness init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
-      log notice "Specify project initialized successfully"
+      log notice "ai-harness project initialized successfully"
       return "${RETURN_SUCCESS:-0}"
     fi
   elif ai-harness init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
-    log notice "Specify project initialized successfully"
+    log notice "ai-harness project initialized successfully"
     return "${RETURN_SUCCESS:-0}"
   fi
 
-  log error "Failed to initialize Specify project"
+  log error "Failed to initialize ai-harness project"
   return "${RETURN_FAILURE:-1}"
 }
 
-# Initialize a Specify project with Copilot AI
-function specify_init_copilot() {
+# Initialize an ai-harness project with Copilot AI
+function ah_init_copilot() {
   local project_name=${1:-.}
-  specify_init copilot "${project_name}"
+  ah_init copilot "${project_name}"
 }
 
-# Initialize a Specify project with Qoder
-function specify_init_qoder() {
+# Initialize an ai-harness project with Qoder
+function ah_init_qoder() {
   local project_name=${1:-.}
-  specify_init qoder "${project_name}" true
+  ah_init qoder "${project_name}" true
 }
 
-# Initialize a Specify project with OpenCode
-function specify_init_opencode() {
+# Initialize an ai-harness project with OpenCode
+function ah_init_opencode() {
   local project_name=${1:-.}
-  specify_init opencode "${project_name}" true
+  ah_init opencode "${project_name}" true
 }
 
-# Initialize a Specify project with claude code
-function specify_init_claude() {
+# Initialize an ai-harness project with claude code
+function ah_init_claude() {
   local project_name=${1:-.}
-  specify_init claude "${project_name}" true
+  ah_init claude "${project_name}" true
 }
 
-# Initialize a Specify project with all AI agent tools
-function specify_init_all() {
+# Initialize an ai-harness project with all AI agent tools
+function ah_init_all() {
   local project_name=${1:-.}
-  specify_init all "${project_name}" true
+  ah_init all "${project_name}" true
 }
 
-function specify_deinit() {
+function ah_deinit() {
   local ai_tool=${1:-all}
 
   case "${ai_tool}" in
@@ -334,7 +336,7 @@ function specify_deinit() {
     rm -rfv .opencode/command/ah.*.md
     ;;
   *)
-    log error "Usage: specify_deinit [copilot|qoder|opencode|all]"
+    log error "Usage: ah_deinit [copilot|qoder|opencode|all]"
     return "${RETURN_FAILURE:-1}"
     ;;
   esac
