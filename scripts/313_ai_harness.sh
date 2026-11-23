@@ -1,14 +1,15 @@
 #!/bin/bash
 
-# ai-harness family. Spec Kit's `specify_*` family lives in 313_specify.sh and
-# is independent of this file: the two projects no longer share CLI helpers or
-# command names. `specify` is Spec Kit's own console entrypoint; this file
-# detects ai-harness only by the `ai-harness` console script.
+# shellcheck disable=SC2119,SC2120  # public helper forwards caller args; ensure installs with defaults
 
-# User:group that owns agent-CLI (qodercli et al.) login state for the current
-# runtime. Shared helper (not part of either CLI family): the host operator
-# account and the container run account are different identities, so the target
-# follows the runtime form rather than the host user:
+# ai-harness family — independent of the Spec Kit family in 313_specify.sh.
+# This file mirrors 313_specify.sh: same function set, order and logic; only
+# the prefix and the CLI/tool names differ. `ai-harness` is ai-harness's own
+# console entrypoint; `specify` belongs to the independent Spec Kit project.
+
+# Shared agent-CLI user:group helper (not part of either CLI family).
+# The host operator account and the container run account are different
+# identities, so the target follows the runtime form rather than the host user:
 #   - container (image run account): CWS_DEVELOP_USER, default develop
 #   - docker host (physical/VM):     agent
 # is_container comes from profile.d/02_probe.sh, which is loaded before scripts/.
@@ -22,23 +23,28 @@ function specify_user() {
   echo "${user}:${group}"
 }
 
-# Ensure ai-harness is installed and available. Detection is by the
-# `ai-harness` console script only: `specify` belongs to the independent
-# Spec Kit project and is never an ai-harness signal.
-function ai_harness_ensure() {
-  if ! have ai-harness; then
-    log warn "ai-harness command not found, attempting to install..."
-    if ! ai_harness_install; then
-      log error "Failed to install ai-harness"
-      return "${RETURN_FAILURE:-1}"
-    fi
-  fi
-  return "${RETURN_SUCCESS:-0}"
-}
-
-# Short family alias: ensure ai-harness is available.
+# Ensure the ai-harness CLI is installed and that `ai-harness` really is
+# ai-harness. A stale or shadowed binary is detected by asking it to identify
+# itself; never assume a bare `ai-harness` is the right CLI.
 function ah_ensure() {
-  ai_harness_ensure "$@"
+  if have ai-harness && ai-harness --version 2>/dev/null | grep -qi "ai-harness-cli"; then
+    return "${RETURN_SUCCESS:-0}"
+  fi
+  if have ai-harness; then
+    log warn "'ai-harness' on PATH is not the ai-harness CLI; installing ai-harness"
+  else
+    log warn "ai-harness command not found, attempting to install..."
+  fi
+  if ! ah_install; then
+    log error "Failed to install ai-harness"
+    return "${RETURN_FAILURE:-1}"
+  fi
+  hash -r
+  if have ai-harness && ai-harness --version 2>/dev/null | grep -qi "ai-harness-cli"; then
+    return "${RETURN_SUCCESS:-0}"
+  fi
+  log error "'ai-harness' on PATH is still not the ai-harness CLI; remove the conflicting binary or put the ai-harness install first on PATH"
+  return "${RETURN_FAILURE:-1}"
 }
 
 # Install or upgrade ai-harness by delegating to ai-harness's own install.sh
@@ -56,32 +62,31 @@ function ah_ensure() {
 # fetch-only copy used to obtain a checkout (and thus install.sh) — the
 # authoritative install order lives in install.sh.
 #
-# Usage: ai_harness_install [install.sh args...]
-#   e.g. ai_harness_install --python /path/to/python
-#        ai_harness_install --intranet-only
+# Usage: ah_install [install.sh args...]
+#   e.g. ah_install --python /path/to/python
+#        ah_install --intranet-only
 #   forwarded verbatim to install.sh (see `bash install.sh --help` there)
 #
 # Locate order:
-#   1. ${SPECIFY_INSTALL_SH} — explicit path to an install.sh (any local
-#      ai-harness checkout); use this to avoid the network entirely.
-#      The env var name is kept for backward compatibility.
+#   1. ${AI_HARNESS_INSTALL_SH} — explicit path to an install.sh (any local
+#      ai-harness checkout); use this to avoid the network entirely
 #   2. shallow clone of the first reachable source below into a temp dir
 #
 # Exit codes: install.sh exit codes propagate (0 ok | 2 missing prerequisite
 # | 3 no viable source x index | 5 verification failed); failure to even
 # obtain the script returns RETURN_FAILURE.
-function ai_harness_install() {
+function ah_install() {
   log info "Installing ai-harness (delegating to ai-harness install.sh)..."
 
   local script=""
 
   # 1. Explicit override: any local ai-harness checkout's install.sh
-  if [[ -n "${SPECIFY_INSTALL_SH:-}" ]]; then
-    if [[ -f "${SPECIFY_INSTALL_SH}" ]]; then
-      script="${SPECIFY_INSTALL_SH}"
-      log info "Using installer from SPECIFY_INSTALL_SH: ${script}"
+  if [[ -n "${AI_HARNESS_INSTALL_SH:-}" ]]; then
+    if [[ -f "${AI_HARNESS_INSTALL_SH}" ]]; then
+      script="${AI_HARNESS_INSTALL_SH}"
+      log info "Using installer from AI_HARNESS_INSTALL_SH: ${script}"
     else
-      log warn "SPECIFY_INSTALL_SH set but not found: ${SPECIFY_INSTALL_SH}; falling back to clone"
+      log warn "AI_HARNESS_INSTALL_SH set but not found: ${AI_HARNESS_INSTALL_SH}; falling back to clone"
     fi
   fi
 
@@ -91,7 +96,7 @@ function ai_harness_install() {
   local tmp_dir=""
   if [[ -z "${script}" ]]; then
     if ! have git; then
-      log error "git command not found. Install git first, or set SPECIFY_INSTALL_SH to a local install.sh."
+      log error "git command not found. Install git first, or set AI_HARNESS_INSTALL_SH to a local install.sh."
       return "${RETURN_FAILURE:-1}"
     fi
 
@@ -129,7 +134,7 @@ function ai_harness_install() {
 
     if [[ "${cloned}" != true ]]; then
       rm -rf "${tmp_dir}"
-      log error "Failed to fetch install.sh from all available sources (set SPECIFY_INSTALL_SH to use a local copy)"
+      log error "Failed to fetch install.sh from all available sources (set AI_HARNESS_INSTALL_SH to use a local copy)"
       return "${RETURN_FAILURE:-1}"
     fi
 
@@ -160,15 +165,7 @@ function ai_harness_install() {
   return "${rc}"
 }
 
-# Short family alias: install or upgrade ai-harness.
-function ah_install() {
-  ai_harness_install "$@"
-}
-
-# Uninstall ai-harness (package renamed specify-cli → ai-harness-cli; the
-# current packages are ai-harness-cli and ai-engine-cli). NEVER includes
-# specify-cli: that package name now belongs to the independent Spec Kit
-# project (see 313_specify.sh).
+# Uninstall ai-harness
 function ah_uninstall() {
   log info "Uninstalling ai-harness..."
   if ! have pip3; then
@@ -176,29 +173,19 @@ function ah_uninstall() {
     return "${RETURN_FAILURE:-1}"
   fi
 
-  local pkg removed=false
-  for pkg in ai-harness-cli ai-engine-cli; do
-    if pip3 show "${pkg}" >/dev/null 2>&1; then
-      if pip3 uninstall -y "${pkg}"; then
-        removed=true
-      else
-        log warn "Failed to uninstall ${pkg}"
-      fi
-    fi
-  done
-
-  if [ "${removed}" = true ]; then
+  if pip3 uninstall -y ai-harness-cli ai-engine-cli; then
     log notice "ai-harness uninstalled successfully"
+    return "${RETURN_SUCCESS:-0}"
   else
     log warn "Failed to uninstall ai-harness (it might not be installed)"
+    return "${RETURN_SUCCESS:-0}"
   fi
-  return "${RETURN_SUCCESS:-0}"
 }
 
 # Check ai-harness dependencies and ensure installation
 function ah_check() {
   # Ensure ai-harness is installed
-  if ! ai_harness_ensure; then
+  if ! ah_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
@@ -229,7 +216,7 @@ function ah_init() {
   fi
 
   case "${ai_tool}" in
-  all | claude | copilot | opencode | qoder )
+  all | claude | copilot | opencode | qoder)
     ;;
   *)
     log error "Unsupported AI tool: ${ai_tool}"
@@ -239,7 +226,7 @@ function ah_init() {
   esac
 
   # Ensure ai-harness is available
-  if ! ai_harness_ensure; then
+  if ! ah_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
@@ -343,4 +330,13 @@ function ah_deinit() {
 
   rm -rfv .ah/memory/features .ah/memory/features.md
   rm -rfv .ah/scripts .ah/templates
+}
+
+# Backward-compatible long names (same behavior as the short family above).
+function ai_harness_ensure() {
+  ah_ensure "$@"
+}
+
+function ai_harness_install() {
+  ah_install "$@"
 }
