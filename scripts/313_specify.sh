@@ -1,170 +1,181 @@
 #!/bin/bash
 
+# shellcheck disable=SC2119,SC2120  # public helper forwards caller args; ensure installs with defaults
+
 # Spec Kit family — independent of the ai-harness family in 313_ai_harness.sh.
-# `specify` is Spec Kit's own console entrypoint and `ai-harness` is the
-# harness; the two projects are independent. This family resolves Spec Kit by
-# identity rather than by bare command name, so a stale or shadowed `specify`
-# belonging to another tool can never be mistaken for it. Resolution order:
-#   1. SPECIFY_CLI_BIN — explicit path to a Spec Kit CLI executable
-#   2. ${SPECIFY_CLI_HOME:-$HOME/.local/share/spec-kit}/venv/bin/specify
-#      (created by specify_install)
-#   3. a `specify` on PATH whose `--version` identifies `specify-cli`
-#   4. uvx --from git+<source> specify (on-demand; source probed from the org
-#      mirrors, override with SPECIFY_CLI_SOURCE)
-#
-# ai-harness equivalents: ai_harness_* / ah_* in 313_ai_harness.sh.
+# `specify` is Spec Kit's own console entrypoint. specify_install delegates to
+# spec-kit's own install.sh (pip/python by default; uv only behind install.sh's
+# --uv opt-in), so no uv is required by this helper.
 
-function specify_cli_home() {
-  printf '%s\n' "${SPECIFY_CLI_HOME:-${HOME}/.local/share/spec-kit}"
-}
-
-# A `specify` on PATH is accepted only when it identifies itself as Spec Kit.
-function specify_cli_path_bin() {
-  local candidate=""
-  candidate="$(command -v specify 2>/dev/null || true)"
-  if [[ -z "${candidate}" || ! -x "${candidate}" ]]; then
-    return "${RETURN_FAILURE:-1}"
-  fi
-  if "${candidate}" --version 2>/dev/null | grep -qi "specify-cli"; then
-    printf '%s\n' "${candidate}"
-    return "${RETURN_SUCCESS:-0}"
-  fi
-  return "${RETURN_FAILURE:-1}"
-}
-
-function specify_cli_bin() {
-  if [[ -n "${SPECIFY_CLI_BIN:-}" ]]; then
-    if [[ -x "${SPECIFY_CLI_BIN}" ]]; then
-      printf '%s\n' "${SPECIFY_CLI_BIN}"
-      return "${RETURN_SUCCESS:-0}"
-    fi
-    return "${RETURN_FAILURE:-1}"
-  fi
-  local home=""
-  home="$(specify_cli_home)"
-  if [[ -x "${home}/venv/bin/specify" ]]; then
-    printf '%s\n' "${home}/venv/bin/specify"
-    return "${RETURN_SUCCESS:-0}"
-  fi
-  local path_bin=""
-  if path_bin="$(specify_cli_path_bin)"; then
-    printf '%s\n' "${path_bin}"
-    return "${RETURN_SUCCESS:-0}"
-  fi
-  return "${RETURN_FAILURE:-1}"
-}
-
-# Probe the org mirrors in the same order as the ai-harness installer.
-function specify_cli_source() {
-  if [[ -n "${SPECIFY_CLI_SOURCE:-}" ]]; then
-    printf '%s\n' "${SPECIFY_CLI_SOURCE}"
-    return "${RETURN_SUCCESS:-0}"
-  fi
-  if ! have net_ping; then
-    log error "net_ping is unavailable; set SPECIFY_CLI_SOURCE to a git URL"
-    return "${RETURN_FAILURE:-1}"
-  fi
-  local sources=(
-    "https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git|gitlab.alibaba-inc.com"
-    "https://gitee.com/cloud-native-ai/spec-kit.git|gitee.com"
-    "https://github.com/cloud-native-ai/spec-kit.git|github.com"
-  )
-  local entry url host
-  for entry in "${sources[@]}"; do
-    url="${entry%%|*}"
-    host="${entry##*|}"
-    if net_ping "${host}"; then
-      printf '%s@master\n' "${url}"
-      return "${RETURN_SUCCESS:-0}"
-    fi
-    log warn "Network connectivity to ${host} failed, skipping this Spec Kit source"
-  done
-  log error "No reachable Spec Kit source; set SPECIFY_CLI_SOURCE to a git URL"
-  return "${RETURN_FAILURE:-1}"
-}
-
-# Run the Spec Kit CLI without going through the ai-harness `specify` alias.
-function specify_cli_run() {
-  local bin=""
-  if bin="$(specify_cli_bin)"; then
-    "${bin}" "$@"
-    return $?
-  fi
-  if ! have uvx; then
-    log error "Spec Kit CLI not found: set SPECIFY_CLI_BIN, run specify_install, or install uv (uvx)"
-    return "${RETURN_FAILURE:-1}"
-  fi
-  local source=""
-  source="$(specify_cli_source)" || return "${RETURN_FAILURE:-1}"
-  log info "Running Spec Kit via uvx from ${source}"
-  uvx --from "git+${source}" specify "$@"
-}
-
-# Ensure a Spec Kit CLI path exists (explicit binary, dedicated venv, or uvx).
+# Ensure the Spec Kit CLI is installed and that `specify` really is Spec Kit.
+# A stale or shadowed binary (for example an ai-harness era shim) is detected by
+# asking it to identify itself; never assume a bare `specify` is Spec Kit.
 function specify_ensure() {
-  if specify_cli_bin >/dev/null 2>&1; then
+  if have specify && specify --version 2>/dev/null | grep -qi "specify-cli"; then
     return "${RETURN_SUCCESS:-0}"
   fi
-  if have uvx; then
+  if have specify; then
+    log warn "'specify' on PATH is not the Spec Kit CLI; installing the Spec Kit CLI"
+  else
+    log warn "Specify command not found, attempting to install..."
+  fi
+  if ! specify_install; then
+    log error "Failed to install Spec Kit"
+    return "${RETURN_FAILURE:-1}"
+  fi
+  hash -r
+  if have specify && specify --version 2>/dev/null | grep -qi "specify-cli"; then
     return "${RETURN_SUCCESS:-0}"
   fi
-  log error "Spec Kit CLI unavailable: set SPECIFY_CLI_BIN, run specify_install, or install uv (uvx)"
+  log error "'specify' on PATH is still not the Spec Kit CLI; remove the conflicting binary or put the Spec Kit install first on PATH"
   return "${RETURN_FAILURE:-1}"
 }
 
-# Install the Spec Kit CLI into a dedicated venv (no global `specify` shim, so
-# the ai-harness legacy alias is untouched).
+# Install or upgrade Spec Kit by delegating to spec-kit's own install.sh
+#
+# DUAL DUTY: specify has no self-update subcommand, so this function is both
+# the cold-start INSTALL path and the UPGRADE path — install.sh performs a
+# clean reinstall, and its python ladder prefers the existing installation's
+# python (upgrade-in-place) when no --python / cwd .venv pins the destination.
+#
+# Ownership contract: the install.sh at the spec-kit repo root is the SINGLE
+# owner of cold-start install logic — python resolution ladder, source
+# ordering, pip index pairing, uv opt-in, and post-install verification all
+# live there. This wrapper only LOCATES or FETCHES that script and delegates;
+# it must not re-implement any of that logic. The source list below is a
+# fetch-only copy used to obtain a checkout (and thus install.sh) — the
+# authoritative install order lives in install.sh.
+#
+# Usage: specify_install [install.sh args...]
+#   e.g. specify_install --python /path/to/python
+#        specify_install --intranet-only
+#   forwarded verbatim to install.sh (see `bash install.sh --help` there)
+#
+# Locate order:
+#   1. ${SPECIFY_INSTALL_SH} — explicit path to an install.sh (any local
+#      spec-kit checkout); use this to avoid the network entirely
+#   2. shallow clone of the first reachable source below into a temp dir
+#
+# Exit codes: install.sh exit codes propagate (0 ok | 2 missing prerequisite
+# | 3 no viable source x index | 5 verification failed); failure to even
+# obtain the script returns RETURN_FAILURE.
 function specify_install() {
-  if ! have uv; then
-    log error "uv is required to install Spec Kit: https://docs.astral.sh/uv/"
-    return "${RETURN_FAILURE:-1}"
+  log info "Installing Spec Kit (delegating to spec-kit install.sh)..."
+
+  local script=""
+
+  # 1. Explicit override: any local spec-kit checkout's install.sh
+  if [[ -n "${SPECIFY_INSTALL_SH:-}" ]]; then
+    if [[ -f "${SPECIFY_INSTALL_SH}" ]]; then
+      script="${SPECIFY_INSTALL_SH}"
+      log info "Using installer from SPECIFY_INSTALL_SH: ${script}"
+    else
+      log warn "SPECIFY_INSTALL_SH set but not found: ${SPECIFY_INSTALL_SH}; falling back to clone"
+    fi
   fi
-  local source=""
-  source="$(specify_cli_source)" || return "${RETURN_FAILURE:-1}"
-  local home=""
-  home="$(specify_cli_home)"
-  local venv="${home}/venv"
-  if ! mkdir -p "${home}"; then
-    log error "Cannot create ${home}"
-    return "${RETURN_FAILURE:-1}"
-  fi
-  if [[ ! -x "${venv}/bin/python" ]]; then
-    log info "Creating Spec Kit virtual environment: ${venv}"
-    if ! uv venv "${venv}" --python "${SPECIFY_CLI_PYTHON:-python3}"; then
-      log error "Failed to create ${venv}"
+
+  # 2. Fetch-only fallback: shallow-clone the first reachable repo and use
+  #    its install.sh. The intranet-first order mirrors install.sh's
+  #    authoritative order, but this list exists ONLY to obtain the script.
+  local tmp_dir=""
+  if [[ -z "${script}" ]]; then
+    if ! have git; then
+      log error "git command not found. Install git first, or set SPECIFY_INSTALL_SH to a local install.sh."
+      return "${RETURN_FAILURE:-1}"
+    fi
+
+    # Entry format: "<repo url>|<branch>|<hostname>"
+    local sources=(
+      "https://gitlab.alibaba-inc.com/cloud-native-ai/spec-kit.git|master|gitlab.alibaba-inc.com"
+      "https://gitee.com/cloud-native-ai/spec-kit.git|master|gitee.com"
+      "https://github.com/cloud-native-ai/spec-kit.git|master|github.com"
+    )
+
+    tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/specify-install.XXXXXX")" || {
+      log error "Failed to create temp directory"
+      return "${RETURN_FAILURE:-1}"
+    }
+
+    local entry url branch hostname cloned=false
+    for entry in "${sources[@]}"; do
+      url="${entry%%|*}"
+      branch="${entry#*|}"
+      branch="${branch%%|*}"
+      hostname="${entry##*|}"
+
+      log info "Trying to fetch install.sh from: ${hostname}"
+      if ! net_ping "${hostname}"; then
+        log warn "Network connectivity to ${hostname} failed, skipping this source"
+        continue
+      fi
+      if git clone --depth 1 --branch "${branch}" "${url}" "${tmp_dir}/spec-kit" >/dev/null 2>&1; then
+        cloned=true
+        log notice "Fetched spec-kit checkout from ${hostname}"
+        break
+      fi
+      log warn "Clone from ${hostname} failed, trying next source..."
+    done
+
+    if [[ "${cloned}" != true ]]; then
+      rm -rf "${tmp_dir}"
+      log error "Failed to fetch install.sh from all available sources (set SPECIFY_INSTALL_SH to use a local copy)"
+      return "${RETURN_FAILURE:-1}"
+    fi
+
+    script="${tmp_dir}/spec-kit/install.sh"
+    if [[ ! -f "${script}" ]]; then
+      rm -rf "${tmp_dir}"
+      log error "Fetched checkout has no install.sh at repo root (too old spec-kit?)"
       return "${RETURN_FAILURE:-1}"
     fi
   fi
-  log info "Installing Spec Kit CLI from ${source}"
-  if ! uv pip install --python "${venv}/bin/python" "git+${source}"; then
-    log error "Failed to install Spec Kit CLI"
+
+  # Delegate: all install logic (python ladder, index pairing, source
+  # fallback, verification) runs inside install.sh, in the CURRENT working
+  # directory so its $PWD/.venv detection applies.
+  log info "Delegating to installer: bash ${script} $*"
+  local rc=0
+  bash "${script}" "$@" || rc=$?
+
+  if [[ -n "${tmp_dir}" ]]; then
+    rm -rf "${tmp_dir}"
+  fi
+
+  if [[ ${rc} -eq 0 ]]; then
+    log notice "Spec Kit installed successfully (via ${script})"
+    return "${RETURN_SUCCESS:-0}"
+  fi
+  log error "Spec Kit installer failed with exit code ${rc}"
+  return "${rc}"
+}
+
+# Uninstall Spec Kit
+function specify_uninstall() {
+  log info "Uninstalling Spec Kit..."
+  if ! have pip3; then
+    log error "pip3 command not found. Please install pip3 first."
     return "${RETURN_FAILURE:-1}"
   fi
-  log notice "Spec Kit CLI installed: ${venv}/bin/specify"
-}
 
-function specify_uninstall() {
-  local home=""
-  home="$(specify_cli_home)"
-  if [[ -d "${home}" ]]; then
-    rm -rfv "${home}"
-    log notice "Spec Kit CLI environment removed: ${home}"
+  if pip3 uninstall -y specify-cli; then
+    log notice "Spec Kit uninstalled successfully"
+    return "${RETURN_SUCCESS:-0}"
   else
-    log warn "Spec Kit CLI environment not found at ${home}"
+    log warn "Failed to uninstall Spec Kit (it might not be installed)"
+    return "${RETURN_SUCCESS:-0}"
   fi
-  if [[ -n "${SPECIFY_CLI_BIN:-}" ]]; then
-    log info "SPECIFY_CLI_BIN points outside ${home}; it was not removed"
-  fi
-  return "${RETURN_SUCCESS:-0}"
 }
 
-# Check Spec Kit dependencies via the Spec Kit CLI.
+# Check Spec Kit dependencies and ensure installation
 function specify_check() {
+  # Ensure Spec Kit is installed
   if ! specify_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
+
+  # Call specify check to verify all required tools are available
   log info "Checking Spec Kit dependencies..."
-  if specify_cli_run check; then
+  if specify check; then
     log notice "Spec Kit dependencies check passed"
     return "${RETURN_SUCCESS:-0}"
   else
@@ -198,27 +209,32 @@ function specify_init() {
     ;;
   esac
 
+  # Ensure Spec Kit is available
   if ! specify_ensure; then
     return "${RETURN_FAILURE:-1}"
   fi
 
   log info "Initializing Spec Kit project with AI tool: ${ai_tool}, project name: ${project_name}"
 
-  local base_args=(init "${project_name}" --script sh --no-git --force --skip-tls)
   if [ "${ai_tool}" = "all" ]; then
     local tools=(claude copilot opencode qoder)
     local tool=""
-    local tool_args=()
+    local tool_ignore_agent_tools=false
 
     for tool in "${tools[@]}"; do
-      tool_args=("${base_args[@]}" --ai "${tool}")
+      tool_ignore_agent_tools=false
       case "${tool}" in
       claude | opencode | qoder)
-        tool_args+=(--ignore-agent-tools)
+        tool_ignore_agent_tools=true
         ;;
       esac
 
-      if ! specify_cli_run "${tool_args[@]}"; then
+      if [ "${tool_ignore_agent_tools}" = "true" ]; then
+        if ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+          log error "Failed to initialize Spec Kit project for AI tool: ${tool}"
+          return "${RETURN_FAILURE:-1}"
+        fi
+      elif ! specify init "${project_name}" --ai "${tool}" --script sh --no-git --force --skip-tls; then
         log error "Failed to initialize Spec Kit project for AI tool: ${tool}"
         return "${RETURN_FAILURE:-1}"
       fi
@@ -228,12 +244,12 @@ function specify_init() {
     return "${RETURN_SUCCESS:-0}"
   fi
 
-  local args=("${base_args[@]}" --ai "${ai_tool}")
   if [ "${ignore_agent_tools}" = "true" ]; then
-    args+=(--ignore-agent-tools)
-  fi
-
-  if specify_cli_run "${args[@]}"; then
+    if specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls --ignore-agent-tools; then
+      log notice "Spec Kit project initialized successfully"
+      return "${RETURN_SUCCESS:-0}"
+    fi
+  elif specify init "${project_name}" --ai "${ai_tool}" --script sh --no-git --force --skip-tls; then
     log notice "Spec Kit project initialized successfully"
     return "${RETURN_SUCCESS:-0}"
   fi
@@ -272,43 +288,30 @@ function specify_init_all() {
   specify_init all "${project_name}" true
 }
 
-# Remove the per-tool /speckit.* command copies. `.specify/` is project-owned
-# (scripts/templates/memory/specs) and is deliberately kept.
 function specify_deinit() {
   local ai_tool=${1:-all}
 
   case "${ai_tool}" in
   all)
     rm -rfv .github/prompts/speckit.*.prompt.md
-    rm -rfv .claude/commands/speckit.*.md
-    rm -rfv .codex/commands/speckit.*.md
-    rm -rfv .hermes/commands/speckit.*.md
-    rm -rfv .opencode/command/speckit.*.md
     rm -rfv .qoder/commands/speckit.*.md
+    rm -rfv .opencode/command/speckit.*.md
     ;;
   copilot)
     rm -rfv .github/prompts/speckit.*.prompt.md
     ;;
-  claude)
-    rm -rfv .claude/commands/speckit.*.md
-    ;;
-  codex)
-    rm -rfv .codex/commands/speckit.*.md
-    ;;
-  hermes)
-    rm -rfv .hermes/commands/speckit.*.md
+  qoder)
+    rm -rfv .qoder/commands/speckit.*.md
     ;;
   opencode)
     rm -rfv .opencode/command/speckit.*.md
     ;;
-  qoder)
-    rm -rfv .qoder/commands/speckit.*.md
-    ;;
   *)
-    log error "Usage: specify_deinit [claude|codex|copilot|hermes|opencode|qoder|all]"
+    log error "Usage: specify_deinit [copilot|qoder|opencode|all]"
     return "${RETURN_FAILURE:-1}"
     ;;
   esac
 
-  log notice "Spec Kit agent command copies removed; .specify/ is project-owned and kept"
+  rm -rfv .specify/memory/features .specify/memory/features.md
+  rm -rfv .specify/scripts .specify/templates
 }

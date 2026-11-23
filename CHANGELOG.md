@@ -15,7 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Logging and error handling framework
 
 ### Changed
-- Split the ai-harness and Spec Kit shell helpers: `ah_*` (and `ai_harness_*`) drive ai-harness; `specify_*` drives the independent Spec Kit CLI via an explicit binary, a dedicated venv, a verified `specify` on PATH, or `uvx`. `specify_init_all` no longer runs `ai-harness init` (which printed `/ah.*` commands), and `ah_uninstall` no longer removes the Spec Kit `specify-cli` package.
+- Split the ai-harness and Spec Kit shell helpers: `ah_*` (and `ai_harness_*`) drive ai-harness; `specify_*` drives the independent Spec Kit CLI through spec-kit's own `install.sh` (pip/python by default; uv only behind install.sh's `--uv` opt-in, so this helper needs no uv) and verifies that `specify` identifies as Spec Kit. `specify_init_all` no longer runs `ai-harness init` (which printed `/ah.*` commands), and `ah_uninstall` no longer removes the Spec Kit `specify-cli` package.
 
 ### Deprecated
 

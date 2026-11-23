@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 
-# shellcheck disable=SC2030,SC2031,SC2034,SC2329  # scoped PATH/env + sourced helpers
+# shellcheck disable=SC2034,SC2329  # env vars/functions consumed by sourced helpers
 
 # Spec Kit family tests: the specify_* helpers must drive the Spec Kit CLI,
 # never ai-harness (and vice versa for the ah_* family in test_ai_harness.sh).
+# specify_install must delegate to spec-kit's own install.sh with no uv
+# requirement.
 
 # shellcheck disable=SC1091
 source "$(dirname "${BASH_SOURCE[0]}")/../bin/cws_bash_test"
@@ -34,34 +36,51 @@ assert_eq "agent:agent" "$(specify_user)" "docker host should use agent"
 STUB_DIR="$(mktemp -d "${TMPDIR:-/tmp}/cws-specify-test.XXXXXX")"
 SPECIFY_LOG="${STUB_DIR}/specify.log"
 AH_LOG="${STUB_DIR}/ah.log"
+INSTALL_LOG="${STUB_DIR}/install.log"
 : > "${SPECIFY_LOG}"
 : > "${AH_LOG}"
-
-cat > "${STUB_DIR}/specify-cli" <<'EOS'
-#!/usr/bin/env bash
-printf '%s\n' "$*" >> "${SPECIFY_LOG:?}"
-EOS
-chmod +x "${STUB_DIR}/specify-cli"
+: > "${INSTALL_LOG}"
 
 function ai_harness_ensure() { return 0; }
 function ai-harness() { printf '%s\n' "$*" >> "${AH_LOG:?}"; }
 function have() { return 0; }
+function specify_ensure() { return 0; }
+function specify() { printf '%s\n' "$*" >> "${SPECIFY_LOG:?}"; }
 
-export SPECIFY_CLI_BIN="${STUB_DIR}/specify-cli"
-export SPECIFY_LOG AH_LOG
+export SPECIFY_LOG AH_LOG INSTALL_LOG
 
 specify_init_all demo >/dev/null 2>&1
 assert_eq "4" "$(wc -l < "${SPECIFY_LOG}" | tr -d ' ')" \
   "specify_init_all should call the Spec Kit CLI once per tool"
 assert_contains "$(cat "${SPECIFY_LOG}")" \
-  "init demo --script sh --no-git --force --skip-tls --ai claude --ignore-agent-tools" \
+  "init demo --ai claude --script sh --no-git --force --skip-tls --ignore-agent-tools" \
   "claude init must use the Spec Kit CLI with --ignore-agent-tools"
 assert_contains "$(cat "${SPECIFY_LOG}")" "--ai copilot" \
   "copilot init must use the Spec Kit CLI"
 assert_eq "" "$(cat "${AH_LOG}")" "specify_init_all must not call ai-harness"
 
+# --- specify_install delegates to spec-kit's install.sh (no uv required) ---
+cat > "${STUB_DIR}/fake-install.sh" <<'EOS'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "${INSTALL_LOG:?}"
+EOS
+chmod +x "${STUB_DIR}/fake-install.sh"
+export SPECIFY_INSTALL_SH="${STUB_DIR}/fake-install.sh"
+
+if specify_install --python /fake/python >/dev/null 2>&1; then
+  install_rc=0
+else
+  install_rc=$?
+fi
+assert_eq "0" "${install_rc}" "specify_install should delegate without uv"
+assert_contains "$(cat "${INSTALL_LOG}")" "--python /fake/python" \
+  "specify_install must forward its arguments to install.sh"
+
 # --- deinit split: speckit.* copies only -----------------------------------
-mkdir -p "${STUB_DIR}/cwd/.qoder/commands"
+mkdir -p "${STUB_DIR}/cwd/.qoder/commands" \
+  "${STUB_DIR}/cwd/.specify/scripts" \
+  "${STUB_DIR}/cwd/.specify/templates" \
+  "${STUB_DIR}/cwd/.specify/memory/features"
 touch "${STUB_DIR}/cwd/.qoder/commands/speckit.demo.md"
 touch "${STUB_DIR}/cwd/.qoder/commands/ah.demo.md"
 (
@@ -72,31 +91,10 @@ assert_true "[[ ! -e '${STUB_DIR}/cwd/.qoder/commands/speckit.demo.md' ]]" \
   "specify_deinit should remove speckit command copies"
 assert_true "[[ -e '${STUB_DIR}/cwd/.qoder/commands/ah.demo.md' ]]" \
   "specify_deinit must not remove ai-harness command copies"
-
-# --- PATH probe: `specify` is trusted only when it identifies as Spec Kit ---
-unset SPECIFY_CLI_BIN
-mkdir -p "${STUB_DIR}/fakebin"
-cat > "${STUB_DIR}/fakebin/specify" <<'EOS'
-#!/usr/bin/env bash
-printf 'ai-harness-cli 0.0.22\n'
-EOS
-chmod +x "${STUB_DIR}/fakebin/specify"
-if (PATH="${STUB_DIR}/fakebin:${PATH}"; specify_cli_path_bin >/dev/null 2>&1); then
-  probe_result="accepted"
-else
-  probe_result="rejected"
-fi
-assert_eq "rejected" "${probe_result}" \
-  "a non-Spec-Kit specify on PATH must be rejected"
-
-cat > "${STUB_DIR}/fakebin/specify" <<'EOS'
-#!/usr/bin/env bash
-printf 'specify-cli 0.0.22\n'
-EOS
-chmod +x "${STUB_DIR}/fakebin/specify"
-probe_result="$(PATH="${STUB_DIR}/fakebin:${PATH}" specify_cli_path_bin 2>/dev/null || true)"
-assert_eq "${STUB_DIR}/fakebin/specify" "${probe_result}" \
-  "a genuine Spec Kit specify on PATH must be accepted"
+assert_true "[[ ! -e '${STUB_DIR}/cwd/.specify/scripts' ]]" \
+  "specify_deinit should remove the installed .specify/scripts"
+assert_true "[[ ! -e '${STUB_DIR}/cwd/.specify/templates' ]]" \
+  "specify_deinit should remove the installed .specify/templates"
 
 rm -rf "${STUB_DIR}"
 print_summary
